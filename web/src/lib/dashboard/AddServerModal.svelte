@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { api, ApiError, isUnauthorized, type AvailableServer } from '../../api';
+  import { api, ApiError, isUnauthorized, type AvailableServer, type ConnectInfo } from '../../api';
   import { t, tr } from '../../i18n';
   import Modal from '../Modal.svelte';
   import { showToast } from '../toast';
@@ -26,6 +26,34 @@
   let loaded = $state(false);
   let loadFailed = $state(false);
   let busy = $state<Record<string, boolean>>({});
+  let connect = $state<ConnectInfo | null>(null);
+
+  // The agent port is not behind the admin reverse proxy, so the address is the one the panel was opened with
+  // (a domain or an IP); the other names the agent-port certificate was issued for are listed as alternatives.
+  const connectHost = $derived(location.hostname);
+  const connectTarget = $derived(connect ? `${connectHost}:${connect.port}` : '');
+  const otherHosts = $derived(
+    (connect?.hosts ?? []).filter(
+      (h) => h.toLowerCase() !== connectHost.toLowerCase() && h !== 'localhost' && h !== '127.0.0.1' && h !== '::1',
+    ),
+  );
+
+  async function loadConnect(): Promise<void> {
+    try {
+      connect = await api.connectInfo();
+    } catch (e) {
+      if (isUnauthorized(e)) onauthlost();
+    }
+  }
+
+  async function copyTarget(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(connectTarget);
+      showToast(t('common.copied'));
+    } catch {
+      showToast(t('common.copyFailed'));
+    }
+  }
 
   async function load(): Promise<void> {
     try {
@@ -69,6 +97,7 @@
 
   onMount(() => {
     void load();
+    void loadConnect();
     const timer = setInterval(() => void load(), REFRESH_MS);
     return () => clearInterval(timer);
   });
@@ -106,6 +135,28 @@
       <button class="btn primary" type="button" onclick={onpairing}>{$tr('dash.pendingOpen')}</button>
     </div>
   </section>
+
+  {#if connect}
+    <section class="block pairing">
+      <h3 class="section-title">{$tr('dash.connect')}</h3>
+      <p class="muted small">{$tr('dash.connectHint')}</p>
+      <dl class="kv">
+        <dt>{$tr('dash.connectAddress')}</dt>
+        <dd class="mono">{connectHost}</dd>
+        <dt>{$tr('dash.connectPort')}</dt>
+        <dd class="mono">{connect.port}</dd>
+        <dt>{$tr('dash.connectFp')}</dt>
+        <dd class="mono fp">{connect.fingerprint}</dd>
+      </dl>
+      {#if otherHosts.length > 0}
+        <p class="muted small mono">{$tr('dash.connectOther', { list: otherHosts.join(', ') })}</p>
+      {/if}
+      <div class="row">
+        <button class="btn" type="button" onclick={() => void copyTarget()}>{$tr('dash.connectCopy')}</button>
+        <span class="muted small mono">{connectTarget}</span>
+      </div>
+    </section>
+  {/if}
 </Modal>
 
 <style>
@@ -150,6 +201,23 @@
   .info {
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .kv {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 6px 16px;
+    margin: 0;
+  }
+
+  .kv dt {
+    color: var(--muted);
+  }
+
+  .kv dd {
+    margin: 0;
     min-width: 0;
     overflow-wrap: anywhere;
   }

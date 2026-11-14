@@ -42,7 +42,7 @@ In "Own reverse proxy" mode the wizard installs and configures nothing; it only 
 At the end, the wizard shows the admin panel address, the fingerprint of the client-port certificate, and a ready-to-use client installation command.
 
 ### Client
-Questions: the server address `host:client-port` and confirmation of the fingerprint (or the `--fingerprint` flag). Then the wizard shows the **key** `XXXX-XXXX` and the **verification code**. Enter the key in the admin panel ("+ Server", the "Awaiting approval" block) and make sure the codes match. After confirmation, the `linager-agent` service starts.
+Questions: the server address `host:client-port` and confirmation of the fingerprint (or the `--fingerprint` flag). Then the wizard shows the **key** `XXXX-XXXX` and the **verification code**. Enter the key in the admin panel ("+ Server", the "Awaiting approval" block) and make sure the codes match. After confirmation, the `linager-agent` service starts. The address, port and fingerprint for this question are in the admin panel: "+ Server", the "Client connection details" block (the address is taken from the browser's address bar, the button copies `address:port`).
 
 ## Unattended (automation)
 

@@ -35,8 +35,25 @@ server {
 }
 ```
 
-## Real-time streams (SSE)
-The dashboard receives data via `GET /api/live` (Server-Sent Events). The proxy must not buffer this stream: in nginx, add `proxy_buffering off;` for `location /` (or separately for `/api/live`); the server also sends `X-Accel-Buffering: no`. Caddy needs no changes. The read timeout must be longer than 15 seconds (the server sends a keep-alive every 15 s).
+## Nginx Proxy Manager
+
+In the Proxy Host card:
+
+- **Details:** Scheme `http`, Forward Hostname / IP: the address of the Linager server (for example `10.0.0.5`), Forward Port: the admin panel port (for example `8080`). Turn on **Websockets Support**: the terminal and the live dashboard need it.
+- **SSL:** pick a certificate and turn on Force SSL.
+- **Advanced**, Custom Nginx Configuration field:
+
+```nginx
+proxy_buffering off;
+proxy_read_timeout 3600s;
+```
+
+Nginx Proxy Manager sets `Host`, `X-Forwarded-For` and `X-Forwarded-Proto` by itself.
+
+## Live dashboard updates (SSE)
+The dashboard receives data through one long request, `GET /api/live`: the server keeps appending new data to it. By default nginx collects the response in a buffer and sends it in batches, so updates arrive late or not at all. For this request buffering must be off: in nginx add `proxy_buffering off;` to `location /` (or separately to `location /api/live`). The server also sends the `X-Accel-Buffering: no` header. Caddy needs no changes.
+
+The second requirement: the proxy must not drop a quiet connection too early. The server sends a "still alive" signal every 15 seconds, so the read timeout (`proxy_read_timeout`) must be longer than 15 seconds (nginx defaults to 60, which is enough).
 
 ## Security
 Because the admin panel port accepts `X-Forwarded-*` headers from any address by default, restrict access to it with a firewall (proxy only), or narrow `admin.trusted_proxies` and `admin.listen` in `/etc/linager/server.yaml`.

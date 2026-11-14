@@ -170,6 +170,16 @@ func TestEndToEnd(t *testing.T) {
 	}
 	api.csrf = lr.CSRF
 
+	// --- connection info for clients (shown in the "Add server" dialog) ---
+	var ci struct {
+		Port        string   `json:"port"`
+		Fingerprint string   `json:"fingerprint"`
+		Hosts       []string `json:"hosts"`
+	}
+	if code := api.do("GET", "/api/connect", nil, &ci); code != 200 || ci.Fingerprint != serverFP || ci.Port != strings.Split(cfg.Agents.Listen, ":")[1] || len(ci.Hosts) != 1 {
+		t.Fatalf("connect info: %d %+v", code, ci)
+	}
+
 	// --- enrollment with a wrong pinned fingerprint is refused ---
 	adata := t.TempDir()
 	err = agent.Enroll(ctx, agent.EnrollOptions{Server: cfg.Agents.Listen, Fingerprint: "SHA256:wrong", DataDir: adata, Show: func(string, string, string) {}})

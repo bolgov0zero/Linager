@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.14
+
+- "Add server" dialog: client connection details (address, port, certificate fingerprint) with a button that copies `address:port`. The address is the one the panel was opened with, so it is the domain when the panel is behind a reverse proxy.
+- Docs: Nginx Proxy Manager settings; the live-updates (SSE) note rewritten in plain words.
+
 ## 0.1.13
 
 - Server page: no more gap between the active tab and the panel below it.

@@ -70,6 +70,8 @@ export interface ServerCard {
   online: boolean; last_seen_at: string | null;
   sample: Sample | null; spark: number[];
 }
+/** What a client needs to connect: agent port, agent-port certificate fingerprint, names/IPs of that certificate. */
+export interface ConnectInfo { port: string; fingerprint: string; hosts: string[] }
 export interface AvailableServer { id: string; name: string; address: string; os: string }
 export interface ServiceUnit {
   name: string; description: string;
@@ -301,6 +303,7 @@ export const api = {
   totpDisable: (password: string) => request<void>('POST', 'api/me/totp/disable', { password }),
 
   dashboard: () => request<{ items: ServerCard[] }>('GET', 'api/dashboard'),
+  connectInfo: () => request<ConnectInfo>('GET', 'api/connect'),
   availableServers: () => request<AvailableServer[]>('GET', 'api/dashboard/available'),
   dashboardAdd: (serverId: string) => request<void>('POST', 'api/dashboard/items', { server_id: serverId }),
   dashboardRemove: (serverId: string) => request<void>('DELETE', `api/dashboard/items/${enc(serverId)}`),

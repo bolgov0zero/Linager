@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"mime"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -77,6 +78,7 @@ func (a *Admin) Handler() http.Handler {
 	mux.HandleFunc("GET /api/servers/{id}", a.auth(a.serverDetail))
 	mux.HandleFunc("GET /api/servers/{id}/metrics", a.auth(a.history))
 	mux.HandleFunc("GET /api/servers/{id}/metrics.csv", a.auth(a.historyCSV))
+	mux.HandleFunc("GET /api/connect", a.auth(a.connectInfo))
 	mux.HandleFunc("GET /api/dashboard", a.auth(a.dashboard))
 	mux.HandleFunc("GET /api/dashboard/available", a.auth(a.dashboardAvailable))
 	mux.HandleFunc("POST /api/dashboard/items", a.auth(a.dashboardAdd))
@@ -310,6 +312,21 @@ func (a *Admin) me(w http.ResponseWriter, r *http.Request, u *store.User) {
 	se := r.Context().Value(keySession).(*store.Session)
 	writeJSON(w, http.StatusOK, map[string]any{"login": u.Login, "totp_enabled": u.TOTPEnabled, "csrf": se.CSRF,
 		"totp_required": a.Cfg.Admin.RequireTOTP && !u.TOTPEnabled})
+}
+
+// connectInfo returns what a client needs to connect to this server: the agent port, the fingerprint of the agent-port
+// certificate and the names/IPs that certificate was issued for. The agent port is not behind the admin reverse proxy,
+// so the page picks the host itself (usually the one the administrator opened the panel with).
+func (a *Admin) connectInfo(w http.ResponseWriter, _ *http.Request, _ *store.User) {
+	port := ""
+	if _, p, err := net.SplitHostPort(a.Cfg.Agents.Listen); err == nil {
+		port = p
+	}
+	hosts := a.Cfg.Agents.Hosts
+	if hosts == nil {
+		hosts = []string{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"port": port, "fingerprint": pki.Fingerprint(a.Keys.TLSDER), "hosts": hosts})
 }
 
 func (a *Admin) totpSetup(w http.ResponseWriter, r *http.Request, u *store.User) {
