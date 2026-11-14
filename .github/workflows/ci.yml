@@ -36,7 +36,7 @@ jobs:
         run: cd web && npm ci && npm run check && npm run build
       - name: Vet and test
         run: go vet ./... && go test -race ./...
-      - uses: golangci/golangci-lint-action@v8
+      - uses: golangci/golangci-lint-action@v9
         with:
           version: latest
       - name: Build linux/amd64
