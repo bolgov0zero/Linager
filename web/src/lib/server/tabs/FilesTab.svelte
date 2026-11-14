@@ -150,7 +150,8 @@
     for (const [i, file] of files.entries()) {
       upload = { name: file.name, index: i + 1, total: files.length, fraction: 0 };
       try {
-        await api.uploadFile(id, dir, file, (fraction) => {
+        // the API takes the full target path (directory + file name), not just the directory
+        await api.uploadFile(id, joinPath(dir, file.name), file, (fraction) => {
           if (upload) upload.fraction = fraction;
         });
       } catch (e) {
