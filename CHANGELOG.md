@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.1.1
 
 Fixes after the 0.1 review.
+
+- New server setting `agents.cert_lifetime` (default one year).
 
 - Agent certificates renew themselves over the channel before they expire (previously every agent would have dropped off after one year).
 - Network and firewall changes get a second, out-of-process rollback timer for the case when the agent itself crashes or hangs.
