@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.5
+
+- Metrics charts are redrawn: the time axis covers the whole selected period, averages are lines with a light fill and
+  peaks a dashed line, gaps break the line, round y-axis steps, events as markers under the axis, legend and a hover
+  tooltip with values and events. Network receive and send use two colour-blind-safe colours.
+- Services table: rows keep one height and the action buttons stay on one line.
+- Server page: the Processes tab follows Services; the page is centred.
+
 ## 0.1.4
 
 - The "Linager updates" page no longer hangs on "Loading…" while a release check runs: the check talks to GitHub
