@@ -9,7 +9,7 @@
 ## Установка / Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bolgov0zero/linager/main/install.sh | sudo sh
+curl -fsSL https://raw.githubusercontent.com/bolgov0zero/linager/main/install.sh | sh
 ```
 
 Debian 12/13, Ubuntu 22.04/24.04/26.04, amd64, systemd. Подробно и безопасный вариант (скачать, проверить, запустить): [docs/ru/install.md](docs/ru/install.md) · [docs/en/install.md](docs/en/install.md).

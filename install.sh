@@ -65,7 +65,7 @@ cd /
 rm -rf "$tmp"
 trap - EXIT INT TERM
 
-# With `curl ... | sudo sh` stdin is the pipe, not the keyboard: give the wizard the terminal back.
+# With `curl ... | sh` stdin is the pipe, not the keyboard: give the wizard the terminal back.
 # Without a terminal (automation) the wizard runs non-interactively and needs its flags.
 if [ ! -t 0 ] && [ -t 1 ] && (: </dev/tty) 2>/dev/null; then
   exec /usr/local/bin/linager install "$@" </dev/tty

@@ -5,8 +5,10 @@ Supported: Debian 12/13 and Ubuntu 22.04/24.04/26.04 (amd64, systemd).
 ## Quick install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bolgov0zero/linager/main/install.sh | sudo sh
+curl -fsSL https://raw.githubusercontent.com/bolgov0zero/linager/main/install.sh | sh
 ```
+
+Run the command as root, otherwise the installer stops with an error.
 
 ## Safe option: download, verify, run
 

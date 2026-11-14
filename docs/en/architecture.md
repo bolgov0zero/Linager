@@ -236,7 +236,7 @@ Done when: on clean Debian 12/13 and Ubuntu 22.04/24.04/26.04, a single wizard r
   refused (server and agent); the stable channel does not accept versions with a suffix. New command `linager restore`.
 - An agent rollout keeps its state in `settings` (`updates.rollout`) and continues after a server restart;
   a failed first agent in "first, then the rest" mode no longer stalls the rollout.
-- `install.sh` started through a pipe (`curl … | sudo sh`) gives the wizard the terminal back.
+- `install.sh` started through a pipe (`curl … | sh`) gives the wizard the terminal back.
 - Interface: the `ELSH 40` dot shape on large headings, the "Terminal" button on cards (address `#srv-<name>/<tab>`),
   agent update tags and banner, tabs of disabled modules are hidden.
 

@@ -5,8 +5,10 @@
 ## Быстрая установка
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bolgov0zero/linager/main/install.sh | sudo sh
+curl -fsSL https://raw.githubusercontent.com/bolgov0zero/linager/main/install.sh | sh
 ```
+
+Команду нужно выполнять от root, иначе установщик завершится с ошибкой.
 
 ## Безопасный вариант: скачать, проверить, запустить
 
