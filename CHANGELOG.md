@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2
+
+- Dashboard: the "Terminal" button opens a floating terminal window over the dashboard. Windows can be moved, resized,
+  minimized to a bar at the bottom, maximized and closed; several can be open at once (up to 3 per server).
+- When the per-server terminal limit is reached, the interface shows a notice (the server now reports it as WebSocket
+  close code 4029).
+
 ## 0.1.1
 
 Fixes after the 0.1 review.
