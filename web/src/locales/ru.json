@@ -1,0 +1,9 @@
+{
+  "app.title": "Linager",
+  "app.status": "Скелет интерфейса",
+  "theme.light": "Светлая",
+  "theme.dark": "Тёмная",
+  "lang.ru": "RU",
+  "lang.en": "EN",
+  "page.placeholder": "Здесь будет содержимое"
+}

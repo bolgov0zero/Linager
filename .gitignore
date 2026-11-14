@@ -4,7 +4,8 @@ linager-kickoff.zip
 # build output
 /bin/
 /dist/
-/web/dist/
+/web/dist/*
+!/web/dist/.gitkeep
 /web/node_modules/
 *.test
 *.out

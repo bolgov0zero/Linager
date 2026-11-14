@@ -1,0 +1,9 @@
+{
+  "app.title": "Linager",
+  "app.status": "UI skeleton",
+  "theme.light": "Light",
+  "theme.dark": "Dark",
+  "lang.ru": "RU",
+  "lang.en": "EN",
+  "page.placeholder": "Content goes here"
+}
