@@ -6,6 +6,7 @@
   import Modal from '../../Modal.svelte';
   import { showToast } from '../../toast';
   import { formatBytes, formatDateTime } from '../format';
+  import FileTree from './FileTree.svelte';
   import {
     crumbs,
     errorText,
@@ -56,6 +57,21 @@
   let editor = $state<Editor | null>(null);
   let upload = $state<{ name: string; index: number; total: number; fraction: number } | null>(null);
   let picker = $state<HTMLInputElement | undefined>(undefined);
+  let selected = $state<string | null>(null);
+  let noEdit = $state<{ name: string; href: string; text: string } | null>(null);
+  let treeOpen = $state(false);
+
+  const TREE_KEY = 'linager.files.treeWidth';
+  function savedTreeWidth(): number {
+    try {
+      const n = Number(localStorage.getItem(TREE_KEY));
+      if (n >= 160 && n <= 600) return n;
+    } catch {
+      // storage unavailable
+    }
+    return 260;
+  }
+  let treeWidth = $state(savedTreeWidth());
 
   const offline = $derived(loadState === 'offline' || !server.online);
   const readOnly = $derived(offline || loadState === 'disabled');
@@ -66,6 +82,7 @@
   }
 
   function apply(res: { path: string; entries: FileEntry[] }): void {
+    if (res.path !== path) selected = null;
     path = res.path;
     listing = sortEntries(res.entries);
     loadState = 'ready';
@@ -216,8 +233,72 @@
         saving: false,
       };
     } catch (e) {
-      showToast(openErrorText(e, T));
+      if (isStatus(e, 413) || isStatus(e, 415)) {
+        noEdit = { name: entry.name, href: api.fileDownloadUrl(serverId, full), text: openErrorText(e, T) };
+      } else {
+        showToast(openErrorText(e, T));
+      }
     }
+  }
+
+  /** Double click / Enter: a folder opens in the list, a file opens in the editor. */
+  function openEntry(entry: FileEntry): void {
+    if (entry.type === 'dir') void go(joinPath(path, entry.name));
+    else if (entry.type === 'file' || entry.type === 'link') void openFile(entry);
+  }
+
+  const coarse = () => window.matchMedia('(pointer: coarse)').matches;
+  const onControl = (event: Event) => !!(event.target as HTMLElement).closest('a, button');
+
+  /** Click selects; on touch screens a tap opens right away. */
+  function rowClick(event: MouseEvent, entry: FileEntry): void {
+    if (onControl(event)) return;
+    selected = entry.name;
+    if (coarse()) openEntry(entry);
+  }
+
+  function rowKey(event: KeyboardEvent, entry: FileEntry, index: number): void {
+    if (event.target !== event.currentTarget) return;
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      openEntry(entry);
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const rows = (event.currentTarget as HTMLElement).parentElement?.children;
+      const next = rows?.[index + (event.key === 'ArrowDown' ? 1 : -1)] as HTMLElement | undefined;
+      next?.focus();
+    }
+  }
+
+  /** Drag of the splitter between the tree and the list. */
+  function startSplit(event: PointerEvent): void {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    const handle = event.currentTarget as HTMLElement;
+    handle.setPointerCapture(event.pointerId);
+    const startX = event.clientX;
+    const startW = treeWidth;
+    const move = (e: PointerEvent) => {
+      treeWidth = Math.min(Math.max(startW + e.clientX - startX, 160), 600);
+    };
+    const end = () => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', end);
+      handle.removeEventListener('pointercancel', end);
+      try {
+        localStorage.setItem(TREE_KEY, String(treeWidth));
+      } catch {
+        // storage unavailable
+      }
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', end);
+    handle.addEventListener('pointercancel', end);
+  }
+
+  function navigateTree(dir: string): void {
+    treeOpen = false;
+    void go(dir);
   }
 
   function closeEditor(): void {
@@ -289,6 +370,9 @@
     </nav>
 
     <div class="row actions">
+      <button class="btn tree-toggle" type="button" aria-expanded={treeOpen} onclick={() => (treeOpen = !treeOpen)}>
+        {$tStore('files.tree')}
+      </button>
       <button class="btn" type="button" disabled={path === '/' || !listing} onclick={() => go(parentPath(path))}>
         {$tStore('files.up')}
       </button>
@@ -321,6 +405,14 @@
     </div>
   {/if}
 
+  <div class="panes" class:tree-open={treeOpen} style:--tree-w="{treeWidth}px">
+  {#if loadState !== 'offline' && loadState !== 'disabled'}
+    <aside class="treepane">
+      <FileTree {serverId} {path} entries={listing} onnavigate={navigateTree} />
+    </aside>
+    <div class="split" role="separator" aria-orientation="vertical" aria-label={$tStore('files.splitter')} onpointerdown={startSplit}></div>
+  {/if}
+  <div class="listpane">
   {#if !listing}
     {#if loadState === 'error'}
       <div class="state">
@@ -344,32 +436,39 @@
             <th class="hide-sm">{$tStore('files.col.mode')}</th>
             <th class="hide-sm">{$tStore('files.col.owner')}</th>
             <th class="num">{$tStore('files.col.size')}</th>
-            <th>{$tStore('files.col.mtime')}</th>
+            <th class="hide-xs">{$tStore('files.col.mtime')}</th>
             <th class="acts-head"><span class="sr-only">{$tStore('files.col.actions')}</span></th>
           </tr>
         </thead>
         <tbody>
-          {#each listing as entry (entry.name)}
-            <tr>
+          {#each listing as entry, i (entry.name)}
+            <tr
+              class="item"
+              class:sel={selected === entry.name}
+              tabindex="0"
+              aria-selected={selected === entry.name}
+              onclick={(e) => rowClick(e, entry)}
+              ondblclick={(e) => !onControl(e) && openEntry(entry)}
+              onkeydown={(e) => rowKey(e, entry, i)}
+              onfocus={() => (selected = entry.name)}
+            >
               <td class="kind">
                 <span class="kind-icon kind-{entry.type}" role="img" title={kindLabel(entry.type)} aria-label={kindLabel(entry.type)}></span>
               </td>
               <td class="name">
                 {#if entry.type === 'dir'}
-                  <button class="link" type="button" onclick={() => go(joinPath(path, entry.name))}>{entry.name}/</button>
-                {:else if entry.type === 'file' || entry.type === 'link'}
-                  <button class="link" type="button" onclick={() => openFile(entry)}>{entry.name}</button>
+                  <span>{entry.name}/</span>
+                {:else}
+                  <span>{entry.name}</span>
                   {#if entry.type === 'link' && entry.link_target}
                     <span class="muted small"> → {entry.link_target}</span>
                   {/if}
-                {:else}
-                  <span>{entry.name}</span>
                 {/if}
               </td>
               <td class="hide-sm mono small">{entry.mode_str}</td>
               <td class="hide-sm mono small">{entry.owner}:{entry.group}</td>
               <td class="num mono">{entry.type === 'dir' ? '—' : formatBytes(entry.size)}</td>
-              <td class="mono small">{formatDateTime(entry.mtime, $locale)}</td>
+              <td class="hide-xs mono small">{formatDateTime(entry.mtime, $locale)}</td>
               <td class="acts">
                 <div class="row end">
                   {#if entry.type === 'file' || entry.type === 'link'}
@@ -393,6 +492,8 @@
       </table>
     </div>
   {/if}
+  </div>
+  </div>
 </div>
 
 {#if prompt}
@@ -434,6 +535,17 @@
     <div class="row end">
       <button class="btn" type="button" disabled={askBusy} onclick={() => (ask = null)}>{$tStore('common.cancel')}</button>
       <button class="btn danger" type="button" disabled={askBusy} onclick={confirmAsk}>{a.label}</button>
+    </div>
+  </Modal>
+{/if}
+
+{#if noEdit}
+  {@const n = noEdit}
+  <Modal title={n.name} labelId="files-noedit-title" onclose={() => (noEdit = null)}>
+    <p>{n.text}</p>
+    <div class="row end">
+      <button class="btn" type="button" onclick={() => (noEdit = null)}>{$tStore('common.cancel')}</button>
+      <a class="btn primary" href={n.href} download={n.name} onclick={() => (noEdit = null)}>{$tStore('files.download')}</a>
     </div>
   </Modal>
 {/if}
@@ -573,6 +685,63 @@
     gap: 12px;
   }
 
+  .panes {
+    display: grid;
+    grid-template-columns: var(--tree-w) 8px minmax(0, 1fr);
+    align-items: stretch;
+    min-height: 360px;
+  }
+
+  .treepane {
+    min-width: 0;
+    max-height: 70vh;
+    overflow: auto;
+    padding: 6px 4px;
+    border: 2px solid var(--line);
+    background: var(--surface);
+  }
+
+  .split {
+    cursor: col-resize;
+    touch-action: none;
+  }
+
+  .split:hover {
+    background: var(--seg-off);
+  }
+
+  .listpane {
+    min-width: 0;
+    container-type: inline-size;
+  }
+
+  /* Without the tree (offline, module disabled) the list takes the whole width. */
+  .panes:not(:has(.treepane)) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tree-toggle {
+    display: none;
+  }
+
+  tr.item {
+    cursor: default;
+    user-select: none;
+  }
+
+  tr.item:hover td {
+    background: color-mix(in srgb, var(--seg-off) 50%, transparent);
+  }
+
+  tr.item.sel td {
+    background: var(--seg-off);
+  }
+
+  tr.item:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+
   .tablewrap {
     overflow-x: auto;
   }
@@ -639,22 +808,7 @@
   .name {
     min-width: 0;
     overflow-wrap: anywhere;
-  }
-
-  .link {
-    padding: 0;
-    background: none;
-    border: 0;
-    color: var(--ink);
-    cursor: pointer;
-    font: inherit;
-    text-align: left;
-    overflow-wrap: anywhere;
-  }
-
-  .link:hover {
-    color: var(--accent);
-    text-decoration: underline;
+    word-break: normal;
   }
 
   .acts {
@@ -734,13 +888,43 @@
     white-space: nowrap;
   }
 
-  @media (max-width: 720px) {
+  @container (max-width: 460px) {
+    .hide-xs {
+      display: none;
+    }
+  }
+
+  @container (max-width: 640px) {
     .hide-sm {
       display: none;
     }
 
     table.grid {
       min-width: 0;
+    }
+  }
+
+  /* Phones: the tree is a panel above the list, opened with the "Folders" button. */
+  @media (max-width: 720px) {
+    .tree-toggle {
+      display: inline-block;
+    }
+
+    .panes,
+    .panes:not(:has(.treepane)) {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+      min-height: 0;
+    }
+
+    .treepane,
+    .split {
+      display: none;
+    }
+
+    .panes.tree-open .treepane {
+      display: block;
+      max-height: 50vh;
     }
   }
 </style>

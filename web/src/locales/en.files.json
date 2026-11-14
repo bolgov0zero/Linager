@@ -51,7 +51,6 @@
   "files.editor.close": "Close",
   "files.editor.save": "Save",
   "files.editor.saving": "Saving…",
-
   "docker.unavailable": "Docker is not installed on this server",
   "docker.disabled": "Docker module is disabled on the agent",
   "docker.offline": "Server is offline. Actions are unavailable, showing the last known data.",
@@ -100,5 +99,10 @@
   "docker.pull.submit": "Pull image",
   "docker.pull.title": "Pulling image {image}",
   "docker.pull.emptyError": "Enter an image name",
-  "docker.pull.waiting": "Waiting for Docker…"
+  "docker.pull.waiting": "Waiting for Docker…",
+  "files.tree": "Folders",
+  "files.expand": "Expand folder",
+  "files.collapse": "Collapse folder",
+  "files.treeFailed": "Cannot read the folder",
+  "files.splitter": "Folder tree width"
 }

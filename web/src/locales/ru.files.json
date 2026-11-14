@@ -51,7 +51,6 @@
   "files.editor.close": "Закрыть",
   "files.editor.save": "Сохранить",
   "files.editor.saving": "Сохранение…",
-
   "docker.unavailable": "Docker не установлен на этом сервере",
   "docker.disabled": "Модуль Docker отключён на агенте",
   "docker.offline": "Сервер не в сети. Действия недоступны, показаны последние данные.",
@@ -100,5 +99,10 @@
   "docker.pull.submit": "Скачать образ",
   "docker.pull.title": "Загрузка образа {image}",
   "docker.pull.emptyError": "Укажите имя образа",
-  "docker.pull.waiting": "Ожидание ответа от Docker…"
+  "docker.pull.waiting": "Ожидание ответа от Docker…",
+  "files.tree": "Папки",
+  "files.expand": "Развернуть папку",
+  "files.collapse": "Свернуть папку",
+  "files.treeFailed": "Не удалось прочитать папку",
+  "files.splitter": "Ширина дерева папок"
 }
