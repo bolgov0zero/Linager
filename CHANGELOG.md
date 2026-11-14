@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.9
+
+- The top bar stays pinned to the top of the window while the page scrolls (on screens wider than 720 px).
+
 ## 0.1.8
 
 - Dashboard rows view: the "Terminal" and "Open" buttons stand one above the other to the right of the metrics.
