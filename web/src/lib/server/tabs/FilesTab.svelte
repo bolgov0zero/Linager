@@ -73,6 +73,22 @@
   }
   let treeWidth = $state(savedTreeWidth());
 
+  // The two panes fill the window below them and scroll inside, so the tab itself never grows.
+  let panesEl = $state<HTMLDivElement | null>(null);
+  let panesH = $state(480);
+  function fitPanes(): void {
+    if (!panesEl) return;
+    const top = panesEl.getBoundingClientRect().top + window.scrollY;
+    panesH = Math.max(320, Math.floor(window.innerHeight - top - 44));
+  }
+  $effect(() => {
+    // Re-measure when something above the panes appears or disappears.
+    void [panesEl, upload !== null, offline, loadState];
+    fitPanes();
+    window.addEventListener('resize', fitPanes);
+    return () => window.removeEventListener('resize', fitPanes);
+  });
+
   const offline = $derived(loadState === 'offline' || !server.online);
   const readOnly = $derived(offline || loadState === 'disabled');
   const dirty = $derived(editor !== null && editor.text !== editor.saved);
@@ -405,7 +421,7 @@
     </div>
   {/if}
 
-  <div class="panes" class:tree-open={treeOpen} style:--tree-w="{treeWidth}px">
+  <div class="panes" class:tree-open={treeOpen} style:--tree-w="{treeWidth}px" style:--panes-h="{panesH}px" bind:this={panesEl}>
   {#if loadState !== 'offline' && loadState !== 'disabled'}
     <aside class="treepane">
       <FileTree {serverId} {path} entries={listing} onnavigate={navigateTree} />
@@ -689,12 +705,12 @@
     display: grid;
     grid-template-columns: var(--tree-w) 8px minmax(0, 1fr);
     align-items: stretch;
-    min-height: 360px;
+    height: var(--panes-h);
   }
 
   .treepane {
     min-width: 0;
-    max-height: 70vh;
+    min-height: 0;
     overflow: auto;
     padding: 6px 4px;
     border: 2px solid var(--line);
@@ -712,7 +728,21 @@
 
   .listpane {
     min-width: 0;
+    min-height: 0;
+    overflow: auto;
     container-type: inline-size;
+  }
+
+  /* The list pane scrolls both ways, so the header row can stick to its top. */
+  .listpane .tablewrap {
+    overflow: visible;
+  }
+
+  .listpane th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--surface);
   }
 
   /* Without the tree (offline, module disabled) the list takes the whole width. */
@@ -914,7 +944,11 @@
     .panes:not(:has(.treepane)) {
       grid-template-columns: minmax(0, 1fr);
       gap: 8px;
-      min-height: 0;
+      height: auto;
+    }
+
+    .listpane {
+      overflow: visible;
     }
 
     .treepane,
