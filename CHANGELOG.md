@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.16
+
+- The pairing ("Adding a server") dialog has a Back button that returns to the "Add server" dialog.
+
 ## 0.1.15
 
 - Docker tab: the container buttons stand in one line (start and stop are one button that follows the state), so rows are much lower; on screens up to 1000 px the buttons wrap into two lines and ports and RAM are hidden.

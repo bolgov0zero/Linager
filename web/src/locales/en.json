@@ -10,6 +10,7 @@
   "common.loading": "Loading…",
   "common.cancel": "Cancel",
   "common.close": "Close",
+  "common.back": "← Back",
   "common.copy": "Copy",
   "common.copied": "Copied",
   "common.copyFailed": "Copy failed",

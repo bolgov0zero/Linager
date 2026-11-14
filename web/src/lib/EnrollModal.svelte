@@ -7,10 +7,13 @@
 
   let {
     onclose,
+    onback,
     onchanged,
     onauthlost,
   }: {
     onclose: () => void;
+    /** Back to the "Add server" dialog this one was opened from. */
+    onback?: () => void;
     onchanged: () => void;
     onauthlost: () => void;
   } = $props();
@@ -102,6 +105,11 @@
 </script>
 
 <Modal title={$tr('enroll.title')} labelId="enroll-title" {onclose}>
+  {#if onback}
+    <div class="row">
+      <button class="btn" type="button" onclick={onback}>{$tr('common.back')}</button>
+    </div>
+  {/if}
   <h3 class="section-title">{$tr('enroll.pending')}</h3>
 
   {#if !loaded}

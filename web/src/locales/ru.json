@@ -10,6 +10,7 @@
   "common.loading": "Загрузка…",
   "common.cancel": "Отмена",
   "common.close": "Закрыть",
+  "common.back": "← Назад",
   "common.copy": "Копировать",
   "common.copied": "Скопировано",
   "common.copyFailed": "Не удалось скопировать",

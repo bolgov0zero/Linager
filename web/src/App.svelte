@@ -288,6 +288,10 @@
 {#if enrollOpen && session}
   <EnrollModal
     onclose={() => (enrollOpen = false)}
+    onback={() => {
+      enrollOpen = false;
+      addOpen = true;
+    }}
     onchanged={() => (reloadKey += 1)}
     onauthlost={endSession}
   />
