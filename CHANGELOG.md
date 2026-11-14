@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.13
+
+- Server page: no more gap between the active tab and the panel below it.
+
 ## 0.1.12
 
 - Phones: the top bar is compact (logo, live indicator and a menu button) and stays pinned while the page scrolls; the buttons open as a panel under it.
