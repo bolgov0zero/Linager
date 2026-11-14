@@ -49,6 +49,7 @@ type serverCard struct {
 	LastSeenAt   *time.Time       `json:"last_seen_at"`
 	Sample       *protocol.Sample `json:"sample"`
 	Spark        []float64        `json:"spark"`
+	GroupID      *int64           `json:"group_id"`
 }
 
 func (a *Admin) card(ctx context.Context, s *store.Server) serverCard {
@@ -76,9 +77,14 @@ func (a *Admin) dashboard(w http.ResponseWriter, r *http.Request, u *store.User)
 		jsonErr(w, http.StatusInternalServerError, "internal error")
 		return
 	}
+	groups, _ := a.DB.ServerGroups(r.Context())
 	items := make([]serverCard, 0, len(list))
 	for _, s := range list {
-		items = append(items, a.card(r.Context(), s))
+		c := a.card(r.Context(), s)
+		if g, ok := groups[s.ID]; ok {
+			c.GroupID = &g
+		}
+		items = append(items, c)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": items})
 }

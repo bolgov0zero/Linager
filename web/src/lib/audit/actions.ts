@@ -13,6 +13,7 @@ export const KNOWN_ACTIONS: ReadonlySet<string> = new Set([
   'stream.open', 'stream.close',
   'metrics.export',
   'dashboard.add', 'dashboard.remove', 'dashboard.reorder',
+  'group.create', 'group.rename', 'group.delete', 'group.assign',
 ]);
 
 export interface Option {

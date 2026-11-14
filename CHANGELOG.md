@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.18
+
+- Server groups: create groups ("Groups…" next to the dashboard filters), put a server into a group in edit mode, and pick a group in the selector to see only its servers (the summary follows the selected group). Reordering works inside the selected group. Group changes are written to the audit log. Database migration 00005 adds the groups table.
+
 ## 0.1.17
 
 - Server overview: the interfaces table takes the full width with aligned columns; the system block moved below it and shows its rows in several columns.

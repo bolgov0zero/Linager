@@ -83,5 +83,9 @@
   "audit.action.metrics.export": "Экспорт метрик",
   "audit.action.dashboard.add": "Дашборд: добавление",
   "audit.action.dashboard.remove": "Дашборд: удаление",
-  "audit.action.dashboard.reorder": "Дашборд: порядок"
+  "audit.action.dashboard.reorder": "Дашборд: порядок",
+  "audit.action.group.create": "Группа: создание",
+  "audit.action.group.rename": "Группа: переименование",
+  "audit.action.group.delete": "Группа: удаление",
+  "audit.action.group.assign": "Группа: назначение серверу"
 }

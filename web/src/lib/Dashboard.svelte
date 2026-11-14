@@ -1,13 +1,15 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { api, isUnauthorized, type LiveEvent, type ServerCard } from '../api';
+  import { api, isUnauthorized, type Group, type LiveEvent, type ServerCard } from '../api';
   import { locale, t, tr } from '../i18n';
   import { subscribeLive } from '../live';
   import CardView from './dashboard/CardView.svelte';
   import { pluralForm } from './dashboard/format';
+  import GroupsModal from './dashboard/GroupsModal.svelte';
   import RowView from './dashboard/RowView.svelte';
   import Summary from './dashboard/Summary.svelte';
   import { levelOf, summarize, type AgentFlag } from './dashboard/status';
+  import Select from './ui/Select.svelte';
   import { showToast } from './toast';
 
   type Filter = 'all' | 'problems' | 'offline';
@@ -27,6 +29,7 @@
   } = $props();
 
   const VIEW_KEY = 'linager.dashboard.view';
+  const GROUP_KEY = 'linager.dashboard.group';
   const LIVE_RELOAD_MS = 500;
   const SAFETY_RELOAD_MS = 60_000;
   const TICK_MS = 15_000;
@@ -51,7 +54,28 @@
     }
   }
 
+  function readGroup(): string {
+    try {
+      return localStorage.getItem(GROUP_KEY) ?? 'all';
+    } catch {
+      return 'all';
+    }
+  }
+
+  function pickGroup(next: string): void {
+    groupFilter = next;
+    try {
+      localStorage.setItem(GROUP_KEY, next);
+    } catch {
+      // storage unavailable: the choice just is not remembered
+    }
+  }
+
   let items = $state<ServerCard[]>([]);
+  let groups = $state<Group[]>([]);
+  /** 'all', 'none' (servers without a group) or a group id. */
+  let groupFilter = $state(readGroup());
+  let groupsOpen = $state(false);
   /** Agent update state per server id, from the same endpoint as the updates page. */
   let agentFlags = $state<Record<string, AgentFlag>>({});
   let loaded = $state(false);
@@ -70,11 +94,25 @@
   let orderTimer: ReturnType<typeof setTimeout> | undefined;
   let undoTimer: ReturnType<typeof setTimeout> | undefined;
 
-  const totals = $derived(summarize(items));
-  const countLabel = $derived($tr(`dash.servers.${pluralForm($locale, items.length)}`, { n: items.length }));
+  const inGroup = $derived(
+    items.filter((card) =>
+      groupFilter === 'all' ? true : groupFilter === 'none' ? card.group_id === null : String(card.group_id) === groupFilter,
+    ),
+  );
+  const totals = $derived(summarize(inGroup));
+  const countLabel = $derived($tr(`dash.servers.${pluralForm($locale, inGroup.length)}`, { n: inGroup.length }));
+  const groupOptions = $derived([
+    { value: 'all', label: $tr('dash.group.all') },
+    { value: 'none', label: $tr('dash.group.none') },
+    ...groups.map((g) => ({ value: String(g.id), label: g.name })),
+  ]);
+  const cardGroupOptions = $derived([
+    { value: '0', label: $tr('dash.group.none') },
+    ...groups.map((g) => ({ value: String(g.id), label: g.name })),
+  ]);
   const visible = $derived.by(() => {
     const q = query.trim().toLowerCase();
-    return items.filter((card) => {
+    return inGroup.filter((card) => {
       if (filter === 'offline' && card.online) return false;
       if (filter === 'problems' && levelOf(card) === 'ok') return false;
       if (!q) return true;
@@ -84,6 +122,24 @@
 
   function indexOf(id: string): number {
     return items.findIndex((c) => c.id === id);
+  }
+
+  function visibleIndex(id: string): number {
+    return visible.findIndex((c) => c.id === id);
+  }
+
+  async function setCardGroup(card: ServerCard, value: string): Promise<void> {
+    const groupId = value === '0' ? null : Number(value);
+    try {
+      await api.serverSetGroup(card.id, groupId);
+      items = items.map((c) => (c.id === card.id ? { ...c, group_id: groupId } : c));
+    } catch (e) {
+      if (isUnauthorized(e)) {
+        onauthlost();
+        return;
+      }
+      showToast(t('dash.group.setFailed'));
+    }
   }
 
   async function loadAgentFlags(): Promise<void> {
@@ -102,9 +158,11 @@
   async function load(): Promise<void> {
     void loadAgentFlags();
     try {
-      const res = await api.dashboard();
+      const [res, list] = await Promise.all([api.dashboard(), api.groups()]);
       const hidden = pending?.card.id;
       items = hidden ? res.items.filter((c) => c.id !== hidden) : res.items;
+      groups = list;
+      if (groupFilter !== 'all' && groupFilter !== 'none' && !list.some((g) => String(g.id) === groupFilter)) pickGroup('all');
       loadFailed = false;
     } catch (e) {
       if (isUnauthorized(e)) {
@@ -197,10 +255,12 @@
     scheduleOrderSave();
   }
 
+  /** Moves a card one step among the cards currently shown (the selected group), swapping with its visible neighbour. */
   function move(id: string, dir: -1 | 1): void {
     const index = indexOf(id);
-    const target = index + dir;
-    if (index < 0 || target < 0 || target >= items.length) return;
+    const neighbour = visible[visibleIndex(id) + dir];
+    const target = neighbour ? indexOf(neighbour.id) : -1;
+    if (index < 0 || target < 0) return;
     const next = items.slice();
     const a = next[index];
     const b = next[target];
@@ -330,6 +390,10 @@
           type="button"
           aria-pressed={filter === 'offline'}
           onclick={() => (filter = 'offline')}>{$tr('dash.filter.offline')}</button>
+        {#if groups.length > 0}
+          <Select size="sm" value={groupFilter} options={groupOptions} ariaLabel={$tr('dash.group.label')} onchange={pickGroup} />
+        {/if}
+        <button class="chip" type="button" onclick={() => (groupsOpen = true)}>{$tr('dash.group.manage')}</button>
       </div>
       <div class="group end">
         <button class="chip" type="button" aria-pressed={view === 'cards'} onclick={() => setView('cards')}
@@ -369,11 +433,16 @@
               agent={agentFlags[card.id] ?? null}
               {now}
               {editing}
-              index={indexOf(card.id)}
-              count={items.length}
+              index={visibleIndex(card.id)}
+              count={visible.length}
               {onopen}
               onmove={(dir) => move(card.id, dir)}
               onremove={() => void removeCard(card)} />
+            {#if editing && groups.length > 0}
+              <div class="pick">
+                <Select size="sm" value={String(card.group_id ?? 0)} options={cardGroupOptions} ariaLabel={$tr('dash.group.label')} onchange={(v) => void setCardGroup(card, v)} />
+              </div>
+            {/if}
           </div>
         {/each}
       </div>
@@ -396,17 +465,26 @@
               agent={agentFlags[card.id] ?? null}
               {now}
               {editing}
-              index={indexOf(card.id)}
-              count={items.length}
+              index={visibleIndex(card.id)}
+              count={visible.length}
               {onopen}
               onmove={(dir) => move(card.id, dir)}
               onremove={() => void removeCard(card)} />
+            {#if editing && groups.length > 0}
+              <div class="pick">
+                <Select size="sm" value={String(card.group_id ?? 0)} options={cardGroupOptions} ariaLabel={$tr('dash.group.label')} onchange={(v) => void setCardGroup(card, v)} />
+              </div>
+            {/if}
           </div>
         {/each}
       </div>
     {/if}
   {/if}
 </section>
+
+{#if groupsOpen}
+  <GroupsModal {groups} onclose={() => (groupsOpen = false)} onchanged={() => void load()} {onauthlost} />
+{/if}
 
 {#if pending}
   <div class="toast undo" role="status" aria-live="polite">
@@ -416,6 +494,10 @@
 {/if}
 
 <style>
+  .pick {
+    margin-top: 8px;
+  }
+
   .count {
     margin: 0 0 12px;
   }

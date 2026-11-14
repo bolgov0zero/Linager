@@ -69,7 +69,9 @@ export interface ServerCard {
   id: string; name: string; address: string; os: string; agent_version: string;
   online: boolean; last_seen_at: string | null;
   sample: Sample | null; spark: number[];
+  group_id: number | null;
 }
+export interface Group { id: number; name: string }
 /** What a client needs to connect: agent port, agent-port certificate fingerprint, names/IPs of that certificate. */
 export interface ConnectInfo { port: string; fingerprint: string; hosts: string[] }
 export interface AvailableServer { id: string; name: string; address: string; os: string }
@@ -303,6 +305,12 @@ export const api = {
   totpDisable: (password: string) => request<void>('POST', 'api/me/totp/disable', { password }),
 
   dashboard: () => request<{ items: ServerCard[] }>('GET', 'api/dashboard'),
+  groups: () => request<Group[]>('GET', 'api/groups'),
+  groupCreate: (name: string) => request<Group>('POST', 'api/groups', { name }),
+  groupRename: (id: number, name: string) => request<void>('PUT', `api/groups/${id}`, { name }),
+  groupDelete: (id: number) => request<void>('DELETE', `api/groups/${id}`),
+  serverSetGroup: (serverId: string, groupId: number | null) =>
+    request<void>('PUT', `api/servers/${enc(serverId)}/group`, { group_id: groupId }),
   connectInfo: () => request<ConnectInfo>('GET', 'api/connect'),
   availableServers: () => request<AvailableServer[]>('GET', 'api/dashboard/available'),
   dashboardAdd: (serverId: string) => request<void>('POST', 'api/dashboard/items', { server_id: serverId }),

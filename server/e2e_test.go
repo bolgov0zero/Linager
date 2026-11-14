@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -178,6 +179,28 @@ func TestEndToEnd(t *testing.T) {
 	}
 	if code := api.do("GET", "/api/connect", nil, &ci); code != 200 || ci.Fingerprint != serverFP || ci.Port != strings.Split(cfg.Agents.Listen, ":")[1] || len(ci.Hosts) != 1 {
 		t.Fatalf("connect info: %d %+v", code, ci)
+	}
+
+	// --- server groups: create, duplicate name refused, rename, list, delete ---
+	var grp struct {
+		ID   int64  `json:"id"`
+		Name string `json:"name"`
+	}
+	if code := api.do("POST", "/api/groups", map[string]string{"name": " Prod "}, &grp); code != 200 || grp.Name != "Prod" {
+		t.Fatalf("group create: %d %+v", code, grp)
+	}
+	if code := api.do("POST", "/api/groups", map[string]string{"name": "prod"}, nil); code != http.StatusConflict {
+		t.Fatalf("duplicate group name must be refused, got %d", code)
+	}
+	if code := api.do("PUT", "/api/groups/"+strconv.FormatInt(grp.ID, 10), map[string]string{"name": "Production"}, nil); code != 200 {
+		t.Fatalf("group rename: %d", code)
+	}
+	var gl []struct{ Name string }
+	if code := api.do("GET", "/api/groups", nil, &gl); code != 200 || len(gl) != 1 || gl[0].Name != "Production" {
+		t.Fatalf("group list: %d %+v", code, gl)
+	}
+	if code := api.do("DELETE", "/api/groups/"+strconv.FormatInt(grp.ID, 10), nil, nil); code != 200 {
+		t.Fatalf("group delete: %d", code)
 	}
 
 	// --- enrollment with a wrong pinned fingerprint is refused ---
