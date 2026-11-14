@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.6
+
+- The "Linager updates" page no longer freezes after "Check" finds a release without notes: the server always sends a
+  list (never null) and the page tolerates missing fields.
+- Release notes on GitHub are taken from this file, so the updates page shows the real list of changes; wrapped lines
+  of one item are joined.
+
 ## 0.1.5
 
 - Metrics charts are redrawn: the time axis covers the whole selected period, averages are lines with a light fill and
