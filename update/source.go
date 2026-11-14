@@ -153,11 +153,23 @@ func Find(rels []Release, version string) (Release, error) {
 
 // NotesLines turns release notes into short bullet lines.
 func NotesLines(body string) []string {
-	var out []string
-	for _, l := range strings.Split(body, "\n") {
-		l = strings.TrimSpace(strings.TrimLeft(strings.TrimSpace(l), "-*• "))
-		if l != "" && !strings.HasPrefix(l, "#") && !strings.HasPrefix(strings.ToLower(l), "full changelog") && len(out) < 12 {
-			out = append(out, l)
+	out := []string{} // never nil: the web reads notes.length
+	full := false
+	for _, raw := range strings.Split(body, "\n") {
+		l := strings.TrimSpace(raw)
+		item := strings.TrimSpace(strings.TrimLeft(l, "-*• "))
+		if item == "" || strings.HasPrefix(l, "#") || strings.HasPrefix(strings.ToLower(item), "full changelog") {
+			continue
+		}
+		// An indented line that is not a new bullet continues the previous item (wrapped CHANGELOG lines).
+		if len(out) > 0 && raw != l && !strings.ContainsAny(l[:1], "-*•") {
+			if !full {
+				out[len(out)-1] += " " + item
+			}
+			continue
+		}
+		if full = len(out) >= 12; !full {
+			out = append(out, item)
 		}
 	}
 	return out

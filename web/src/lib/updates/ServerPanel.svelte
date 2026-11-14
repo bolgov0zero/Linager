@@ -39,7 +39,7 @@
   );
 
   function stepState(id: UpdateStep['id']): UpdateStep['state'] {
-    return run.steps.find((step) => step.id === id)?.state ?? 'pending';
+    return run.steps?.find((step) => step.id === id)?.state ?? 'pending';
   }
 
   function confirmUpdate(): void {
@@ -89,7 +89,7 @@
     <p class="upd-err">{srv.check_error}</p>
   {/if}
 
-  {#if srv.notes.length > 0}
+  {#if srv.notes?.length}
     <ul class="upd-list">
       {#each srv.notes as note, i (i)}
         <li>{note}</li>

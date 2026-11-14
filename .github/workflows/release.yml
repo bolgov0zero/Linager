@@ -50,5 +50,9 @@ jobs:
           case "$GITHUB_REF_NAME" in *-*) flags="--prerelease";; esac
           files="bin/linager_linux_amd64 bin/linager_amd64.deb bin/SHA256SUMS bin/manifest.json"
           if [ -n "${UNSIGNED:-}" ]; then flags="--prerelease"; else files="$files bin/SHA256SUMS.minisig bin/manifest.json.minisig"; fi
+          # Release notes: this version's section of CHANGELOG.md (the server shows them on the updates page).
+          ver="${GITHUB_REF_NAME#v}"
+          awk -v v="$ver" '/^## /{p=($2==v)} p && !/^## /' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          if [ -s "$RUNNER_TEMP/notes.md" ]; then flags="$flags --notes-file $RUNNER_TEMP/notes.md"; else flags="$flags --generate-notes"; fi
           # shellcheck disable=SC2086
-          gh release create "$GITHUB_REF_NAME" $flags --generate-notes $files
+          gh release create "$GITHUB_REF_NAME" $flags $files
