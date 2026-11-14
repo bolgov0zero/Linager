@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4
+
+- The "Linager updates" page no longer hangs on "Loading…" while a release check runs: the check talks to GitHub
+  without holding the updates lock, and repeated clicks on "Check" share one request.
+
 ## 0.1.3
 
 - Files tab works like a file explorer: a folder tree on the left (lazy loading, resizable), the folder contents on the right;
