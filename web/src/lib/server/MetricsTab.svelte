@@ -1,7 +1,7 @@
 <script lang="ts">
   import { api, type History, type HistoryPoint, type MetricStats, type Period } from '../../api';
   import { locale, tr } from '../../i18n';
-  import BarChart from './BarChart.svelte';
+  import TimeChart from './TimeChart.svelte';
   import MetricsExtras from './MetricsExtras.svelte';
   import { formatDateTime, formatPct, formatRate, formatStep, formatTick } from './format';
   import type { ChartPoint } from './model';
@@ -89,14 +89,16 @@
     <div class="charts">
       <article class="card chart-card">
         <h3>{$tr('srv.metrics.cpu')}</h3>
-        <BarChart
-          points={cpu}
+        <TimeChart
+          series={[{ label: $tr('srv.metrics.cpu'), color: 'var(--accent)', points: cpu }]}
+          from={h.from}
+          to={h.to}
           step={h.step_seconds}
           events={h.events}
-          format={formatPct}
-          yMax={100}
           tickLabel={(ts) => formatTick(ts, period, $locale)}
           fullLabel={(ts) => formatDateTime(ts, $locale)}
+          format={formatPct}
+          yMax={100}
           label={$tr('srv.metrics.cpu')}
         />
         {@render statLine(h.stats.cpu, formatPct)}
@@ -104,14 +106,16 @@
 
       <article class="card chart-card">
         <h3>{$tr('srv.metrics.ram')}</h3>
-        <BarChart
-          points={mem}
+        <TimeChart
+          series={[{ label: $tr('srv.metrics.ram'), color: 'var(--accent)', points: mem }]}
+          from={h.from}
+          to={h.to}
           step={h.step_seconds}
           events={h.events}
-          format={formatPct}
-          yMax={100}
           tickLabel={(ts) => formatTick(ts, period, $locale)}
           fullLabel={(ts) => formatDateTime(ts, $locale)}
+          format={formatPct}
+          yMax={100}
           label={$tr('srv.metrics.ram')}
         />
         {@render statLine(h.stats.mem, formatPct)}
@@ -119,14 +123,16 @@
 
       <article class="card chart-card">
         <h3>{$tr('srv.metrics.disk')}</h3>
-        <BarChart
-          points={disk}
+        <TimeChart
+          series={[{ label: $tr('srv.metrics.disk'), color: 'var(--accent)', points: disk }]}
+          from={h.from}
+          to={h.to}
           step={h.step_seconds}
           events={h.events}
-          format={formatPct}
-          yMax={100}
           tickLabel={(ts) => formatTick(ts, period, $locale)}
           fullLabel={(ts) => formatDateTime(ts, $locale)}
+          format={formatPct}
+          yMax={100}
           label={$tr('srv.metrics.disk')}
         />
         {@render statLine(h.stats.disk, formatPct)}
@@ -134,17 +140,20 @@
 
       <article class="card chart-card">
         <h3>{$tr('srv.metrics.net')}</h3>
-        <BarChart
-          points={rx}
-          secondary={tx}
+        <TimeChart
+          series={[
+            { label: `↓ ${$tr('srv.chart.rx')}`, color: 'var(--series-1)', points: rx },
+            { label: `↑ ${$tr('srv.chart.tx')}`, color: 'var(--series-2)', points: tx },
+          ]}
+          from={h.from}
+          to={h.to}
           step={h.step_seconds}
           events={h.events}
-          format={formatRate}
-          yMax="auto"
-          primaryLabel="↓"
-          secondaryLabel="↑"
           tickLabel={(ts) => formatTick(ts, period, $locale)}
           fullLabel={(ts) => formatDateTime(ts, $locale)}
+          format={formatRate}
+          binary
+          minTop={1024}
           label={$tr('srv.metrics.net')}
         />
         {@render statLine(h.stats.rx, formatRate, '↓')}

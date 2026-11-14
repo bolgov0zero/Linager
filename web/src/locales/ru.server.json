@@ -71,7 +71,7 @@
   "srv.metrics.cpu": "CPU, %",
   "srv.metrics.ram": "RAM, %",
   "srv.metrics.disk": "Диск (макс.), %",
-  "srv.metrics.net": "Сеть · ↓ приём, ↑ отдача",
+  "srv.metrics.net": "Сеть",
   "srv.stat.min": "мин",
   "srv.stat.avg": "средн",
   "srv.stat.p95": "p95",
@@ -101,5 +101,9 @@
   "srv.agent.confirmOk": "Обновить",
   "srv.agent.done": "Агент {name} обновлён до {version}",
   "srv.agent.rolledBack": "Откат агента на {name}: связь не восстановилась",
-  "srv.event.rename": "переименование"
+  "srv.event.rename": "переименование",
+  "srv.chart.avgLegend": "среднее",
+  "srv.chart.peakLegend": "пик",
+  "srv.chart.rx": "приём",
+  "srv.chart.tx": "отдача"
 }

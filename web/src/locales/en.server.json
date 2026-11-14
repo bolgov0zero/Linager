@@ -71,7 +71,7 @@
   "srv.metrics.cpu": "CPU, %",
   "srv.metrics.ram": "RAM, %",
   "srv.metrics.disk": "Disk (max), %",
-  "srv.metrics.net": "Network · ↓ in, ↑ out",
+  "srv.metrics.net": "Network",
   "srv.stat.min": "min",
   "srv.stat.avg": "avg",
   "srv.stat.p95": "p95",
@@ -101,5 +101,9 @@
   "srv.agent.confirmOk": "Update",
   "srv.agent.done": "Agent {name} updated to {version}",
   "srv.agent.rolledBack": "Agent rollback on {name}: the link was not restored",
-  "srv.event.rename": "renamed"
+  "srv.event.rename": "renamed",
+  "srv.chart.avgLegend": "average",
+  "srv.chart.peakLegend": "peak",
+  "srv.chart.rx": "receive",
+  "srv.chart.tx": "send"
 }
