@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.3
+
+- Files tab works like a file explorer: a folder tree on the left (lazy loading, resizable), the folder contents on the right;
+  click selects, double click or Enter opens a folder or the file editor; binary and large files offer a download.
+- The server name follows the hostname: the agent reports it on every connection (also after a reboot) and right after it
+  changes; a rename is recorded as a server event. Names that were not derived from the hostname stay as they are.
+- All drop-down lists use a project-styled control instead of the native one.
+
 ## 0.1.2
 
 - Dashboard: the "Terminal" button opens a floating terminal window over the dashboard. Windows can be moved, resized,
