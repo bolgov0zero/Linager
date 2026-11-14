@@ -46,8 +46,11 @@ type Updates struct {
 	checkedAt time.Time
 	checkErr  string
 	latestMan *release.Manifest
-	ro        *rollout
-	roSaved   string // last persisted rollout state, to skip identical writes
+	// checking is closed when the release check in flight ends; checkingCh is the channel it checks.
+	checking   chan struct{}
+	checkingCh string
+	ro         *rollout
+	roSaved    string // last persisted rollout state, to skip identical writes
 }
 
 // rolloutSetting keeps the running rollout in the settings table, so a server restart (including the
@@ -177,12 +180,50 @@ func (u *Updates) SetChannel(ctx context.Context, ch string) error {
 }
 
 // Check reads the release list and verifies the manifest of the newest release.
+// The network work runs without u.mu, so the updates page, the header counter and the rollout keep
+// answering while GitHub is slow. Concurrent checks of the same channel share one request.
 func (u *Updates) Check(ctx context.Context) error {
-	cctx, cancel := context.WithTimeout(ctx, 45*time.Second)
+	u.mu.Lock()
+	for u.checking != nil {
+		wait, sameChannel := u.checking, u.checkingCh == u.channel
+		u.mu.Unlock()
+		select {
+		case <-wait:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+		u.mu.Lock()
+		if sameChannel {
+			defer u.mu.Unlock()
+			if u.checkErr != "" {
+				return errors.New(u.checkErr)
+			}
+			return nil
+		}
+		// The channel changed while the other check ran: check again for the current one.
+	}
+	done := make(chan struct{})
+	ch := u.channel
+	u.checking, u.checkingCh = done, ch
+	u.mu.Unlock()
+
+	// The check is shared, so a closed browser tab must not cancel it for the others.
+	cctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 45*time.Second)
 	defer cancel()
 	rels, err := u.Src.Releases(cctx)
+	var man *release.Manifest
+	if err == nil {
+		if l, ok := update.Latest(rels, ch); ok {
+			if m, merr := u.fetchManifest(cctx, l); merr == nil {
+				man = m
+			}
+		}
+	}
+
 	u.mu.Lock()
 	defer u.mu.Unlock()
+	u.checking, u.checkingCh = nil, ""
+	close(done)
 	u.checkedAt = time.Now()
 	if err != nil {
 		u.checkErr = err.Error()
@@ -190,12 +231,7 @@ func (u *Updates) Check(ctx context.Context) error {
 	}
 	u.checkErr = ""
 	u.releases = rels
-	u.latestMan = nil
-	if l, ok := update.Latest(rels, u.channel); ok {
-		if m, err := u.fetchManifest(cctx, l); err == nil {
-			u.latestMan = m
-		}
-	}
+	u.latestMan = man
 	return nil
 }
 
