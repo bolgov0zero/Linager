@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.15
+
+- Docker tab: the container buttons stand in one line (start and stop are one button that follows the state), so rows are much lower; on screens up to 1000 px the buttons wrap into two lines and ports and RAM are hidden.
+
 ## 0.1.14
 
 - "Add server" dialog: client connection details (address, port, certificate fingerprint) with a button that copies `address:port`. The address is the one the panel was opened with, so it is the domain when the panel is behind a reverse proxy.

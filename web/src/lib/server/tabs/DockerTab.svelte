@@ -300,14 +300,17 @@
                 <td class="acts">
                   <div class="row end">
                     <button class="btn" type="button" disabled={readOnly} onclick={() => openLogs(c)}>{$tStore('docker.logs')}</button>
-                    <button class="btn" type="button" disabled={readOnly || running || rowBusy(c)} onclick={() => containerAction(c, 'start')}>
-                      {$tStore('docker.act.start')}
-                    </button>
+                    {#if running}
+                      <button class="btn" type="button" disabled={readOnly || rowBusy(c)} onclick={() => containerAction(c, 'stop')}>
+                        {$tStore('docker.act.stop')}
+                      </button>
+                    {:else}
+                      <button class="btn" type="button" disabled={readOnly || rowBusy(c)} onclick={() => containerAction(c, 'start')}>
+                        {$tStore('docker.act.start')}
+                      </button>
+                    {/if}
                     <button class="btn" type="button" disabled={readOnly || !running || rowBusy(c)} onclick={() => containerAction(c, 'restart')}>
                       {$tStore('docker.act.restart')}
-                    </button>
-                    <button class="btn" type="button" disabled={readOnly || !running || rowBusy(c)} onclick={() => containerAction(c, 'stop')}>
-                      {$tStore('docker.act.stop')}
                     </button>
                     <button class="btn" type="button" disabled={readOnly || rowBusy(c)} onclick={() => requestRemove(c)}>
                       {$tStore('docker.act.remove')}
@@ -510,13 +513,24 @@
   }
 
   .name {
-    min-width: 0;
+    min-width: 150px;
     overflow-wrap: anywhere;
   }
 
   .acts {
     width: 1%;
     white-space: nowrap;
+  }
+
+  /* Row actions stay in one line (compact buttons); on phones they may wrap. */
+  .acts .row {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .acts .btn {
+    padding: 4px 10px;
+    font-size: 13px;
   }
 
   .acts-head {
@@ -609,13 +623,19 @@
     white-space: nowrap;
   }
 
-  @media (max-width: 720px) {
+  /* Medium and narrow screens: drop ports and RAM, let the row actions wrap into two lines. */
+  @media (max-width: 1000px) {
     .hide-sm {
       display: none;
     }
 
     table.grid {
       min-width: 0;
+    }
+
+    .acts .row {
+      flex-wrap: wrap;
+      min-width: 260px;
     }
   }
 </style>
