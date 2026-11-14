@@ -204,6 +204,18 @@ func (m *Metrics) Ingest(ctx context.Context, serverID string, b *protocol.Metri
 	}
 }
 
+// Hostname stores the hostname an agent reports (on connect and whenever it changes). When the server
+// name follows it, the rename is recorded as an event and dashboards reload.
+func (m *Metrics) Hostname(ctx context.Context, serverID, hostname string) {
+	ctx = context.WithoutCancel(ctx)
+	oldName, newName, err := m.DB.SyncHostname(ctx, serverID, hostname)
+	if err != nil || newName == "" {
+		return
+	}
+	_ = m.DB.AddEvent(ctx, serverID, time.Now(), "rename", oldName+" → "+newName)
+	m.Live.Publish("dashboard", map[string]any{})
+}
+
 // Status records connect/disconnect transitions as events and announces them.
 func (m *Metrics) Status(ctx context.Context, serverID string, online bool) {
 	kind, msg := "offline", "agent disconnected"

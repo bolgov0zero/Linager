@@ -209,6 +209,7 @@ func (a *AgentPort) ws(w http.ResponseWriter, r *http.Request) {
 	defer a.Hub.remove(id, c)
 	_ = a.DB.TouchServer(ctx, id, h.OS, h.AgentVersion, hello.V)
 	_ = a.DB.SetModules(ctx, id, h.Modules)
+	a.Metrics.Hostname(ctx, id, h.Hostname)
 	if a.Updates != nil {
 		a.Updates.AgentHello(ctx, id, h.AgentVersion)
 	}
@@ -240,6 +241,9 @@ func (a *AgentPort) ws(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			a.Metrics.Ingest(ctx, id, &batch)
+			if batch.System != nil {
+				a.Metrics.Hostname(ctx, id, batch.System.Hostname)
+			}
 		case protocol.TypeCertRenew:
 			// The agent is authenticated (mTLS and a signed message) and still registered, so it may have a
 			// fresh certificate for the same key. Requests are rate-limited per connection; a connection that

@@ -234,17 +234,24 @@ func session(ctx context.Context, o RunOptions, st *State, cert tls.Certificate,
 		t := time.NewTicker(o.SampleEvery)
 		defer t.Stop()
 		first := true
+		host := hostname()
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-t.C:
+				// The hostname is polled every tick (a cheap uname); a change resends the system info so the
+				// server can update the server name without waiting for a reconnect.
+				renamed := false
+				if h := hostname(); h != host {
+					host, renamed = h, true
+				}
 				pending := buf.snapshot()
-				if len(pending) == 0 && !first {
+				if len(pending) == 0 && !first && !renamed {
 					continue
 				}
 				b := protocol.MetricsBatch{Samples: pending}
-				if first {
+				if first || renamed {
 					si := o.Collector.System(o.AgentVersion)
 					b.System = &si
 				}

@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -129,7 +130,7 @@ func (s *Store) ApproveEnrollment(ctx context.Context, e *Enrollment, issue func
 		return nil, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	name := uniqueName(ctx, tx, e.Hostname)
+	name := uniqueName(ctx, tx, e.Hostname, "")
 	srv, err := scanSrv(tx.QueryRow(ctx, `INSERT INTO servers (name,hostname,address,agent_pubkey,os,agent_version,protocol)
 		VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING `+srvCols, name, e.Hostname, e.Address, e.AgentPubkey, e.OS, e.AgentVersion, e.Protocol))
 	if err != nil {
@@ -153,11 +154,12 @@ func (s *Store) ApproveEnrollment(ctx context.Context, e *Enrollment, issue func
 	return srv, tx.Commit(ctx)
 }
 
-func uniqueName(ctx context.Context, tx pgx.Tx, base string) string {
+// uniqueName returns base, or base-N when another server (not exceptID) already has that name.
+func uniqueName(ctx context.Context, tx pgx.Tx, base, exceptID string) string {
 	name := base
 	for i := 2; ; i++ {
 		var n int
-		if err := tx.QueryRow(ctx, `SELECT count(*) FROM servers WHERE name=$1`, name).Scan(&n); err != nil || n == 0 {
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM servers WHERE name=$1 AND id::text<>$2`, name, exceptID).Scan(&n); err != nil || n == 0 {
 			return name
 		}
 		name = base + "-" + itoa(i)
@@ -216,4 +218,56 @@ func (s *Store) TouchServer(ctx context.Context, id, os, agentVersion string, pr
 	_, err := s.Pool.Exec(ctx, `UPDATE servers SET last_seen_at=now(), os=coalesce(nullif($2,''),os),
 		agent_version=coalesce(nullif($3,''),agent_version), protocol=$4 WHERE id=$1`, id, os, agentVersion, protocol)
 	return err
+}
+
+// autoName reports whether a name derived from a hostname by uniqueName: the hostname itself or hostname-N.
+func autoName(name, hostname string) bool {
+	if name == hostname {
+		return true
+	}
+	rest, ok := strings.CutPrefix(name, hostname+"-")
+	if !ok || rest == "" {
+		return false
+	}
+	for _, r := range rest {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// SyncHostname stores the hostname the agent reports. A server name that was derived from the old
+// hostname follows the new one (kept unique); a name that differs from it is left alone.
+// It returns the old and new name when the name changed.
+func (s *Store) SyncHostname(ctx context.Context, id, hostname string) (oldName, newName string, err error) {
+	if hostname == "" || hostname == "unknown" || len(hostname) > 253 {
+		return "", "", nil
+	}
+	tx, err := s.Pool.Begin(ctx)
+	if err != nil {
+		return "", "", err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var name, current string
+	if err := tx.QueryRow(ctx, `SELECT name, hostname FROM servers WHERE id=$1 FOR UPDATE`, id).Scan(&name, &current); err != nil {
+		return "", "", err
+	}
+	if current == hostname {
+		return "", "", nil
+	}
+	next := name
+	if autoName(name, current) {
+		next = uniqueName(ctx, tx, hostname, id)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE servers SET hostname=$2, name=$3 WHERE id=$1`, id, hostname, next); err != nil {
+		return "", "", err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return "", "", err
+	}
+	if next == name {
+		return "", "", nil
+	}
+	return name, next, nil
 }

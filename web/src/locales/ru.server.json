@@ -15,7 +15,6 @@
   "srv.retry": "Повторить",
   "srv.offlineNotice": "Сервер не в сети. Показаны последние известные значения.",
   "srv.tabsLabel": "Разделы сервера",
-
   "srv.tab.overview": "Обзор",
   "srv.tab.metrics": "Метрики",
   "srv.tab.terminal": "Терминал",
@@ -27,7 +26,6 @@
   "srv.tab.updates": "Обновления",
   "srv.tab.processes": "Процессы",
   "srv.tab.logs": "Логи",
-
   "srv.ov.cpu": "CPU",
   "srv.ov.ram": "RAM",
   "srv.ov.net": "Сеть · приём",
@@ -60,7 +58,6 @@
   "srv.dur.dh": "{d} д {h} ч",
   "srv.dur.hm": "{h} ч {m} мин",
   "srv.dur.m": "{m} мин",
-
   "srv.period.1h": "1 ч",
   "srv.period.24h": "24 ч",
   "srv.period.7d": "7 дн",
@@ -85,7 +82,6 @@
   "srv.step.s": "{n} с",
   "srv.step.m": "{n} мин",
   "srv.step.h": "{n} ч",
-
   "srv.events.title": "События за период",
   "srv.events.none": "Событий за период нет",
   "srv.events.legend": "Метки на графиках: жёлтые — события, красные — перезагрузка.",
@@ -104,5 +100,6 @@
   "srv.agent.confirmText": "Агент перезапустится, связь прервётся на несколько секунд. Если агент не выйдет на связь за 60 секунд, он откатится на прежнюю версию.",
   "srv.agent.confirmOk": "Обновить",
   "srv.agent.done": "Агент {name} обновлён до {version}",
-  "srv.agent.rolledBack": "Откат агента на {name}: связь не восстановилась"
+  "srv.agent.rolledBack": "Откат агента на {name}: связь не восстановилась",
+  "srv.event.rename": "переименование"
 }
