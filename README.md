@@ -1,8 +1,8 @@
 # Linager
 
-Открытая система управления серверами на Debian: сервер с веб-админкой и агенты на управляемых серверах.
+Открытая система управления серверами на Debian и Ubuntu: сервер с веб-админкой и агенты на управляемых серверах.
 
-Open-source server management for Debian: a server with a web admin panel and agents on managed hosts.
+Open-source server management for Debian and Ubuntu: a server with a web admin panel and agents on managed hosts.
 
 **Статус / Status:** проектирование, кода пока нет / design phase, no code yet.
 
