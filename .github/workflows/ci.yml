@@ -10,6 +10,18 @@ permissions:
 jobs:
   go:
     runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: linager
+          POSTGRES_DB: linager_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U linager" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      LINAGER_TEST_DSN: postgres://linager@127.0.0.1:5432/linager_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

@@ -1,0 +1,98 @@
+package server
+
+import (
+	"context"
+	"crypto/tls"
+	"errors"
+	"io/fs"
+	"log/slog"
+	"net"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/bolgov0zero/linager/internal/config"
+	"github.com/bolgov0zero/linager/server/store"
+)
+
+// CreateAdmin creates the first (and on this version only) administrator.
+func CreateAdmin(ctx context.Context, db *store.Store, login, password string) error {
+	login = strings.ToLower(strings.TrimSpace(login))
+	if login == "" {
+		return errors.New("login is required")
+	}
+	if n, err := db.UserCount(ctx); err != nil {
+		return err
+	} else if n > 0 {
+		return errors.New("an administrator already exists")
+	}
+	hash, err := HashPassword(password)
+	if err != nil {
+		return err
+	}
+	_, err = db.CreateAdmin(ctx, login, hash)
+	return err
+}
+
+// Run starts the admin and agent listeners and blocks until ctx is cancelled.
+func Run(ctx context.Context, cfg *config.Server, static fs.FS, log *slog.Logger) error {
+	db, err := store.Open(ctx, cfg.Database.DSN)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	keys, err := LoadKeys(cfg.DataDir)
+	if err != nil {
+		return err
+	}
+	hub := NewHub()
+	admin, err := NewAdmin(db, keys, hub, cfg, static, log)
+	if err != nil {
+		return err
+	}
+	agents := NewAgentPort(db, keys, hub, log)
+
+	adminSrv := &http.Server{Addr: cfg.Admin.Listen, Handler: admin.Handler(), ReadHeaderTimeout: 10 * time.Second}
+	agentSrv := &http.Server{Handler: agents.Handler(), TLSConfig: agents.TLSConfig(), ReadHeaderTimeout: 10 * time.Second}
+	agentLn, err := net.Listen("tcp", cfg.Agents.Listen)
+	if err != nil {
+		return err
+	}
+	adminLn, err := net.Listen("tcp", cfg.Admin.Listen)
+	if err != nil {
+		_ = agentLn.Close()
+		return err
+	}
+
+	errc := make(chan error, 2)
+	go func() { errc <- adminSrv.Serve(adminLn) }()
+	go func() { errc <- agentSrv.Serve(tls.NewListener(agentLn, agents.TLSConfig())) }()
+	go func() {
+		t := time.NewTicker(10 * time.Minute)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				if err := db.PurgeExpired(ctx); err != nil {
+					log.Warn("purge expired", "err", err)
+				}
+			}
+		}
+	}()
+	log.Info("linager server started", "admin", cfg.Admin.Listen, "agents", cfg.Agents.Listen)
+
+	select {
+	case <-ctx.Done():
+	case err = <-errc:
+	}
+	shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_ = adminSrv.Shutdown(shutdown)
+	_ = agentSrv.Shutdown(shutdown)
+	if errors.Is(err, http.ErrServerClosed) {
+		err = nil
+	}
+	return err
+}

@@ -2,6 +2,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -19,8 +20,8 @@ func newRootCmd() *cobra.Command {
 	}
 	root.AddCommand(
 		newVersionCmd(),
-		stub("server", "Run the Linager server"),
-		stub("agent", "Run the Linager agent"),
+		newServerCmd(),
+		newAgentCmd(),
 		stub("install", "Interactive installer (server or agent)"),
 		stub("update", "Update Linager"),
 		stub("backup", "Back up the database and configuration"),
@@ -53,6 +54,10 @@ func stub(use, short string) *cobra.Command {
 func main() {
 	if err := newRootCmd().Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
+		var ee *exitError
+		if errors.As(err, &ee) {
+			os.Exit(ee.code)
+		}
 		os.Exit(1)
 	}
 }

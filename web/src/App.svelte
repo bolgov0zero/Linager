@@ -1,7 +1,14 @@
 <script lang="ts">
-  import { locale, setLocale, t, type Locale } from './i18n';
+  import { onMount } from 'svelte';
+  import { api, type Session } from './api';
+  import { locale, setLocale, tr, type Locale } from './i18n';
+  import Login from './lib/Login.svelte';
+  import SecurityModal from './lib/SecurityModal.svelte';
+  import Servers from './lib/Servers.svelte';
+  import Toast from './lib/Toast.svelte';
 
   type Theme = 'light' | 'dark';
+  type Phase = 'loading' | 'login' | 'app';
 
   function initialTheme(): Theme {
     const attr = document.documentElement.dataset.theme;
@@ -10,12 +17,9 @@
   }
 
   let theme = $state<Theme>(initialTheme());
-
-  // Reactive translator: re-derives whenever the locale store changes.
-  const tr = $derived.by(() => {
-    const current = $locale;
-    return (key: string) => t(key, current);
-  });
+  let phase = $state<Phase>('loading');
+  let session = $state<Session | null>(null);
+  let securityOpen = $state(false);
 
   function toggleTheme(): void {
     theme = theme === 'dark' ? 'light' : 'dark';
@@ -25,37 +29,91 @@
   function pickLocale(next: Locale): void {
     setLocale(next);
   }
+
+  function startSession(next: Session): void {
+    session = next;
+    phase = 'app';
+  }
+
+  function endSession(): void {
+    session = null;
+    securityOpen = false;
+    phase = 'login';
+  }
+
+  async function logout(): Promise<void> {
+    try {
+      await api.logout();
+    } catch {
+      // Drop the local session even if the server call failed.
+    }
+    endSession();
+  }
+
+  function setTotpEnabled(enabled: boolean): void {
+    if (session) session = { ...session, totp_enabled: enabled };
+  }
+
+  async function restoreSession(): Promise<void> {
+    try {
+      startSession(await api.me());
+    } catch {
+      endSession();
+    }
+  }
+
+  onMount(() => {
+    void restoreSession();
+  });
 </script>
 
 <header class="top">
   <div class="brand">
-    <h1>{tr('app.title')}</h1>
-    <span class="status">{tr('app.status')}</span>
+    <h1>{$tr('app.title')}</h1>
   </div>
   <div class="controls">
+    {#if phase === 'app'}
+      <button class="btn" type="button" onclick={() => (securityOpen = true)}>{$tr('app.security')}</button>
+      <button class="btn" type="button" onclick={() => void logout()}>{$tr('app.logout')}</button>
+    {/if}
     <button class="btn" type="button" onclick={toggleTheme}>
-      {theme === 'dark' ? tr('theme.light') : tr('theme.dark')}
+      {theme === 'dark' ? $tr('theme.light') : $tr('theme.dark')}
     </button>
     <div class="seg" role="group" aria-label="language">
       <button
         class="chip"
         type="button"
         aria-pressed={$locale === 'ru'}
-        onclick={() => pickLocale('ru')}>{tr('lang.ru')}</button>
+        onclick={() => pickLocale('ru')}>{$tr('lang.ru')}</button>
       <button
         class="chip"
         type="button"
         aria-pressed={$locale === 'en'}
-        onclick={() => pickLocale('en')}>{tr('lang.en')}</button>
+        onclick={() => pickLocale('en')}>{$tr('lang.en')}</button>
     </div>
   </div>
 </header>
 
 <main>
-  <section class="placeholder">
-    <p>{tr('page.placeholder')}</p>
-  </section>
+  {#if phase === 'loading'}
+    <p class="muted">{$tr('common.loading')}</p>
+  {:else if phase === 'login'}
+    <Login onlogin={startSession} />
+  {:else if session}
+    <Servers onauthlost={endSession} />
+  {/if}
 </main>
+
+{#if securityOpen && session}
+  <SecurityModal
+    totpEnabled={session.totp_enabled}
+    onchange={setTotpEnabled}
+    onclose={() => (securityOpen = false)}
+    onauthlost={endSession}
+  />
+{/if}
+
+<Toast />
 
 <style>
   .top {
@@ -70,12 +128,6 @@
     box-shadow: 3px 3px 0 var(--shade);
   }
 
-  .brand {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-  }
-
   .brand h1 {
     margin: 0;
     font-size: 26px;
@@ -83,32 +135,11 @@
     line-height: 1;
   }
 
-  .status {
-    color: var(--muted);
-  }
-
   .controls {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
-  }
-
-  .btn,
-  .chip {
-    background: var(--surface);
-    border: 2px solid var(--line);
-    border-radius: 0;
-    padding: 6px 12px;
-    cursor: pointer;
-    font-family: var(--font-display);
-    font-size: 14px;
-    letter-spacing: 0.02em;
-    box-shadow: 3px 3px 0 var(--shade);
-  }
-
-  .chip[aria-pressed='true'] {
-    background: var(--ink);
-    color: var(--surface);
   }
 
   .seg {
@@ -118,18 +149,5 @@
 
   main {
     padding: 24px 16px;
-  }
-
-  .placeholder {
-    max-width: 720px;
-    padding: 24px;
-    background: var(--surface);
-    border: 2px solid var(--line);
-    box-shadow: 4px 4px 0 var(--shade);
-  }
-
-  .placeholder p {
-    margin: 0;
-    color: var(--muted);
   }
 </style>

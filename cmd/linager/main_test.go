@@ -21,7 +21,7 @@ func TestVersionCommand(t *testing.T) {
 
 func TestStubReturnsError(t *testing.T) {
 	root := newRootCmd()
-	root.SetArgs([]string{"server"})
+	root.SetArgs([]string{"update"})
 	if err := root.Execute(); err == nil {
 		t.Fatal("expected error from unimplemented command")
 	}

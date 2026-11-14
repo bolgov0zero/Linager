@@ -1,0 +1,91 @@
+// Package config loads and validates the server configuration file.
+package config
+
+import (
+	"errors"
+	"fmt"
+	"net"
+	"os"
+	"strconv"
+
+	"gopkg.in/yaml.v3"
+)
+
+// Server is the content of /etc/linager/server.yaml.
+type Server struct {
+	DataDir  string `yaml:"data_dir"`
+	Database struct {
+		DSN string `yaml:"dsn"`
+	} `yaml:"database"`
+	Admin struct {
+		Listen         string   `yaml:"listen"`          // host:port, port is mandatory
+		BasePath       string   `yaml:"base_path"`       // e.g. /linager, empty by default
+		TrustedProxies []string `yaml:"trusted_proxies"` // CIDRs; default: any
+		CookieSecure   string   `yaml:"cookie_secure"`   // auto|always|never
+	} `yaml:"admin"`
+	Agents struct {
+		Listen string   `yaml:"listen"` // host:port, port is mandatory
+		Hosts  []string `yaml:"hosts"`  // names/IPs placed into the agent TLS certificate
+	} `yaml:"agents"`
+}
+
+// LoadServer reads, defaults and validates a server config.
+func LoadServer(path string) (*Server, error) {
+	b, err := os.ReadFile(path) //nolint:gosec // path is an operator-supplied config file
+	if err != nil {
+		return nil, err
+	}
+	var c Server
+	if err := yaml.Unmarshal(b, &c); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	c.applyDefaults()
+	return &c, c.Validate()
+}
+
+func (c *Server) applyDefaults() {
+	if c.DataDir == "" {
+		c.DataDir = "/var/lib/linager"
+	}
+	if len(c.Admin.TrustedProxies) == 0 {
+		c.Admin.TrustedProxies = []string{"0.0.0.0/0", "::/0"}
+	}
+	if c.Admin.CookieSecure == "" {
+		c.Admin.CookieSecure = "auto"
+	}
+}
+
+// Validate checks required settings. There are deliberately no default ports.
+func (c *Server) Validate() error {
+	if c.Database.DSN == "" {
+		return errors.New("database.dsn is required")
+	}
+	for name, addr := range map[string]string{"admin.listen": c.Admin.Listen, "agents.listen": c.Agents.Listen} {
+		if err := validListen(addr); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+	}
+	if c.Admin.Listen == c.Agents.Listen {
+		return errors.New("admin.listen and agents.listen must differ")
+	}
+	switch c.Admin.CookieSecure {
+	case "auto", "always", "never":
+	default:
+		return errors.New("admin.cookie_secure must be auto, always or never")
+	}
+	return nil
+}
+
+func validListen(addr string) error {
+	if addr == "" {
+		return errors.New("is required (no default port)")
+	}
+	_, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return err
+	}
+	if n, err := strconv.Atoi(port); err != nil || n < 1 || n > 65535 {
+		return errors.New("invalid port")
+	}
+	return nil
+}

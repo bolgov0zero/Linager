@@ -1,8 +1,9 @@
-import { get, writable } from 'svelte/store';
+import { derived, get, writable } from 'svelte/store';
 import ru from './locales/ru.json';
 import en from './locales/en.json';
 
 export type Locale = 'ru' | 'en';
+export type Vars = Record<string, string | number>;
 
 const dictionaries: Record<Locale, Record<string, string>> = { ru, en };
 const STORAGE_KEY = 'linager.lang';
@@ -30,8 +31,15 @@ export function setLocale(next: Locale): void {
   document.documentElement.lang = next;
 }
 
-export function t(key: string, current: Locale = get(locale)): string {
-  return dictionaries[current][key] ?? dictionaries[DEFAULT_LOCALE][key] ?? key;
+export function t(key: string, current: Locale = get(locale), vars?: Vars): string {
+  const raw = dictionaries[current][key] ?? dictionaries[DEFAULT_LOCALE][key] ?? key;
+  if (!vars) return raw;
+  return raw.replace(/\{(\w+)\}/g, (match: string, name: string) =>
+    name in vars ? String(vars[name]) : match,
+  );
 }
+
+// Reactive translator for templates: `{$tr('key')}` re-renders on locale change.
+export const tr = derived(locale, ($locale) => (key: string, vars?: Vars) => t(key, $locale, vars));
 
 document.documentElement.lang = get(locale);
