@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"os/user"
 	"syscall"
 
 	"github.com/creack/pty"
@@ -33,10 +34,7 @@ func termStream(ctx context.Context, raw json.RawMessage, sio *StreamIO) error {
 	}
 	cmd := exec.Command(shell, "-l") //nolint:gosec // the terminal is a root shell by design; gated by the terminal module and audit
 	cmd.Env = append(os.Environ(), "TERM=xterm-256color", "LANG=C.UTF-8")
-	cmd.Dir = "/root"
-	if _, err := os.Stat(cmd.Dir); err != nil {
-		cmd.Dir = "/"
-	}
+	cmd.Dir = homeDir()
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: uint16(clampSize(p.Cols, 80)), Rows: uint16(clampSize(p.Rows, 24))}) //nolint:gosec // bounded by clampSize
 	if err != nil {
 		return err
@@ -84,4 +82,24 @@ func termStream(ctx context.Context, raw json.RawMessage, sio *StreamIO) error {
 			_ = pty.Setsize(ptmx, &pty.Winsize{Cols: uint16(clampSize(sz[0], 80)), Rows: uint16(clampSize(sz[1], 24))}) //nolint:gosec // bounded by clampSize
 		}
 	}
+}
+
+// homeDir is the working directory of new shells: the home of the user running the agent
+// (root in production), or "/" when it is unknown or inaccessible.
+func homeDir() string {
+	dir := os.Getenv("HOME")
+	if dir == "" {
+		if u, err := user.Current(); err == nil {
+			dir = u.HomeDir
+		}
+	}
+	if st, err := os.Stat(dir); err != nil || !st.IsDir() { //nolint:gosec // HOME of the agent user, only probed
+		return "/"
+	}
+	if f, err := os.Open(dir); err != nil { //nolint:gosec // probing accessibility of the home directory
+		return "/"
+	} else {
+		_ = f.Close()
+	}
+	return dir
 }
