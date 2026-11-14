@@ -69,6 +69,15 @@ func probe(ctx context.Context, addr string) (der []byte, local string, err erro
 	return st.PeerCertificates[0].Raw, localIP(c), nil
 }
 
+// ProbeFingerprint connects to the server's agent port and returns the fingerprint of its certificate.
+func ProbeFingerprint(ctx context.Context, addr string) (string, error) {
+	der, _, err := probe(ctx, addr)
+	if err != nil {
+		return "", fmt.Errorf("cannot reach the server: %w", err)
+	}
+	return pki.Fingerprint(der), nil
+}
+
 // Enroll pairs this host with the server and stores the resulting identity.
 func Enroll(ctx context.Context, o EnrollOptions) error {
 	if o.PollEvery == 0 {

@@ -22,7 +22,7 @@ func newRootCmd() *cobra.Command {
 		newVersionCmd(),
 		newServerCmd(),
 		newAgentCmd(),
-		stub("install", "Interactive installer (server or agent)"),
+		newInstallCmd(),
 		stub("update", "Update Linager"),
 		stub("backup", "Back up the database and configuration"),
 	)
