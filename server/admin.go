@@ -32,24 +32,26 @@ const (
 
 // Admin serves the web admin panel and its JSON API.
 type Admin struct {
-	DB     *store.Store
-	Keys   *Keys
-	Hub    *Hub
-	Log    *slog.Logger
-	Cfg    *config.Server
-	Trust  *ProxyTrust
-	Static fs.FS // built frontend (may be nil in tests)
+	DB      *store.Store
+	Keys    *Keys
+	Hub     *Hub
+	Live    *Live
+	Metrics *Metrics
+	Log     *slog.Logger
+	Cfg     *config.Server
+	Trust   *ProxyTrust
+	Static  fs.FS // built frontend (may be nil in tests)
 
 	loginL *ipLimiter
 }
 
 // NewAdmin builds the admin handler set.
-func NewAdmin(db *store.Store, keys *Keys, hub *Hub, cfg *config.Server, static fs.FS, log *slog.Logger) (*Admin, error) {
+func NewAdmin(db *store.Store, keys *Keys, hub *Hub, live *Live, metrics *Metrics, cfg *config.Server, static fs.FS, log *slog.Logger) (*Admin, error) {
 	trust, err := NewProxyTrust(cfg.Admin.TrustedProxies)
 	if err != nil {
 		return nil, err
 	}
-	return &Admin{DB: db, Keys: keys, Hub: hub, Log: log, Cfg: cfg, Trust: trust, Static: static, loginL: newLimiter(10, time.Minute)}, nil
+	return &Admin{DB: db, Keys: keys, Hub: hub, Live: live, Metrics: metrics, Log: log, Cfg: cfg, Trust: trust, Static: static, loginL: newLimiter(10, time.Minute)}, nil
 }
 
 // Handler returns the full admin handler including the base path and security headers.
@@ -66,6 +68,15 @@ func (a *Admin) Handler() http.Handler {
 	mux.HandleFunc("POST /api/enrollments/{id}/reject", a.auth(a.reject))
 	mux.HandleFunc("GET /api/servers", a.auth(a.listServers))
 	mux.HandleFunc("DELETE /api/servers/{id}", a.auth(a.deleteServer))
+	mux.HandleFunc("GET /api/servers/{id}", a.auth(a.serverDetail))
+	mux.HandleFunc("GET /api/servers/{id}/metrics", a.auth(a.history))
+	mux.HandleFunc("GET /api/servers/{id}/metrics.csv", a.auth(a.historyCSV))
+	mux.HandleFunc("GET /api/dashboard", a.auth(a.dashboard))
+	mux.HandleFunc("GET /api/dashboard/available", a.auth(a.dashboardAvailable))
+	mux.HandleFunc("POST /api/dashboard/items", a.auth(a.dashboardAdd))
+	mux.HandleFunc("DELETE /api/dashboard/items/{id}", a.auth(a.dashboardRemove))
+	mux.HandleFunc("PUT /api/dashboard/order", a.auth(a.dashboardOrder))
+	mux.HandleFunc("GET /api/live", a.auth(a.liveHandler))
 	if a.Static != nil {
 		mux.Handle("/", a.static())
 	}
@@ -371,6 +382,7 @@ func (a *Admin) approve(w http.ResponseWriter, r *http.Request, u *store.User) {
 		return
 	}
 	a.audit(r, u, "enroll.approve", "server", srv.ID, srv.Name, "ok", map[string]any{"address": e.Address})
+	a.Live.Publish("dashboard", map[string]any{})
 	writeJSON(w, http.StatusOK, srv)
 }
 
@@ -444,6 +456,8 @@ func (a *Admin) deleteServer(w http.ResponseWriter, r *http.Request, u *store.Us
 		return
 	}
 	a.Hub.Kick(id)
+	a.Metrics.Forget(id)
+	a.Live.Publish("dashboard", map[string]any{})
 	a.audit(r, u, "server.delete", "server", id, srv.Name, "ok", map[string]any{"was_online": online, "uninstall_requested": req.Uninstall, "uninstall_sent": sent})
 	writeJSON(w, http.StatusOK, map[string]any{"deleted": true, "uninstall_sent": sent, "was_online": online})
 }

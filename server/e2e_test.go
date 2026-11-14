@@ -21,9 +21,22 @@ import (
 	"github.com/bolgov0zero/linager/agent"
 	"github.com/bolgov0zero/linager/internal/config"
 	"github.com/bolgov0zero/linager/internal/pki"
+	"github.com/bolgov0zero/linager/internal/protocol"
 	"github.com/bolgov0zero/linager/server"
 	"github.com/bolgov0zero/linager/server/store"
 )
+
+type fakeCollector struct{ boot int64 }
+
+func (f fakeCollector) Collect(now time.Time) protocol.Sample {
+	return protocol.Sample{TS: now.Unix(), CPU: 42, MemPct: 55, MemUsed: 55, MemTotal: 100, DiskPct: 33, RxBps: 1000, TxBps: 500,
+		BootTime: f.boot, Uptime: now.Unix() - f.boot, Updates: 3,
+		Disks: []protocol.Disk{{Mount: "/", Device: "/dev/x", FS: "ext4", Total: 100, Used: 33, Pct: 33}}}
+}
+
+func (fakeCollector) System(v string) protocol.SystemInfo {
+	return protocol.SystemInfo{Hostname: "h", OS: "Test OS", Kernel: "6.0", Arch: "amd64", CPUModel: "cpu", CPUCores: 2, MemTotal: 100, AgentVersion: v}
+}
 
 func freeAddr(t *testing.T) string {
 	t.Helper()
@@ -205,6 +218,7 @@ func TestEndToEnd(t *testing.T) {
 	go func() {
 		runErr <- agent.Run(ctx, agent.RunOptions{
 			DataDir: adata, AgentVersion: "0.0.1-test", Log: slog.New(slog.NewTextHandler(io.Discard, nil)), PingEvery: 100 * time.Millisecond,
+			SampleEvery: 200 * time.Millisecond, Collector: fakeCollector{boot: time.Now().Add(-time.Hour).Unix()},
 			Uninstall: func(purge bool, _ string) error { uninstalled.purge, uninstalled.ran = purge, true; return nil },
 		})
 	}()
@@ -219,12 +233,107 @@ func TestEndToEnd(t *testing.T) {
 		api.do("GET", "/api/servers", nil, &servers)
 		return len(servers) == 1 && servers[0].Online
 	})
+	id := servers[0].ID
 	if servers[0].AgentVersion != "0.0.1-test" {
 		t.Fatalf("agent version not recorded: %+v", servers[0])
 	}
 
+	// --- metrics, dashboard, history ---
+	type dashItem struct {
+		ID     string           `json:"id"`
+		Online bool             `json:"online"`
+		Sample *protocol.Sample `json:"sample"`
+		Spark  []float64        `json:"spark"`
+	}
+	var dash struct {
+		Items []dashItem `json:"items"`
+	}
+	waitFor(t, "live sample on the dashboard", func() bool {
+		api.do("GET", "/api/dashboard", nil, &dash)
+		return len(dash.Items) == 1 && dash.Items[0].Sample != nil && len(dash.Items[0].Spark) > 0
+	})
+	if sm := dash.Items[0].Sample; sm.CPU != 42 || sm.Updates != 3 || len(sm.Disks) != 1 {
+		t.Fatalf("unexpected sample: %+v", sm)
+	}
+	var hist struct {
+		Tier   string                           `json:"tier"`
+		Points []map[string]any                 `json:"points"`
+		Stats  map[string]struct{ Avg float64 } `json:"stats"`
+		Events []struct{ Kind string }          `json:"events"`
+	}
+	waitFor(t, "raw history", func() bool {
+		api.do("GET", "/api/servers/"+id+"/metrics?period=1h", nil, &hist)
+		return len(hist.Points) > 0
+	})
+	if hist.Tier != "raw" || hist.Stats["cpu"].Avg != 42 {
+		t.Fatalf("raw history: tier=%s stats=%+v", hist.Tier, hist.Stats)
+	}
+	(&server.Scheduler{DB: db, Log: slog.New(slog.NewTextHandler(io.Discard, nil))}).RunOnce(ctx)
+	for _, p := range []string{"24h", "7d", "30d", "90d", "180d", "360d"} {
+		hist.Points = nil
+		api.do("GET", "/api/servers/"+id+"/metrics?period="+p, nil, &hist)
+		if len(hist.Points) == 0 || hist.Stats["cpu"].Avg != 42 {
+			t.Fatalf("period %s (tier %s): points=%d stats=%+v", p, hist.Tier, len(hist.Points), hist.Stats)
+		}
+	}
+	if code := api.do("GET", "/api/servers/"+id+"/metrics?period=2y", nil, nil); code != http.StatusBadRequest {
+		t.Fatalf("unknown period must be refused, got %d", code)
+	}
+	hasOnline := false
+	for _, e := range hist.Events {
+		hasOnline = hasOnline || e.Kind == "online"
+	}
+	if !hasOnline {
+		t.Fatal("an 'online' event must be recorded when the agent connects")
+	}
+	req, _ := http.NewRequest("GET", api.base+"/api/servers/"+id+"/metrics.csv?period=1h", nil)
+	if resp, err := api.hc.Do(req); err != nil || resp.StatusCode != 200 || !strings.HasPrefix(resp.Header.Get("Content-Type"), "text/csv") {
+		t.Fatalf("csv export failed: %v", err)
+	} else {
+		body, _ := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if !strings.HasPrefix(string(body), "time_utc,cpu_avg") || strings.Count(string(body), "\n") < 2 {
+			t.Fatalf("csv content: %q", body)
+		}
+	}
+	// live stream delivers metric events
+	sreq, _ := http.NewRequest("GET", api.base+"/api/live", nil)
+	sctx, scancel := context.WithTimeout(ctx, 5*time.Second)
+	sresp, err := api.hc.Do(sreq.WithContext(sctx))
+	if err != nil {
+		t.Fatal(err)
+	}
+	buf := make([]byte, 4096)
+	got := ""
+	for !strings.Contains(got, "event: metrics") {
+		n, err := sresp.Body.Read(buf)
+		got += string(buf[:n])
+		if err != nil {
+			scancel()
+			t.Fatalf("live stream ended without a metrics event: %q (%v)", got, err)
+		}
+	}
+	scancel()
+	_ = sresp.Body.Close()
+	// dashboard membership
+	var avail []map[string]any
+	if code := api.do("DELETE", "/api/dashboard/items/"+id, nil, nil); code != 200 {
+		t.Fatalf("remove from dashboard: %d", code)
+	}
+	api.do("GET", "/api/dashboard/available", nil, &avail)
+	api.do("GET", "/api/dashboard", nil, &dash)
+	if len(avail) != 1 || len(dash.Items) != 0 {
+		t.Fatalf("after remove: available=%d items=%d", len(avail), len(dash.Items))
+	}
+	if code := api.do("POST", "/api/dashboard/items", map[string]string{"server_id": id}, nil); code != 200 {
+		t.Fatalf("add to dashboard: %d", code)
+	}
+	if code := api.do("PUT", "/api/dashboard/order", map[string]any{"server_ids": []string{id}}, nil); code != 200 {
+		t.Fatalf("order: %d", code)
+	}
+
 	// --- deleting a client ---
-	id, name := servers[0].ID, servers[0].Name
+	name := servers[0].Name
 	if code := api.do("DELETE", "/api/servers/"+id, map[string]any{"name": "nope", "uninstall": true}, nil); code != http.StatusUnprocessableEntity {
 		t.Fatalf("delete with wrong confirmation name: %d", code)
 	}

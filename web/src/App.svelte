@@ -1,14 +1,22 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { api, type Session } from './api';
-  import { locale, setLocale, tr, type Locale } from './i18n';
+  import { liveConnected, subscribeLive } from './live';
+  import { locale, setLocale, t, tr, type Locale } from './i18n';
+  import Dashboard from './lib/Dashboard.svelte';
+  import EnrollModal from './lib/EnrollModal.svelte';
   import Login from './lib/Login.svelte';
   import SecurityModal from './lib/SecurityModal.svelte';
-  import Servers from './lib/Servers.svelte';
   import Toast from './lib/Toast.svelte';
+  import { showToast } from './lib/toast';
+  import AddServerModal from './lib/dashboard/AddServerModal.svelte';
+  import { fmtClock } from './lib/dashboard/format';
+  import ServerPage from './lib/server/ServerPage.svelte';
 
   type Theme = 'light' | 'dark';
   type Phase = 'loading' | 'login' | 'app';
+
+  const SRV_PREFIX = '#srv-';
 
   function initialTheme(): Theme {
     const attr = document.documentElement.dataset.theme;
@@ -16,10 +24,48 @@
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
 
+  /** '#srv-<encoded name>' is the server page; anything else is the dashboard. */
+  function parseServerHash(value: string): string | null {
+    if (!value.startsWith(SRV_PREFIX)) return null;
+    const raw = value.slice(SRV_PREFIX.length);
+    if (!raw) return null;
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return null;
+    }
+  }
+
   let theme = $state<Theme>(initialTheme());
   let phase = $state<Phase>('loading');
   let session = $state<Session | null>(null);
   let securityOpen = $state(false);
+  let editing = $state(false);
+  let addOpen = $state(false);
+  let enrollOpen = $state(false);
+  let reloadKey = $state(0);
+  let lastLive = $state<Date | null>(null);
+  let hash = $state(location.hash);
+  let openedFromApp = false;
+  let unsubscribeLive: (() => void) | undefined;
+
+  const serverName = $derived(parseServerHash(hash));
+  const clock = $derived(lastLive ? fmtClock(lastLive) : '--:--:--');
+
+  function onHashChange(): void {
+    hash = location.hash;
+    if (!hash.startsWith(SRV_PREFIX)) openedFromApp = false;
+  }
+
+  function openServer(name: string): void {
+    openedFromApp = true;
+    location.hash = `${SRV_PREFIX}${encodeURIComponent(name)}`;
+  }
+
+  function backToDashboard(): void {
+    if (openedFromApp) history.back();
+    else location.hash = '';
+  }
 
   function toggleTheme(): void {
     theme = theme === 'dark' ? 'light' : 'dark';
@@ -30,14 +76,34 @@
     setLocale(next);
   }
 
+  function toggleEdit(): void {
+    editing = !editing;
+    if (editing) showToast(t('dash.editHint'));
+  }
+
   function startSession(next: Session): void {
     session = next;
     phase = 'app';
+    if (!unsubscribeLive) {
+      unsubscribeLive = subscribeLive(() => {
+        lastLive = new Date();
+      });
+    }
   }
 
   function endSession(): void {
     session = null;
     securityOpen = false;
+    editing = false;
+    addOpen = false;
+    enrollOpen = false;
+    unsubscribeLive?.();
+    unsubscribeLive = undefined;
+    lastLive = null;
+    if (hash) {
+      history.replaceState(null, '', `${location.pathname}${location.search}`);
+      hash = '';
+    }
     phase = 'login';
   }
 
@@ -63,15 +129,31 @@
   }
 
   onMount(() => {
+    window.addEventListener('hashchange', onHashChange);
     void restoreSession();
+    return () => {
+      window.removeEventListener('hashchange', onHashChange);
+      unsubscribeLive?.();
+    };
   });
 </script>
 
 <header class="top">
   <div class="brand">
     <h1>{$tr('app.title')}</h1>
+    {#if phase === 'app'}
+      <p class="live mono small">
+        <span class="dot" class:on={$liveConnected} aria-hidden="true"></span>{$tr('dash.live', { time: clock })}
+      </p>
+    {/if}
   </div>
   <div class="controls">
+    {#if phase === 'app' && serverName === null}
+      <button class="btn" class:ink={editing} type="button" onclick={toggleEdit}>
+        {editing ? $tr('dash.done') : $tr('dash.edit')}
+      </button>
+      <button class="btn primary" type="button" onclick={() => (addOpen = true)}>{$tr('servers.add')}</button>
+    {/if}
     {#if phase === 'app'}
       <button class="btn" type="button" onclick={() => (securityOpen = true)}>{$tr('app.security')}</button>
       <button class="btn" type="button" onclick={() => void logout()}>{$tr('app.logout')}</button>
@@ -100,9 +182,35 @@
   {:else if phase === 'login'}
     <Login onlogin={startSession} />
   {:else if session}
-    <Servers onauthlost={endSession} />
+    {#if serverName !== null}
+      {#key serverName}
+        <ServerPage name={serverName} onBack={backToDashboard} />
+      {/key}
+    {:else}
+      <Dashboard {editing} {reloadKey} onopen={openServer} onauthlost={endSession} />
+    {/if}
   {/if}
 </main>
+
+{#if addOpen && session}
+  <AddServerModal
+    onclose={() => (addOpen = false)}
+    onadded={() => (reloadKey += 1)}
+    onpairing={() => {
+      addOpen = false;
+      enrollOpen = true;
+    }}
+    onauthlost={endSession}
+  />
+{/if}
+
+{#if enrollOpen && session}
+  <EnrollModal
+    onclose={() => (enrollOpen = false)}
+    onchanged={() => (reloadKey += 1)}
+    onauthlost={endSession}
+  />
+{/if}
 
 {#if securityOpen && session}
   <SecurityModal
@@ -135,11 +243,35 @@
     line-height: 1;
   }
 
+  .live {
+    display: flex;
+    align-items: center;
+    margin: 6px 0 0;
+    color: var(--muted);
+  }
+
+  .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 6px;
+    background: var(--muted);
+  }
+
+  .dot.on {
+    background: var(--good);
+  }
+
   .controls {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
+  }
+
+  .btn.ink {
+    background: var(--ink);
+    color: var(--surface);
   }
 
   .seg {

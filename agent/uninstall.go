@@ -35,5 +35,7 @@ func uninstall(purge bool, dataDir, unit, config string, systemctl func(args ...
 	_ = os.Remove(unit)
 	_ = systemctl("daemon-reload")
 	// --no-block: this very process is the service, stop must not wait for itself.
-	return systemctl("stop", "--no-block", serviceName)
+	// A missing unit (already removed) is not an error.
+	_ = systemctl("stop", "--no-block", serviceName)
+	return nil
 }

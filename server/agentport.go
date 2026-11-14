@@ -31,13 +31,14 @@ type AgentPort struct {
 	DB      *store.Store
 	Keys    *Keys
 	Hub     *Hub
+	Metrics *Metrics
 	Log     *slog.Logger
 	enrollL *ipLimiter
 }
 
 // NewAgentPort builds the handler set.
-func NewAgentPort(db *store.Store, keys *Keys, hub *Hub, log *slog.Logger) *AgentPort {
-	return &AgentPort{DB: db, Keys: keys, Hub: hub, Log: log, enrollL: newLimiter(20, 10*time.Minute)}
+func NewAgentPort(db *store.Store, keys *Keys, hub *Hub, metrics *Metrics, log *slog.Logger) *AgentPort {
+	return &AgentPort{DB: db, Keys: keys, Hub: hub, Metrics: metrics, Log: log, enrollL: newLimiter(20, 10*time.Minute)}
 }
 
 // TLSConfig is the agent listener configuration: TLS 1.3, client certificate optional
@@ -204,6 +205,13 @@ func (a *AgentPort) ws(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		switch env.Type {
+		case protocol.TypeMetrics:
+			var batch protocol.MetricsBatch
+			if err := json.Unmarshal(env.Payload, &batch); err != nil || len(batch.Samples) > protocol.MaxBatchSamples {
+				a.Log.Warn("bad metrics batch", "server", srv.Name)
+				continue
+			}
+			a.Metrics.Ingest(ctx, id, &batch)
 		case protocol.TypePing:
 			_ = a.DB.TouchServer(ctx, id, "", "", env.V)
 			if c.send(ctx, protocol.TypePong, nil) != nil {

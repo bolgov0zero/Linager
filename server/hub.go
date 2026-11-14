@@ -41,6 +41,8 @@ func (c *conn) send(ctx context.Context, typ string, payload any) error {
 type Hub struct {
 	mu    sync.RWMutex
 	conns map[string]*conn
+	// OnChange is called (without locks held) when an agent connects or disconnects.
+	OnChange func(serverID string, online bool)
 }
 
 // NewHub creates an empty hub.
@@ -54,15 +56,21 @@ func (h *Hub) add(id string, c *conn) {
 	if old != nil {
 		old.cancel()
 		_ = old.ws.Close(websocket.StatusPolicyViolation, "replaced by a new connection")
+	} else if h.OnChange != nil {
+		h.OnChange(id, true)
 	}
 }
 
 func (h *Hub) remove(id string, c *conn) {
 	h.mu.Lock()
-	if h.conns[id] == c {
+	removed := h.conns[id] == c
+	if removed {
 		delete(h.conns, id)
 	}
 	h.mu.Unlock()
+	if removed && h.OnChange != nil {
+		h.OnChange(id, false)
+	}
 }
 
 // Online reports whether the agent is connected.

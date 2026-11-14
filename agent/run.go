@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/coder/websocket"
@@ -28,6 +29,9 @@ type RunOptions struct {
 	AgentVersion string
 	Log          *slog.Logger
 	PingEvery    time.Duration // default 15 s
+	SampleEvery  time.Duration // default 5 s
+	// Collector supplies samples; nil uses the /proc collector.
+	Collector Collector
 	// Uninstall performs self-removal; nil uses the real implementation.
 	Uninstall func(purge bool, dataDir string) error
 }
@@ -38,9 +42,17 @@ func Run(ctx context.Context, o RunOptions) error {
 	if o.PingEvery == 0 {
 		o.PingEvery = 15 * time.Second
 	}
+	if o.SampleEvery == 0 {
+		o.SampleEvery = 5 * time.Second
+	}
 	if o.Uninstall == nil {
 		o.Uninstall = Uninstall
 	}
+	if o.Collector == nil {
+		o.Collector = NewCollector(ctx)
+	}
+	buf := &sampleBuffer{}
+	go sampler(ctx, o, buf)
 	st, cert, err := loadState(o.DataDir)
 	if err != nil {
 		return err
@@ -51,7 +63,7 @@ func Run(ctx context.Context, o RunOptions) error {
 	}
 	backoff := time.Second
 	for {
-		err := session(ctx, o, st, cert, key)
+		err := session(ctx, o, st, cert, key, buf)
 		switch {
 		case errors.Is(err, ErrRevoked), errors.Is(err, ErrUninstalled), ctx.Err() != nil:
 			if ctx.Err() != nil && err == nil {
@@ -71,7 +83,7 @@ func Run(ctx context.Context, o RunOptions) error {
 	}
 }
 
-func session(ctx context.Context, o RunOptions, st *State, cert tls.Certificate, key ed25519.PrivateKey) error {
+func session(ctx context.Context, o RunOptions, st *State, cert tls.Certificate, key ed25519.PrivateKey, buf *sampleBuffer) error {
 	hc := &http.Client{Transport: &http.Transport{TLSClientConfig: pinnedTLS(st.ServerFP, &cert)}}
 	ws, resp, err := websocket.Dial(ctx, "wss://"+st.Server+"/v1/ws", &websocket.DialOptions{HTTPClient: hc})
 	if err != nil {
@@ -86,7 +98,10 @@ func session(ctx context.Context, o RunOptions, st *State, cert tls.Certificate,
 	defer cancel()
 
 	var seq uint64
+	var sendMu sync.Mutex // seq numbers must hit the wire in order
 	send := func(typ string, payload any) error {
+		sendMu.Lock()
+		defer sendMu.Unlock()
 		seq++
 		env, err := protocol.Sign(key, typ, seq, payload)
 		if err != nil {
@@ -136,6 +151,33 @@ func session(ctx context.Context, o RunOptions, st *State, cert tls.Certificate,
 			}
 		}
 	}()
+	go func() {
+		t := time.NewTicker(o.SampleEvery)
+		defer t.Stop()
+		first := true
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				pending := buf.snapshot()
+				if len(pending) == 0 && !first {
+					continue
+				}
+				b := protocol.MetricsBatch{Samples: pending}
+				if first {
+					si := o.Collector.System(o.AgentVersion)
+					b.System = &si
+				}
+				if err := send(protocol.TypeMetrics, b); err != nil {
+					errc <- err
+					return
+				}
+				buf.ack(len(pending))
+				first = false
+			}
+		}
+	}()
 	msgs := make(chan *protocol.Envelope)
 	go func() {
 		for {
@@ -168,6 +210,55 @@ func session(ctx context.Context, o RunOptions, st *State, cert tls.Certificate,
 				}
 				return ErrUninstalled
 			}
+		}
+	}
+}
+
+// maxBuffered is how many samples are kept while the server is unreachable (one hour at 5 s).
+const maxBuffered = 720
+
+// sampleBuffer holds samples not yet delivered to the server.
+type sampleBuffer struct {
+	mu    sync.Mutex
+	items []protocol.Sample
+}
+
+func (b *sampleBuffer) add(s protocol.Sample) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.items = append(b.items, s)
+	if len(b.items) > maxBuffered {
+		b.items = b.items[len(b.items)-maxBuffered:]
+	}
+}
+
+func (b *sampleBuffer) snapshot() []protocol.Sample {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return append([]protocol.Sample(nil), b.items...)
+}
+
+// ack removes the first n samples after they were written to the connection.
+func (b *sampleBuffer) ack(n int) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if n > len(b.items) {
+		n = len(b.items)
+	}
+	b.items = b.items[n:]
+}
+
+// sampler collects a sample every SampleEvery, independent of the connection state.
+func sampler(ctx context.Context, o RunOptions, buf *sampleBuffer) {
+	o.Collector.Collect(time.Now()) // primes the CPU and network counters
+	t := time.NewTicker(o.SampleEvery)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case now := <-t.C:
+			buf.add(o.Collector.Collect(now))
 		}
 	}
 }

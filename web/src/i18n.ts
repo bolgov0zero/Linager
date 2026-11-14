@@ -1,11 +1,16 @@
 import { derived, get, writable } from 'svelte/store';
 import ru from './locales/ru.json';
 import en from './locales/en.json';
+import ruServer from './locales/ru.server.json';
+import enServer from './locales/en.server.json';
 
 export type Locale = 'ru' | 'en';
 export type Vars = Record<string, string | number>;
 
-const dictionaries: Record<Locale, Record<string, string>> = { ru, en };
+const dictionaries: Record<Locale, Record<string, string>> = {
+  ru: { ...ru, ...ruServer },
+  en: { ...en, ...enServer },
+};
 const STORAGE_KEY = 'linager.lang';
 const DEFAULT_LOCALE: Locale = 'ru';
 

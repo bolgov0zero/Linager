@@ -46,11 +46,15 @@ func Run(ctx context.Context, cfg *config.Server, static fs.FS, log *slog.Logger
 		return err
 	}
 	hub := NewHub()
-	admin, err := NewAdmin(db, keys, hub, cfg, static, log)
+	live := NewLive()
+	metrics := NewMetrics(db, live, log)
+	hub.OnChange = func(id string, online bool) { go metrics.Status(ctx, id, online) }
+	admin, err := NewAdmin(db, keys, hub, live, metrics, cfg, static, log)
 	if err != nil {
 		return err
 	}
-	agents := NewAgentPort(db, keys, hub, log)
+	agents := NewAgentPort(db, keys, hub, metrics, log)
+	go (&Scheduler{DB: db, Log: log}).Run(ctx)
 
 	adminSrv := &http.Server{Addr: cfg.Admin.Listen, Handler: admin.Handler(), ReadHeaderTimeout: 10 * time.Second}
 	agentSrv := &http.Server{Handler: agents.Handler(), TLSConfig: agents.TLSConfig(), ReadHeaderTimeout: 10 * time.Second}
