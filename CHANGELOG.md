@@ -3,6 +3,7 @@
 ## 0.1.12
 
 - Phones: the top bar is compact (logo, live indicator and a menu button) and stays pinned while the page scrolls; the buttons open as a panel under it.
+- Checkboxes are restyled to match the rest of the interface (square with a hard edge and offset shade, pixel tick).
 - The logo in the top bar is now the same `>_` pixel icon as the home screen icon, and the icon no longer has the extra bottom square.
 
 ## 0.1.11
