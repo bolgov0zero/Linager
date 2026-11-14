@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.11
+
+- Phones: the admin panel is shown at 90% scale.
+- Home screen icon (pixel console `>_`) and a web app manifest: a page added to the phone's home screen gets the icon and opens without the browser address bar.
+
 ## 0.1.10
 
 - Phones: the admin panel no longer zooms (pinch, double tap and focusing an input field).
