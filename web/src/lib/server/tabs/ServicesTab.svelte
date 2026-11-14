@@ -173,9 +173,11 @@
               {@const toggle = unit.enabled === 'enabled' ? 'disable' : 'enable'}
               {@const canToggle = unit.enabled === 'enabled' || unit.enabled === 'disabled'}
               <tr class:failed={kind === 'failed'}>
-                <td class="name">
-                  <span class="unit mono">{unit.name}</span>
-                  {#if unit.description}<span class="desc muted small">{unit.description}</span>{/if}
+                <td>
+                  <div class="name">
+                    <span class="unit mono">{unit.name}</span>
+                    {#if unit.description}<span class="desc muted small">{unit.description}</span>{/if}
+                  </div>
                 </td>
                 <td>
                   <span class="badge state {kind}">{stateLabel(unit)}</span>
@@ -329,6 +331,7 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+    min-width: 220px;
   }
 
   .unit {
@@ -368,13 +371,16 @@
     color: var(--muted);
   }
 
+  /* All four buttons stay on one line so every row has the same height; narrow screens scroll the table. */
   .actions {
+    width: 1%;
     text-align: right;
+    white-space: nowrap;
   }
 
   .btns {
     display: inline-flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-end;
     gap: 6px;
   }

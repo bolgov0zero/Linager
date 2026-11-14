@@ -222,6 +222,7 @@
     flex-direction: column;
     gap: 12px;
     max-width: 1200px;
+    margin: 0 auto;
   }
 
   .titlebar {

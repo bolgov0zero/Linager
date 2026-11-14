@@ -28,11 +28,11 @@ export const TABS = [
   { id: 'terminal', key: 'srv.tab.terminal' },
   { id: 'files', key: 'srv.tab.files' },
   { id: 'services', key: 'srv.tab.services' },
+  { id: 'processes', key: 'srv.tab.processes' },
   { id: 'network', key: 'srv.tab.network' },
   { id: 'firewall', key: 'srv.tab.firewall' },
   { id: 'docker', key: 'srv.tab.docker' },
   { id: 'updates', key: 'srv.tab.updates' },
-  { id: 'processes', key: 'srv.tab.processes' },
   { id: 'logs', key: 'srv.tab.logs' },
 ] as const;
 
