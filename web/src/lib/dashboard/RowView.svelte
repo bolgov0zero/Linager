@@ -77,15 +77,15 @@
 </article>
 
 <style>
-  /* Two lines per server, laid out like the design's list view:
-     name | buttons | ..... | metrics
-     address (spans) | tags | ..... | network */
+  /* Two lines per server; the buttons stand one above the other to the right of the metrics:
+     name     | tags | metrics | Terminal
+     address (spans)  | network | Open */
   .row-card {
     display: grid;
-    grid-template-columns: 250px auto minmax(0, 1fr) auto;
+    grid-template-columns: 250px minmax(0, 1fr) auto auto;
     grid-template-areas:
-      'head acts . metrics'
-      'addr addr tags net';
+      'head tags metrics acts'
+      'addr addr net acts';
     column-gap: 16px;
     row-gap: 4px;
     align-items: center;
@@ -163,6 +163,8 @@
   }
 
   .acts {
+    flex-direction: column;
+    align-items: stretch;
     gap: 6px;
   }
 
@@ -224,7 +226,7 @@
       grid-template-columns: minmax(0, 1fr) auto;
       grid-template-areas:
         'head acts'
-        'addr addr'
+        'addr acts'
         'metrics metrics'
         'tags net';
       padding: 9px 12px;
