@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.8
+
+- Dashboard rows view: the "Terminal" and "Open" buttons stand one above the other to the right of the metrics.
+
 ## 0.1.7
 
 - Files tab: the tree and the list fill the window height and scroll inside (the table header stays visible) instead of
