@@ -6,14 +6,15 @@
   import CardView from './dashboard/CardView.svelte';
   import { pluralForm } from './dashboard/format';
   import GroupsModal from './dashboard/GroupsModal.svelte';
-  import RowView from './dashboard/RowView.svelte';
   import Summary from './dashboard/Summary.svelte';
   import { levelOf, summarize, type AgentFlag } from './dashboard/status';
+  import ContextMenu, { type MenuItem } from './ui/ContextMenu.svelte';
   import Select from './ui/Select.svelte';
+  import { openTermWindow } from './terminal/windows';
   import { showToast } from './toast';
 
   type Filter = 'all' | 'problems' | 'offline';
-  type View = 'cards' | 'rows';
+  type View = 'cards' | 'map';
 
   let {
     editing,
@@ -39,7 +40,8 @@
   function readView(): View {
     try {
       const value = localStorage.getItem(VIEW_KEY);
-      if (value === 'cards' || value === 'rows') return value;
+      if (value === 'cards') return value;
+      if (value === 'map' || value === 'rows') return 'map'; // the old rows view was replaced by the map
     } catch {
       // storage unavailable: fall back to the default view
     }
@@ -88,6 +90,22 @@
   let pending = $state<{ card: ServerCard; index: number } | null>(null);
   let dragId = $state<string | null>(null);
   let overId = $state<string | null>(null);
+
+  /** Only the server list scrolls: its height is what is left of the window below the summary and the filters. */
+  let scroller = $state<HTMLDivElement | undefined>(undefined);
+  let listH = $state(480);
+  function fitList(): void {
+    if (!scroller) return;
+    const top = scroller.getBoundingClientRect().top + window.scrollY;
+    listH = Math.max(240, Math.floor(window.innerHeight - top - 28));
+  }
+  $effect(() => {
+    // Measure again when the list appears, changes its mode or something above it changes its height.
+    void [scroller, view, visible.length, loaded, totals];
+    fitList();
+    window.addEventListener('resize', fitList);
+    return () => window.removeEventListener('resize', fitList);
+  });
 
   let seenReload = -1;
   let reloadTimer: ReturnType<typeof setTimeout> | undefined;
@@ -239,6 +257,73 @@
   function setView(next: View): void {
     view = next;
     storeView(next);
+  }
+
+  // ---- context menu of a map tile ----
+
+  let menu = $state<{ x: number; y: number; items: MenuItem[] } | null>(null);
+
+  // Long press (touch and pen) opens the same menu; the click that follows the press must not open the server.
+  const LONG_PRESS_MS = 500;
+  const PRESS_SLOP = 10;
+  let pressTimer: ReturnType<typeof setTimeout> | undefined;
+  let pressed = false;
+
+  function pressStart(event: PointerEvent, card: ServerCard): void {
+    pressed = false;
+    if (event.pointerType === 'mouse' || editing) return;
+    const x = event.clientX;
+    const y = event.clientY;
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(() => {
+      pressed = true;
+      showMenu(x, y, card);
+    }, LONG_PRESS_MS);
+    const cancel = (e: Event) => {
+      if (e instanceof PointerEvent && e.type === 'pointermove' && Math.hypot(e.clientX - x, e.clientY - y) < PRESS_SLOP) return;
+      clearTimeout(pressTimer);
+      window.removeEventListener('pointermove', cancel);
+      window.removeEventListener('pointerup', cancel);
+      window.removeEventListener('pointercancel', cancel);
+    };
+    window.addEventListener('pointermove', cancel);
+    window.addEventListener('pointerup', cancel);
+    window.addEventListener('pointercancel', cancel);
+  }
+
+  function tileClick(card: ServerCard): void {
+    if (pressed) {
+      pressed = false;
+      return;
+    }
+    onopen(card.name);
+  }
+
+  function openMenu(event: MouseEvent, card: ServerCard): void {
+    event.preventDefault();
+    showMenu(event.clientX, event.clientY, card);
+  }
+
+  function showMenu(x: number, y: number, card: ServerCard): void {
+    const items: MenuItem[] = [
+      { key: 'term', label: $tr('dash.terminal'), disabled: !card.online, onselect: () => openTermWindow(card.id, card.name) },
+      { key: 'open', label: $tr('dash.open'), onselect: () => onopen(card.name) },
+    ];
+    if (groups.length > 0) {
+      for (const g of groups) {
+        items.push({
+          key: `g${g.id}`,
+          label: `${card.group_id === g.id ? '✓ ' : ''}${$tr('dash.group.label')}: ${g.name}`,
+          separated: items.length === 2,
+          onselect: () => void setCardGroup(card, String(g.id)),
+        });
+      }
+      if (card.group_id !== null) {
+        items.push({ key: 'g0', label: `${$tr('dash.group.label')}: ${$tr('dash.group.none')}`, onselect: () => void setCardGroup(card, '0') });
+      }
+    }
+    items.push({ key: 'remove', label: $tr('dash.remove'), danger: true, separated: true, onselect: () => void removeCard(card) });
+    menu = { x, y, items };
   }
 
   // ---- ordering ----
@@ -398,8 +483,8 @@
       <div class="group end">
         <button class="chip" type="button" aria-pressed={view === 'cards'} onclick={() => setView('cards')}
           >{$tr('dash.view.cards')}</button>
-        <button class="chip" type="button" aria-pressed={view === 'rows'} onclick={() => setView('rows')}
-          >{$tr('dash.view.rows')}</button>
+        <button class="chip" type="button" aria-pressed={view === 'map'} onclick={() => setView('map')}
+          >{$tr('dash.view.map')}</button>
         <input
           class="input search"
           type="search"
@@ -415,6 +500,7 @@
     {:else if visible.length === 0}
       <p class="muted">{$tr('dash.empty')}</p>
     {:else if view === 'cards'}
+      <div class="scroll" bind:this={scroller} style:--list-h="{listH}px">
       <div class="grid">
         {#each visible as card (card.id)}
           <div
@@ -446,41 +532,43 @@
           </div>
         {/each}
       </div>
+      </div>
     {:else}
-      <div class="list">
+      <div class="scroll" bind:this={scroller} style:--list-h="{listH}px">
+      <div class="map">
         {#each visible as card (card.id)}
+          {@const level = levelOf(card)}
+          {@const sample = card.online ? card.sample : null}
           <div
-            class="slot"
+            class="tile {level}"
             class:editing
             class:over={editing && overId === card.id && dragId !== card.id}
             class:dragging={dragId === card.id}
+            role="button"
+            tabindex="0"
             draggable={editing}
-            role="presentation"
+            title="{card.address} · {card.os} · {$tr('dash.agent')} {card.agent_version}"
+            onclick={() => tileClick(card)}
+            onkeydown={(e) => e.key === 'Enter' && onopen(card.name)}
+            onpointerdown={(e) => pressStart(e, card)}
+            oncontextmenu={(e) => openMenu(e, card)}
             ondragstart={(e) => onDragStart(e, card.id)}
             ondragover={(e) => onDragOver(e, card.id)}
             ondrop={(e) => onDrop(e, card.id)}
             ondragend={onDragEnd}>
-            <RowView
-              {card}
-              agent={agentFlags[card.id] ?? null}
-              {now}
-              {editing}
-              index={visibleIndex(card.id)}
-              count={visible.length}
-              {onopen}
-              onmove={(dir) => move(card.id, dir)}
-              onremove={() => void removeCard(card)} />
-            {#if editing && groups.length > 0}
-              <div class="pick">
-                <Select size="sm" value={String(card.group_id ?? 0)} options={cardGroupOptions} ariaLabel={$tr('dash.group.label')} onchange={(v) => void setCardGroup(card, v)} />
-              </div>
-            {/if}
+            <b class="tname">{card.name}</b>
+            <span class="tsub">{sample ? `c ${Math.round(sample.cpu)}% · r ${Math.round(sample.mem_pct)}%` : $tr('dash.tag.offline')}</span>
           </div>
         {/each}
+      </div>
       </div>
     {/if}
   {/if}
 </section>
+
+{#if menu}
+  <ContextMenu x={menu.x} y={menu.y} items={menu.items} label={$tr('dash.menu')} onclose={() => (menu = null)} />
+{/if}
 
 {#if groupsOpen}
   <GroupsModal {groups} onclose={() => (groupsOpen = false)} onchanged={() => void load()} {onauthlost} />
@@ -529,16 +617,95 @@
     padding: 5px 10px;
   }
 
+  /* On wide screens the list scrolls inside; the padding keeps the cards' offset shadows from being clipped.
+     On phones the whole page scrolls as before. */
+  @media (min-width: 721px) {
+    .scroll {
+      max-height: var(--list-h);
+      overflow-y: auto;
+      padding: 2px 8px 8px 2px;
+      margin: -2px -8px -8px -2px;
+    }
+  }
+
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
     gap: 18px;
   }
 
-  .list {
+  /* The status map: small tiles, the left edge shows the status. */
+  .map {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(130px, 100%), 1fr));
+    gap: 6px;
+  }
+
+  .tile {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    min-width: 0;
+    padding: 4px 8px;
+    background: var(--surface);
+    border: 2px solid var(--line);
+    border-left-width: 6px;
+    line-height: 1.35;
+    cursor: pointer;
+    outline: 2px dashed transparent;
+    outline-offset: 3px;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .tile.ok {
+    border-left-color: var(--good);
+  }
+
+  .tile.warn {
+    border-left-color: var(--warn);
+  }
+
+  .tile.crit {
+    border-left-color: var(--crit);
+  }
+
+  .tile.off {
+    border-left-color: var(--muted);
+    opacity: 0.65;
+  }
+
+  .tile:hover,
+  .tile:focus-visible {
+    background: var(--seg-off);
+  }
+
+  .tile.editing {
+    outline-color: var(--muted);
+    cursor: grab;
+  }
+
+  .tile.over {
+    outline-color: var(--accent);
+  }
+
+  .tile.dragging {
+    opacity: 0.45;
+  }
+
+  .tname {
+    overflow: hidden;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tsub {
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .slot {

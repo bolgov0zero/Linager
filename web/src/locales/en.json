@@ -155,5 +155,7 @@
   "dash.unit.h": "h",
   "dash.unit.min": "min",
   "app.updates": "Updates",
-  "app.audit": "Audit log"
+  "app.audit": "Audit log",
+  "dash.view.map": "Map",
+  "dash.menu": "Server actions"
 }

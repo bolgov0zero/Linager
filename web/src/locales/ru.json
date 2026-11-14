@@ -155,5 +155,7 @@
   "dash.unit.h": "ч",
   "dash.unit.min": "мин",
   "app.updates": "Обновления",
-  "app.audit": "Журнал"
+  "app.audit": "Журнал",
+  "dash.view.map": "Карта",
+  "dash.menu": "Действия с сервером"
 }

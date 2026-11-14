@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.24
+
+- Dashboard: only the server list scrolls, the summary and the filters stay in place (screens wider than 720 px).
+- Dashboard: the "Rows" view is replaced by the "Map": small tiles with a status-coloured edge, name and CPU/RAM. Left click opens the server; right click (long press on touch screens) opens a menu: Terminal, Open, Group, Remove from the dashboard.
+
 ## 0.1.23
 
 - File manager: the number of selected items is shown to the right of the path instead of a separate line above the list.
