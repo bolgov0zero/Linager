@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bolgov0zero/linager/agent"
+	"github.com/bolgov0zero/linager/internal/config"
 	"github.com/bolgov0zero/linager/internal/version"
 )
 
@@ -36,7 +37,7 @@ func newAgentCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "agent", Short: "Linager agent"}
 	cmd.PersistentFlags().StringVar(&dataDir, "data-dir", defaultAgentDir, "agent data directory (keys, state)")
 
-	var srv, fp string
+	var srv, fp, cfgPath string
 	enroll := &cobra.Command{
 		Use:   "enroll",
 		Short: "Pair this host with a Linager server and wait for approval",
@@ -71,7 +72,11 @@ func newAgentCmd() *cobra.Command {
 		RunE: func(c *cobra.Command, _ []string) error {
 			ctx, stop := signal.NotifyContext(c.Context(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
-			err := agent.Run(ctx, agent.RunOptions{DataDir: dataDir, AgentVersion: version.Version, Log: slog.New(slog.NewTextHandler(os.Stderr, nil))})
+			cfg, err := config.LoadAgent(cfgPath)
+			if err != nil {
+				return err
+			}
+			err = agent.Run(ctx, agent.RunOptions{DataDir: dataDir, AgentVersion: version.Version, Config: cfg, Log: slog.New(slog.NewTextHandler(os.Stderr, nil))})
 			switch {
 			case errors.Is(err, agent.ErrRevoked), errors.Is(err, agent.ErrUninstalled), errors.Is(err, agent.ErrNotEnrolled):
 				return &exitError{code: exitCodeConfig, err: err}
@@ -90,6 +95,7 @@ func newAgentCmd() *cobra.Command {
 		},
 	}
 	uninstall.Flags().BoolVar(&purge, "purge", false, "also delete keys and configuration")
+	run.Flags().StringVar(&cfgPath, "config", "/etc/linager/agent.yaml", "agent configuration (enabled modules)")
 	cmd.AddCommand(enroll, run, uninstall)
 	return cmd
 }

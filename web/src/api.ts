@@ -69,7 +69,21 @@ export interface ServerCard {
   sample: Sample | null; spark: number[];
 }
 export interface AvailableServer { id: string; name: string; address: string; os: string }
+export interface ServiceUnit {
+  name: string; description: string;
+  active: string; // active | inactive | failed | activating | deactivating
+  sub: string; // running | dead | exited | failed | ...
+  enabled: string; // enabled | disabled | static | masked | indirect | ...
+}
+export type ServiceAction = 'start' | 'stop' | 'restart' | 'enable' | 'disable';
+export interface AptPackage { name: string; current: string; candidate: string; security: boolean; reboot: boolean }
+export interface AptList { packages: AptPackage[]; reboot_required: boolean; last_check: number }
+export interface ProcessInfo { pid: number; user: string; cpu: number; mem_pct: number; rss: number; state: string; cmd: string }
+export interface ProcessList { processes: ProcessInfo[]; total: number }
+export type StreamKind = 'terminal' | 'logs' | 'apt';
+
 export interface ServerDetail {
+  modules: string[]; // enabled agent modules; empty = unknown (old agent)
   id: string; name: string; hostname: string; address: string; os: string; agent_version: string;
   online: boolean; last_seen_at: string | null; enrolled_at: string;
   system: SystemInfo | null; sample: Sample | null; spark: number[];
@@ -204,4 +218,32 @@ export const api = {
   history: (id: string, period: Period) => request<History>('GET', `api/servers/${enc(id)}/metrics?period=${period}`),
   /** Relative URL for a CSV download link. */
   historyCsvUrl: (id: string, period: Period) => `api/servers/${enc(id)}/metrics.csv?period=${period}`,
+
+  services: (id: string) => request<{ services: ServiceUnit[] }>('GET', `api/servers/${enc(id)}/services`),
+  /** Rejects with ApiError status 409 and `dangerous` when the action needs `confirm: true`. */
+  serviceAction: (id: string, unit: string, action: ServiceAction, confirm: boolean) =>
+    request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/services/${enc(unit)}/${action}`, { confirm }),
+  apt: (id: string) => request<AptList>('GET', `api/servers/${enc(id)}/apt`),
+  reboot: (id: string) => request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/reboot`, { confirm: true }),
+  processes: (id: string, sort: 'cpu' | 'mem', n = 10) =>
+    request<ProcessList>('GET', `api/servers/${enc(id)}/processes?sort=${sort}&n=${n}`),
+  killProcess: (id: string, pid: number, signal: 'TERM' | 'KILL') =>
+    request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/processes/${pid}/kill`, { signal, confirm: true }),
 };
+
+/**
+ * Opens a WebSocket stream to the agent. Server -> client: binary frames are output bytes
+ * (terminal: raw; logs/apt: UTF-8 text); text frames are JSON `{closed: string}` or `{error: string}`.
+ * Client -> server (terminal): binary frames are keystrokes, text frame `{"resize":{"cols":N,"rows":N}}`.
+ * Closing the socket ends the stream. params: terminal cols,rows; logs unit,priority(0-7),kernel(0|1),lines;
+ * apt mode=update|upgrade|security.
+ */
+export function openStream(id: string, kind: StreamKind, params: Record<string, string | number> = {}): WebSocket {
+  const url = new URL(`api/servers/${enc(id)}/stream`, location.href);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  url.searchParams.set('kind', kind);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
+  const ws = new WebSocket(url);
+  ws.binaryType = 'arraybuffer';
+  return ws;
+}

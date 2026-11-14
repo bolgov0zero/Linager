@@ -177,8 +177,13 @@ func (a *Admin) serverDetail(w http.ResponseWriter, r *http.Request, _ *store.Us
 	if v.Spark == nil {
 		v.Spark = []float64{}
 	}
+	mods, _ := a.DB.Modules(r.Context(), s.ID)
+	if mods == nil {
+		mods = []string{}
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"id": s.ID, "name": s.Name, "hostname": s.Hostname, "address": s.Address, "os": s.OS, "agent_version": s.AgentVersion,
+		"modules": mods,
+		"id":      s.ID, "name": s.Name, "hostname": s.Hostname, "address": s.Address, "os": s.OS, "agent_version": s.AgentVersion,
 		"online": a.Hub.Online(s.ID), "last_seen_at": s.LastSeenAt, "enrolled_at": s.EnrolledAt,
 		"system": v.System, "sample": v.Sample, "spark": v.Spark,
 	})

@@ -20,6 +20,7 @@ type conn struct {
 	seq     uint64
 	cancel  context.CancelFunc
 	version string
+	state   *connState
 }
 
 func (c *conn) send(ctx context.Context, typ string, payload any) error {

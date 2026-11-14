@@ -360,3 +360,6 @@ func (c *linuxCollector) collectNet(now time.Time) []protocol.NetIface {
 	c.prevNet, c.prevTime = cur, now
 	return out
 }
+
+// RefreshUpdates recomputes the upgradable package count right away (after an apt run).
+func (c *linuxCollector) RefreshUpdates() { c.updateAptCount(context.Background()) }

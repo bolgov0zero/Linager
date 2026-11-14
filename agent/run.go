@@ -14,6 +14,7 @@ import (
 
 	"github.com/coder/websocket"
 
+	"github.com/bolgov0zero/linager/internal/config"
 	"github.com/bolgov0zero/linager/internal/protocol"
 )
 
@@ -32,6 +33,8 @@ type RunOptions struct {
 	SampleEvery  time.Duration // default 5 s
 	// Collector supplies samples; nil uses the /proc collector.
 	Collector Collector
+	// Config selects the enabled modules; nil enables all of them.
+	Config *config.Agent
 	// Uninstall performs self-removal; nil uses the real implementation.
 	Uninstall func(purge bool, dataDir string) error
 }
@@ -51,6 +54,10 @@ func Run(ctx context.Context, o RunOptions) error {
 	if o.Collector == nil {
 		o.Collector = NewCollector(ctx)
 	}
+	if o.Config == nil {
+		o.Config = config.DefaultAgent()
+	}
+	reg := NewRegistry(o.Config, o.Collector, o.Log)
 	buf := &sampleBuffer{}
 	go sampler(ctx, o, buf)
 	st, cert, err := loadState(o.DataDir)
@@ -63,7 +70,7 @@ func Run(ctx context.Context, o RunOptions) error {
 	}
 	backoff := time.Second
 	for {
-		err := session(ctx, o, st, cert, key, buf)
+		err := session(ctx, o, st, cert, key, buf, reg)
 		switch {
 		case errors.Is(err, ErrRevoked), errors.Is(err, ErrUninstalled), ctx.Err() != nil:
 			if ctx.Err() != nil && err == nil {
@@ -83,7 +90,7 @@ func Run(ctx context.Context, o RunOptions) error {
 	}
 }
 
-func session(ctx context.Context, o RunOptions, st *State, cert tls.Certificate, key ed25519.PrivateKey, buf *sampleBuffer) error {
+func session(ctx context.Context, o RunOptions, st *State, cert tls.Certificate, key ed25519.PrivateKey, buf *sampleBuffer, reg *Registry) error {
 	hc := &http.Client{Transport: &http.Transport{TLSClientConfig: pinnedTLS(st.ServerFP, &cert)}}
 	ws, resp, err := websocket.Dial(ctx, "wss://"+st.Server+"/v1/ws", &websocket.DialOptions{HTTPClient: hc})
 	if err != nil {
@@ -96,6 +103,7 @@ func session(ctx context.Context, o RunOptions, st *State, cert tls.Certificate,
 	defer func() { _ = ws.Close(websocket.StatusNormalClosure, "") }()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	defer reg.CloseAll()
 
 	var seq uint64
 	var sendMu sync.Mutex // seq numbers must hit the wire in order
@@ -110,7 +118,7 @@ func session(ctx context.Context, o RunOptions, st *State, cert tls.Certificate,
 		b, _ := json.Marshal(env)
 		return ws.Write(ctx, websocket.MessageText, b)
 	}
-	if err := send(protocol.TypeHello, protocol.Hello{AgentVersion: o.AgentVersion, OS: osName(), Hostname: hostname()}); err != nil {
+	if err := send(protocol.TypeHello, protocol.Hello{AgentVersion: o.AgentVersion, OS: osName(), Hostname: hostname(), Modules: reg.Modules()}); err != nil {
 		return err
 	}
 
@@ -200,6 +208,38 @@ func session(ctx context.Context, o RunOptions, st *State, cert tls.Certificate,
 		case err := <-errc:
 			return err
 		case env := <-msgs:
+			switch env.Type {
+			case protocol.TypeCmd:
+				var c protocol.Cmd
+				if json.Unmarshal(env.Payload, &c) == nil {
+					go func() { _ = send(protocol.TypeCmdResult, reg.HandleCmd(ctx, c)) }()
+				}
+				continue
+			case protocol.TypeStreamOpen:
+				var so protocol.StreamOpen
+				if json.Unmarshal(env.Payload, &so) == nil {
+					reg.OpenStream(ctx, so, send)
+				}
+				continue
+			case protocol.TypeStreamInput:
+				var d protocol.StreamData
+				if json.Unmarshal(env.Payload, &d) == nil {
+					reg.StreamInput(d.SID, d.Data)
+				}
+				continue
+			case protocol.TypeStreamResize:
+				var rz protocol.StreamResize
+				if json.Unmarshal(env.Payload, &rz) == nil {
+					reg.StreamResize(rz.SID, rz.Cols, rz.Rows)
+				}
+				continue
+			case protocol.TypeStreamClose:
+				var sc protocol.StreamClose
+				if json.Unmarshal(env.Payload, &sc) == nil {
+					reg.StreamClose(sc.SID)
+				}
+				continue
+			}
 			if env.Type == protocol.TypeAgentRemove {
 				var u protocol.Uninstall
 				_ = json.Unmarshal(env.Payload, &u)

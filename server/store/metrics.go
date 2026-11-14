@@ -294,3 +294,19 @@ func (s *Store) DashboardSetOrder(ctx context.Context, dashID int64, ids []strin
 	}
 	return tx.Commit(ctx)
 }
+
+// SetModules stores the modules an agent reported in its hello.
+func (s *Store) SetModules(ctx context.Context, serverID string, modules []string) error {
+	if modules == nil {
+		modules = []string{}
+	}
+	_, err := s.Pool.Exec(ctx, `UPDATE servers SET modules=$2 WHERE id=$1`, serverID, modules)
+	return err
+}
+
+// Modules returns the modules an agent last reported.
+func (s *Store) Modules(ctx context.Context, serverID string) ([]string, error) {
+	var m []string
+	err := s.Pool.QueryRow(ctx, `SELECT coalesce(ARRAY(SELECT jsonb_array_elements_text(modules)), '{}') FROM servers WHERE id=$1`, serverID).Scan(&m)
+	return m, notFound(err)
+}

@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/bolgov0zero/linager/agent"
@@ -331,6 +332,60 @@ func TestEndToEnd(t *testing.T) {
 	if code := api.do("PUT", "/api/dashboard/order", map[string]any{"server_ids": []string{id}}, nil); code != 200 {
 		t.Fatalf("order: %d", code)
 	}
+
+	// --- management: confirmation rules, processes, streams ---
+	if code := api.do("POST", "/api/servers/"+id+"/services/ssh.service/stop", map[string]any{"confirm": false}, nil); code != http.StatusConflict {
+		t.Fatalf("stopping ssh without confirmation must be refused, got %d", code)
+	}
+	if code := api.do("POST", "/api/servers/"+id+"/services/linager-agent.service/restart", map[string]any{}, nil); code != http.StatusConflict {
+		t.Fatalf("restarting the agent without confirmation must be refused, got %d", code)
+	}
+	if code := api.do("POST", "/api/servers/"+id+"/reboot", map[string]any{"confirm": false}, nil); code != http.StatusConflict {
+		t.Fatalf("reboot without confirmation must be refused, got %d", code)
+	}
+	if code := api.do("POST", "/api/servers/"+id+"/services/bad;name/start", map[string]any{}, nil); code != http.StatusBadRequest {
+		t.Fatalf("invalid unit names must be refused, got %d", code)
+	}
+	if code := api.do("POST", "/api/servers/"+id+"/processes/1/kill", map[string]any{"confirm": true}, nil); code != http.StatusBadRequest {
+		t.Fatalf("killing pid 1 must be refused, got %d", code)
+	}
+	if code := api.do("GET", "/api/servers/"+id+"/processes?sort=cpu&n=5", nil, nil); code != http.StatusOK {
+		t.Fatalf("processes list: %d", code)
+	}
+	var detail struct {
+		Modules []string `json:"modules"`
+	}
+	api.do("GET", "/api/servers/"+id, nil, &detail)
+	if len(detail.Modules) < 5 {
+		t.Fatalf("agent must report its modules: %v", detail.Modules)
+	}
+	if code := api.do("GET", "/api/servers/"+id+"/stream?kind=bogus", nil, nil); code != http.StatusBadRequest {
+		t.Fatalf("unknown stream kind: %d", code)
+	}
+	wsURL := "ws" + strings.TrimPrefix(api.base, "http") + "/api/servers/" + id + "/stream?kind=terminal&cols=80&rows=24"
+	wctx, wcancel := context.WithTimeout(ctx, 20*time.Second)
+	wc, _, err := websocket.Dial(wctx, wsURL, &websocket.DialOptions{HTTPClient: api.hc})
+	if err != nil {
+		t.Fatalf("terminal websocket: %v", err)
+	}
+	if err := wc.Write(wctx, websocket.MessageBinary, []byte("echo hello-$((40+2))-linager\n")); err != nil {
+		t.Fatal(err)
+	}
+	var term strings.Builder
+	for !strings.Contains(term.String(), "hello-42-linager\r\n") {
+		_, b, err := wc.Read(wctx)
+		if err != nil {
+			t.Fatalf("terminal output not received (%v): %q", err, term.String())
+		}
+		term.Write(b)
+	}
+	_ = wc.Close(websocket.StatusNormalClosure, "")
+	wcancel()
+	var nAudit int
+	waitFor(t, "terminal audit entries", func() bool {
+		_ = db.Pool.QueryRow(ctx, `SELECT count(*) FROM audit_log WHERE action IN ('stream.open','stream.close')`).Scan(&nAudit)
+		return nAudit >= 2
+	})
 
 	// --- deleting a client ---
 	name := servers[0].Name

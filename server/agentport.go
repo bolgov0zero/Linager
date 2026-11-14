@@ -162,7 +162,8 @@ func (a *AgentPort) ws(w http.ResponseWriter, r *http.Request) {
 	ws.SetReadLimit(1 << 20)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	c := &conn{ws: ws, key: a.Keys.CmdKey, cancel: cancel}
+	c := &conn{ws: ws, key: a.Keys.CmdKey, cancel: cancel, state: newConnState()}
+	defer c.failAll()
 	defer func() { _ = ws.Close(websocket.StatusNormalClosure, "") }()
 
 	pub := ed25519.PublicKey(srv.AgentPubkey)
@@ -196,6 +197,7 @@ func (a *AgentPort) ws(w http.ResponseWriter, r *http.Request) {
 	a.Hub.add(id, c)
 	defer a.Hub.remove(id, c)
 	_ = a.DB.TouchServer(ctx, id, h.OS, h.AgentVersion, hello.V)
+	_ = a.DB.SetModules(ctx, id, h.Modules)
 	a.Log.Info("agent connected", "server", srv.Name, "version", h.AgentVersion)
 
 	for {
@@ -205,6 +207,8 @@ func (a *AgentPort) ws(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		switch env.Type {
+		case protocol.TypeCmdResult, protocol.TypeStreamData, protocol.TypeStreamClose:
+			c.deliver(ctx, env)
 		case protocol.TypeMetrics:
 			var batch protocol.MetricsBatch
 			if err := json.Unmarshal(env.Payload, &batch); err != nil || len(batch.Samples) > protocol.MaxBatchSamples {

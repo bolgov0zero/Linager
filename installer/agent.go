@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bolgov0zero/linager/agent"
+	"github.com/bolgov0zero/linager/internal/config"
 	"github.com/bolgov0zero/linager/internal/version"
 )
 
@@ -109,6 +110,9 @@ func AgentFlow(o AgentOpts) Flow {
 				return pairing(ctx)
 			}},
 			step{title: tr(l, "st.service"), fn: func(ctx context.Context) error {
+				if err := writeAgentConfig(); err != nil {
+					return err
+				}
 				if err := os.WriteFile("/etc/systemd/system/linager-agent.service", []byte(AgentUnit), 0o644); err != nil { //nolint:gosec // unit files are world-readable
 					return err
 				}
@@ -131,4 +135,21 @@ func AgentFlow(o AgentOpts) Flow {
 			{Label: tr(l, "sum.log"), Value: o.LogPath},
 		}}, nil
 	}
+}
+
+// writeAgentConfig creates /etc/linager/agent.yaml with every module enabled; an existing file is kept.
+func writeAgentConfig() error {
+	const path = "/etc/linager/agent.yaml"
+	if FileExists(path) {
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { //nolint:gosec // config dir is traversable, the file itself is 0600
+		return err
+	}
+	var b strings.Builder
+	b.WriteString("# Linager agent: switch modules off by setting them to false, then restart linager-agent.\nmodules:\n")
+	for _, m := range config.AgentModules {
+		fmt.Fprintf(&b, "  %s: true\n", m)
+	}
+	return os.WriteFile(path, []byte(b.String()), 0o600)
 }

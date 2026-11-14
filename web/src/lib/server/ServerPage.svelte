@@ -6,6 +6,12 @@
   import { showToast } from '../toast';
   import MetricsTab from './MetricsTab.svelte';
   import OverviewTab from './OverviewTab.svelte';
+  import TerminalTab from './tabs/TerminalTab.svelte';
+  import LogsTab from './tabs/LogsTab.svelte';
+  import ProcessesTab from './tabs/ProcessesTab.svelte';
+  import ServicesTab from './tabs/ServicesTab.svelte';
+  import UpdatesTab from './tabs/UpdatesTab.svelte';
+  import RebootButton from './tabs/RebootButton.svelte';
   import { formatDateTime } from './format';
   import { HISTORY_LIMIT, TABS, type LiveSample, type TabId } from './model';
 
@@ -81,8 +87,8 @@
   <div class="topbar">
     <button class="btn" type="button" onclick={onBack}>{$tr('srv.back')}</button>
     <div class="row">
-      <button class="btn" type="button" disabled title={$tr('srv.soon')}>{$tr('srv.reboot')}</button>
       {#if detail}
+        <RebootButton server={detail} />
         <button class="btn danger" type="button" onclick={() => (deleteOpen = true)}>{$tr('srv.delete')}</button>
       {/if}
     </div>
@@ -143,6 +149,16 @@
         <OverviewTab server={detail} {sample} {live} {online} />
       {:else if tab === 'metrics'}
         <MetricsTab serverId={detail.id} />
+      {:else if tab === 'terminal'}
+        <TerminalTab server={detail} />
+      {:else if tab === 'services'}
+        <ServicesTab server={detail} />
+      {:else if tab === 'updates'}
+        <UpdatesTab server={detail} />
+      {:else if tab === 'processes'}
+        <ProcessesTab server={detail} />
+      {:else if tab === 'logs'}
+        <LogsTab server={detail} />
       {:else}
         <p class="soon">{$tr('srv.soon')}</p>
       {/if}

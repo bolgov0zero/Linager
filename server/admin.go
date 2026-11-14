@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bolgov0zero/linager/internal/config"
@@ -43,6 +44,9 @@ type Admin struct {
 	Static  fs.FS // built frontend (may be nil in tests)
 
 	loginL *ipLimiter
+
+	termMu sync.Mutex
+	terms  map[string]int
 }
 
 // NewAdmin builds the admin handler set.
@@ -51,7 +55,7 @@ func NewAdmin(db *store.Store, keys *Keys, hub *Hub, live *Live, metrics *Metric
 	if err != nil {
 		return nil, err
 	}
-	return &Admin{DB: db, Keys: keys, Hub: hub, Live: live, Metrics: metrics, Log: log, Cfg: cfg, Trust: trust, Static: static, loginL: newLimiter(10, time.Minute)}, nil
+	return &Admin{DB: db, Keys: keys, Hub: hub, Live: live, Metrics: metrics, Log: log, Cfg: cfg, Trust: trust, Static: static, loginL: newLimiter(10, time.Minute), terms: map[string]int{}}, nil
 }
 
 // Handler returns the full admin handler including the base path and security headers.
@@ -77,6 +81,13 @@ func (a *Admin) Handler() http.Handler {
 	mux.HandleFunc("DELETE /api/dashboard/items/{id}", a.auth(a.dashboardRemove))
 	mux.HandleFunc("PUT /api/dashboard/order", a.auth(a.dashboardOrder))
 	mux.HandleFunc("GET /api/live", a.auth(a.liveHandler))
+	mux.HandleFunc("GET /api/servers/{id}/services", a.auth(a.servicesList))
+	mux.HandleFunc("POST /api/servers/{id}/services/{unit}/{action}", a.auth(a.serviceAction))
+	mux.HandleFunc("GET /api/servers/{id}/apt", a.auth(a.aptList))
+	mux.HandleFunc("POST /api/servers/{id}/reboot", a.auth(a.reboot))
+	mux.HandleFunc("GET /api/servers/{id}/processes", a.auth(a.processesList))
+	mux.HandleFunc("POST /api/servers/{id}/processes/{pid}/kill", a.auth(a.killProcess))
+	mux.HandleFunc("GET /api/servers/{id}/stream", a.auth(a.streamWS))
 	if a.Static != nil {
 		mux.Handle("/", a.static())
 	}
@@ -90,7 +101,7 @@ func (a *Admin) Handler() http.Handler {
 func secureHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
-		h.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+		h.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Referrer-Policy", "no-referrer")
