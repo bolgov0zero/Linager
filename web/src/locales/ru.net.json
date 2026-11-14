@@ -77,5 +77,13 @@
   "net.dns.search": "Домен поиска",
   "net.config.title": "Конфигурация",
   "net.config.show": "Показать",
-  "net.config.hide": "Скрыть"
+  "net.config.hide": "Скрыть",
+  "net.config.edit": "Редактировать",
+  "net.config.cancel": "Отмена",
+  "net.config.apply": "Применить…",
+  "net.config.hint": "Правится файл /etc/network/interfaces целиком. Подключённые файлы (source) здесь не меняются. Перед применением конфигурация проверяется командой ifup --no-act.",
+  "net.config.confirmTitle": "Применить конфигурацию?",
+  "net.config.confirmText": "Изменённые интерфейсы будут переподняты с новой конфигурацией. Если связь с сервером пропадёт и вы не подтвердите изменение в течение 30 секунд, агент сам вернёт прежний файл.",
+  "net.config.confirmButton": "Применить",
+  "net.config.unchanged": "Файл не изменён."
 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.19
+
+- Network tab: the configuration block can be edited by hand (ifupdown systems): the whole `/etc/network/interfaces` is edited, checked with `ifup --no-act`, applied with the same 30-second rollback as form changes, and written to the audit log. Netplan systems stay read-only. Agents must be updated to this version to use it.
+
 ## 0.1.18
 
 - Server groups: create groups ("Groups…" next to the dashboard filters), put a server into a group in edit mode, and pick a group in the selector to see only its servers (the summary follows the selected group). Reordering works inside the selected group. Group changes are written to the audit log. Database migration 00005 adds the groups table.

@@ -64,3 +64,21 @@ func TestApplyCreatesMissingStanza(t *testing.T) {
 		t.Fatalf("%s", out)
 	}
 }
+
+func TestDiffIfaces(t *testing.T) {
+	oldText := "auto lo\niface lo inet loopback\n\nauto eth0\niface eth0 inet dhcp\n\nauto eth1\niface eth1 inet static\n    address 10.0.0.2/24\n"
+	newText := "auto lo\niface lo inet loopback\n\nauto eth0\niface eth0 inet static\n    address 10.0.0.9/24\n\n# eth1 removed\n\nauto eth2\niface eth2 inet dhcp\n"
+	names, up := diffIfaces(oldText, newText, func(string) bool { return false })
+	want := map[string]bool{"eth0": true, "eth1": false, "eth2": true} // name -> brought up afterwards
+	if len(names) != len(want) {
+		t.Fatalf("changed interfaces = %v", names)
+	}
+	for i, n := range names {
+		if w, ok := want[n]; !ok || w != up[i] {
+			t.Errorf("%s: up=%v, want %v (names %v)", n, up[i], w, names)
+		}
+	}
+	if names, _ := diffIfaces(oldText, oldText+"# comment\n", func(string) bool { return false }); len(names) != 0 {
+		t.Errorf("a comment must not change interfaces, got %v", names)
+	}
+}

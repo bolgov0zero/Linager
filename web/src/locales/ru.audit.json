@@ -87,5 +87,6 @@
   "audit.action.group.create": "Группа: создание",
   "audit.action.group.rename": "Группа: переименование",
   "audit.action.group.delete": "Группа: удаление",
-  "audit.action.group.assign": "Группа: назначение серверу"
+  "audit.action.group.assign": "Группа: назначение серверу",
+  "audit.action.network.config.apply": "Сеть: правка конфигурации"
 }

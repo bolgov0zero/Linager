@@ -278,14 +278,18 @@ func (m *netModule) apply(ctx context.Context, raw json.RawMessage, dangerous bo
 	var p struct {
 		ID      string      `json:"id"`
 		Changes []NetChange `json:"changes"`
+		Raw     *string     `json:"raw"` // the whole interfaces file, edited by hand
 	}
-	if err := json.Unmarshal(raw, &p); err != nil || p.ID == "" || len(p.Changes) == 0 {
+	if err := json.Unmarshal(raw, &p); err != nil || p.ID == "" || (p.Raw == nil && len(p.Changes) == 0) {
 		return nil, errors.New("invalid request")
 	}
 	if m.backend() != "ifupdown" {
 		return nil, errors.New("network editing is not available on this system")
 	}
 	old := read(m.ifPath)
+	if p.Raw != nil {
+		return m.applyRaw(ctx, p.ID, old, *p.Raw)
+	}
 	for _, c := range p.Changes {
 		if err := validateNetChange(c); err != nil {
 			return nil, fmt.Errorf("%s: %w", c.Iface, err)
@@ -322,6 +326,55 @@ func (m *netModule) apply(ctx context.Context, raw json.RawMessage, dangerous bo
 		}
 	}
 	return map[string]any{"id": p.ID, "deadline": deadline}, nil
+}
+
+// applyRaw replaces the whole interfaces file with hand-edited text. Like the form-based change it goes through
+// the pending flow: the changed interfaces are reconfigured with the candidate file and the old file comes back
+// by itself unless the administrator confirms in time. The candidate is dry-run checked with ifup first.
+func (m *netModule) applyRaw(ctx context.Context, id, old, text string) (any, error) {
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	if strings.TrimSpace(text) == "" || len(text) > maxRawConfig || strings.ContainsRune(text, 0) {
+		return nil, errors.New("the file is empty, too large or not text")
+	}
+	text = strings.TrimRight(text, "\n") + "\n"
+	if text == strings.TrimRight(old, "\n")+"\n" {
+		return nil, errors.New("nothing changed")
+	}
+	if err := os.MkdirAll(m.dir, 0o700); err != nil {
+		return nil, err
+	}
+	candPath := filepath.Join(m.dir, "net-"+id+".interfaces")
+	if err := os.WriteFile(candPath, []byte(text), 0o600); err != nil {
+		return nil, err
+	}
+	ifaces, up := diffIfaces(old, text, func(n string) bool {
+		return strings.TrimSpace(read("/sys/class/net/"+n+"/operstate")) == "up"
+	})
+	for i, ifc := range ifaces {
+		if !up[i] {
+			continue
+		}
+		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		out, err := m.run(cctx, "ifup", "--no-act", "--force", "-i", candPath, ifc)
+		cancel()
+		if err != nil {
+			_ = os.Remove(candPath)
+			return nil, fmt.Errorf("%s: %s", ifc, lastLine(string(out), err.Error()))
+		}
+	}
+	data := netPendingData{Cand: candPath, Old: m.ifPath, Ifaces: ifaces, Up: up}
+	deadline, err := m.pend.Begin(id, "network", data, PendingWindow)
+	if err != nil {
+		_ = os.Remove(candPath)
+		return nil, err
+	}
+	for i, ifc := range ifaces {
+		if err := m.reconfigure(ctx, data.Old, data.Cand, ifc, up[i]); err != nil {
+			m.pend.Abort(id)
+			return nil, err
+		}
+	}
+	return map[string]any{"id": id, "deadline": deadline}, nil
 }
 
 // reconfigure takes the interface down using the config it was brought up with and up with the new one.

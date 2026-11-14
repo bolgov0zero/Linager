@@ -277,6 +277,33 @@
     }
   }
 
+  // ---- raw configuration editor (ifupdown only) ----
+  let editingConfig = $state(false);
+  let configText = $state('');
+  let confirmConfig = $state(false);
+
+  function startConfigEdit() {
+    configText = info?.config_preview ?? '';
+    actionError = null;
+    editingConfig = true;
+  }
+
+  async function applyConfig() {
+    if (busy) return;
+    busy = true;
+    actionError = null;
+    confirmConfig = false;
+    try {
+      await api.networkApplyConfig(serverId, configText);
+      editingConfig = false;
+      await load(serverId);
+    } catch (e) {
+      actionError = errorText(e);
+    } finally {
+      busy = false;
+    }
+  }
+
   async function confirmPending() {
     const id = pendingId;
     if (id === null || busy) return;
@@ -599,16 +626,61 @@
     <section class="card stack">
       <div class="head">
         <h2>{$tr('net.config.title')}</h2>
-        <button class="btn" type="button" onclick={() => (showConfig = !showConfig)}
-          >{showConfig ? $tr('net.config.hide') : $tr('net.config.show')}</button
-        >
+        <div class="row">
+          {#if editable && !editingConfig}
+            <button class="btn" type="button" disabled={busy || pending !== null} onclick={startConfigEdit}
+              >{$tr('net.config.edit')}</button
+            >
+          {/if}
+          {#if !editingConfig}
+            <button class="btn" type="button" onclick={() => (showConfig = !showConfig)}
+              >{showConfig ? $tr('net.config.hide') : $tr('net.config.show')}</button
+            >
+          {/if}
+        </div>
       </div>
-      {#if showConfig}
+      {#if editingConfig}
+        <p class="small muted">{$tr('net.config.hint')}</p>
+        <textarea
+          class="input mono config-edit"
+          rows="22"
+          spellcheck="false"
+          aria-label={$tr('net.config.title')}
+          bind:value={configText}></textarea>
+        {#if actionError}
+          <p class="error" role="alert">{actionError}</p>
+        {/if}
+        <div class="row end">
+          <button class="btn" type="button" disabled={busy} onclick={() => (editingConfig = false)}
+            >{$tr('net.config.cancel')}</button
+          >
+          <button
+            class="btn primary"
+            type="button"
+            disabled={busy || configText.trim() === '' || configText.trim() === (info.config_preview ?? '').trim()}
+            onclick={() => (confirmConfig = true)}>{$tr('net.config.apply')}</button
+          >
+        </div>
+      {:else if showConfig}
         <pre class="config mono">{info.config_preview}</pre>
       {/if}
     </section>
   {/if}
 </div>
+
+{#if confirmConfig}
+  <Modal title={$tr('net.config.confirmTitle')} labelId="net-cfg-title" onclose={() => (confirmConfig = false)}>
+    <div class="stack">
+      <p>{$tr('net.config.confirmText')}</p>
+      <div class="row end">
+        <button class="btn" type="button" onclick={() => (confirmConfig = false)}>{$tr('common.cancel')}</button>
+        <button class="btn danger" type="button" disabled={busy} onclick={() => void applyConfig()}
+          >{$tr('net.config.confirmButton')}</button
+        >
+      </div>
+    </div>
+  </Modal>
+{/if}
 
 {#if warnings}
   <Modal title={$tr('net.warn.title')} labelId="net-warn-title" onclose={() => (warnings = null)}>
@@ -636,6 +708,13 @@
 {/if}
 
 <style>
+  .config-edit {
+    width: 100%;
+    resize: vertical;
+    white-space: pre;
+    overflow: auto;
+  }
+
   .net {
     min-width: 0;
   }

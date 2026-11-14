@@ -371,6 +371,9 @@ export const api = {
   /** Without confirm, answers 409 {warnings} when the change is risky; repeat with confirm=true to apply. */
   networkApply: (id: string, confirm: boolean) =>
     request<PendingChange>('POST', `api/servers/${enc(id)}/network/apply`, { confirm }),
+  /** Applies a hand-edited interfaces file; it is rolled back by the agent unless confirmed in time. */
+  networkApplyConfig: (id: string, text: string) =>
+    request<PendingChange>('POST', `api/servers/${enc(id)}/network/config`, { text, confirm: true }),
   networkConfirm: (id: string, changeId: string) =>
     request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/network/confirm`, { id: changeId }),
   networkRollback: (id: string, changeId: string) =>

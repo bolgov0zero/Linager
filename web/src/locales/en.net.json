@@ -77,5 +77,13 @@
   "net.dns.search": "Search domain",
   "net.config.title": "Configuration",
   "net.config.show": "Show",
-  "net.config.hide": "Hide"
+  "net.config.hide": "Hide",
+  "net.config.edit": "Edit",
+  "net.config.cancel": "Cancel",
+  "net.config.apply": "Apply…",
+  "net.config.hint": "The whole /etc/network/interfaces file is edited. Included files (source) are not changed here. The configuration is checked with ifup --no-act before it is applied.",
+  "net.config.confirmTitle": "Apply the configuration?",
+  "net.config.confirmText": "The changed interfaces will be brought up again with the new configuration. If the connection to the server is lost and you do not confirm the change within 30 seconds, the agent restores the previous file by itself.",
+  "net.config.confirmButton": "Apply",
+  "net.config.unchanged": "The file is unchanged."
 }

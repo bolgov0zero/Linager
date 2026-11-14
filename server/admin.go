@@ -118,6 +118,7 @@ func (a *Admin) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/servers/{id}/network/draft", a.auth(a.networkSaveDraft))
 	mux.HandleFunc("DELETE /api/servers/{id}/network/draft", a.auth(a.resetDraft("network")))
 	mux.HandleFunc("POST /api/servers/{id}/network/apply", a.auth(a.networkApply))
+	mux.HandleFunc("POST /api/servers/{id}/network/config", a.auth(a.networkApplyConfig))
 	mux.HandleFunc("POST /api/servers/{id}/network/confirm", a.auth(a.confirmOrRollback("network", "confirm")))
 	mux.HandleFunc("POST /api/servers/{id}/network/rollback", a.auth(a.confirmOrRollback("network", "rollback")))
 	mux.HandleFunc("GET /api/servers/{id}/firewall", a.auth(a.firewallState))

@@ -448,6 +448,39 @@ func (a *Admin) networkApply(w http.ResponseWriter, r *http.Request, u *store.Us
 	writeJSON(w, http.StatusOK, pv)
 }
 
+// networkApplyConfig applies a hand-edited interfaces file through the same pending/rollback flow.
+func (a *Admin) networkApplyConfig(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s := a.serverOr404(w, r)
+	if s == nil {
+		return
+	}
+	var req struct {
+		Text    string `json:"text"`
+		Confirm bool   `json:"confirm"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	if !req.Confirm {
+		jsonErr(w, http.StatusBadRequest, msg(r, "Нужно подтверждение", "Confirmation required"))
+		return
+	}
+	if strings.TrimSpace(req.Text) == "" || len(req.Text) > 64*1024 {
+		jsonErr(w, http.StatusBadRequest, msg(r, "Файл пуст или слишком большой (до 64 КБ)", "The file is empty or too large (64 KB max)"))
+		return
+	}
+	if a.pendingOf(r.Context(), s.ID, "") != nil {
+		jsonErr(w, http.StatusConflict, msg(r, "Есть неподтверждённое изменение", "Another change is waiting for confirmation"))
+		return
+	}
+	pv, ok := a.startChange(w, r, s, "network", "network", map[string]any{"raw": req.Text}, true)
+	a.audit(r, u, "network.config.apply", "server", s.ID, s.Name, map[bool]string{true: "ok", false: "failed"}[ok], map[string]any{"bytes": len(req.Text), "lines": strings.Count(req.Text, "\n") + 1})
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, pv)
+}
+
 // ---- firewall ----
 
 type fwDraftReq struct {
