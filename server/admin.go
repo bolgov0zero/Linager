@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io/fs"
 	"log/slog"
+	"mime"
 	"net/http"
 	"strings"
 	"sync"
@@ -153,6 +154,8 @@ func (a *Admin) secureHeaders(next http.Handler) http.Handler {
 }
 
 func (a *Admin) static() http.Handler {
+	// Not every system mime table knows the web app manifest; nosniff is set, so the type must be right.
+	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
 	files := http.FileServerFS(a.Static)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p := strings.TrimPrefix(r.URL.Path, "/")
