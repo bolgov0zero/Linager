@@ -134,5 +134,6 @@
   "files.conflict.cancel": "Отмена",
   "files.deleteManyTitle": "Удалить выбранное?",
   "files.deleteMany": "Будет удалено элементов: {n}. Это нельзя отменить.",
-  "files.deletedMany": "Удалено: {n}"
+  "files.deletedMany": "Удалено: {n}",
+  "docker.menu": "Действия"
 }

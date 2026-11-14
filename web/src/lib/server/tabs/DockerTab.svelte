@@ -4,6 +4,7 @@
   import { api, openStream, type DockerContainer, type DockerImage, type DockerInfo, type ServerDetail } from '../../../api';
   import { locale, t, tr as tStore, type Vars } from '../../../i18n';
   import Modal from '../../Modal.svelte';
+  import ActionMenu from '../../ui/ActionMenu.svelte';
   import { showToast } from '../../toast';
   import { formatBytes, formatDateTime } from '../format';
   import {
@@ -189,6 +190,24 @@
     return busy !== null && busy.startsWith(`${c.id}:`);
   }
 
+  /** Items of the actions menu of a container row. */
+  function containerMenu(c: DockerContainer, running: boolean) {
+    const busy = readOnly || rowBusy(c);
+    return [
+      { key: 'logs', label: $tStore('docker.logs'), disabled: readOnly, onselect: () => openLogs(c) },
+      running
+        ? { key: 'stop', label: $tStore('docker.act.stop'), disabled: busy, onselect: () => void containerAction(c, 'stop') }
+        : { key: 'start', label: $tStore('docker.act.start'), disabled: busy, onselect: () => void containerAction(c, 'start') },
+      { key: 'restart', label: $tStore('docker.act.restart'), disabled: busy || !running, onselect: () => void containerAction(c, 'restart') },
+      { key: 'remove', label: $tStore('docker.act.remove'), disabled: busy, onselect: () => requestRemove(c) },
+    ];
+  }
+
+  /** An image in use cannot be removed (the item is disabled). */
+  function imageMenu(image: DockerImage) {
+    return [{ key: 'remove', label: $tStore('docker.act.remove'), disabled: readOnly || image.used, onselect: () => requestImageRemove(image) }];
+  }
+
   function requestRemove(c: DockerContainer): void {
     ask = {
       title: T('docker.removeTitle'),
@@ -298,24 +317,7 @@
                 <td class="num mono small hide-sm">{ramText(c)}</td>
                 <td class="small">{c.status}</td>
                 <td class="acts">
-                  <div class="row end">
-                    <button class="btn" type="button" disabled={readOnly} onclick={() => openLogs(c)}>{$tStore('docker.logs')}</button>
-                    {#if running}
-                      <button class="btn" type="button" disabled={readOnly || rowBusy(c)} onclick={() => containerAction(c, 'stop')}>
-                        {$tStore('docker.act.stop')}
-                      </button>
-                    {:else}
-                      <button class="btn" type="button" disabled={readOnly || rowBusy(c)} onclick={() => containerAction(c, 'start')}>
-                        {$tStore('docker.act.start')}
-                      </button>
-                    {/if}
-                    <button class="btn" type="button" disabled={readOnly || !running || rowBusy(c)} onclick={() => containerAction(c, 'restart')}>
-                      {$tStore('docker.act.restart')}
-                    </button>
-                    <button class="btn" type="button" disabled={readOnly || rowBusy(c)} onclick={() => requestRemove(c)}>
-                      {$tStore('docker.act.remove')}
-                    </button>
-                  </div>
+                  <ActionMenu label={$tStore('docker.menu')} items={containerMenu(c, running)} disabled={readOnly} />
                 </td>
               </tr>
             {/each}
@@ -358,17 +360,7 @@
                   {/if}
                 </td>
                 <td class="acts">
-                  <div class="row end">
-                    <button
-                      class="btn"
-                      type="button"
-                      disabled={readOnly || img.used}
-                      title={img.used ? $tStore('docker.usedHint') : undefined}
-                      onclick={() => requestImageRemove(img)}
-                    >
-                      {$tStore('docker.act.remove')}
-                    </button>
-                  </div>
+                  <ActionMenu label={$tStore('docker.menu')} items={imageMenu(img)} disabled={readOnly} />
                 </td>
               </tr>
             {/each}
@@ -522,17 +514,6 @@
     white-space: nowrap;
   }
 
-  /* Row actions stay in one line (compact buttons); on phones they may wrap. */
-  .acts .row {
-    flex-wrap: nowrap;
-    gap: 6px;
-  }
-
-  .acts .btn {
-    padding: 4px 10px;
-    font-size: 13px;
-  }
-
   .acts-head {
     width: 1%;
   }
@@ -633,10 +614,6 @@
       min-width: 0;
     }
 
-    .acts .row {
-      flex-wrap: wrap;
-      min-width: 260px;
-    }
   }
 
   /* Phones: containers and images as small blocks. */
@@ -687,14 +664,9 @@
     }
 
     table.grid td.acts {
-      flex: 1 0 100%;
+      flex: none;
       width: auto;
-      white-space: normal;
-    }
-
-    .acts .row {
-      min-width: 0;
-      justify-content: flex-start;
+      margin-left: auto;
     }
   }
 </style>

@@ -134,5 +134,6 @@
   "files.conflict.cancel": "Cancel",
   "files.deleteManyTitle": "Delete the selection?",
   "files.deleteMany": "{n} items will be deleted. This cannot be undone.",
-  "files.deletedMany": "Deleted: {n}"
+  "files.deletedMany": "Deleted: {n}",
+  "docker.menu": "Actions"
 }

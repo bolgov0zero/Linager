@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.28
+
+- Docker tab: the container and image actions moved into a drop-down "Actions" menu in each row.
+
 ## 0.1.27
 
 - Phones: the agents, cache and history tables on the Updates page are shown as compact blocks, so there is no horizontal scrolling.
