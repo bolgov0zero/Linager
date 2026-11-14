@@ -298,6 +298,16 @@
     box-shadow: 3px 3px 0 var(--shade);
   }
 
+  /* The top bar stays pinned while the page scrolls (below floating terminals and dialogs). On phones the bar
+     wraps into several lines, so there it scrolls away with the page. */
+  @media (min-width: 721px) {
+    .top {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+  }
+
   .brand {
     display: flex;
     align-items: center;
