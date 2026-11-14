@@ -127,5 +127,7 @@
   "dash.pendingOpen": "Открыть запросы",
   "dash.unit.d": "д",
   "dash.unit.h": "ч",
-  "dash.unit.min": "мин"
+  "dash.unit.min": "мин",
+  "app.updates": "Обновления",
+  "app.audit": "Журнал"
 }

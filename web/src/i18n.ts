@@ -13,13 +13,17 @@ import ruNet from './locales/ru.net.json';
 import enNet from './locales/en.net.json';
 import ruFw from './locales/ru.fw.json';
 import enFw from './locales/en.fw.json';
+import ruUpd from './locales/ru.upd.json';
+import enUpd from './locales/en.upd.json';
+import ruAudit from './locales/ru.audit.json';
+import enAudit from './locales/en.audit.json';
 
 export type Locale = 'ru' | 'en';
 export type Vars = Record<string, string | number>;
 
 const dictionaries: Record<Locale, Record<string, string>> = {
-  ru: { ...ru, ...ruServer, ...ruTerm, ...ruMgmt, ...ruFiles, ...ruNet, ...ruFw },
-  en: { ...en, ...enServer, ...enTerm, ...enMgmt, ...enFiles, ...enNet, ...enFw },
+  ru: { ...ru, ...ruServer, ...ruTerm, ...ruMgmt, ...ruFiles, ...ruNet, ...ruFw, ...ruUpd, ...ruAudit },
+  en: { ...en, ...enServer, ...enTerm, ...enMgmt, ...enFiles, ...enNet, ...enFw, ...enUpd, ...enAudit },
 };
 const STORAGE_KEY = 'linager.lang';
 const DEFAULT_LOCALE: Locale = 'ru';

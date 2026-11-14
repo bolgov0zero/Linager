@@ -76,3 +76,15 @@ const (
 
 // ChangeWindow is how long a network or firewall change waits for confirmation before the agent rolls it back.
 const ChangeWindow = 30 * time.Second
+
+// TypeUpdateEvent reports the progress of an agent self-update to the server.
+const TypeUpdateEvent = "update.event"
+
+// UpdateEvent is the payload of TypeUpdateEvent.
+type UpdateEvent struct {
+	Version string `json:"version"`
+	Step    int    `json:"step"`  // 1..Total
+	Total   int    `json:"total"` // 5
+	ID      string `json:"id"`    // download | verify | backup | replace | restart
+	Error   string `json:"error,omitempty"`
+}

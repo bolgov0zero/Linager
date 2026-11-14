@@ -10,21 +10,23 @@ import (
 
 // ServerParams are the answers needed to install the server.
 type ServerParams struct {
-	AgentPort    int
-	AdminMode    string // "caddy" or "proxy"
-	Domain       string // caddy mode
-	PublicPort   int    // caddy mode, HTTPS port of Caddy (default 443)
-	AdminPort    int    // proxy mode: HTTP port Linager listens on; caddy mode: chosen loopback port
-	AdminUser    string
-	Password     string // empty = generate
-	ExtraHosts   []string
-	PasswordGen  bool
-	DSN          string
-	AdminListen  string
-	ConfigPath   string
-	DataDir      string
-	Force        bool
-	CaddyCfgPath string
+	AgentPort     int
+	AdminMode     string // "caddy" or "proxy"
+	Domain        string // caddy mode
+	PublicPort    int    // caddy mode, HTTPS port of Caddy (default 443)
+	AdminPort     int    // proxy mode: HTTP port Linager listens on; caddy mode: chosen loopback port
+	AdminUser     string
+	Password      string // empty = generate
+	ExtraHosts    []string
+	PasswordGen   bool
+	DSN           string
+	AdminListen   string
+	ConfigPath    string
+	DataDir       string
+	Force         bool
+	CaddyCfgPath  string
+	UpdateSource  string // carried over from an existing configuration on reinstall
+	UpdateChannel string
 }
 
 // AdminAddr returns the listen address of the Linager admin HTTP server.
@@ -71,6 +73,15 @@ func RenderServerConfig(p *ServerParams, hosts []string) string {
 	fmt.Fprintf(&b, "  listen: %q\n", p.AdminAddr())
 	b.WriteString("  trusted_proxies: [\"0.0.0.0/0\", \"::/0\"]\n")
 	b.WriteString("  cookie_secure: auto\n")
+	if p.UpdateSource != "" || p.UpdateChannel == "beta" {
+		b.WriteString("update:\n")
+		if p.UpdateSource != "" {
+			fmt.Fprintf(&b, "  source: %q\n", p.UpdateSource)
+		}
+		if p.UpdateChannel == "beta" {
+			b.WriteString("  channel: beta\n")
+		}
+	}
 	b.WriteString("agents:\n")
 	fmt.Fprintf(&b, "  listen: \"0.0.0.0:%d\"\n", p.AgentPort)
 	b.WriteString("  hosts:\n")
@@ -134,4 +145,47 @@ RestartPreventExitStatus=78
 
 [Install]
 WantedBy=multi-user.target
+`
+
+// UpdaterPathUnit starts the privileged updater when the panel writes an update request.
+const UpdaterPathUnit = `[Unit]
+Description=Linager update request watcher
+
+[Path]
+PathExists=/var/lib/linager/update-request.json
+Unit=linager-updater.service
+
+[Install]
+WantedBy=multi-user.target
+`
+
+// UpdaterServiceUnit performs the update as root (the server itself runs unprivileged).
+const UpdaterServiceUnit = `[Unit]
+Description=Linager updater
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/linager update --apply-request
+TimeoutStartSec=20min
+`
+
+// BackupServiceUnit and BackupTimerUnit create a daily backup (database, configuration, keys).
+const BackupServiceUnit = `[Unit]
+Description=Linager backup
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/linager backup --keep 7
+`
+
+// BackupTimerUnit runs the backup every night at 02:00.
+const BackupTimerUnit = `[Unit]
+Description=Linager daily backup
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
 `

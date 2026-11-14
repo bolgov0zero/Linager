@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -361,5 +362,172 @@ func (s *Store) PendingFor(ctx context.Context, serverID string) (*Pending, erro
 // ClearPending forgets the pending change.
 func (s *Store) ClearPending(ctx context.Context, serverID string) error {
 	_, err := s.Pool.Exec(ctx, `DELETE FROM pending_changes WHERE server_id=$1`, serverID)
+	return err
+}
+
+// ---- update history ----
+
+// UpdateRun is one row of the update history.
+type UpdateRun struct {
+	ID          int64     `json:"id"`
+	TS          time.Time `json:"-"`
+	Unix        int64     `json:"ts"`
+	Kind        string    `json:"kind"`
+	FromVersion string    `json:"from"`
+	ToVersion   string    `json:"to"`
+	Status      string    `json:"status"`
+	Detail      string    `json:"detail"`
+}
+
+// AddUpdateRun appends a history row.
+func (s *Store) AddUpdateRun(ctx context.Context, r UpdateRun) error {
+	_, err := s.Pool.Exec(ctx, `INSERT INTO update_runs (kind, from_version, to_version, status, detail) VALUES ($1,$2,$3,$4,$5)`,
+		r.Kind, r.FromVersion, r.ToVersion, r.Status, r.Detail)
+	return err
+}
+
+// UpdateRuns returns the latest history rows.
+func (s *Store) UpdateRuns(ctx context.Context, limit int) ([]UpdateRun, error) {
+	rows, err := s.Pool.Query(ctx, `SELECT id, extract(epoch FROM ts)::bigint, kind, from_version, to_version, status, detail FROM update_runs ORDER BY id DESC LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []UpdateRun{}
+	for rows.Next() {
+		var r UpdateRun
+		if err := rows.Scan(&r.ID, &r.Unix, &r.Kind, &r.FromVersion, &r.ToVersion, &r.Status, &r.Detail); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// AgentUpdate is the update state of one agent.
+type AgentUpdate struct {
+	ServerID  string
+	Version   string
+	Status    string
+	Step      int
+	Message   string
+	RunID     string
+	UpdatedAt time.Time
+}
+
+// SetAgentUpdate inserts or updates the state of an agent's update.
+func (s *Store) SetAgentUpdate(ctx context.Context, u AgentUpdate) error {
+	_, err := s.Pool.Exec(ctx, `INSERT INTO agent_updates (server_id, version, status, step, message, run_id) VALUES ($1,$2,$3,$4,$5,$6)
+		ON CONFLICT (server_id) DO UPDATE SET version=EXCLUDED.version, status=EXCLUDED.status, step=EXCLUDED.step,
+		message=EXCLUDED.message, run_id=EXCLUDED.run_id, updated_at=now()`, u.ServerID, u.Version, u.Status, u.Step, u.Message, u.RunID)
+	return err
+}
+
+// AgentUpdates lists all agent update rows.
+func (s *Store) AgentUpdates(ctx context.Context) (map[string]AgentUpdate, error) {
+	rows, err := s.Pool.Query(ctx, `SELECT server_id::text, version, status, step, message, run_id, updated_at FROM agent_updates`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]AgentUpdate{}
+	for rows.Next() {
+		var u AgentUpdate
+		if err := rows.Scan(&u.ServerID, &u.Version, &u.Status, &u.Step, &u.Message, &u.RunID, &u.UpdatedAt); err != nil {
+			return nil, err
+		}
+		out[u.ServerID] = u
+	}
+	return out, rows.Err()
+}
+
+// DeleteAgentUpdate removes an agent's update row.
+func (s *Store) DeleteAgentUpdate(ctx context.Context, serverID string) error {
+	_, err := s.Pool.Exec(ctx, `DELETE FROM agent_updates WHERE server_id=$1`, serverID)
+	return err
+}
+
+// AppliedMigrations returns the highest applied migration version.
+func (s *Store) AppliedMigrations(ctx context.Context) (int, error) {
+	var v int
+	err := s.Pool.QueryRow(ctx, `SELECT coalesce(max(version_id),0) FROM goose_db_version WHERE is_applied`).Scan(&v)
+	return v, err
+}
+
+// ---- audit log ----
+
+// AuditRow is one audit entry for the admin UI.
+type AuditRow struct {
+	ID         int64          `json:"id"`
+	TS         int64          `json:"ts"`
+	Actor      string         `json:"actor"`
+	Action     string         `json:"action"`
+	TargetType string         `json:"target_type"`
+	TargetName string         `json:"target_name"`
+	Result     string         `json:"result"`
+	ClientIP   string         `json:"client_ip"`
+	RemoteAddr string         `json:"remote_addr"`
+	Details    map[string]any `json:"details"`
+}
+
+// AuditFilter narrows an audit query.
+type AuditFilter struct {
+	Before int64 // return rows with id < Before (0 = newest)
+	Limit  int
+	Action string // one or more comma-separated prefixes
+	Actor  string
+	Result string
+	Query  string // substring of target name or action
+}
+
+// AuditList returns audit rows newest first.
+func (s *Store) AuditList(ctx context.Context, f AuditFilter) ([]AuditRow, error) {
+	if f.Limit <= 0 || f.Limit > 500 {
+		f.Limit = 100
+	}
+	prefixes := []string{} // non-nil: a nil slice would be sent as NULL
+	for _, p := range strings.Split(f.Action, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			prefixes = append(prefixes, strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(p)+"%")
+		}
+	}
+	rows, err := s.Pool.Query(ctx, `SELECT id, extract(epoch FROM ts)::bigint, actor, action, target_type, target_name, result, client_ip, remote_addr, details
+		FROM audit_log WHERE ($1::bigint = 0 OR id < $1) AND (cardinality($2::text[]) = 0 OR action LIKE ANY($2)) AND ($3 = '' OR actor = $3)
+		AND ($4 = '' OR result = $4) AND ($5 = '' OR target_name ILIKE '%' || $5 || '%' OR action ILIKE '%' || $5 || '%')
+		ORDER BY id DESC LIMIT $6`, f.Before, prefixes, f.Actor, f.Result, f.Query, f.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []AuditRow{}
+	for rows.Next() {
+		var r AuditRow
+		var d []byte
+		if err := rows.Scan(&r.ID, &r.TS, &r.Actor, &r.Action, &r.TargetType, &r.TargetName, &r.Result, &r.ClientIP, &r.RemoteAddr, &d); err != nil {
+			return nil, err
+		}
+		_ = json.Unmarshal(d, &r.Details)
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// ---- settings ----
+
+// Setting returns a stored setting as a string ("" when missing).
+func (s *Store) Setting(ctx context.Context, key string) string {
+	var raw []byte
+	if err := s.Pool.QueryRow(ctx, `SELECT value FROM settings WHERE key=$1`, key).Scan(&raw); err != nil {
+		return ""
+	}
+	var v string
+	_ = json.Unmarshal(raw, &v)
+	return v
+}
+
+// SetSetting stores a string setting.
+func (s *Store) SetSetting(ctx context.Context, key, value string) error {
+	b, _ := json.Marshal(value)
+	_, err := s.Pool.Exec(ctx, `INSERT INTO settings (key, value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value`, key, b)
 	return err
 }

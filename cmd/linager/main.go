@@ -23,8 +23,8 @@ func newRootCmd() *cobra.Command {
 		newServerCmd(),
 		newAgentCmd(),
 		newInstallCmd(),
-		stub("update", "Update Linager"),
-		stub("backup", "Back up the database and configuration"),
+		newUpdateCmd(),
+		newBackupCmd(),
 	)
 	return root
 }
@@ -36,17 +36,6 @@ func newVersionCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			_, err := fmt.Fprintln(cmd.OutOrStdout(), "linager "+version.String())
 			return err
-		},
-	}
-}
-
-// stub registers a command that is not implemented yet.
-func stub(use, short string) *cobra.Command {
-	return &cobra.Command{
-		Use:   use,
-		Short: short,
-		RunE: func(*cobra.Command, []string) error {
-			return fmt.Errorf("%q is not implemented yet", use)
 		},
 	}
 }

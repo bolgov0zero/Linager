@@ -9,10 +9,12 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/bolgov0zero/linager/internal/config"
 	"github.com/bolgov0zero/linager/internal/pki"
 	"github.com/bolgov0zero/linager/server"
 	"github.com/bolgov0zero/linager/server/store"
@@ -276,6 +278,10 @@ func ServerFlow(o ServerOpts) Flow {
 		if FileExists(o.ConfigPath) && !o.Force {
 			return &Summary{Title: tr(l, "fail.title"), Notes: []string{tr(l, "note.already", o.ConfigPath)}}, errors.New(tr(l, "note.already", o.ConfigPath))
 		}
+		if o.Force && FileExists(o.ConfigPath) {
+			// a reinstall over a running instance must not collide with its own ports
+			_ = exec.Command("systemctl", "stop", "linager-server").Run()
+		}
 		p, err := collectServerParams(c, o)
 		if err != nil {
 			return nil, err
@@ -304,7 +310,16 @@ func ServerFlow(o ServerOpts) Flow {
 				if err := os.WriteFile("/etc/systemd/system/linager-server.service", []byte(ServerUnit), 0o644); err != nil { //nolint:gosec // unit files are world-readable
 					return err
 				}
+				for name, body := range map[string]string{"linager-updater.path": UpdaterPathUnit, "linager-updater.service": UpdaterServiceUnit,
+					"linager-backup.service": BackupServiceUnit, "linager-backup.timer": BackupTimerUnit} {
+					if err := os.WriteFile("/etc/systemd/system/"+name, []byte(body), 0o644); err != nil { //nolint:gosec // unit files are world-readable
+						return err
+					}
+				}
 				if err := run.Run(ctx, "", "systemctl", "daemon-reload"); err != nil {
+					return err
+				}
+				if err := run.Run(ctx, "", "systemctl", "enable", "--now", "linager-updater.path", "linager-backup.timer"); err != nil {
 					return err
 				}
 				if err := run.Run(ctx, "", "systemctl", "enable", "linager-server"); err != nil {
@@ -443,6 +458,9 @@ func writeServerFiles(ctx context.Context, run *Runner, p *ServerParams, hosts [
 		if err := run.Run(ctx, "", "useradd", "--system", "--home-dir", p.DataDir, "--shell", "/usr/sbin/nologin", "linager"); err != nil {
 			return err
 		}
+	}
+	if old, err := config.LoadServer(p.ConfigPath); err == nil { // keep the update settings of an existing install
+		p.UpdateSource, p.UpdateChannel = old.Update.Source, old.Update.Channel
 	}
 	if err := os.MkdirAll(filepath.Dir(p.ConfigPath), 0o755); err != nil { //nolint:gosec // config dir is traversable, the file itself is 0600
 		return err

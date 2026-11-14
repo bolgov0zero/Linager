@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -90,5 +92,27 @@ func TestPendingRecoverAfterRestart(t *testing.T) {
 	q.Recover()
 	if rolled.Load() != 1 || q.Current() != nil {
 		t.Fatal("an expired journal must be rolled back at start")
+	}
+}
+
+func TestRollbackUpdateRestoresPreviousBinary(t *testing.T) {
+	dir := t.TempDir()
+	exe := filepath.Join(dir, "linager")
+	_ = os.WriteFile(exe, []byte("NEW-BROKEN"), 0o755)         //nolint:gosec // test fixture
+	_ = os.WriteFile(prevPath(dir), []byte("OLD-GOOD"), 0o755) //nolint:gosec // test fixture
+	// confirmed update (no marker): nothing happens
+	if err := RollbackUpdate(dir, exe); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(exe); string(b) != "NEW-BROKEN" { //nolint:gosec // test fixture
+		t.Fatal("without a marker the binary must stay")
+	}
+	_ = os.WriteFile(markerPath(dir), []byte(`{"from":"v1","to":"v2"}`), 0o600)
+	_ = RollbackUpdate(dir, exe)                           // systemctl restart fails in tests; the file restore must still have happened
+	if b, _ := os.ReadFile(exe); string(b) != "OLD-GOOD" { //nolint:gosec // test fixture
+		t.Fatalf("the previous binary must be restored, got %q", b)
+	}
+	if _, err := os.Stat(markerPath(dir)); err == nil {
+		t.Fatal("the marker must be removed")
 	}
 }

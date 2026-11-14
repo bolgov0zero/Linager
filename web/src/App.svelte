@@ -12,6 +12,8 @@
   import AddServerModal from './lib/dashboard/AddServerModal.svelte';
   import { fmtClock } from './lib/dashboard/format';
   import ServerPage from './lib/server/ServerPage.svelte';
+  import UpdatesPage from './lib/UpdatesPage.svelte';
+  import AuditPage from './lib/AuditPage.svelte';
 
   type Theme = 'light' | 'dark';
   type Phase = 'loading' | 'login' | 'app';
@@ -50,6 +52,8 @@
   let unsubscribeLive: (() => void) | undefined;
 
   const serverName = $derived(parseServerHash(hash));
+  const page = $derived<'updates' | 'audit' | null>(hash === '#updates' ? 'updates' : hash === '#audit' ? 'audit' : null);
+  let updatesCount = $state(0);
   const clock = $derived(lastLive ? fmtClock(lastLive) : '--:--:--');
 
   function onHashChange(): void {
@@ -65,6 +69,14 @@
   function backToDashboard(): void {
     if (openedFromApp) history.back();
     else location.hash = '';
+  }
+
+  async function refreshUpdatesCount(): Promise<void> {
+    try {
+      updatesCount = (await api.updatesSummary()).count;
+    } catch {
+      // not signed in yet or offline: keep the previous number
+    }
   }
 
   function toggleTheme(): void {
@@ -84,6 +96,7 @@
   function startSession(next: Session): void {
     session = next;
     phase = 'app';
+    void refreshUpdatesCount();
     if (!unsubscribeLive) {
       unsubscribeLive = subscribeLive(() => {
         lastLive = new Date();
@@ -131,7 +144,9 @@
   onMount(() => {
     window.addEventListener('hashchange', onHashChange);
     void restoreSession();
+    const counter = setInterval(() => session && void refreshUpdatesCount(), 60_000);
     return () => {
+      clearInterval(counter);
       window.removeEventListener('hashchange', onHashChange);
       unsubscribeLive?.();
     };
@@ -148,7 +163,11 @@
     {/if}
   </div>
   <div class="controls">
-    {#if phase === 'app' && serverName === null}
+    {#if phase === 'app'}
+      <a class="btn" href="#updates">{$tr('app.updates')}{#if updatesCount > 0} <span class="badge">{updatesCount}</span>{/if}</a>
+      <a class="btn" href="#audit">{$tr('app.audit')}</a>
+    {/if}
+    {#if phase === 'app' && serverName === null && page === null}
       <button class="btn" class:ink={editing} type="button" onclick={toggleEdit}>
         {editing ? $tr('dash.done') : $tr('dash.edit')}
       </button>
@@ -182,7 +201,11 @@
   {:else if phase === 'login'}
     <Login onlogin={startSession} />
   {:else if session}
-    {#if serverName !== null}
+    {#if page === 'updates'}
+      <UpdatesPage onBack={() => (location.hash = '')} onchanged={refreshUpdatesCount} />
+    {:else if page === 'audit'}
+      <AuditPage onBack={() => (location.hash = '')} />
+    {:else if serverName !== null}
       {#key serverName}
         <ServerPage name={serverName} onBack={backToDashboard} />
       {/key}
@@ -281,5 +304,16 @@
 
   main {
     padding: 24px 16px;
+  }
+  .badge {
+    background: var(--warn);
+    border-color: var(--warn);
+    color: #fff;
+    display: inline-block;
+    min-width: 1.4em;
+    padding: 0 4px;
+    margin-left: 4px;
+    border: 2px solid currentColor;
+    text-align: center;
   }
 </style>

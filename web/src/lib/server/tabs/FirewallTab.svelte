@@ -10,10 +10,11 @@
     type FwChain,
     type ServerDetail,
   } from '../../../api';
-  import { locale, t, tr } from '../../../i18n';
+  import { locale, t, tr as trs } from '../../../i18n';
   import Modal from '../../Modal.svelte';
   import { showToast } from '../../toast';
   import { applyFirewall } from './fw-api';
+  import { buildRule, normalizeRule, type RuleAction, type RuleProto } from './fw-rule';
 
   type ChainName = FwChain['name'];
   type Policy = FwChain['policy'];
@@ -45,9 +46,20 @@
   let warnings = $state<ApplyWarning[]>([]);
   let warnOpen = $state(false);
 
-  let addText = $state<Record<ChainName, string>>({ input: '', forward: '', output: '' });
-  let addError = $state<Record<ChainName, string | null>>({ input: null, forward: null, output: null });
-  let addBusy = $state<ChainName | null>(null);
+  // "Добавить правило" form.
+  let addChain = $state<ChainName>('input');
+  let addAction = $state<RuleAction>('accept');
+  let addProto = $state<RuleProto>('tcp');
+  let addPort = $state('');
+  let addSource = $state('');
+  let addComment = $state('');
+  let formError = $state<string | null>(null);
+  let rawOpen = $state(false);
+  let rawText = $state('');
+  let rawError = $state<string | null>(null);
+  let addBusy = $state(false);
+
+  let showRuleset = $state(false);
 
   let now = $state(Date.now() / 1000);
   let pendingBusy = $state(false);
@@ -136,8 +148,13 @@
     return info?.chains.find((c) => c.name === name)?.rules.find((r) => r.text === text);
   }
 
-  function fmtNum(n: number): string {
-    return n.toLocaleString(get(locale) === 'ru' ? 'ru-RU' : 'en-US');
+  // Counters are shown only for a draft rule that matches a live rule's text.
+  function countersText(name: ChainName, text: string): { packets: string; bytes: string } {
+    const live = countersOf(name, text);
+    return {
+      packets: live?.packets === undefined ? '—' : String(live.packets),
+      bytes: live?.bytes === undefined ? '—' : fmtBytes(live.bytes),
+    };
   }
 
   function fmtBytes(n: number): string {
@@ -193,6 +210,8 @@
       pendingError = null;
       loadError = null;
       connLost = false;
+      formError = null;
+      rawError = null;
     });
 
     const tick = async (): Promise<void> => {
@@ -274,26 +293,50 @@
     );
   }
 
-  async function addRule(name: ChainName): Promise<void> {
-    const text = addText[name].trim().replace(/\s+/g, ' ');
-    if (!text || addBusy) return;
+  // Validates the rule against the server draft and appends it to the chain. Returns an error text, or null on success.
+  async function appendRule(name: ChainName, text: string): Promise<string | null> {
     const sid = serverId;
     const next = mapChain(base(), name, (c) => ({ ...c, rules: [...c.rules, { text }] }));
-    addBusy = name;
-    addError[name] = null;
+    addBusy = true;
     try {
       const res = await api.firewallValidate(sid, next);
-      if (!res.ok) {
-        addError[name] = res.error || tx('fw.add.invalid');
-        return;
-      }
-      addText[name] = '';
+      if (!res.ok) return res.error || tx('fw.add.invalid');
+      if (sid !== serverId) return null;
       commit(next);
+      return null;
     } catch (e) {
-      addError[name] = errorText(e);
+      return errorText(e);
     } finally {
-      addBusy = null;
+      addBusy = false;
     }
+  }
+
+  async function addFromForm(): Promise<void> {
+    if (addBusy) return;
+    const built = buildRule({
+      proto: addProto,
+      port: addPort,
+      source: addSource,
+      action: addAction,
+      comment: addComment,
+    });
+    if (!built.ok) {
+      formError = tx(built.error);
+      return;
+    }
+    formError = await appendRule(addChain, built.text);
+    if (!formError) {
+      addPort = '';
+      addSource = '';
+      addComment = '';
+    }
+  }
+
+  async function addRaw(): Promise<void> {
+    const text = normalizeRule(rawText);
+    if (!text || addBusy) return;
+    rawError = await appendRule(addChain, text);
+    if (!rawError) rawText = '';
   }
 
   async function resetDraft(): Promise<void> {
@@ -383,35 +426,39 @@
 </script>
 
 {#if loadError && !info}
-  <p class="card error" role="alert">{$tr('fw.loadError')}</p>
+  <p class="card error" role="alert">{$trs('fw.loadError')}</p>
 {:else if !info}
-  <p class="muted">{$tr('common.loading')}</p>
+  <p class="muted">{$trs('common.loading')}</p>
 {:else}
   <div class="fw stack">
+    {#if info.available}
+      <p class="status mono" role="status">{$trs('fw.status.active')}</p>
+    {/if}
+
     {#if info.ufw_active}
-      <p class="warn" role="status">{$tr('fw.ufwWarning')}</p>
+      <p class="warn" role="status">{$trs('fw.ufwWarning')}</p>
     {/if}
 
     {#if pending}
       <section class="pending" class:expired aria-live="polite">
-        <h3>{$tr('fw.pending.title')}</h3>
-        <p class="muted">{$tr('fw.pending.explain')}</p>
+        <h3>{$trs('fw.pending.title')}</h3>
+        <p class="muted">{$trs('fw.pending.explain')}</p>
         <div class="countdown" class:expired>
           {#if expired}
-            <span>{$tr('fw.pending.expired')}</span>
+            <span>{$trs('fw.pending.expired')}</span>
           {:else}
             <span class="digits">{formatCountdown(countdown)}</span>
           {/if}
         </div>
         {#if connLost}
-          <p class="warn">{$tr('fw.pending.lost')}</p>
+          <p class="warn">{$trs('fw.pending.lost')}</p>
         {/if}
         <div class="row">
           <button class="btn primary" type="button" disabled={pendingBusy || expired} onclick={confirmPending}>
-            {$tr('fw.pending.confirm')}
+            {$trs('fw.pending.confirm')}
           </button>
           <button class="btn danger" type="button" disabled={pendingBusy} onclick={rollbackPending}>
-            {$tr('fw.pending.rollback')}
+            {$trs('fw.pending.rollback')}
           </button>
         </div>
         {#if pendingError}
@@ -422,22 +469,22 @@
 
     {#if draft}
       <section class="draft" aria-live="polite">
-        <h3>{$tr('fw.draft.title')}</h3>
-        <p class="muted small">{$tr('fw.draft.hint')}</p>
+        <h3>{$trs('fw.draft.title')}</h3>
+        <p class="muted small">{$trs('fw.draft.hint')}</p>
         {#if changes.length}
           <ul class="changes">
             {#each changes as change, i (i)}
-              <li class="mono small">{$tr(change.key, change.vars)}</li>
+              <li class="mono small">{$trs(change.key, change.vars)}</li>
             {/each}
           </ul>
         {/if}
         <div class="row">
           <button class="btn primary" type="button" disabled={applying || hasPending} onclick={() => apply(false)}>
-            {$tr('fw.draft.apply')}
+            {$trs('fw.draft.apply')}
           </button>
-          <button class="btn" type="button" disabled={applying} onclick={resetDraft}>{$tr('fw.draft.reset')}</button>
+          <button class="btn" type="button" disabled={applying} onclick={resetDraft}>{$trs('fw.draft.reset')}</button>
           {#if saving}
-            <span class="muted small">{$tr('fw.draft.saving')}</span>
+            <span class="muted small">{$trs('fw.draft.saving')}</span>
           {/if}
         </div>
         {#if saveError || draftError}
@@ -447,129 +494,202 @@
     {/if}
 
     {#if !info.available}
-      <p class="card">{$tr('fw.notAvailable')}</p>
+      <p class="card">{$trs('fw.notAvailable')}</p>
     {:else}
       {#each CHAIN_NAMES as name (name)}
         {@const chain = shown?.chains.find((c) => c.name === name)}
         {#if chain}
           <section class="chain">
-            <header class="chain-head">
+            <div class="chain-head">
               <div class="chain-title">
-                <h3>chain {name}</h3>
-                <span class="muted small mono">{$tr('fw.chain.hook', { chain: name })}</span>
+                <span class="chain-name">chain {name}</span>
+                <span class="hook mono">{$trs('fw.chain.hook', { chain: name })}</span>
               </div>
-              <div class="policy" role="group" aria-label={$tr('fw.chain.policyLabel')}>
-                <button
-                  class="chip"
-                  type="button"
-                  aria-pressed={chain.policy === 'accept'}
-                  onclick={() => setPolicy(name, 'accept')}>accept</button
-                >
-                <button
-                  class="chip"
-                  type="button"
-                  aria-pressed={chain.policy === 'drop'}
-                  onclick={() => setPolicy(name, 'drop')}>drop</button
-                >
-              </div>
-            </header>
+              <select
+                class="ctl policy"
+                aria-label={$trs('fw.chain.policyLabel')}
+                value={chain.policy}
+                onchange={(event) => setPolicy(name, event.currentTarget.value as Policy)}
+              >
+                <option value="accept">accept</option>
+                <option value="drop">drop</option>
+              </select>
+            </div>
 
-            {#if chain.rules.length === 0}
-              <p class="muted small">{$tr('fw.chain.empty')}</p>
-            {:else}
-              <ol class="rules">
-                {#each chain.rules as rule, index (index + ':' + rule.text)}
-                  {@const counter = countersOf(name, rule.text)}
-                  <li class="rule">
-                    <span class="rule-text mono">{rule.text}</span>
-                    {#if counter && counter.packets !== undefined && counter.bytes !== undefined}
-                      <span class="counters mono small muted"
-                        >{$tr('fw.counters', { packets: fmtNum(counter.packets), bytes: fmtBytes(counter.bytes) })}</span
-                      >
-                    {/if}
-                    <span class="rule-actions">
-                      <button
-                        class="btn small-btn"
-                        type="button"
-                        aria-label={$tr('fw.rule.up')}
-                        title={$tr('fw.rule.up')}
-                        disabled={index === 0}
-                        onclick={() => moveRule(name, index, -1)}>▲</button
-                      >
-                      <button
-                        class="btn small-btn"
-                        type="button"
-                        aria-label={$tr('fw.rule.down')}
-                        title={$tr('fw.rule.down')}
-                        disabled={index === chain.rules.length - 1}
-                        onclick={() => moveRule(name, index, 1)}>▼</button
-                      >
-                      <button
-                        class="btn small-btn"
-                        type="button"
-                        aria-label={$tr('fw.rule.delete')}
-                        title={$tr('fw.rule.delete')}
-                        onclick={() => removeRule(name, index)}>×</button
-                      >
-                    </span>
-                  </li>
-                {/each}
-              </ol>
-            {/if}
-
-            <form
-              class="add"
-              onsubmit={(event) => {
-                event.preventDefault();
-                void addRule(name);
-              }}
-            >
-              <label class="field add-field">
-                <span class="label small">{$tr('fw.add.label', { chain: name })}</span>
-                <input
-                  class="input mono"
-                  type="text"
-                  autocomplete="off"
-                  spellcheck="false"
-                  placeholder={$tr('fw.add.placeholder')}
-                  bind:value={addText[name]}
-                  oninput={() => (addError[name] = null)}
-                />
-              </label>
-              <button class="btn primary" type="submit" disabled={addBusy !== null || !addText[name].trim()}>
-                {addBusy === name ? $tr('fw.add.checking') : $tr('fw.add.submit')}
-              </button>
-              {#if addError[name]}
-                <p class="error small add-error" role="alert">{addError[name]}</p>
-              {/if}
-            </form>
+            <div class="tw">
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th>{$trs('fw.col.rule')}</th>
+                    <th class="r">{$trs('fw.col.packets')}</th>
+                    <th class="r">{$trs('fw.col.bytes')}</th>
+                    <th class="r"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {#if chain.rules.length === 0}
+                    <tr>
+                      <td class="empty" colspan="4">{$trs('fw.chain.empty')}</td>
+                    </tr>
+                  {:else}
+                    {#each chain.rules as rule, index (index + ':' + rule.text)}
+                      {@const counters = countersText(name, rule.text)}
+                      <tr>
+                        <td class="rule mono">{rule.text}</td>
+                        <td class="r num">{counters.packets}</td>
+                        <td class="r num">{counters.bytes}</td>
+                        <td class="r acts">
+                          <button
+                            class="ib"
+                            type="button"
+                            aria-label={$trs('fw.rule.up')}
+                            title={$trs('fw.rule.up')}
+                            disabled={index === 0}
+                            onclick={() => moveRule(name, index, -1)}>▲</button
+                          ><button
+                            class="ib"
+                            type="button"
+                            aria-label={$trs('fw.rule.down')}
+                            title={$trs('fw.rule.down')}
+                            disabled={index === chain.rules.length - 1}
+                            onclick={() => moveRule(name, index, 1)}>▼</button
+                          ><button
+                            class="ib del"
+                            type="button"
+                            aria-label={$trs('fw.rule.delete')}
+                            title={$trs('fw.rule.delete')}
+                            onclick={() => removeRule(name, index)}>×</button
+                          >
+                        </td>
+                      </tr>
+                    {/each}
+                  {/if}
+                </tbody>
+              </table>
+            </div>
           </section>
         {/if}
       {/each}
+
+      <section class="add-block">
+        <h3 class="sect">{$trs('fw.add.title')}</h3>
+        <form
+          class="inl"
+          onsubmit={(event) => {
+            event.preventDefault();
+            void addFromForm();
+          }}
+        >
+          <select class="ctl" bind:value={addChain} aria-label={$trs('fw.add.chain')}>
+            {#each CHAIN_NAMES as chainName (chainName)}
+              <option value={chainName}>{chainName}</option>
+            {/each}
+          </select>
+          <select class="ctl" bind:value={addAction} aria-label={$trs('fw.add.action')}>
+            <option value="accept">accept</option>
+            <option value="drop">drop</option>
+            <option value="reject">reject</option>
+          </select>
+          <select class="ctl" bind:value={addProto} aria-label={$trs('fw.add.proto')}>
+            <option value="tcp">tcp</option>
+            <option value="udp">udp</option>
+            <option value="icmp">icmp</option>
+            <option value="any">{$trs('fw.add.protoAny')}</option>
+          </select>
+          <input
+            class="ctl w mono"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder={$trs('fw.add.port')}
+            aria-label={$trs('fw.add.port')}
+            bind:value={addPort}
+            oninput={() => (formError = null)}
+          />
+          <input
+            class="ctl w mono"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder={$trs('fw.add.source')}
+            aria-label={$trs('fw.add.source')}
+            bind:value={addSource}
+            oninput={() => (formError = null)}
+          />
+          <input
+            class="ctl grow"
+            type="text"
+            autocomplete="off"
+            placeholder={$trs('fw.add.comment')}
+            aria-label={$trs('fw.add.comment')}
+            bind:value={addComment}
+            oninput={() => (formError = null)}
+          />
+          <button class="btn primary" type="submit" disabled={addBusy}>
+            {addBusy ? $trs('fw.add.checking') : $trs('fw.add.submit')}
+          </button>
+        </form>
+        <p class="errt" aria-live="polite">{formError ?? ''}</p>
+
+        <button class="link" type="button" aria-expanded={rawOpen} onclick={() => (rawOpen = !rawOpen)}>
+          {$trs('fw.add.rawToggle')}
+        </button>
+        {#if rawOpen}
+          <form
+            class="inl"
+            onsubmit={(event) => {
+              event.preventDefault();
+              void addRaw();
+            }}
+          >
+            <input
+              class="ctl grow mono"
+              type="text"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder={$trs('fw.add.rawPlaceholder')}
+              aria-label={$trs('fw.add.rawToggle')}
+              bind:value={rawText}
+              oninput={() => (rawError = null)}
+            />
+            <button class="btn" type="submit" disabled={addBusy || !rawText.trim()}>
+              {$trs('fw.add.submit')}
+            </button>
+          </form>
+          <p class="errt" aria-live="polite">{rawError ?? ''}</p>
+        {/if}
+      </section>
     {/if}
 
     <section class="ruleset-block">
-      <h3>{$tr('fw.ruleset.title')}</h3>
-      <pre class="ruleset mono">{info.ruleset}</pre>
+      <div class="ruleset-head">
+        <h3 class="sect">{$trs('fw.ruleset.title')}</h3>
+        <button class="btn" type="button" aria-expanded={showRuleset} onclick={() => (showRuleset = !showRuleset)}>
+          {showRuleset ? $trs('fw.ruleset.hide') : $trs('fw.ruleset.show')}
+        </button>
+      </div>
+      {#if showRuleset}
+        <pre class="ruleset mono">{info.ruleset}</pre>
+      {/if}
       {#if info.other_tables.length}
-        <p class="muted small">{$tr('fw.otherTables', { tables: info.other_tables.join(', ') })}</p>
+        <p class="hint">{$trs('fw.otherTables', { tables: info.other_tables.join(', ') })}</p>
       {/if}
     </section>
   </div>
 {/if}
 
 {#if warnOpen}
-  <Modal title={$tr('fw.warn.title')} labelId="fw-warn-title" onclose={closeWarnings}>
-    <p>{$tr('fw.warn.explain')}</p>
+  <Modal title={$trs('fw.warn.title')} labelId="fw-warn-title" onclose={closeWarnings}>
+    <p>{$trs('fw.warn.explain')}</p>
     <ul class="changes">
       {#each warnings as warning, i (i)}
         <li>{warning.message}</li>
       {/each}
     </ul>
     <div class="row end">
-      <button class="btn" type="button" onclick={closeWarnings}>{$tr('fw.warn.cancel')}</button>
+      <button class="btn" type="button" onclick={closeWarnings}>{$trs('fw.warn.cancel')}</button>
       <button class="btn danger" type="button" disabled={applying} onclick={() => apply(true)}>
-        {$tr('fw.warn.apply')}
+        {$trs('fw.warn.apply')}
       </button>
     </div>
   </Modal>
@@ -578,12 +698,25 @@
 <style>
   .fw {
     min-width: 0;
+    gap: 20px;
   }
 
   h3 {
     margin: 0;
     font-size: 18px;
     line-height: 1.2;
+  }
+
+  .sect {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  .status {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
   }
 
   .warn,
@@ -647,98 +780,196 @@
     color: var(--crit);
   }
 
-  .chain {
+  .chain,
+  .add-block,
+  .ruleset-block {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 12px;
-    border: 2px solid var(--line);
+    gap: 6px;
     min-width: 0;
   }
 
-  .chain-head {
+  .chain-head,
+  .ruleset-head {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+    margin-bottom: 4px;
   }
 
   .chain-title {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
-    gap: 8px;
+    gap: 10px;
   }
 
-  .policy {
-    display: flex;
-    gap: 6px;
+  .chain-name {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
   }
 
-  .rules {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    display: flex;
-    flex-direction: column;
+  .hook {
+    color: var(--muted);
+    font-size: 12px;
   }
 
-  .rule {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px 12px;
-    padding: 8px 0;
-    border-bottom: 1px dashed var(--line);
-  }
-
-  .rule:last-child {
-    border-bottom: 0;
-  }
-
-  .rule-text {
-    flex: 1 1 240px;
+  .tw {
+    overflow-x: auto;
     min-width: 0;
-    overflow-wrap: anywhere;
   }
 
-  .counters {
+  .tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .tbl th {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 2px solid var(--line);
     white-space: nowrap;
   }
 
-  .rule-actions {
-    display: flex;
-    gap: 4px;
-    margin-left: auto;
+  .tbl td {
+    padding: 7px 8px;
+    border-bottom: 2px dashed var(--seg-off);
+    vertical-align: middle;
   }
 
-  .small-btn {
-    padding: 2px 8px;
-    box-shadow: 2px 2px 0 var(--shade);
+  .tbl .r {
+    text-align: right;
   }
 
-  .add {
+  .tbl td.r {
+    white-space: nowrap;
+  }
+
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rule {
+    font-size: 12px;
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+
+  .empty {
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .acts {
+    width: 1%;
+  }
+
+  .ib {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    display: inline-grid;
+    place-items: center;
+    vertical-align: middle;
+    background: var(--bg);
+    color: var(--ink);
+    border: 2px solid var(--line);
+    border-radius: 0;
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  .ib + .ib {
+    margin-left: 4px;
+  }
+
+  .ib:hover:not(:disabled) {
+    background: var(--ink);
+    color: var(--surface);
+  }
+
+  .ib.del:hover:not(:disabled) {
+    background: var(--crit);
+    border-color: var(--crit);
+    color: var(--surface);
+  }
+
+  .ib:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .ctl {
+    background: var(--bg);
+    color: var(--ink);
+    border: 2px solid var(--line);
+    border-radius: 0;
+    padding: 5px 8px;
+    min-width: 0;
+    font: inherit;
+    font-size: 13px;
+  }
+
+  .ctl::placeholder {
+    color: var(--muted);
+  }
+
+  .ctl.policy {
+    background: var(--surface);
+    min-width: 200px;
+  }
+
+  .ctl.w {
+    width: 170px;
+  }
+
+  .ctl.grow {
+    flex: 1 1 180px;
+  }
+
+  .ctl:focus-visible,
+  .link:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .inl {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end;
+    align-items: center;
     gap: 8px;
   }
 
-  .add-field {
-    flex: 1 1 260px;
-    min-width: 0;
+  .errt {
+    margin: 0;
+    min-height: 16px;
+    color: var(--crit);
+    font-size: 12px;
   }
 
-  .add-error {
-    flex-basis: 100%;
-  }
-
-  .ruleset-block {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    min-width: 0;
+  .link {
+    align-self: flex-start;
+    padding: 0;
+    background: none;
+    border: 0;
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: 13px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
   }
 
   .ruleset {

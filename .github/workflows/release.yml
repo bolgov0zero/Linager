@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -23,8 +25,11 @@ jobs:
         run: |
           go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
           VERSION="${GITHUB_REF_NAME#v}" "$(go env GOPATH)/bin/nfpm" package -f packaging/nfpm.yaml -p deb -t bin/linager_amd64.deb
-      - name: Checksums
-        run: cd bin && sha256sum linager_linux_amd64 linager_amd64.deb > SHA256SUMS
+      - name: Manifest and checksums
+        run: |
+          git fetch --tags --force
+          sh packaging/make-manifest.sh "${GITHUB_REF_NAME}"
+          cd bin && sha256sum linager_linux_amd64 linager_amd64.deb > SHA256SUMS
       - name: Sign (minisign)
         env:
           MINISIGN_KEY: ${{ secrets.MINISIGN_KEY }}
@@ -35,6 +40,7 @@ jobs:
           umask 077
           printf '%s\n' "$MINISIGN_KEY" > "$RUNNER_TEMP/min.key"
           printf '%s\n' "$MINISIGN_PASSWORD" | minisign -S -s "$RUNNER_TEMP/min.key" -m bin/SHA256SUMS
+          printf '%s\n' "$MINISIGN_PASSWORD" | minisign -S -s "$RUNNER_TEMP/min.key" -m bin/manifest.json
           rm -f "$RUNNER_TEMP/min.key"
       - name: Publish
         env:
@@ -42,7 +48,7 @@ jobs:
         run: |
           flags=""
           case "$GITHUB_REF_NAME" in *-*) flags="--prerelease";; esac
-          files="bin/linager_linux_amd64 bin/linager_amd64.deb bin/SHA256SUMS"
-          if [ -n "${UNSIGNED:-}" ]; then flags="--prerelease"; else files="$files bin/SHA256SUMS.minisig"; fi
+          files="bin/linager_linux_amd64 bin/linager_amd64.deb bin/SHA256SUMS bin/manifest.json"
+          if [ -n "${UNSIGNED:-}" ]; then flags="--prerelease"; else files="$files bin/SHA256SUMS.minisig bin/manifest.json.minisig"; fi
           # shellcheck disable=SC2086
           gh release create "$GITHUB_REF_NAME" $flags --generate-notes $files

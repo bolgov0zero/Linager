@@ -97,5 +97,6 @@ func newAgentCmd() *cobra.Command {
 	uninstall.Flags().BoolVar(&purge, "purge", false, "also delete keys and configuration")
 	run.Flags().StringVar(&cfgPath, "config", "/etc/linager/agent.yaml", "agent configuration (enabled modules)")
 	cmd.AddCommand(enroll, run, uninstall)
+	cmd.AddCommand(newAgentUpdateCmds(&dataDir)...)
 	return cmd
 }

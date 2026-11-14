@@ -10,6 +10,7 @@ import (
 
 	"github.com/bolgov0zero/linager/internal/config"
 	"github.com/bolgov0zero/linager/internal/protocol"
+	"github.com/bolgov0zero/linager/internal/version"
 )
 
 // errors produced by modules.
@@ -43,6 +44,26 @@ type Registry struct {
 	mu      sync.Mutex
 	live    map[string]*liveStream
 	nStream map[string]int // active streams per module
+
+	dataDir string
+	emitMu  sync.Mutex
+	emitFn  func(typ string, payload any) error
+}
+
+// SetEmitter lets modules send unsolicited messages (update progress) over the current connection.
+func (r *Registry) SetEmitter(f func(typ string, payload any) error) {
+	r.emitMu.Lock()
+	r.emitFn = f
+	r.emitMu.Unlock()
+}
+
+func (r *Registry) emitUpdate(e protocol.UpdateEvent) {
+	r.emitMu.Lock()
+	f := r.emitFn
+	r.emitMu.Unlock()
+	if f != nil {
+		_ = f(protocol.TypeUpdateEvent, e)
+	}
 }
 
 type liveStream struct {
@@ -60,7 +81,8 @@ const (
 
 // NewRegistry registers every enabled module.
 func NewRegistry(cfg *config.Agent, col Collector, log *slog.Logger, dataDir string) *Registry {
-	r := &Registry{cmds: map[string]CmdFunc{}, streams: map[string]StreamFunc{}, log: log, live: map[string]*liveStream{}, nStream: map[string]int{}}
+	r := &Registry{cmds: map[string]CmdFunc{}, streams: map[string]StreamFunc{}, log: log, live: map[string]*liveStream{}, nStream: map[string]int{}, dataDir: dataDir}
+	r.cmds["update.apply"] = r.updateApplyCmd(version.Version)
 	r.modules = cfg.List()
 	if cfg.Enabled("terminal") {
 		r.streams["terminal"] = termStream

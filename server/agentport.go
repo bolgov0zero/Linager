@@ -32,13 +32,14 @@ type AgentPort struct {
 	Keys    *Keys
 	Hub     *Hub
 	Metrics *Metrics
+	Updates *Updates
 	Log     *slog.Logger
 	enrollL *ipLimiter
 }
 
 // NewAgentPort builds the handler set.
-func NewAgentPort(db *store.Store, keys *Keys, hub *Hub, metrics *Metrics, log *slog.Logger) *AgentPort {
-	return &AgentPort{DB: db, Keys: keys, Hub: hub, Metrics: metrics, Log: log, enrollL: newLimiter(20, 10*time.Minute)}
+func NewAgentPort(db *store.Store, keys *Keys, hub *Hub, metrics *Metrics, updates *Updates, log *slog.Logger) *AgentPort {
+	return &AgentPort{DB: db, Keys: keys, Hub: hub, Metrics: metrics, Updates: updates, Log: log, enrollL: newLimiter(20, 10*time.Minute)}
 }
 
 // TLSConfig is the agent listener configuration: TLS 1.3, client certificate optional
@@ -60,6 +61,8 @@ func (a *AgentPort) Handler() http.Handler {
 	mux.HandleFunc("POST /v1/enroll", a.enroll)
 	mux.HandleFunc("GET /v1/enroll/{id}", a.enrollStatus)
 	mux.HandleFunc("GET /v1/ws", a.ws)
+	mux.HandleFunc("GET /v1/release/latest", a.releaseLatest)
+	mux.HandleFunc("GET /v1/release/{ver}/{file}", a.releaseFile)
 	return mux
 }
 
@@ -198,6 +201,9 @@ func (a *AgentPort) ws(w http.ResponseWriter, r *http.Request) {
 	defer a.Hub.remove(id, c)
 	_ = a.DB.TouchServer(ctx, id, h.OS, h.AgentVersion, hello.V)
 	_ = a.DB.SetModules(ctx, id, h.Modules)
+	if a.Updates != nil {
+		a.Updates.AgentHello(ctx, id, h.AgentVersion)
+	}
 	a.Log.Info("agent connected", "server", srv.Name, "version", h.AgentVersion)
 
 	for {
@@ -209,6 +215,11 @@ func (a *AgentPort) ws(w http.ResponseWriter, r *http.Request) {
 		switch env.Type {
 		case protocol.TypeCmdResult, protocol.TypeStreamData, protocol.TypeStreamClose:
 			c.deliver(ctx, env)
+		case protocol.TypeUpdateEvent:
+			var ev protocol.UpdateEvent
+			if json.Unmarshal(env.Payload, &ev) == nil && a.Updates != nil {
+				a.Updates.AgentEvent(ctx, id, ev)
+			}
 		case protocol.TypeMetrics:
 			var batch protocol.MetricsBatch
 			if err := json.Unmarshal(env.Payload, &batch); err != nil || len(batch.Samples) > protocol.MaxBatchSamples {

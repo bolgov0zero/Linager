@@ -5,7 +5,7 @@ set -eu
 
 REPO="bolgov0zero/linager"
 # minisign public key of the release signing key (set when the key is created).
-PUBKEY="${LINAGER_PUBKEY:-REPLACE_WITH_MINISIGN_PUBLIC_KEY}"
+PUBKEY="${LINAGER_PUBKEY:-RWQlhVj7fNoehSMCgQigmYrwQMjs/DyxnH1zLVEXkNXINxSTC0HDdCOU}"
 VERSION="${LINAGER_VERSION:-latest}"
 
 # Clear screen and scrollback so the wizard starts on a clean terminal.

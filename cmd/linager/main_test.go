@@ -19,9 +19,9 @@ func TestVersionCommand(t *testing.T) {
 	}
 }
 
-func TestStubReturnsError(t *testing.T) {
+func TestUnknownCommandFails(t *testing.T) {
 	root := newRootCmd()
-	root.SetArgs([]string{"update"})
+	root.SetArgs([]string{"nonexistent-command"})
 	if err := root.Execute(); err == nil {
 		t.Fatal("expected error from unimplemented command")
 	}

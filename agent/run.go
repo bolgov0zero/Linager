@@ -141,6 +141,9 @@ func session(ctx context.Context, o RunOptions, st *State, cert tls.Certificate,
 	if err != nil || hello.Type != protocol.TypeHello {
 		return errors.New("bad hello from server")
 	}
+	reg.SetEmitter(send)
+	defer reg.SetEmitter(nil)
+	ConfirmUpdate(o.DataDir, func(m string, a ...any) { o.Log.Info(m, a...) }) // the new version is connected: cancel the rollback
 	o.Log.Info("connected", "server", st.Server)
 
 	errc := make(chan error, 1)

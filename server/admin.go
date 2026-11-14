@@ -38,6 +38,7 @@ type Admin struct {
 	Hub     *Hub
 	Live    *Live
 	Metrics *Metrics
+	Updates *Updates
 	Log     *slog.Logger
 	Cfg     *config.Server
 	Trust   *ProxyTrust
@@ -50,12 +51,12 @@ type Admin struct {
 }
 
 // NewAdmin builds the admin handler set.
-func NewAdmin(db *store.Store, keys *Keys, hub *Hub, live *Live, metrics *Metrics, cfg *config.Server, static fs.FS, log *slog.Logger) (*Admin, error) {
+func NewAdmin(db *store.Store, keys *Keys, hub *Hub, live *Live, metrics *Metrics, updates *Updates, cfg *config.Server, static fs.FS, log *slog.Logger) (*Admin, error) {
 	trust, err := NewProxyTrust(cfg.Admin.TrustedProxies)
 	if err != nil {
 		return nil, err
 	}
-	return &Admin{DB: db, Keys: keys, Hub: hub, Live: live, Metrics: metrics, Log: log, Cfg: cfg, Trust: trust, Static: static, loginL: newLimiter(10, time.Minute), terms: map[string]int{}}, nil
+	return &Admin{DB: db, Keys: keys, Hub: hub, Live: live, Metrics: metrics, Updates: updates, Log: log, Cfg: cfg, Trust: trust, Static: static, loginL: newLimiter(10, time.Minute), terms: map[string]int{}}, nil
 }
 
 // Handler returns the full admin handler including the base path and security headers.
@@ -81,6 +82,14 @@ func (a *Admin) Handler() http.Handler {
 	mux.HandleFunc("DELETE /api/dashboard/items/{id}", a.auth(a.dashboardRemove))
 	mux.HandleFunc("PUT /api/dashboard/order", a.auth(a.dashboardOrder))
 	mux.HandleFunc("GET /api/live", a.auth(a.liveHandler))
+	mux.HandleFunc("GET /api/updates", a.auth(a.updatesGet))
+	mux.HandleFunc("GET /api/updates/summary", a.auth(a.updatesSummary))
+	mux.HandleFunc("POST /api/updates/check", a.auth(a.updatesCheck))
+	mux.HandleFunc("PUT /api/updates/channel", a.auth(a.updatesChannel))
+	mux.HandleFunc("POST /api/updates/cache", a.auth(a.updatesCache))
+	mux.HandleFunc("POST /api/updates/server", a.auth(a.updatesServer))
+	mux.HandleFunc("POST /api/updates/agents", a.auth(a.updatesAgents))
+	mux.HandleFunc("GET /api/audit", a.auth(a.auditList))
 	mux.HandleFunc("GET /api/servers/{id}/services", a.auth(a.servicesList))
 	mux.HandleFunc("POST /api/servers/{id}/services/{unit}/{action}", a.auth(a.serviceAction))
 	mux.HandleFunc("GET /api/servers/{id}/apt", a.auth(a.aptList))
@@ -497,3 +506,6 @@ func (a *Admin) deleteServer(w http.ResponseWriter, r *http.Request, u *store.Us
 	a.audit(r, u, "server.delete", "server", id, srv.Name, "ok", map[string]any{"was_online": online, "uninstall_requested": req.Uninstall, "uninstall_sent": sent})
 	writeJSON(w, http.StatusOK, map[string]any{"deleted": true, "uninstall_sent": sent, "was_online": online})
 }
+
+// bg returns a context for work that must outlive a request.
+func (a *Admin) bg() context.Context { return context.Background() }

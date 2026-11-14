@@ -127,5 +127,7 @@
   "dash.pendingOpen": "Review requests",
   "dash.unit.d": "d",
   "dash.unit.h": "h",
-  "dash.unit.min": "min"
+  "dash.unit.min": "min",
+  "app.updates": "Updates",
+  "app.audit": "Audit log"
 }

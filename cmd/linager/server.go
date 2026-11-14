@@ -55,6 +55,8 @@ func newServerCmd() *cobra.Command {
 		},
 	})
 
+	cmd.AddCommand(newMigrateCmd(&cfgPath))
+
 	var login, pwFile string
 	create := &cobra.Command{
 		Use:   "create-admin",

@@ -137,6 +137,40 @@ export interface DockerContainer {
 export interface DockerImage { id: string; repo_tags: string[]; size: number; created: number; used: boolean }
 export interface DockerInfo { available: boolean; containers: DockerContainer[]; images: DockerImage[] }
 
+// ---- updates and audit (stage 6) ----
+export interface UpdateStep { id: 'verify' | 'backup' | 'stop' | 'replace' | 'migrate' | 'start'; state: 'pending' | 'running' | 'done' | 'failed' }
+export interface ServerUpdateRun {
+  run_id: string; state: 'idle' | 'running' | 'done' | 'failed' | 'rolled_back';
+  steps: UpdateStep[]; from: string; to: string; error?: string; started_at: number; finished_at: number;
+}
+export interface AgentUpdateRow {
+  id: string; name: string; os: string; address: string; version: string;
+  status: 'current' | 'available' | 'unsupported' | 'updating' | 'queued' | 'rollback' | 'failed';
+  online: boolean; target?: string;
+  step?: number; steps_total: number; step_id?: 'download' | 'verify' | 'backup' | 'replace' | 'restart';
+  message?: string;
+}
+export interface UpdateHistoryRow { id: number; ts: number; kind: 'server' | 'agents'; from: string; to: string; status: 'success' | 'failed' | 'rolled_back'; detail: string }
+export type RolloutMode = 'all' | 'one_by_one' | 'first_then_rest';
+export interface UpdatesInfo {
+  channel: 'stable' | 'beta';
+  server: {
+    current: string; available: string | null; checked_at: number; check_error: string;
+    notes: string[]; db_migrations: { applied: number; shipped: number; pending: number };
+    last_backup: number; source: string; can_update: boolean; update_run: ServerUpdateRun;
+  };
+  cache: { version: string; size: number; downloaded_at: number; verified: boolean; downloaded: boolean }[];
+  agents: AgentUpdateRow[];
+  rollout: { state: 'running' | 'done' | 'stopped'; mode: RolloutMode; stop_on_error: boolean; version: string } | null;
+  history: UpdateHistoryRow[];
+  min_agent: string; agents_target: string; latest_known: string | null;
+}
+export interface AuditItem {
+  id: number; ts: number; actor: string; action: string; target_type: string; target_name: string;
+  result: string; client_ip: string; remote_addr: string; details: Record<string, unknown> | null;
+}
+export interface AuditPage { items: AuditItem[]; next_before: number }
+
 export interface ServerDetail {
   modules: string[]; // enabled agent modules; empty = unknown (old agent)
   id: string; name: string; hostname: string; address: string; os: string; agent_version: string;
@@ -349,6 +383,26 @@ export const api = {
     request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/docker/containers/${enc(cid)}/${action}`, { confirm: action === 'remove' }),
   dockerRemoveImage: (id: string, imageId: string) =>
     request<{ ok: boolean }>('DELETE', `api/servers/${enc(id)}/docker/images/${enc(imageId)}`),
+  // updates (stage 6)
+  updates: () => request<UpdatesInfo>('GET', 'api/updates'),
+  updatesSummary: () => request<{ count: number }>('GET', 'api/updates/summary'),
+  updatesCheck: () => request<UpdatesInfo>('POST', 'api/updates/check'),
+  updatesChannel: (channel: 'stable' | 'beta') => request<UpdatesInfo>('PUT', 'api/updates/channel', { channel }),
+  /** Download and verify a release into the server cache ahead of time. */
+  updatesPrefetch: (version: string) => request<UpdatesInfo>('POST', 'api/updates/cache', { version }),
+  /** Starts the server update (backup, replace, migrate, restart); the panel is unreachable for a short time. */
+  updatesServer: (version: string) => request<{ ok: boolean }>('POST', 'api/updates/server', { version, confirm: true }),
+  updatesAgents: (serverIds: string[] | 'all', mode: RolloutMode, stopOnError: boolean) =>
+    request<UpdatesInfo>('POST', 'api/updates/agents', serverIds === 'all'
+      ? { all: true, mode, stop_on_error: stopOnError }
+      : { server_ids: serverIds, mode, stop_on_error: stopOnError }),
+
+  // audit log
+  audit: (params: { before?: number; limit?: number; action?: string; actor?: string; result?: string; q?: string } = {}) => {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '' && v !== 0) q.set(k, String(v));
+    return request<AuditPage>('GET', `api/audit?${q.toString()}`);
+  },
 };
 
 /**

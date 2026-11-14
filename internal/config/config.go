@@ -23,6 +23,10 @@ type Server struct {
 		TrustedProxies []string `yaml:"trusted_proxies"` // CIDRs; default: any
 		CookieSecure   string   `yaml:"cookie_secure"`   // auto|always|never
 	} `yaml:"admin"`
+	Update struct {
+		Source  string `yaml:"source"`  // "" = GitHub releases of bolgov0zero/linager, "owner/repo", or a mirror URL
+		Channel string `yaml:"channel"` // stable (default) or beta
+	} `yaml:"update"`
 	Agents struct {
 		Listen string   `yaml:"listen"` // host:port, port is mandatory
 		Hosts  []string `yaml:"hosts"`  // names/IPs placed into the agent TLS certificate
@@ -52,6 +56,9 @@ func (c *Server) applyDefaults() {
 	}
 	if c.Admin.CookieSecure == "" {
 		c.Admin.CookieSecure = "auto"
+	}
+	if c.Update.Channel != "beta" {
+		c.Update.Channel = "stable"
 	}
 }
 
