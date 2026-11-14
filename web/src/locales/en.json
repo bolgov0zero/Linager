@@ -1,6 +1,7 @@
 {
   "app.title": "Linager",
   "app.security": "2FA",
+  "app.menu": "Menu",
   "app.logout": "Log out",
   "theme.light": "Light",
   "theme.dark": "Dark",
