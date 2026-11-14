@@ -1,6 +1,9 @@
 package protocol
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
 
 // Command and stream message types (server <-> agent).
 const (
@@ -63,4 +66,13 @@ const (
 	ErrModuleDisabled = "module disabled"
 	ErrBusy           = "busy"
 	ErrDangerous      = "dangerous action requires confirmation"
+	ErrTooLarge       = "file too large"
+	ErrBinary         = "binary file"
+	ErrConflict       = "file changed"
+	ErrExists         = "already exists"
+	ErrNotFound       = "not found"
+	ErrNoPending      = "no such pending change"
 )
+
+// ChangeWindow is how long a network or firewall change waits for confirmation before the agent rolls it back.
+const ChangeWindow = 30 * time.Second

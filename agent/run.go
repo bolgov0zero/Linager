@@ -57,7 +57,7 @@ func Run(ctx context.Context, o RunOptions) error {
 	if o.Config == nil {
 		o.Config = config.DefaultAgent()
 	}
-	reg := NewRegistry(o.Config, o.Collector, o.Log)
+	reg := NewRegistry(o.Config, o.Collector, o.Log, o.DataDir)
 	buf := &sampleBuffer{}
 	go sampler(ctx, o, buf)
 	st, cert, err := loadState(o.DataDir)

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/coder/websocket"
@@ -28,11 +29,30 @@ func callErr(w http.ResponseWriter, err error) {
 		jsonErr(w, http.StatusNotImplemented, protocol.ErrModuleDisabled)
 	case errors.As(err, &ae) && ae.Msg == protocol.ErrBusy:
 		jsonErr(w, http.StatusConflict, protocol.ErrBusy)
+	case errors.As(err, &ae) && ae.Msg == protocol.ErrTooLarge:
+		jsonErr(w, http.StatusRequestEntityTooLarge, ae.Msg)
+	case errors.As(err, &ae) && ae.Msg == protocol.ErrBinary:
+		jsonErr(w, http.StatusUnsupportedMediaType, ae.Msg)
+	case errors.As(err, &ae) && (ae.Msg == protocol.ErrConflict || ae.Msg == protocol.ErrExists):
+		jsonErr(w, http.StatusConflict, ae.Msg)
+	case errors.As(err, &ae) && ae.Msg == protocol.ErrNotFound:
+		jsonErr(w, http.StatusNotFound, ae.Msg)
+	case errors.As(err, &ae) && ae.Msg == "permission denied":
+		jsonErr(w, http.StatusForbidden, ae.Msg)
+	case errors.As(err, &ae) && ae.Msg == protocol.ErrNoPending:
+		jsonErr(w, http.StatusGone, ae.Msg)
+	case errors.As(err, &ae) && dockerConflict(ae.Msg):
+		jsonErr(w, http.StatusConflict, ae.Msg)
 	case errors.As(err, &ae):
 		jsonErr(w, http.StatusBadGateway, ae.Msg)
 	default:
 		jsonErr(w, http.StatusInternalServerError, "internal error")
 	}
+}
+
+func dockerConflict(m string) bool {
+	m = strings.ToLower(m)
+	return strings.Contains(m, "conflict") || strings.Contains(m, "being used") || strings.Contains(m, "in use")
 }
 
 func (a *Admin) serverOr404(w http.ResponseWriter, r *http.Request) *store.Server {
@@ -220,6 +240,14 @@ func (a *Admin) streamParams(r *http.Request) (module string, params map[string]
 			p["kernel"] = "1"
 		}
 		return "logs", p, true
+	case "docker-logs":
+		if c := q.Get("container"); c != "" && len(c) <= 128 {
+			return "docker.logs", map[string]any{"container": c, "lines": atoiClamp(q.Get("lines"), 0, 1000, 200)}, true
+		}
+	case "docker-pull":
+		if img := q.Get("image"); img != "" && len(img) <= 256 {
+			return "docker.pull", map[string]any{"image": img}, true
+		}
 	case "apt":
 		switch m := q.Get("mode"); m {
 		case "update", "upgrade", "security":

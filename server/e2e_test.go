@@ -387,6 +387,77 @@ func TestEndToEnd(t *testing.T) {
 		return nAudit >= 2
 	})
 
+	// --- files: list, edit with conflict detection, create, upload, download, delete ---
+	fdir := t.TempDir()
+	var fl struct {
+		Entries []struct{ Name, Type string } `json:"entries"`
+	}
+	if code := api.do("POST", "/api/servers/"+id+"/files/mkdir", map[string]any{"path": fdir + "/sub"}, nil); code != 200 {
+		t.Fatalf("mkdir: %d", code)
+	}
+	if code := api.do("POST", "/api/servers/"+id+"/files/create", map[string]any{"path": fdir + "/a.txt"}, nil); code != 200 {
+		t.Fatalf("create: %d", code)
+	}
+	if code := api.do("POST", "/api/servers/"+id+"/files/create", map[string]any{"path": fdir + "/a.txt"}, nil); code != http.StatusConflict {
+		t.Fatalf("creating an existing file must conflict, got %d", code)
+	}
+	var fc struct {
+		Content string `json:"content"`
+		MTime   int64  `json:"mtime"`
+	}
+	api.do("GET", "/api/servers/"+id+"/files/content?path="+fdir+"/a.txt", nil, &fc)
+	if code := api.do("PUT", "/api/servers/"+id+"/files/content", map[string]any{"path": fdir + "/a.txt", "content": "hello\n", "mtime": fc.MTime}, nil); code != 200 {
+		t.Fatalf("save: %d", code)
+	}
+	if code := api.do("PUT", "/api/servers/"+id+"/files/content", map[string]any{"path": fdir + "/a.txt", "content": "stale", "mtime": fc.MTime}, nil); code != http.StatusConflict {
+		t.Fatalf("a stale mtime must be refused, got %d", code)
+	}
+	api.do("GET", "/api/servers/"+id+"/files?path="+fdir, nil, &fl)
+	if len(fl.Entries) != 2 || fl.Entries[0].Type != "dir" || fl.Entries[1].Name != "a.txt" {
+		t.Fatalf("listing: %+v", fl.Entries)
+	}
+	payload := bytes.Repeat([]byte("0123456789abcdef"), 40000) // 640 KB, several chunks
+	upReq, _ := http.NewRequest("POST", api.base+"/api/servers/"+id+"/files/upload?path="+fdir+"/big.bin", bytes.NewReader(payload))
+	upReq.Header.Set("X-CSRF-Token", api.csrf)
+	if resp, err := api.hc.Do(upReq); err != nil || resp.StatusCode != 200 {
+		t.Fatalf("upload: %v %v", err, resp)
+	}
+	dlReq, _ := http.NewRequest("GET", api.base+"/api/servers/"+id+"/files/download?path="+fdir+"/big.bin", nil)
+	dl, err := api.hc.Do(dlReq)
+	if err != nil || dl.StatusCode != 200 {
+		t.Fatalf("download: %v", err)
+	}
+	dlBody, _ := io.ReadAll(dl.Body)
+	_ = dl.Body.Close()
+	if !bytes.Equal(dlBody, payload) {
+		t.Fatalf("downloaded %d bytes, want %d identical bytes", len(dlBody), len(payload))
+	}
+	if code := api.do("POST", "/api/servers/"+id+"/files/delete", map[string]any{"path": fdir + "/big.bin"}, nil); code != http.StatusConflict {
+		t.Fatalf("delete without confirmation must be refused, got %d", code)
+	}
+	if code := api.do("POST", "/api/servers/"+id+"/files/delete", map[string]any{"path": fdir + "/big.bin", "confirm": true}, nil); code != 200 {
+		t.Fatalf("delete: %d", code)
+	}
+	if code := api.do("POST", "/api/servers/"+id+"/files/delete", map[string]any{"path": "/etc", "confirm": true}, nil); code == 200 {
+		t.Fatal("deleting /etc must be refused")
+	}
+	// --- network and firewall state are readable; apply needs a draft ---
+	if code := api.do("GET", "/api/servers/"+id+"/network", nil, nil); code != 200 {
+		t.Fatalf("network state: %d", code)
+	}
+	if code := api.do("GET", "/api/servers/"+id+"/firewall", nil, nil); code != 200 {
+		t.Fatalf("firewall state: %d", code)
+	}
+	if code := api.do("POST", "/api/servers/"+id+"/network/apply", map[string]any{"confirm": true}, nil); code != http.StatusBadRequest {
+		t.Fatalf("applying without a draft must be refused, got %d", code)
+	}
+	if code := api.do("PUT", "/api/servers/"+id+"/firewall/draft", map[string]any{"chains": []map[string]any{{"name": "prerouting", "policy": "drop", "rules": []any{}}}}, nil); code != http.StatusUnprocessableEntity {
+		t.Fatalf("an unmanaged chain must be refused, got %d", code)
+	}
+	if code := api.do("POST", "/api/servers/"+id+"/network/confirm", map[string]any{"id": "nope"}, nil); code != http.StatusGone {
+		t.Fatalf("confirming an unknown change must answer 410, got %d", code)
+	}
+
 	// --- deleting a client ---
 	name := servers[0].Name
 	if code := api.do("DELETE", "/api/servers/"+id, map[string]any{"name": "nope", "uninstall": true}, nil); code != http.StatusUnprocessableEntity {

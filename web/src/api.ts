@@ -80,7 +80,62 @@ export interface AptPackage { name: string; current: string; candidate: string; 
 export interface AptList { packages: AptPackage[]; reboot_required: boolean; last_check: number }
 export interface ProcessInfo { pid: number; user: string; cpu: number; mem_pct: number; rss: number; state: string; cmd: string }
 export interface ProcessList { processes: ProcessInfo[]; total: number }
-export type StreamKind = 'terminal' | 'logs' | 'apt';
+export type StreamKind = 'terminal' | 'logs' | 'apt' | 'docker-logs' | 'docker-pull';
+
+// ---- files (stage 5) ----
+export interface FileEntry {
+  name: string; type: 'dir' | 'file' | 'link' | 'other'; size: number;
+  mode: string; // octal, e.g. "0755"
+  mode_str: string; // e.g. "drwxr-xr-x"
+  owner: string; group: string; mtime: number; link_target?: string;
+}
+export interface FileList { path: string; entries: FileEntry[] }
+export interface FileContent { path: string; content: string; size: number; mtime: number; mode: string }
+
+// ---- network (stage 5) ----
+export interface NetInterface {
+  name: string; state: 'UP' | 'DOWN'; kind: 'physical' | 'virtual' | 'loopback';
+  mac: string; mtu: number; mode: 'static' | 'dhcp' | 'manual' | 'unknown';
+  addresses: string[]; gateway: string; speed_mbps: number;
+  rx_bytes: number; tx_bytes: number; rx_packets: number; tx_packets: number;
+  rx_errors: number; tx_errors: number; rx_dropped: number; tx_dropped: number;
+  primary: boolean; // carries the agent's connection
+  editable: boolean;
+}
+export interface NetRoute { dst: string; gateway: string; dev: string; metric: number; protocol: string }
+export interface NetChange { iface: string; mode: 'static' | 'dhcp'; address: string; gateway: string; mtu: number; up: boolean }
+export interface NetworkDraft { changes: NetChange[] }
+export interface PendingChange { id: string; kind: 'network' | 'firewall'; deadline: number /* unix seconds */ }
+export interface NetworkInfo {
+  backend: 'ifupdown' | 'netplan' | 'unknown';
+  editable: boolean; // false for netplan in this version
+  interfaces: NetInterface[];
+  dns: { nameservers: string[]; search: string[] };
+  routes: NetRoute[];
+  config_preview: string;
+  pending: PendingChange | null;
+  draft: NetworkDraft | null;
+}
+export interface FieldError { iface: string; field: string; message: string }
+export interface ApplyWarning { code: 'primary_iface' | 'ssh_port' | 'agent_link'; message: string }
+
+// ---- firewall (stage 5) ----
+export interface FwRule { text: string; packets?: number; bytes?: number }
+export interface FwChain { name: 'input' | 'forward' | 'output'; policy: 'accept' | 'drop'; rules: FwRule[] }
+export interface FirewallDraft { chains: { name: FwChain['name']; policy: FwChain['policy']; rules: { text: string }[] }[] }
+export interface FirewallInfo {
+  available: boolean; ufw_active: boolean;
+  chains: FwChain[]; ruleset: string; other_tables: string[];
+  pending: PendingChange | null; draft: FirewallDraft | null;
+}
+
+// ---- docker (stage 5) ----
+export interface DockerContainer {
+  id: string; name: string; image: string; state: string; status: string; ports: string[];
+  created: number; cpu: number; mem_used: number; mem_limit: number;
+}
+export interface DockerImage { id: string; repo_tags: string[]; size: number; created: number; used: boolean }
+export interface DockerInfo { available: boolean; containers: DockerContainer[]; images: DockerImage[] }
 
 export interface ServerDetail {
   modules: string[]; // enabled agent modules; empty = unknown (old agent)
@@ -229,6 +284,71 @@ export const api = {
     request<ProcessList>('GET', `api/servers/${enc(id)}/processes?sort=${sort}&n=${n}`),
   killProcess: (id: string, pid: number, signal: 'TERM' | 'KILL') =>
     request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/processes/${pid}/kill`, { signal, confirm: true }),
+  // files
+  files: (id: string, path: string) => request<FileList>('GET', `api/servers/${enc(id)}/files?path=${enc(path)}`),
+  fileContent: (id: string, path: string) => request<FileContent>('GET', `api/servers/${enc(id)}/files/content?path=${enc(path)}`),
+  /** Pass the mtime you read; a 409 means the file changed meanwhile. */
+  fileSave: (id: string, path: string, content: string, mtime?: number) =>
+    request<{ ok: boolean; mtime: number }>('PUT', `api/servers/${enc(id)}/files/content`, { path, content, mtime }),
+  fileMkdir: (id: string, path: string) => request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/files/mkdir`, { path }),
+  fileCreate: (id: string, path: string) => request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/files/create`, { path }),
+  fileDelete: (id: string, path: string) =>
+    request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/files/delete`, { path, confirm: true }),
+  /** Relative URL for a download link. */
+  fileDownloadUrl: (id: string, path: string) => `api/servers/${enc(id)}/files/download?path=${enc(path)}`,
+  uploadFile: (id: string, path: string, file: File, onProgress?: (fraction: number) => void) =>
+    new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `api/servers/${enc(id)}/files/upload?path=${enc(path)}`);
+      xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+      xhr.withCredentials = true;
+      xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded / e.total);
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) return resolve();
+        let msg: string | undefined;
+        try { msg = (JSON.parse(xhr.responseText) as { error?: string }).error; } catch { /* no body */ }
+        reject(new ApiError(xhr.status, msg));
+      };
+      xhr.onerror = () => reject(new ApiError(0));
+      xhr.send(file);
+    }),
+
+  // network
+  network: (id: string) => request<NetworkInfo>('GET', `api/servers/${enc(id)}/network`),
+  networkValidate: (id: string, draft: NetworkDraft) =>
+    request<{ errors: FieldError[] }>('POST', `api/servers/${enc(id)}/network/validate`, draft),
+  /** 422 with errors when the draft is invalid. */
+  networkSaveDraft: (id: string, draft: NetworkDraft) =>
+    request<{ ok: boolean }>('PUT', `api/servers/${enc(id)}/network/draft`, draft),
+  networkResetDraft: (id: string) => request<{ ok: boolean }>('DELETE', `api/servers/${enc(id)}/network/draft`),
+  /** Without confirm, answers 409 {warnings} when the change is risky; repeat with confirm=true to apply. */
+  networkApply: (id: string, confirm: boolean) =>
+    request<PendingChange>('POST', `api/servers/${enc(id)}/network/apply`, { confirm }),
+  networkConfirm: (id: string, changeId: string) =>
+    request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/network/confirm`, { id: changeId }),
+  networkRollback: (id: string, changeId: string) =>
+    request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/network/rollback`, { id: changeId }),
+
+  // firewall
+  firewall: (id: string) => request<FirewallInfo>('GET', `api/servers/${enc(id)}/firewall`),
+  firewallValidate: (id: string, draft: FirewallDraft) =>
+    request<{ ok: boolean; error?: string }>('POST', `api/servers/${enc(id)}/firewall/validate`, draft),
+  firewallSaveDraft: (id: string, draft: FirewallDraft) =>
+    request<{ ok: boolean }>('PUT', `api/servers/${enc(id)}/firewall/draft`, draft),
+  firewallResetDraft: (id: string) => request<{ ok: boolean }>('DELETE', `api/servers/${enc(id)}/firewall/draft`),
+  firewallApply: (id: string, confirm: boolean) =>
+    request<PendingChange>('POST', `api/servers/${enc(id)}/firewall/apply`, { confirm }),
+  firewallConfirm: (id: string, changeId: string) =>
+    request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/firewall/confirm`, { id: changeId }),
+  firewallRollback: (id: string, changeId: string) =>
+    request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/firewall/rollback`, { id: changeId }),
+
+  // docker
+  docker: (id: string) => request<DockerInfo>('GET', `api/servers/${enc(id)}/docker`),
+  dockerContainerAction: (id: string, cid: string, action: 'start' | 'stop' | 'restart' | 'remove') =>
+    request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/docker/containers/${enc(cid)}/${action}`, { confirm: action === 'remove' }),
+  dockerRemoveImage: (id: string, imageId: string) =>
+    request<{ ok: boolean }>('DELETE', `api/servers/${enc(id)}/docker/images/${enc(imageId)}`),
 };
 
 /**

@@ -310,3 +310,56 @@ func (s *Store) Modules(ctx context.Context, serverID string) ([]string, error) 
 	err := s.Pool.QueryRow(ctx, `SELECT coalesce(ARRAY(SELECT jsonb_array_elements_text(modules)), '{}') FROM servers WHERE id=$1`, serverID).Scan(&m)
 	return m, notFound(err)
 }
+
+// ---- drafts and pending changes ----
+
+// SaveDraft stores a draft payload.
+func (s *Store) SaveDraft(ctx context.Context, serverID, kind string, payload []byte) error {
+	_, err := s.Pool.Exec(ctx, `INSERT INTO drafts (server_id, kind, payload) VALUES ($1,$2,$3)
+		ON CONFLICT (server_id, kind) DO UPDATE SET payload=EXCLUDED.payload, updated_at=now()`, serverID, kind, payload)
+	return err
+}
+
+// Draft returns a stored draft or ErrNotFound.
+func (s *Store) Draft(ctx context.Context, serverID, kind string) ([]byte, error) {
+	var b []byte
+	err := s.Pool.QueryRow(ctx, `SELECT payload FROM drafts WHERE server_id=$1 AND kind=$2`, serverID, kind).Scan(&b)
+	return b, notFound(err)
+}
+
+// DeleteDraft removes a draft.
+func (s *Store) DeleteDraft(ctx context.Context, serverID, kind string) error {
+	_, err := s.Pool.Exec(ctx, `DELETE FROM drafts WHERE server_id=$1 AND kind=$2`, serverID, kind)
+	return err
+}
+
+// Pending is a change waiting for confirmation.
+type Pending struct {
+	Kind     string
+	ChangeID string
+	Deadline time.Time
+}
+
+// SetPending records a pending change (one per server).
+func (s *Store) SetPending(ctx context.Context, serverID string, p Pending) error {
+	_, err := s.Pool.Exec(ctx, `INSERT INTO pending_changes (server_id, kind, change_id, deadline) VALUES ($1,$2,$3,$4)
+		ON CONFLICT (server_id) DO UPDATE SET kind=EXCLUDED.kind, change_id=EXCLUDED.change_id, deadline=EXCLUDED.deadline`,
+		serverID, p.Kind, p.ChangeID, p.Deadline)
+	return err
+}
+
+// PendingFor returns the pending change of a server, if any.
+func (s *Store) PendingFor(ctx context.Context, serverID string) (*Pending, error) {
+	var p Pending
+	err := s.Pool.QueryRow(ctx, `SELECT kind, change_id, deadline FROM pending_changes WHERE server_id=$1`, serverID).Scan(&p.Kind, &p.ChangeID, &p.Deadline)
+	if err != nil {
+		return nil, notFound(err)
+	}
+	return &p, nil
+}
+
+// ClearPending forgets the pending change.
+func (s *Store) ClearPending(ctx context.Context, serverID string) error {
+	_, err := s.Pool.Exec(ctx, `DELETE FROM pending_changes WHERE server_id=$1`, serverID)
+	return err
+}

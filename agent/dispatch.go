@@ -46,6 +46,7 @@ type Registry struct {
 }
 
 type liveStream struct {
+	ctx    context.Context
 	cancel context.CancelFunc
 	in     chan []byte
 	resize chan [2]int
@@ -58,7 +59,7 @@ const (
 )
 
 // NewRegistry registers every enabled module.
-func NewRegistry(cfg *config.Agent, col Collector, log *slog.Logger) *Registry {
+func NewRegistry(cfg *config.Agent, col Collector, log *slog.Logger, dataDir string) *Registry {
 	r := &Registry{cmds: map[string]CmdFunc{}, streams: map[string]StreamFunc{}, log: log, live: map[string]*liveStream{}, nStream: map[string]int{}}
 	r.modules = cfg.List()
 	if cfg.Enabled("terminal") {
@@ -81,6 +82,62 @@ func NewRegistry(cfg *config.Agent, col Collector, log *slog.Logger) *Registry {
 	}
 	if cfg.Enabled("logs") {
 		r.streams["logs"] = logsStream
+	}
+	if cfg.Enabled("files") {
+		r.cmds["files.list"] = filesList
+		r.cmds["files.read"] = filesRead
+		r.cmds["files.write"] = filesWrite
+		r.cmds["files.mkdir"] = filesMkdir
+		r.cmds["files.create"] = filesCreate
+		r.cmds["files.delete"] = filesDelete
+		r.streams["files.download"] = filesDownload
+		r.streams["files.upload"] = filesUpload
+	}
+	pend := NewPending(dataDir, log)
+	if cfg.Enabled("network") {
+		nm := newNetModule(pend, dataDir)
+		pend.Register("network", nm.kind())
+		r.cmds["network.state"] = nm.state
+		r.cmds["network.apply"] = nm.apply
+	}
+	if cfg.Enabled("firewall") {
+		fm := newFwModule(pend, dataDir)
+		pend.Register("firewall", fm.kind())
+		r.cmds["firewall.state"] = fm.state
+		r.cmds["firewall.validate"] = fm.validate
+		r.cmds["firewall.apply"] = fm.apply
+	}
+	if cfg.Enabled("network") || cfg.Enabled("firewall") {
+		r.cmds["changes.confirm"] = func(_ context.Context, raw json.RawMessage, _ bool) (any, error) {
+			var p struct{ ID string }
+			if err := json.Unmarshal(raw, &p); err != nil {
+				return nil, errors.New("invalid request")
+			}
+			return map[string]bool{"ok": true}, pend.Confirm(p.ID)
+		}
+		r.cmds["changes.rollback"] = func(_ context.Context, raw json.RawMessage, _ bool) (any, error) {
+			var p struct{ ID string }
+			if err := json.Unmarshal(raw, &p); err != nil {
+				return nil, errors.New("invalid request")
+			}
+			return map[string]bool{"ok": true}, pend.Rollback(p.ID)
+		}
+		r.cmds["changes.status"] = func(context.Context, json.RawMessage, bool) (any, error) {
+			if c := pend.Current(); c != nil {
+				return map[string]any{"id": c.ID, "kind": c.Kind, "deadline": c.Deadline}, nil
+			}
+			return map[string]any{}, nil
+		}
+		pend.Recover() // an unconfirmed change from a previous run is rolled back right away
+	}
+	if cfg.Enabled("docker") && dockerAvailable() {
+		r.cmds["docker.state"] = dockerState
+		r.cmds["docker.container"] = dockerContainerAction
+		r.cmds["docker.imageRemove"] = dockerImageRemove
+		r.streams["docker.logs"] = dockerLogs
+		r.streams["docker.pull"] = dockerPull
+	} else {
+		r.modules = without(r.modules, "docker")
 	}
 	r.cmds["system.reboot"] = sysReboot // always available: rebooting is not a toggleable module
 	return r
@@ -131,7 +188,7 @@ func (r *Registry) OpenStream(ctx context.Context, o protocol.StreamOpen, send f
 		return
 	}
 	sctx, cancel := context.WithCancel(ctx)
-	ls := &liveStream{cancel: cancel, in: make(chan []byte, 64), resize: make(chan [2]int, 8)}
+	ls := &liveStream{ctx: sctx, cancel: cancel, in: make(chan []byte, 64), resize: make(chan [2]int, 8)}
 	r.live[o.SID] = ls
 	r.nStream[o.Module]++
 	r.mu.Unlock()
@@ -170,9 +227,12 @@ func (r *Registry) StreamInput(sid string, b []byte) {
 	if ls == nil {
 		return
 	}
+	// Blocking with a timeout: uploads must not lose chunks. The wait is bounded so a stuck handler
+	// cannot stall the whole connection for long.
 	select {
 	case ls.in <- b:
-	default: // input is dropped if the handler cannot keep up
+	case <-ls.ctx.Done():
+	case <-time.After(10 * time.Second):
 	}
 }
 
@@ -212,4 +272,14 @@ func refreshUpdates(col Collector) {
 	if rc, ok := col.(interface{ RefreshUpdates() }); ok {
 		go rc.RefreshUpdates()
 	}
+}
+
+func without(list []string, name string) []string {
+	out := make([]string, 0, len(list))
+	for _, v := range list {
+		if v != name {
+			out = append(out, v)
+		}
+	}
+	return out
 }

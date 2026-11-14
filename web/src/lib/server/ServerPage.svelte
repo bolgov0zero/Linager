@@ -12,6 +12,10 @@
   import ServicesTab from './tabs/ServicesTab.svelte';
   import UpdatesTab from './tabs/UpdatesTab.svelte';
   import RebootButton from './tabs/RebootButton.svelte';
+  import FilesTab from './tabs/FilesTab.svelte';
+  import NetworkTab from './tabs/NetworkTab.svelte';
+  import FirewallTab from './tabs/FirewallTab.svelte';
+  import DockerTab from './tabs/DockerTab.svelte';
   import { formatDateTime } from './format';
   import { HISTORY_LIMIT, TABS, type LiveSample, type TabId } from './model';
 
@@ -153,6 +157,14 @@
         <OverviewTab server={detail} {sample} {live} {online} />
       {:else if tab === 'metrics'}
         <MetricsTab serverId={detail.id} />
+      {:else if tab === 'files'}
+        <FilesTab server={detail} />
+      {:else if tab === 'network'}
+        <NetworkTab server={detail} />
+      {:else if tab === 'firewall'}
+        <FirewallTab server={detail} />
+      {:else if tab === 'docker'}
+        <DockerTab server={detail} />
       {:else if tab === 'terminal'}
         <TerminalTab server={detail} />
       {:else if tab === 'services'}
