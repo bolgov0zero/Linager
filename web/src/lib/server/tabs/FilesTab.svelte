@@ -570,6 +570,7 @@
 
 <div class="files">
   <div class="toolbar">
+    <div class="where">
     <nav class="crumbs" aria-label={$tStore('files.pathLabel')}>
       <button
         class="crumb"
@@ -587,6 +588,10 @@
         >
       {/each}
     </nav>
+      {#if sel.length > 1}
+        <span class="selcount small muted" role="status">{$tStore('files.selected', { n: sel.length })}</span>
+      {/if}
+    </div>
 
     <div class="row actions">
       <button class="btn tree-toggle" type="button" aria-expanded={treeOpen} onclick={() => (treeOpen = !treeOpen)}>
@@ -622,10 +627,6 @@
         <span style="width: {upload.fraction * 100}%"></span>
       </div>
     </div>
-  {/if}
-
-  {#if sel.length > 1}
-    <p class="small muted">{$tStore('files.selected', { n: sel.length })}</p>
   {/if}
 
   <div class="panes" class:tree-open={treeOpen} style:--tree-w="{treeWidth}px" style:--panes-h="{panesH}px" bind:this={panesEl}>
@@ -815,6 +816,19 @@
     justify-content: space-between;
     align-items: center;
     gap: 8px;
+  }
+
+  /* The path with the number of selected items to its right. */
+  .where {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    min-width: 0;
+  }
+
+  .selcount {
+    white-space: nowrap;
   }
 
   .crumbs {

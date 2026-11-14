@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.23
+
+- File manager: the number of selected items is shown to the right of the path instead of a separate line above the list.
+
 ## 0.1.22
 
 - File manager: right-click context menu (open, download, cut, copy, paste, rename, delete; on the empty area: paste, new folder, new file, refresh). The row buttons are gone; touch screens get a "⋯" button in the row.
