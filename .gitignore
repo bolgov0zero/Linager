@@ -1,0 +1,22 @@
+# kickoff archive (contents live in docs/)
+linager-kickoff.zip
+
+# build output
+/bin/
+/dist/
+/web/dist/
+/web/node_modules/
+*.test
+*.out
+
+# local secrets and config
+*.key
+*.pem
+.env
+server.yaml
+agent.yaml
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,2154 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linager</title>
+<style>
+@font-face{font-family:"Medeo Mono";src:url(fonts/MedeoMonoVariable.woff2) format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Medeo Pixel";src:url(fonts/MedeoPixelVariable.woff) format("woff");font-style:normal;font-display:swap}
+/* Layout idea: summary strip on top, grid of equal server cards below; pixel type for labels, hard offset shadows, segmented bars. */
+:root{
+  --bg:#e8ebe5;
+  --surface:#f6f7f3;
+  --ink:#14181e;
+  --muted:#5d6572;
+  --line:#14181e;
+  --accent:#2b55d9;
+  --good:#1e8a4b;
+  --warn:#b36f0e;
+  --crit:#c4352a;
+  --seg-off:#d5d9d0;
+  --shade:#c3c8bd;
+  --font-display:"Medeo Pixel","Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  --font-body:"Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  font-variation-settings:"ELSH" 1;
+  font-synthesis:none;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;
+    --accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;
+  --accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:13px;line-height:1.45;min-height:100%}
+button,input{font:inherit;color:inherit}
+h1,h2,h3,p{margin:0}
+.wrap{max-width:1280px;margin:0 auto;padding:20px 16px 56px;display:flex;flex-direction:column;gap:20px}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand svg{width:32px;height:32px;display:block}
+.brand h1{font-family:var(--font-display);font-size:26px;letter-spacing:.02em;line-height:1}
+.brand small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+.top-r{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.live{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;margin-right:6px}
+.live i{width:8px;height:8px;background:var(--good);display:block;animation:blink 2s steps(2,jump-none) infinite}
+@keyframes blink{50%{opacity:.25}}
+@media (prefers-reduced-motion: reduce){.live i{animation:none}}
+
+.btn{background:var(--surface);border:2px solid var(--line);padding:7px 12px;cursor:pointer;font-family:var(--font-display);font-size:14px;letter-spacing:.02em;box-shadow:3px 3px 0 var(--shade);transition:none}
+.btn:hover{background:var(--ink);color:var(--bg)}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shade)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn.sm{padding:4px 9px;font-size:13px;box-shadow:2px 2px 0 var(--shade)}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* summary */
+.sum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.tile{background:var(--surface);border:2px solid var(--line);padding:12px 14px;display:flex;flex-direction:column;gap:2px;position:relative}
+.tile .k{font-family:var(--font-display);font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.tile .v{font-family:var(--font-display);font-size:34px;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile .s{color:var(--muted);font-size:12px;min-height:18px}
+.tile.alert .v{color:var(--crit)}
+.tile.alert::after{content:"";position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:var(--crit)}
+
+/* toolbar */
+.bar-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:transparent;border:2px solid var(--line);padding:4px 10px;cursor:pointer;font-family:var(--font-display);font-size:14px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.chip:hover:not([aria-pressed="true"]){background:var(--surface)}
+.search{background:var(--surface);border:2px solid var(--line);padding:6px 10px;min-width:200px;font-size:13px}
+.search::placeholder{color:var(--muted)}
+
+/* grid + card */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
+.card{background:var(--surface);border:2px solid var(--line);box-shadow:5px 5px 0 var(--shade);padding:16px 14px 12px;display:flex;flex-direction:column;gap:12px;position:relative;min-width:0}
+.card[hidden]{display:none}
+.card::before{content:"";position:absolute;left:-2px;right:-2px;top:-2px;height:5px;background:var(--line)}
+.card[data-level="ok"]::before{background:var(--line)}
+.card[data-level="warn"]::before{background:var(--warn)}
+.card[data-level="crit"]::before{background:var(--crit)}
+.card[data-level="off"]::before{background:var(--muted)}
+.card[data-level="off"] .metrics,.card[data-level="off"] .spark-wrap{opacity:.45}
+.card.dragging{opacity:.45}
+.editing .card{cursor:grab;outline:2px dashed var(--muted);outline-offset:3px}
+
+.c-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.c-title{display:flex;align-items:center;gap:9px;min-width:0}
+.dot{width:10px;height:10px;flex:none;background:var(--good)}
+.card[data-level="warn"] .dot{background:var(--warn)}
+.card[data-level="crit"] .dot{background:var(--crit)}
+.card[data-level="off"] .dot{background:var(--muted)}
+.c-title h3{font-family:var(--font-display);font-size:20px;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.c-sub{color:var(--muted);font-size:12px;margin-top:-6px}
+.c-edit{display:none;gap:4px;flex:none}
+.editing .c-edit{display:flex}
+.ib{width:26px;height:26px;background:var(--bg);border:2px solid var(--line);cursor:pointer;font-family:var(--font-display);font-size:16px;line-height:1;padding:0;display:grid;place-items:center}
+.ib:hover{background:var(--ink);color:var(--bg)}
+.ib.del:hover{background:var(--crit);border-color:var(--crit);color:#fff}
+
+.tags{display:flex;flex-wrap:wrap;gap:6px;min-height:24px;align-content:flex-start}
+.tag{border:2px solid var(--line);padding:0 6px;font-size:11px;line-height:18px;white-space:nowrap}
+.tag.ok{border-color:var(--good);color:var(--good)}
+.tag.warn{border-color:var(--warn);color:var(--warn)}
+.tag.crit{border-color:var(--crit);color:var(--crit)}
+.tag.off{border-color:var(--muted);color:var(--muted)}
+
+.metrics{display:flex;flex-direction:column;gap:7px}
+.m{display:grid;grid-template-columns:44px 1fr 40px;align-items:center;gap:8px}
+.ml{font-family:var(--font-display);font-size:13px;color:var(--muted);letter-spacing:.06em}
+.mv{text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+.bar{display:flex;gap:2px;height:12px}
+.bar i{flex:1;background:var(--seg-off);display:block}
+.bar[data-level="ok"] i.on{background:var(--accent)}
+.bar[data-level="warn"] i.on{background:var(--warn)}
+.bar[data-level="crit"] i.on{background:var(--crit)}
+
+.spark-wrap{display:flex;flex-direction:column;gap:5px;border-top:2px dashed var(--seg-off);padding-top:10px}
+.spark-wrap canvas{width:100%;height:26px;display:block;image-rendering:pixelated}
+.net{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.net b{color:var(--ink);font-weight:500}
+
+.c-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:2px solid var(--line);margin:0 -14px -12px;padding:9px 14px}
+.up{color:var(--muted);font-size:12px}
+.acts{display:flex;gap:6px}
+
+.empty{border:2px dashed var(--line);padding:32px 16px;text-align:center;color:var(--muted);display:none}
+.empty.show{display:block}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(10,12,16,.55);display:none;align-items:flex-start;justify-content:center;padding:48px 16px 16px;z-index:20;overflow:auto}
+.modal.open{display:flex}
+.sheet{background:var(--surface);border:2px solid var(--line);box-shadow:6px 6px 0 var(--shade);width:100%;max-width:560px;display:flex;flex-direction:column}
+.sheet-h{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:2px solid var(--line)}
+.sheet-h h2{font-family:var(--font-display);font-size:20px}
+.sec{padding:14px;display:flex;flex-direction:column;gap:10px}
+.sec+.sec{border-top:2px dashed var(--seg-off)}
+.sec h4{margin:0;font-family:var(--font-display);font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;border:2px solid var(--line);padding:8px 10px;flex-wrap:wrap}
+.row .nm{font-family:var(--font-display);font-size:16px;font-weight:600}
+.row .sm{color:var(--muted);font-size:12px}
+.pend{display:flex;flex-direction:column;gap:8px;border:2px solid var(--line);padding:10px}
+.pend .line{display:flex;gap:8px;flex-wrap:wrap}
+.pend input{flex:1;min-width:140px;background:var(--bg);border:2px solid var(--line);padding:6px 10px;letter-spacing:.12em;text-transform:uppercase}
+.err{color:var(--crit);font-size:12px;min-height:16px}
+.none{color:var(--muted);font-size:12px}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 14px;display:none;align-items:center;gap:14px;z-index:30;max-width:calc(100% - 32px);box-shadow:4px 4px 0 var(--shade)}
+.toast.show{display:flex}
+.toast button{background:none;border:0;color:var(--bg);text-decoration:underline;cursor:pointer;padding:0}
+
+/* big display type uses the grid dot shape, small pixel text stays square for legibility */
+.brand h1,.tile .v,.c-title h3,.d-ttl h2,.big,.ifh .nm,.tbl .nm{font-variation-settings:"ELSH" 40}
+/* server detail */
+body.in-detail .dv,body.in-detail #editBtn,body.in-detail #addBtn,body.in-updates .dv,body.in-updates #editBtn,body.in-updates #addBtn{display:none}
+#updates{display:none}
+body.in-updates #updates{display:flex;flex-direction:column;gap:16px}
+#detail{display:none}
+body.in-detail #detail{display:flex;flex-direction:column;gap:16px}
+.card h3{cursor:pointer}
+.card h3:hover{text-decoration:underline}
+.editing .card h3{cursor:inherit;text-decoration:none}
+.btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+.btn:disabled:hover{background:var(--surface);color:var(--ink)}
+#dhead{display:flex;flex-direction:column;gap:10px}
+.d-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.d-ttl{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.d-ttl h2{font-family:var(--font-display);font-size:30px;line-height:1}
+#detail[data-level="warn"] .dot{background:var(--warn)}
+#detail[data-level="crit"] .dot{background:var(--crit)}
+#detail[data-level="off"] .dot{background:var(--muted)}
+.banner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;border:2px solid var(--warn);color:var(--warn);padding:8px 12px}
+.banner span{color:var(--ink)}
+.tabs{display:flex;overflow-x:auto;gap:2px;margin-bottom:-14px;position:relative;z-index:1;padding-right:2px}
+.tab{background:none;border:2px solid transparent;border-bottom:0;padding:8px 14px;cursor:pointer;font-family:var(--font-display);font-size:15px;white-space:nowrap;color:var(--muted)}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{background:var(--surface);border-color:var(--line);color:var(--ink);padding-bottom:10px;margin-bottom:-2px}
+.panel{background:var(--surface);border:2px solid var(--line);padding:16px;min-height:300px;box-shadow:5px 5px 0 var(--shade)}
+.ov{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}
+.box{border:2px solid var(--line);background:var(--bg);padding:12px;display:flex;flex-direction:column;gap:9px;min-width:0}
+.box h4{margin:0;font-family:var(--font-display);font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.big{font-family:var(--font-display);font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.box canvas{width:100%;height:64px;display:block;image-rendering:pixelated}
+.sm2{color:var(--muted);font-size:12px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;margin:0;font-size:12px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.tw{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-family:var(--font-display);font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:2px solid var(--line);white-space:nowrap}
+.tbl td{padding:7px 8px;border-bottom:2px dashed var(--seg-off);vertical-align:middle}
+.tbl td.r,.tbl th.r{text-align:right;font-variant-numeric:tabular-nums}
+.tbl .nm{font-family:var(--font-display);font-size:15px;font-weight:600}
+.st{display:inline-block;border:2px solid var(--muted);color:var(--muted);padding:0 6px;font-size:11px;line-height:18px;white-space:nowrap}
+.st.active{border-color:var(--good);color:var(--good)}
+.st.failed{border-color:var(--crit);color:var(--crit)}
+.st.busy{border-color:var(--warn);color:var(--warn)}
+.tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.tools .search{min-width:180px}
+select.search{padding:5px 8px}
+.term,.logs{--t-bg:#0b0e13;--t-fg:#d5dae3;--t-dim:#7f8898;--t-ok:#6fd68f;--t-err:#ff7a6e;--t-warn:#e6b04b;--t-pr:#8fb0ff;background:var(--t-bg);color:var(--t-fg);border:2px solid var(--line);overflow:auto;padding:12px;font-size:13px}
+.term{height:420px;cursor:text}
+.term:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.term pre,.logs pre{margin:0;font:inherit;white-space:pre-wrap;word-break:break-word}
+.term pre span{display:block;min-height:1.45em}
+.term .cmd{color:var(--t-pr)}
+.term .dim{color:var(--t-dim)}
+.term .ok{color:var(--t-ok)}
+.term .err{color:var(--t-err)}
+.tin{display:flex;gap:0;align-items:center}
+.tin .pr{color:var(--t-pr);white-space:pre}
+.tin input{flex:1;min-width:0;background:transparent;border:0;color:var(--t-fg);outline:0;font:inherit;caret-color:var(--t-pr);padding:0}
+.tbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.tbar .dd{display:inline-block;width:8px;height:8px;background:var(--good);margin-right:8px}
+.hint{color:var(--muted);font-size:12px;margin-top:10px}
+.logs{height:380px}
+.logs.short{height:150px;margin-top:14px}
+.logs .row2{display:block;line-height:1.5}
+.logs .lt{color:var(--t-dim)}
+.logs .lu{color:var(--t-pr);margin:0 8px}
+.logs .warn{color:var(--t-warn)}
+.logs .err{color:var(--t-err)}
+.pk-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.offl{display:flex;flex-direction:column;gap:8px;align-items:flex-start;padding:24px 4px}
+.offl p{color:var(--muted);max-width:60ch}
+
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:2px;font-size:13px}
+.crumbs button{background:none;border:0;padding:2px 4px;cursor:pointer;color:var(--accent);text-decoration:underline;font:inherit}
+.crumbs span{color:var(--muted)}
+.fname{background:none;border:0;padding:0;cursor:pointer;font:inherit;font-weight:500;color:var(--ink);text-align:left;display:inline-flex;align-items:center}
+.fname:hover{text-decoration:underline}
+.ico{display:inline-block;width:12px;height:9px;margin-right:9px;background:var(--accent);flex:none}
+.ico.f{background:var(--muted);width:9px;height:12px;margin:0 10px 0 1.5px}
+.editor{width:100%;height:380px;resize:vertical;background:#0b0e13;color:#d5dae3;border:2px solid var(--line);padding:12px;font:13px/1.5 var(--font-body);outline:0;display:block}
+.editor:focus{outline:2px solid var(--accent);outline-offset:2px}
+.inl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.inl input,.inl select{background:var(--bg);border:2px solid var(--line);padding:5px 8px;min-width:0;font-size:13px}
+.inl input.grow{flex:1;min-width:140px}
+.inl input.w{width:170px}
+.tbl td.r{white-space:nowrap}
+.tbl td .ib{display:inline-grid;vertical-align:middle}
+.rule{font-size:12px;word-break:break-word}
+.chh{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin:20px 0 6px}
+.chh.first{margin-top:0}
+.chh b{font-family:var(--font-display);font-size:17px;font-weight:600}
+.chh .sm2{margin-left:8px}
+.ifh{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.ifh .nm{font-family:var(--font-display);font-size:22px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fgrid label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.fgrid input,.fgrid select{background:var(--surface);border:2px solid var(--line);padding:5px 8px;font-size:13px;color:var(--ink);min-width:0}
+.fgrid input:disabled{opacity:.45}
+.fgrid .full{grid-column:1/-1}
+.errt{color:var(--crit);font-size:12px;min-height:16px}
+.upl{position:relative;overflow:hidden;display:inline-block}
+.upl input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.badge{display:inline-block;background:var(--warn);color:#fff;padding:0 6px;margin-left:4px;line-height:18px;font-size:12px}
+.badge[hidden]{display:none}
+.vers{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.pb{display:flex;gap:2px;height:10px;width:110px}
+.pb i{flex:1;background:var(--seg-off)}
+.pb i.on{background:var(--accent)}
+.pb.bad i.on{background:var(--crit)}
+.ulist{margin:0;padding-left:18px;font-size:12px;display:flex;flex-direction:column;gap:3px}
+.ugrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.mxg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.mxg{grid-template-columns:1fr}}
+.mxw{position:relative}
+.box canvas.mx{width:100%;height:170px;image-rendering:pixelated;display:block}
+.mxtip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 8px;font-size:12px;white-space:nowrap;z-index:3;box-shadow:3px 3px 0 var(--shade)}
+.mxtip[hidden]{display:none}
+.stl{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.stl b{color:var(--ink);font-weight:500}
+.tbl tr.cur td{background:var(--bg)}
+input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
+/* list view: two compact lines per server, numbers only */
+body.view-list .grid{grid-template-columns:1fr;gap:8px}
+body.view-list .card{display:grid;grid-template-columns:250px auto minmax(0,1fr) auto;grid-template-areas:"head foot . metrics" "sub sub tags net";column-gap:16px;row-gap:3px;align-items:center;padding:9px 14px 9px 18px;box-shadow:3px 3px 0 var(--shade)}
+body.view-list .card::before{left:-2px;top:-2px;bottom:-2px;right:auto;width:6px;height:auto}
+body.view-list .c-head{grid-area:head}
+body.view-list .c-title h3{font-size:19px}
+body.view-list .c-sub{grid-area:sub;margin:0;white-space:nowrap}
+body.view-list .c-foot{grid-area:foot;border:0;margin:0;padding:0;justify-content:flex-start}
+body.view-list .c-foot .up{display:none}
+body.view-list .tags{grid-area:tags;min-height:0;flex-wrap:nowrap;overflow:hidden}
+body.view-list .tag{line-height:16px;font-size:11px}
+body.view-list .metrics{grid-area:metrics;flex-direction:row;gap:18px;justify-content:flex-end}
+body.view-list .m{display:flex;align-items:baseline;gap:6px}
+body.view-list .bar{display:none}
+body.view-list .mv{min-width:36px;font-size:14px}
+body.view-list .bar[data-level="warn"]+.mv{color:var(--warn)}
+body.view-list .bar[data-level="crit"]+.mv{color:var(--crit)}
+body.view-list .spark-wrap{grid-area:net;border:0;padding:0;justify-self:end}
+body.view-list .spark-wrap canvas{display:none}
+body.view-list .net{flex-direction:row;gap:16px;justify-content:flex-end}
+body.view-list .net span:last-child{display:none}
+@media (max-width:999px){
+  body.view-list .card{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head foot" "sub sub" "metrics metrics" "tags net"}
+  body.view-list .metrics{justify-content:flex-start}
+  body.view-list .tags{flex-wrap:wrap}
+}
+@media (max-width:900px){.ugrid{grid-template-columns:1fr}}
+@media (max-width:900px){.sum{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:400px){.grid{grid-template-columns:1fr}.search{min-width:0;width:100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true">
+        <rect x="0" y="0" width="8" height="2" fill="var(--ink)"/>
+        <rect x="0" y="3" width="8" height="2" fill="var(--ink)"/>
+        <rect x="0" y="6" width="8" height="2" fill="var(--ink)"/>
+        <rect x="5" y="0" width="1" height="2" fill="var(--bg)"/>
+        <rect x="6" y="3" width="1" height="2" fill="var(--accent)"/>
+        <rect x="5" y="6" width="1" height="2" fill="var(--bg)"/>
+      </svg>
+      <div>
+        <h1>Linager</h1>
+        <small id="subtitle">Debian · серверы</small>
+      </div>
+    </div>
+    <div class="top-r">
+      <span class="live"><i></i><span id="clock">live</span></span>
+      <button class="btn" id="updBtn">Обновления <span class="badge" id="updBadge" hidden>0</span></button>
+      <button class="btn" id="editBtn" aria-pressed="false">Редактировать</button>
+      <button class="btn primary" id="addBtn">+ Сервер</button>
+    </div>
+  </header>
+
+  <section class="sum dv" aria-label="Сводка">
+    <div class="tile" id="t-online"><span class="k">Online</span><span class="v">0</span><span class="s"></span></div>
+    <div class="tile" id="t-attn"><span class="k">Внимание</span><span class="v">0</span><span class="s"></span></div>
+    <div class="tile" id="t-upd"><span class="k">Обновления</span><span class="v">0</span><span class="s"></span></div>
+    <div class="tile" id="t-cpu"><span class="k">CPU средн.</span><span class="v">0%</span><span class="s"></span></div>
+  </section>
+
+  <div class="bar-row dv">
+    <div class="chips" role="group" aria-label="Фильтр">
+      <button class="chip" data-f="all" aria-pressed="true">Все</button>
+      <button class="chip" data-f="problem" aria-pressed="false">Проблемные</button>
+      <button class="chip" data-f="off" aria-pressed="false">Offline</button>
+    </div>
+    <div class="top-r">
+      <div class="chips" id="viewSw" role="group" aria-label="Вид"><button class="chip" data-view="cards" aria-pressed="true">Карточки</button><button class="chip" data-view="list" aria-pressed="false">Строки</button></div>
+      <input class="search" id="q" type="search" placeholder="Поиск по имени или IP" aria-label="Поиск по имени или IP">
+    </div>
+  </div>
+
+  <main class="dv">
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty">Нет серверов по этому фильтру.</div>
+  </main>
+
+  <section id="detail" aria-label="Сервер">
+    <div id="dhead"></div>
+    <div class="tabs" id="dtabs" role="tablist"></div>
+    <div class="panel" id="panel" role="tabpanel"></div>
+  </section>
+
+  <section id="updates" aria-label="Обновления Linager"><div id="updbody"></div></section>
+</div>
+
+<div class="modal" id="confirm" role="alertdialog" aria-modal="true" aria-labelledby="cTitle">
+  <div class="sheet" style="max-width:440px">
+    <div class="sheet-h"><h2 id="cTitle"></h2></div>
+    <div class="sec">
+      <p id="cText"></p>
+      <div class="acts" style="justify-content:flex-end"><button class="btn sm" id="cNo">Отмена</button><button class="btn sm primary" id="cOk">OK</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mt">
+  <div class="sheet">
+    <div class="sheet-h"><h2 id="mt">Добавить сервер</h2><button class="ib" id="mClose" aria-label="Закрыть">×</button></div>
+    <div class="sec">
+      <h4>Подключённые, не на дашборде</h4>
+      <div id="avail" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+    <div class="sec">
+      <h4>Ждут подтверждения</h4>
+      <div id="pending" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"><span id="toastMsg"></span><button id="toastAct" hidden>Отменить</button></div>
+
+<script>
+(function(){
+  var HIST=32;
+  function mk(o){
+    var s=Object.assign({online:1,os:'Debian 12',cpu:20,ram:40,disk:40,upd:0,reboot:0,failed:0,up:'10д 4ч',vol:6,rx:200,tx:80,last:''},o);
+    s.base={cpu:s.cpu,ram:s.ram,rx:s.rx,tx:s.tx};
+    s.hist=[];
+    s.av='0.3.2';s.us={st:'idle',step:0,msg:''};
+    s.rhist=[];s.nhist=[];
+    for(var i=0;i<HIST;i++){
+      s.hist.push(s.online?clamp(s.cpu+(Math.random()-.5)*s.vol*2,2,99):0);
+      s.rhist.push(s.online?clamp(s.ram+(Math.random()-.5)*3,2,99):0);
+      s.nhist.push(s.online?s.rx*(0.6+Math.random()*0.8):0);
+    }
+    return s;
+  }
+  function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+
+  var lib=[
+    mk({id:'web-01',ip:'10.0.1.11',cpu:34,ram:52,disk:41,upd:3,up:'41д 6ч',rx:1400,tx:620}),
+    mk({id:'web-02',ip:'10.0.1.12',cpu:28,ram:48,disk:44,upd:12,reboot:1,up:'112д 2ч',rx:980,tx:410}),
+    mk({id:'db-primary',ip:'10.0.2.10',cpu:46,ram:78,disk:63,up:'67д 19ч',vol:10,rx:520,tx:1900}),
+    mk({id:'db-replica',ip:'10.0.2.11',cpu:22,ram:71,disk:63,upd:5,failed:1,up:'67д 19ч',rx:1700,tx:90}),
+    mk({id:'cache-01',ip:'10.0.3.5',cpu:12,ram:64,disk:18,upd:2,up:'203д 11ч',rx:300,tx:260}),
+    mk({id:'mail-01',ip:'10.0.4.2',online:0,upd:7,up:'—',last:'12 мин'}),
+    mk({id:'build-runner',ip:'10.0.5.20',cpu:94,ram:86,disk:72,upd:8,up:'9д 1ч',vol:4,rx:3200,tx:700}),
+    mk({id:'backup-nas',ip:'10.0.6.3',os:'Debian 11',cpu:6,ram:31,disk:91,upd:1,up:'330д 7ч',rx:90,tx:2400}),
+    mk({id:'monitor-01',ip:'10.0.1.30',cpu:18,ram:44,disk:35,up:'58д 3ч',rx:240,tx:120}),
+    mk({id:'vpn-gw',ip:'10.0.0.1',cpu:9,ram:22,disk:27,upd:4,up:'144д 15ч',rx:2100,tx:2000}),
+    mk({id:'staging-01',ip:'10.0.9.8',cpu:41,ram:58,disk:49,upd:6,up:'4д 20ч',rx:400,tx:150})
+  ];
+  var byId={};lib.forEach(function(s){byId[s.id]=s});
+  byId['web-02'].av='0.3.1';byId['backup-nas'].av='0.2.9';byId['vpn-gw'].failOnce=true;
+  var onBoard=lib.slice(0,8).map(function(s){return s.id});
+
+  var pendingList=[
+    {host:'edge-09',ip:'10.0.7.9',fp:'SHA256:Qm4x…r9Lw',hint:'7KQ2-9DXM'},
+    {host:'dns-02',ip:'10.0.1.53',fp:'SHA256:Zt1p…c4Va',hint:'H3NB-41TE'}
+  ];
+
+  var grid=document.getElementById('grid'),emptyEl=document.getElementById('empty');
+  var cards={};
+  var editing=false,filter='all',query='';
+
+  function level(s){
+    if(!s.online)return 'off';
+    if(s.cpu>90||s.ram>92||s.disk>90)return 'crit';
+    if(s.cpu>75||s.ram>85||s.disk>80||s.failed>0||s.reboot||s.upd>=10)return 'warn';
+    return 'ok';
+  }
+  function lv(v){return v>90?'crit':v>75?'warn':'ok'}
+  function fmt(kb){return kb>=1024?(kb/1024).toFixed(1)+' MB/s':Math.round(kb)+' KB/s'}
+
+  function buildCard(s){
+    var el=document.createElement('article');
+    el.className='card';el.dataset.id=s.id;
+    var seg=new Array(21).join('<i></i>');
+    function row(k,l){return '<div class="m"><span class="ml">'+l+'</span><div class="bar" data-bar="'+k+'">'+seg+'</div><span class="mv" data-f="'+k+'">0%</span></div>'}
+    el.innerHTML=
+      '<header class="c-head"><div class="c-title"><span class="dot"></span><h3>'+s.id+'</h3></div>'+
+      '<div class="c-edit"><button class="ib" data-act="left" aria-label="Сдвинуть влево">‹</button><button class="ib" data-act="right" aria-label="Сдвинуть вправо">›</button><button class="ib del" data-act="remove" aria-label="Убрать с дашборда">×</button></div></header>'+
+      '<p class="c-sub" data-f="sub">'+s.ip+' · '+s.os+' · агент '+s.av+'</p>'+
+      '<div class="tags" data-f="tags"></div>'+
+      '<div class="metrics">'+row('cpu','CPU')+row('ram','RAM')+row('disk','ДИСК')+'</div>'+
+      '<div class="spark-wrap"><canvas width="160" height="26"></canvas><div class="net"><span>↓ <b data-f="rx"></b></span><span>↑ <b data-f="tx"></b></span><span data-f="ct">CPU 1 мин</span></div></div>'+
+      '<footer class="c-foot"><span class="up" data-f="up"></span><div class="acts"><button class="btn sm" data-act="term">Терминал</button><button class="btn sm" data-act="open">Открыть</button></div></footer>';
+    el.draggable=editing;
+    cards[s.id]=el;
+    return el;
+  }
+
+  function setBar(el,key,val,level){
+    var b=el.querySelector('[data-bar="'+key+'"]');
+    var n=Math.round(val/5),segs=b.children;
+    for(var i=0;i<segs.length;i++){segs[i].className=i<n?'on':''}
+    b.dataset.level=level;
+  }
+
+  function drawSpark(el,s){
+    var c=el.querySelector('canvas'),g=c.getContext('2d');
+    var cs=getComputedStyle(document.documentElement);
+    var col=cs.getPropertyValue('--accent').trim(),hi=cs.getPropertyValue('--ink').trim(),off=cs.getPropertyValue('--seg-off').trim();
+    g.clearRect(0,0,c.width,c.height);
+    var w=4,gap=1,h=c.height;
+    for(var i=0;i<HIST;i++){
+      var v=s.hist[i];
+      g.fillStyle=off;g.fillRect(i*(w+gap),h-1,w,1);
+      if(!s.online)continue;
+      var bh=Math.max(1,Math.round(v/100*h));
+      g.fillStyle=(i===HIST-1)?hi:col;
+      g.fillRect(i*(w+gap),h-bh,w,bh);
+    }
+  }
+
+  function tagsHtml(s){
+    var t=[];
+    if(!s.online)t.push('<span class="tag off">нет связи</span>');
+    if(s.failed)t.push('<span class="tag crit">служб упало: '+s.failed+'</span>');
+    if(s.reboot)t.push('<span class="tag warn">нужна перезагрузка</span>');
+    if(s.upd)t.push('<span class="tag '+(s.upd>=10?'warn':'')+'">обновлений: '+s.upd+'</span>');
+    var as=agentState(s);
+    if(as==='old')t.push('<span class="tag warn">агент устарел</span>');
+    else if(as==='avail')t.push('<span class="tag">агент: есть обновление</span>');
+    if(!t.length)t.push('<span class="tag ok">без замечаний</span>');
+    return t.join('');
+  }
+
+  function updateCard(s){
+    var el=cards[s.id];if(!el)return;
+    var L=level(s);el.dataset.level=L;
+    function f(k){return el.querySelector('[data-f="'+k+'"]')}
+    var on=!!s.online;
+    f('sub').textContent=s.ip+' · '+s.os+' · агент '+s.av;
+    ['cpu','ram','disk'].forEach(function(k){
+      var v=on?s[k]:0;
+      setBar(el,k,v,lv(s[k]));
+      f(k).textContent=on?Math.round(s[k])+'%':'—';
+    });
+    f('rx').textContent=on?fmt(s.rx):'—';
+    f('tx').textContent=on?fmt(s.tx):'—';
+    f('up').textContent=on?'uptime '+s.up:'офлайн '+s.last;
+    var th=tagsHtml(s),tg=f('tags');
+    if(tg.dataset.k!==th){tg.innerHTML=th;tg.dataset.k=th}
+    drawSpark(el,s);
+  }
+
+  function summary(){
+    var list=onBoard.map(function(id){return byId[id]});
+    var on=list.filter(function(s){return s.online});
+    var attn=list.filter(function(s){var l=level(s);return l!=='ok'});
+    var crit=list.filter(function(s){return level(s)==='crit'}).length;
+    var off=list.length-on.length;
+    var upd=list.reduce(function(a,s){return a+(s.upd||0)},0);
+    var rb=list.filter(function(s){return s.reboot}).length;
+    var avg=on.length?on.reduce(function(a,s){return a+s.cpu},0)/on.length:0;
+    function set(id,v,sub,alert){
+      var t=document.getElementById(id);
+      t.querySelector('.v').textContent=v;t.querySelector('.s').textContent=sub;
+      t.classList.toggle('alert',!!alert);
+    }
+    set('t-online',on.length+'/'+list.length,off?'нет связи: '+off:'все на связи',off>0);
+    set('t-attn',attn.length,crit?'критичных: '+crit:(attn.length?'предупреждения':'всё спокойно'),crit>0);
+    set('t-upd',upd,rb?'ждут перезагрузки: '+rb:'перезагрузка не нужна',false);
+    set('t-cpu',Math.round(avg)+'%','по серверам online',false);
+    document.getElementById('subtitle').textContent='Debian · '+list.length+' '+plural(list.length,'сервер','сервера','серверов');
+  }
+  function plural(n,a,b,c){var m=n%10,k=n%100;return (m===1&&k!==11)?a:(m>=2&&m<=4&&(k<10||k>=20))?b:c}
+
+  function applyFilter(){
+    var vis=0;
+    onBoard.forEach(function(id){
+      var s=byId[id],el=cards[id];
+      var L=level(s),ok=true;
+      if(filter==='problem')ok=L==='warn'||L==='crit'||L==='off';
+      if(filter==='off')ok=L==='off';
+      if(query){var q=query.toLowerCase();ok=ok&&(s.id.toLowerCase().indexOf(q)>-1||s.ip.indexOf(q)>-1)}
+      el.hidden=!ok;if(ok)vis++;
+    });
+    emptyEl.classList.toggle('show',vis===0);
+    emptyEl.textContent=onBoard.length?'Нет серверов по этому фильтру.':'Дашборд пуст. Добавьте сервер кнопкой «+ Сервер».';
+  }
+
+  function refreshAll(){
+    onBoard.forEach(function(id){updateCard(byId[id])});
+    summary();applyFilter();
+  }
+
+  function addToBoard(id){
+    var s=byId[id];
+    if(!cards[id])buildCard(s);
+    cards[id].draggable=editing;
+    grid.appendChild(cards[id]);
+    if(onBoard.indexOf(id)<0)onBoard.push(id);
+    refreshAll();
+  }
+
+  function syncOrder(){
+    onBoard=[].slice.call(grid.querySelectorAll('.card')).map(function(c){return c.dataset.id});
+  }
+
+  /* toast */
+  var toastTimer,toast=document.getElementById('toast'),toastMsg=document.getElementById('toastMsg'),toastAct=document.getElementById('toastAct'),undoFn=null;
+  function showToast(msg,undo){
+    toastMsg.textContent=msg;undoFn=undo||null;toastAct.hidden=!undo;
+    toast.classList.add('show');clearTimeout(toastTimer);
+    toastTimer=setTimeout(function(){toast.classList.remove('show')},5000);
+  }
+  toastAct.addEventListener('click',function(){if(undoFn)undoFn();undoFn=null;toast.classList.remove('show')});
+
+  /* card actions */
+  grid.addEventListener('click',function(e){
+    var b=e.target.closest('button[data-act]');if(!b)return;
+    var card=b.closest('.card'),id=card.dataset.id,act=b.dataset.act;
+    if(act==='left'){var p=card.previousElementSibling;if(p){p.before(card);syncOrder()}}
+    else if(act==='right'){var n=card.nextElementSibling;if(n){n.after(card);syncOrder()}}
+    else if(act==='remove'){
+      var idx=onBoard.indexOf(id);
+      card.remove();syncOrder();refreshAll();
+      showToast(id+' убран с дашборда',function(){
+        grid.insertBefore(card,grid.children[idx]||null);syncOrder();refreshAll();
+      });
+    }
+    else if(act==='term')openDetail(id,'terminal');
+    else if(act==='open')openDetail(id,'overview');
+  });
+  grid.addEventListener('click',function(e){
+    var h=e.target.closest('h3');
+    if(h&&!editing)openDetail(h.closest('.card').dataset.id,'overview');
+  });
+
+  /* drag and drop */
+  var dragEl=null;
+  grid.addEventListener('dragstart',function(e){
+    var c=e.target.closest('.card');if(!c||!editing)return;
+    dragEl=c;c.classList.add('dragging');
+    e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',c.dataset.id);
+  });
+  grid.addEventListener('dragover',function(e){
+    if(!dragEl)return;e.preventDefault();
+    var t=e.target.closest('.card');if(!t||t===dragEl||t.hidden)return;
+    var follows=dragEl.compareDocumentPosition(t)&Node.DOCUMENT_POSITION_FOLLOWING;
+    if(follows)t.after(dragEl);else t.before(dragEl);
+  });
+  grid.addEventListener('drop',function(e){if(dragEl)e.preventDefault()});
+  grid.addEventListener('dragend',function(){
+    if(dragEl)dragEl.classList.remove('dragging');
+    dragEl=null;syncOrder();
+  });
+
+  /* view switch: cards or table rows */
+  function setView(v){
+    document.body.classList.toggle('view-list',v==='list');
+    [].forEach.call(document.querySelectorAll('#viewSw .chip'),function(b){b.setAttribute('aria-pressed',b.dataset.view===v)});
+    try{localStorage.setItem('lg-view',v)}catch(e){}
+  }
+  [].forEach.call(document.querySelectorAll('#viewSw .chip'),function(b){b.addEventListener('click',function(){setView(b.dataset.view)})});
+  try{var sv=localStorage.getItem('lg-view');if(sv==='list')setView('list')}catch(e){}
+
+  /* toolbar */
+  var editBtn=document.getElementById('editBtn');
+  editBtn.addEventListener('click',function(){
+    editing=!editing;
+    document.body.classList.toggle('editing',editing);
+    editBtn.setAttribute('aria-pressed',editing);
+    editBtn.textContent=editing?'Готово':'Редактировать';
+    Object.keys(cards).forEach(function(id){cards[id].draggable=editing});
+    if(editing)showToast('Перетаскивайте карточки или используйте ‹ ›');
+  });
+  [].forEach.call(document.querySelectorAll('.chip'),function(c){
+    c.addEventListener('click',function(){
+      filter=c.dataset.f;
+      [].forEach.call(document.querySelectorAll('.chip'),function(x){x.setAttribute('aria-pressed',x===c)});
+      applyFilter();
+    });
+  });
+  document.getElementById('q').addEventListener('input',function(e){query=e.target.value.trim();applyFilter()});
+
+  /* modal */
+  var modal=document.getElementById('modal'),lastFocus=null;
+  function renderModal(){
+    var av=document.getElementById('avail');av.innerHTML='';
+    var free=lib.filter(function(s){return onBoard.indexOf(s.id)<0});
+    if(!free.length){av.innerHTML='<p class="none">Все подключённые серверы уже на дашборде.</p>'}
+    free.forEach(function(s){
+      var r=document.createElement('div');r.className='row';
+      r.innerHTML='<div><div class="nm">'+s.id+'</div><div class="sm">'+s.os+' · '+s.ip+'</div></div><button class="btn sm" data-add="'+s.id+'">Добавить</button>';
+      av.appendChild(r);
+    });
+    var pe=document.getElementById('pending');pe.innerHTML='';
+    if(!pendingList.length){pe.innerHTML='<p class="none">Новых подключений нет. На сервере выполните <code>linager agent connect panel.example.com:8443</code>.</p>'}
+    pendingList.forEach(function(p,i){
+      var d=document.createElement('div');d.className='pend';
+      d.innerHTML='<div><span class="nm" style="font-family:var(--font-display);font-size:16px;font-weight:600">'+p.host+'</span> <span class="sm" style="color:var(--muted)">'+p.ip+'</span></div>'+
+        '<div class="sm" style="color:var(--muted);font-size:12px">Отпечаток '+p.fp+'</div>'+
+        '<div class="line"><input id="key'+i+'" placeholder="XXXX-XXXX" maxlength="9" aria-label="Ключ подключения для '+p.host+'" autocomplete="off"><button class="btn sm" data-ok="'+i+'">Подтвердить</button></div>'+
+        '<div class="err" id="err'+i+'"></div>'+
+        '<div class="sm" style="color:var(--muted);font-size:12px">Для макета подойдёт любой ключ вида XXXX-XXXX, например '+p.hint+'.</div>';
+      pe.appendChild(d);
+    });
+  }
+  function openModal(){lastFocus=document.activeElement;renderModal();modal.classList.add('open');document.getElementById('mClose').focus()}
+  function closeModal(){modal.classList.remove('open');if(lastFocus)lastFocus.focus()}
+  document.getElementById('addBtn').addEventListener('click',openModal);
+  document.getElementById('mClose').addEventListener('click',closeModal);
+  modal.addEventListener('click',function(e){
+    if(e.target===modal){closeModal();return}
+    var a=e.target.closest('[data-add]');
+    if(a){var id=a.dataset.add;addToBoard(id);renderModal();showToast(id+' добавлен на дашборд');return}
+    var o=e.target.closest('[data-ok]');
+    if(o){
+      var i=+o.dataset.ok,p=pendingList[i],val=document.getElementById('key'+i).value.trim();
+      if(!/^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$/.test(val)){
+        document.getElementById('err'+i).textContent='Ключ не подошёл. Скопируйте его из вывода команды на сервере.';return;
+      }
+      var s=mk({id:p.host,ip:p.ip,cpu:15,ram:30,disk:22,up:'0д 0ч',rx:120,tx:60});
+      lib.push(s);byId[s.id]=s;pendingList.splice(i,1);
+      addToBoard(s.id);renderModal();showToast(s.id+' подключён и добавлен на дашборд');
+    }
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&modal.classList.contains('open'))closeModal()});
+
+  /* ===== server detail ===== */
+  var D={id:null,tab:'overview',paused:false,logUnit:'all',busy:false,plog:null,headKey:'',procSort:'cpu'};
+  var detailEl=document.getElementById('detail');
+  var TABS=[['overview','Обзор'],['metrics','Метрики'],['terminal','Терминал'],['files','Файлы'],['services','Службы'],['network','Сеть'],['firewall','Файрвол'],['docker','Docker'],['updates','Обновления'],['procs','Процессы'],['logs','Логи']];
+  var SEG=new Array(21).join('<i></i>');
+  function esc(t){return String(t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+  function rn(a,b){return Math.floor(a+Math.random()*(b-a+1))}
+  function pick(a){return a[Math.floor(Math.random()*a.length)]}
+  function cur(){return D.id?byId[D.id]:null}
+  function inDetail(){return document.body.classList.contains('in-detail')}
+  function lastTxt(s){return s.last==='только что'?'только что':(s.last||'—')+' назад'}
+  function $(id){return document.getElementById(id)}
+
+  /* confirm dialog */
+  var confirmEl=$('confirm'),confirmFn=null;
+  function confirmBox(title,text,okLabel,fn){
+    $('cTitle').textContent=title;$('cText').textContent=text;$('cOk').textContent=okLabel;
+    confirmFn=fn;confirmEl.classList.add('open');$('cNo').focus();
+  }
+  function closeConfirm(){confirmEl.classList.remove('open');confirmFn=null}
+  $('cNo').addEventListener('click',closeConfirm);
+  $('cOk').addEventListener('click',function(){var f=confirmFn;closeConfirm();if(f)f()});
+  confirmEl.addEventListener('click',function(e){if(e.target===confirmEl)closeConfirm()});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&confirmEl.classList.contains('open'))closeConfirm()});
+
+  /* services */
+  function ensureSvcs(s){
+    if(s.svcs)return;
+    var L=[['ssh','OpenBSD Secure Shell server'],['cron','Планировщик задач cron'],['systemd-timesyncd','Синхронизация времени'],['ufw','Файрвол ufw'],['unattended-upgrades','Автоматические обновления'],['linager-agent','Агент Linager']];
+    var id=s.id;
+    if(/^web|^staging/.test(id))L.unshift(['nginx','HTTP-сервер nginx'],['fail2ban','Защита от перебора паролей']);
+    if(/^db/.test(id))L.unshift(['postgresql','PostgreSQL 15 cluster']);
+    if(/^cache/.test(id))L.unshift(['redis-server','Redis in-memory store']);
+    if(/^mail/.test(id))L.unshift(['postfix','Почтовый сервер Postfix']);
+    if(/^build/.test(id))L.unshift(['docker','Docker Application Container Engine'],['containerd','containerd runtime']);
+    if(/^backup/.test(id))L.unshift(['rsync','Сервис rsync'],['smartmontools','Мониторинг S.M.A.R.T.']);
+    if(/^vpn/.test(id))L.unshift(['wg-quick@wg0','WireGuard wg0']);
+    if(/^monitor/.test(id))L.unshift(['prometheus','Prometheus'],['grafana-server','Grafana']);
+    s.svcs=L.map(function(x){return {n:x[0],d:x[1],st:'active',en:true}});
+    if(s.failed)s.svcs[0].st='failed';
+    if(s.upd>=10){var u=s.svcs.filter(function(v){return v.n==='unattended-upgrades'})[0];u.st='inactive';u.en=false}
+  }
+  var ACT_TXT={start:'запущена',stop:'остановлена',restart:'перезапущена'};
+  function svcAction(s,n,act,skipConfirm){
+    ensureSvcs(s);
+    var v=s.svcs.filter(function(x){return x.n===n})[0];
+    if(!v||v.st==='busy')return;
+    function go(){
+      var prev=v.st;v.st='busy';
+      if(D.id===s.id&&D.tab==='services')renderTab();
+      setTimeout(function(){
+        v.st=act==='stop'?'inactive':'active';
+        if(prev==='failed'&&v.st==='active'&&s.failed>0)s.failed--;
+        if(n==='linager-agent'&&act==='stop'){
+          v.st='active';s.online=0;s.last='только что';
+          showToast('Агент остановлен: '+s.id+' пропал из панели');
+          setTimeout(function(){s.online=1;showToast(s.id+' снова на связи (макет)');refreshAll();if(D.id===s.id){updateHead(true);renderTab()}},6000);
+        }else showToast(n+' '+ACT_TXT[act]+' на '+s.id);
+        refreshAll();
+        if(D.id===s.id){updateHead();renderTab()}
+      },900);
+    }
+    if(act==='stop'&&!skipConfirm&&(n==='linager-agent'||n==='ssh')){
+      confirmBox('Остановить '+n+'?',n==='linager-agent'?'Сервер пропадёт из панели, пока агент не запустят снова.':'Новые SSH-подключения станут недоступны. Веб-терминал через агент продолжит работать.','Остановить',go);
+    }else go();
+  }
+  function tabServices(s){
+    ensureSvcs(s);
+    var rows=s.svcs.map(function(v){
+      var act='';
+      if(v.st==='busy')act='<span class="sm2">выполняется…</span>';
+      else if(v.st==='active')act='<button class="btn sm" data-svc="'+v.n+'" data-act="restart">Перезапустить</button> <button class="btn sm" data-svc="'+v.n+'" data-act="stop">Остановить</button>';
+      else act='<button class="btn sm" data-svc="'+v.n+'" data-act="start">Запустить</button>'+(v.st==='failed'?' <button class="btn sm" data-svc="'+v.n+'" data-act="restart">Перезапустить</button>':'');
+      return '<tr data-n="'+v.n+'"><td><div class="nm">'+esc(v.n)+'</div><div class="sm2">'+esc(v.d)+'</div></td><td><span class="st '+v.st+'">'+({active:'работает',inactive:'остановлена',failed:'ошибка',busy:'…'}[v.st])+'</span></td><td>'+(v.en?'включена':'выключена')+'</td><td class="r">'+act+'</td></tr>';
+    }).join('');
+    $('panel').innerHTML='<div class="tools"><input class="search" id="svcq" type="search" placeholder="Поиск службы" aria-label="Поиск службы"><span class="sm2">'+s.svcs.length+' служб · данные systemd</span></div><div class="tw"><table class="tbl"><thead><tr><th>Служба</th><th>Состояние</th><th>Автозапуск</th><th class="r">Действия</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  }
+
+  /* updates */
+  var PKG=[
+    {n:'linux-image-6.1.0-27-amd64',f:'6.1.115-1',t:'6.1.119-1',sec:1,reb:1},
+    {n:'openssl',f:'3.0.15-1~deb12u1',t:'3.0.16-1~deb12u1',sec:1},
+    {n:'libssl3',f:'3.0.15-1~deb12u1',t:'3.0.16-1~deb12u1',sec:1},
+    {n:'libc6',f:'2.36-9+deb12u8',t:'2.36-9+deb12u9',sec:1,reb:1},
+    {n:'openssh-server',f:'1:9.2p1-2+deb12u3',t:'1:9.2p1-2+deb12u4',sec:1},
+    {n:'curl',f:'7.88.1-10+deb12u7',t:'7.88.1-10+deb12u8',sec:1},
+    {n:'tzdata',f:'2024a-0+deb12u1',t:'2024b-0+deb12u1'},
+    {n:'systemd',f:'252.30-1~deb12u2',t:'252.31-1~deb12u1'},
+    {n:'python3',f:'3.11.2-1+b1',t:'3.11.2-1+b2'},
+    {n:'sudo',f:'1.9.13p3-1+deb12u1',t:'1.9.13p3-1+deb12u2',sec:1},
+    {n:'git',f:'1:2.39.2-1.1',t:'1:2.39.5-0+deb12u1',sec:1},
+    {n:'bash',f:'5.2.15-2+b7',t:'5.2.15-2+b8'},
+    {n:'nginx',f:'1.22.1-9',t:'1.22.1-9+deb12u1',sec:1},
+    {n:'ca-certificates',f:'20230311',t:'20230311+deb12u1'}
+  ];
+  function ensurePkgs(s){
+    if(s.pkgs)return;
+    var off=lib.indexOf(s)%3;s.pkgs=[];
+    for(var i=0;i<s.upd;i++)s.pkgs.push(PKG[(i+off)%PKG.length]);
+  }
+  function plogRender(){var el=$('plog');if(el&&D.plog){el.textContent=D.plog.join('\n');el.scrollTop=el.scrollHeight}}
+  function runCheck(s){
+    if(D.busy)return;D.busy=true;
+    D.plog=['Получено:1 http://deb.debian.org/debian bookworm InRelease [151 kB]'];renderTab();
+    var steps=['Получено:2 http://deb.debian.org/debian-security bookworm-security InRelease [48 kB]','Получено:3 http://deb.debian.org/debian bookworm-updates InRelease [55 kB]','Чтение списков пакетов… Готово','Обновлений: '+s.pkgs.length];
+    var i=0;(function st(){
+      if(i<steps.length){D.plog.push(steps[i++]);plogRender();setTimeout(st,450)}
+      else{D.busy=false;if(D.id===s.id)renderTab()}
+    })();
+  }
+  function runUpgrade(s,onlySec){
+    if(D.busy)return;
+    var list=s.pkgs.filter(function(p){return !onlySec||p.sec});
+    if(!list.length){showToast('Нет подходящих обновлений');return}
+    D.busy=true;D.plog=['Чтение списков пакетов… Готово','К установке: '+list.length];renderTab();
+    var i=0;(function st(){
+      if(i<list.length){
+        var p=list[i++];
+        D.plog.push('Распаковка '+p.n+' ('+p.t+') поверх ('+p.f+')…','Настройка '+p.n+' ('+p.t+')…');
+        plogRender();setTimeout(st,420);
+      }else{
+        var reb=list.some(function(p){return p.reb});
+        s.pkgs=s.pkgs.filter(function(p){return list.indexOf(p)<0});
+        s.upd=s.pkgs.length;if(reb)s.reboot=1;
+        D.plog.push('Готово.'+(reb?' Нужна перезагрузка.':''));
+        D.busy=false;refreshAll();
+        showToast('Установлено пакетов: '+list.length+' на '+s.id);
+        if(D.id===s.id){updateHead(true);renderTab()}
+      }
+    })();
+  }
+  function tabUpdates(s){
+    ensurePkgs(s);
+    var secN=s.pkgs.filter(function(p){return p.sec}).length;
+    var rows=s.pkgs.map(function(p){
+      return '<tr><td><div class="nm">'+esc(p.n)+'</div></td><td class="sm2">'+esc(p.f)+' → '+esc(p.t)+'</td><td>'+(p.sec?'<span class="tag crit">безопасность</span> ':'')+(p.reb?'<span class="tag warn">перезагрузка</span>':'')+'</td></tr>';
+    }).join('');
+    var dis=D.busy?' disabled':'';
+    $('panel').innerHTML=
+      '<div class="pk-top"><div><div class="big">'+s.pkgs.length+'</div><div class="sm2">доступно обновлений · безопасности: '+secN+'</div></div>'+
+      '<div class="acts"><button class="btn sm" data-d="pcheck"'+dis+'>Проверить</button><button class="btn sm" data-d="psec"'+(dis||(secN?'':' disabled'))+'>Только безопасность</button><button class="btn sm primary" data-d="pall"'+(dis||(s.pkgs.length?'':' disabled'))+'>Установить все</button></div></div>'+
+      (s.pkgs.length?'<div class="tw"><table class="tbl"><thead><tr><th>Пакет</th><th>Версия</th><th>Заметки</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p class="sm2">Все пакеты актуальны.</p>')+
+      (D.plog?'<pre class="logs short" id="plog"></pre>':'');
+    plogRender();
+  }
+
+  /* processes */
+  function ensureProcs(s){
+    if(s.procs)return;
+    var L=[['systemd','root',.3],['sshd','root',.2],['linager-agent','root',.6],['cron','root',.1],['rsyslogd','root',.2],['systemd-journald','root',.3]];
+    var id=s.id;
+    if(/^web|^staging/.test(id))L.unshift(['nginx: worker process','www-data',3],['php-fpm: pool www','www-data',2]);
+    else if(/^db/.test(id))L.unshift(['postgres: checkpointer','postgres',3],['postgres: walwriter','postgres',1.5]);
+    else if(/^cache/.test(id))L.unshift(['redis-server *:6379','redis',4]);
+    else if(/^build/.test(id))L.unshift(['dockerd','root',3],['node /srv/runner/index.js','deploy',5],['cc1plus','deploy',6]);
+    else if(/^backup/.test(id))L.unshift(['rsync --server','backup',2]);
+    else if(/^vpn/.test(id))L.unshift(['wg-quick','root',2]);
+    else if(/^monitor/.test(id))L.unshift(['prometheus','prometheus',3],['grafana','grafana',2]);
+    else L.unshift(['python3 app.py','app',2]);
+    s.procs=L.map(function(x){return {pid:rn(300,31000),user:x[1],cmd:x[0],w:x[2],cpu:0,mem:x[2]*rn(5,9)/10}});
+    jitterProcs(s);
+  }
+  function jitterProcs(s){
+    var sw=0;s.procs.forEach(function(p){sw+=p.w});
+    s.procs.forEach(function(p){p.cpu=s.cpu*p.w/sw*(0.8+Math.random()*0.4);p.mem=Math.max(.1,p.mem+(Math.random()-.5)*.1)});
+  }
+  function renderProcs(s){
+    ensureProcs(s);jitterProcs(s);
+    var tb=$('ptb');if(!tb)return;
+    var key=D.procSort;
+    var list=s.procs.slice().sort(function(a,b){return b[key]-a[key]}).slice(0,10);
+    tb.innerHTML=list.map(function(p){
+      return '<tr><td class="r">'+p.pid+'</td><td>'+esc(p.user)+'</td><td class="r">'+p.cpu.toFixed(1)+'</td><td class="r">'+p.mem.toFixed(1)+'</td><td>'+esc(p.cmd)+'</td><td class="r"><button class="btn sm" data-kill="'+p.pid+'">Завершить</button></td></tr>';
+    }).join('');
+  }
+  function tabProcs(s){
+    $('panel').innerHTML='<div class="tools"><div class="chips" role="group" aria-label="Сортировка"><button class="chip" data-sort="cpu" aria-pressed="'+(D.procSort==='cpu')+'">По CPU</button><button class="chip" data-sort="mem" aria-pressed="'+(D.procSort==='mem')+'">По RAM</button></div><span class="sm2">топ-10 · обновляется каждые 2 с</span></div><div class="tw"><table class="tbl"><thead><tr><th class="r">PID</th><th>Пользователь</th><th class="r">CPU %</th><th class="r">RAM %</th><th>Команда</th><th></th></tr></thead><tbody id="ptb"></tbody></table></div>';
+    renderProcs(s);
+  }
+
+  /* logs */
+  var LOGT=[
+    ['sshd','info',function(){return 'Accepted publickey for deploy from 10.0.0.'+rn(2,40)+' port '+rn(30000,60000)+' ssh2'},0],
+    ['sshd','warn',function(){return 'Failed password for invalid user '+pick(['admin','test','oracle','ubuntu'])+' from '+pick(['185.220.101.4','45.155.205.12','193.32.162.7'])+' port '+rn(30000,60000)+' ssh2'},0],
+    ['CRON','info',function(){return '(root) CMD (/usr/local/bin/backup.sh)'},0],
+    ['systemd','info',function(){return pick(['Started Daily apt download activities.','Finished Rotate log files.','Started Session '+rn(100,900)+' of User deploy.'])},0],
+    ['kernel','warn',function(){return '[UFW BLOCK] IN=eth0 SRC=203.0.113.'+rn(2,250)+' PROTO=TCP DPT='+pick([22,3389,5900,23])},0],
+    ['linager-agent','info',function(){return 'metrics sent: 32 samples, '+(rn(30,60)/10).toFixed(1)+' KiB'},0],
+    ['nginx','info',function(){return 'GET /api/v1/status 200 '+rn(3,40)+'ms'},/^web|^staging/],
+    ['nginx','err',function(){return 'upstream timed out (110: Connection timed out) while reading response header'},/^web|^staging/],
+    ['fail2ban','warn',function(){return 'Ban '+pick(['185.220.101.4','45.155.205.12'])+' [sshd]'},/^web|^staging/],
+    ['postgres','info',function(){return 'checkpoint complete: wrote '+rn(100,900)+' buffers'},/^db/],
+    ['postgres','err',function(){return 'could not receive data from WAL stream: connection reset by peer'},/^db-replica/],
+    ['redis','info',function(){return 'Background saving terminated with success'},/^cache/],
+    ['dockerd','info',function(){return 'ignoring event container=3f9a1c module=libcontainerd type=exit'},/^build/],
+    ['smartd','warn',function(){return 'Device: /dev/sda, SMART Prefailure Attribute: 5 Reallocated_Sector_Ct changed'},/^backup/]
+  ];
+  function logPool(s){return LOGT.filter(function(t){return !t[3]||t[3].test(s.id)})}
+  function genLog(s,when){
+    var pool=logPool(s),t=pick(pool);
+    if(t[1]==='err'&&Math.random()>.2)t=pick(pool);
+    return {t:when.toLocaleTimeString('ru-RU'),u:t[0],l:t[1],m:t[2]()};
+  }
+  function ensureLogs(s){
+    if(s.logs)return;s.logs=[];
+    for(var i=14;i>0;i--)s.logs.push(genLog(s,new Date(Date.now()-i*3000)));
+  }
+  function addLogs(s){
+    ensureLogs(s);
+    var n=rn(1,3);for(var i=0;i<n;i++)s.logs.push(genLog(s,new Date()));
+    if(s.logs.length>300)s.logs.splice(0,s.logs.length-300);
+  }
+  function renderLogs(s){
+    var pane=$('lg');if(!pane)return;
+    var atBottom=pane.scrollTop+pane.clientHeight>=pane.scrollHeight-30;
+    var list=s.logs.filter(function(l){return D.logUnit==='all'||l.u===D.logUnit}).slice(-150);
+    pane.innerHTML='<pre>'+list.map(function(l){return '<span class="row2"><span class="lt">'+l.t+'</span><span class="lu">'+esc(l.u)+'</span><span class="'+(l.l==='info'?'':l.l)+'">'+esc(l.m)+'</span></span>'}).join('')+'</pre>';
+    if(atBottom)pane.scrollTop=pane.scrollHeight;
+  }
+  function tabLogs(s){
+    ensureLogs(s);
+    var units=[];logPool(s).forEach(function(t){if(units.indexOf(t[0])<0)units.push(t[0])});
+    $('panel').innerHTML='<div class="tools"><select class="search" id="lu" aria-label="Источник логов"><option value="all">Все источники</option>'+units.map(function(u){return '<option value="'+u+'"'+(D.logUnit===u?' selected':'')+'>'+u+'</option>'}).join('')+'</select><div class="acts"><span class="sm2">journalctl -f</span><button class="btn sm" data-d="lpause" aria-pressed="'+D.paused+'">'+(D.paused?'Продолжить':'Пауза')+'</button></div></div><div class="logs" id="lg"></div>';
+    renderLogs(s);$('lg').scrollTop=$('lg').scrollHeight;
+  }
+
+  /* terminal */
+  function ensureTerm(s){
+    if(s.term)return;
+    s.term={n:rn(1000,9999),hist:[],hi:0,lines:[
+      ['Linux '+s.id+' '+(s.os==='Debian 11'?'5.10.0-33-amd64':'6.1.0-27-amd64')+' #1 SMP PREEMPT_DYNAMIC Debian x86_64','dim'],
+      ['',''],
+      [s.os+' GNU/Linux','dim'],
+      ['Last login: Fri Nov 13 22:41:09 2026 from 10.0.0.5','dim']
+    ]};
+  }
+  function tRender(s){
+    var out=$('tout');if(!out)return;
+    out.innerHTML=s.term.lines.map(function(l){return '<span class="'+l[1]+'">'+esc(l[0])+'</span>'}).join('');
+    $('tpr').textContent='root@'+s.id+':~# ';
+    $('term').scrollTop=$('term').scrollHeight;
+  }
+  function tPrint(s,text,cls){
+    ensureTerm(s);
+    s.term.lines.push([text,cls||'']);
+    if(s.term.lines.length>500)s.term.lines.shift();
+    if(D.id===s.id&&D.tab==='terminal'&&$('tout')){
+      $('tout').insertAdjacentHTML('beforeend','<span class="'+(cls||'')+'">'+esc(text)+'</span>');
+      $('term').scrollTop=$('term').scrollHeight;
+    }
+  }
+  function pad(str,n){str=String(str);while(str.length<n)str+=' ';return str}
+  function termRun(s,raw){
+    ensureSvcs(s);ensureProcs(s);ensurePkgs(s);ensureLogs(s);
+    var out=[],a=raw.trim().split(/\s+/),c=a[0],arg=a.slice(1),on=s.online;
+    function P(t,cls){out.push([t,cls||''])}
+    var now=new Date().toLocaleTimeString('ru-RU');
+    switch(c){
+      case '':break;
+      case 'help':P('Команды макета: help, ls, pwd, whoami, id, hostname, uname -a, date, uptime, free -h, df -h, top, ps, ip -br a, cat /etc/os-release, systemctl status|start|stop|restart <служба>, apt list --upgradable, nft list ruleset, docker ps [-a], journalctl -n, reboot, clear','dim');break;
+      case 'ls':P('backup.sh  deploy  logs  notes.txt');break;
+      case 'pwd':P('/root');break;
+      case 'whoami':P('root');break;
+      case 'id':P('uid=0(root) gid=0(root) groups=0(root)');break;
+      case 'hostname':P(s.id);break;
+      case 'date':P(new Date().toLocaleString('ru-RU'));break;
+      case 'echo':P(arg.join(' '));break;
+      case 'uname':P('Linux '+s.id+' '+(s.os==='Debian 11'?'5.10.0-33-amd64 #1 SMP Debian 5.10.226-1':'6.1.0-27-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.115-1')+' x86_64 GNU/Linux');break;
+      case 'uptime':P(' '+now+' up '+s.up+',  1 user,  load average: '+(s.cpu/25).toFixed(2)+', '+(s.base.cpu/25).toFixed(2)+', '+(s.base.cpu/27).toFixed(2));break;
+      case 'free':
+        var tot=7.8,used=tot*s.ram/100;
+        P('               total        used        free      shared  buff/cache   available','dim');
+        P('Mem:           '+pad(tot.toFixed(1)+'Gi',12)+pad(used.toFixed(1)+'Gi',12)+pad((tot-used).toFixed(1)+'Gi',12)+pad('12Mi',12)+pad('1.1Gi',12)+(tot-used*0.9).toFixed(1)+'Gi');
+        P('Swap:          2.0Gi          0B       2.0Gi');break;
+      case 'df':
+        P('Filesystem      Size  Used Avail Use% Mounted on','dim');
+        [['/dev/vda1',80,s.disk,'/'],['/dev/vdb1',40,clamp(s.disk-14,3,99),'/var'],['/dev/vdc1',120,clamp(s.disk-24,2,99),'/home']].forEach(function(r){
+          var u=Math.round(r[1]*r[2]/100);P(pad(r[0],15)+pad(r[1]+'G',6)+pad(u+'G',6)+pad((r[1]-u)+'G',6)+pad(Math.round(r[2])+'%',5)+r[3],r[2]>90?'err':'');
+        });
+        P('tmpfs           3.9G     0  3.9G   0% /dev/shm');break;
+      case 'top':
+        P('top - '+now+' up '+s.up+',  1 user,  load average: '+(s.cpu/25).toFixed(2)+', '+(s.base.cpu/25).toFixed(2));
+        P('%Cpu(s): '+s.cpu.toFixed(1)+' us, '+(100-s.cpu-1).toFixed(1)+' id');
+        P('MiB Mem : 7977.0 total, '+(7977*(1-s.ram/100)).toFixed(1)+' free, '+(7977*s.ram/100).toFixed(1)+' used');
+        P('');P('    PID USER        %CPU  %MEM COMMAND','dim');
+        s.procs.slice().sort(function(x,y){return y.cpu-x.cpu}).slice(0,6).forEach(function(p){P(pad(p.pid,7)+' '+pad(p.user,11)+pad(p.cpu.toFixed(1),6)+' '+pad(p.mem.toFixed(1),5)+' '+p.cmd)});break;
+      case 'ps':P('    PID TTY          TIME CMD','dim');P(pad(rn(2000,9000),7)+' pts/0    00:00:00 bash');P(pad(rn(9000,30000),7)+' pts/0    00:00:00 ps');break;
+      case 'ip':
+        ensureNet(s);
+        if(arg[0]==='route'||arg[0]==='r'){netRoutes(s.net.live).forEach(function(l){P(l)});break}
+        s.net.live.ifs.forEach(function(i){P(pad(i.n,16)+pad(i.n==='lo'?'UNKNOWN':(i.up?'UP':'DOWN'),15)+(i.up?i.addr:''))});break;
+      case 'cat':
+        if(arg[0]==='/etc/os-release'){P('PRETTY_NAME="'+s.os+' GNU/Linux ('+(s.os==='Debian 11'?'bullseye':'bookworm')+')"');P('NAME="Debian GNU/Linux"');P('VERSION_ID="'+s.os.replace('Debian ','')+'"');P('ID=debian')}
+        else P('cat: '+(arg[0]||'')+': Нет такого файла или каталога','err');break;
+      case 'journalctl':
+        s.logs.slice(-5).forEach(function(l){P('ноя 14 '+l.t+' '+s.id+' '+l.u+': '+l.m,l.l==='err'?'err':'')});break;
+      case 'apt':
+        if(arg[0]==='list'&&arg[1]==='--upgradable'){
+          P('Listing... Done','dim');
+          if(!s.pkgs.length)P('Все пакеты актуальны.','dim');
+          s.pkgs.forEach(function(p){P(p.n+'/'+(p.sec?'stable-security':'stable')+' '+p.t+' amd64 [upgradable from: '+p.f+']')});
+        }else P('Для установки используйте вкладку «Обновления» (в макете).','dim');break;
+      case 'systemctl':
+        var sub=arg[0],name=(arg[1]||'').replace('.service','');
+        var v=s.svcs.filter(function(x){return x.n===name})[0];
+        if(!sub||!name){P('Usage: systemctl status|start|stop|restart <unit>','err');break}
+        if(!v){P('Unit '+name+'.service could not be found.','err');break}
+        if(sub==='status'){
+          P((v.st==='failed'?'× ':'● ')+name+'.service - '+v.d,v.st==='active'?'ok':v.st==='failed'?'err':'dim');
+          P('     Loaded: loaded (/lib/systemd/system/'+name+'.service; '+(v.en?'enabled':'disabled')+')');
+          P('     Active: '+({active:'active (running)',inactive:'inactive (dead)',failed:'failed (Result: exit-code)',busy:'activating'}[v.st])+(v.st==='active'?' since '+s.up+' ago':''));
+        }else if(sub==='start'||sub==='stop'||sub==='restart'){svcAction(s,name,sub,true)}
+        else P('Unknown command verb '+sub,'err');
+        break;
+      case 'nft':
+        if(arg[0]==='list'&&arg[1]==='ruleset'){ensureFw(s);fwRaw(s.fw.live,true,'    ').split('\n').forEach(function(l){P(l)})}
+        else P('Макет поддерживает: nft list ruleset. Правила редактируются на вкладке «Файрвол».','dim');break;
+      case 'docker':
+        ensureDk(s);
+        if(!s.dk){P('bash: docker: команда не найдена','err');break}
+        if(arg[0]==='ps'){
+          P('CONTAINER ID   IMAGE                          STATUS           NAMES','dim');
+          s.dk.c.filter(function(x){return x.st==='running'||arg[1]==='-a'}).forEach(function(x){P(pad(x.id,15)+pad(x.image,31)+pad(x.st==='running'?'Up '+x.up:'Exited',17)+x.name)});
+        }else P('Макет поддерживает: docker ps [-a]. Управление контейнерами на вкладке Docker.','dim');break;
+      case 'reboot':
+        confirmBox('Перезагрузить '+s.id+'?','Все сеансы и службы на сервере остановятся. Сервер вернётся в панель после загрузки.','Перезагрузить',function(){doReboot(s)});
+        P('Ожидается подтверждение в диалоге…','dim');break;
+      default:P('bash: '+c+': команда не найдена','err');
+    }
+    return out;
+  }
+  function tabTerminal(s){
+    ensureTerm(s);
+    $('panel').innerHTML='<div class="tbar"><span class="sm2"><i class="dd"></i>SSH через агент · TLS · сессия #'+s.term.n+'</span><span class="acts"><button class="btn sm" data-d="tclear">Очистить</button></span></div><div class="term" id="term"><pre id="tout"></pre><div class="tin"><span class="pr" id="tpr"></span><input id="tcmd" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Команда"></div></div><p class="hint">Макет: работают help, systemctl, apt list --upgradable, top, df, free и ещё несколько команд. Стрелки вверх и вниз листают историю.</p>';
+    tRender(s);
+    $('term').addEventListener('click',function(){$('tcmd').focus()});
+    $('tcmd').focus({preventScroll:true});
+  }
+  detailEl.addEventListener('keydown',function(e){
+    if(e.target.id!=='tcmd')return;
+    var s=cur(),inp=e.target;if(!s)return;
+    if(e.key==='Enter'){
+      var v=inp.value;inp.value='';
+      tPrint(s,'root@'+s.id+':~# '+v,'cmd');
+      if(v.trim())s.term.hist.push(v);
+      s.term.hi=s.term.hist.length;
+      if(v.trim()==='clear'){s.term.lines=[];tRender(s);return}
+      termRun(s,v).forEach(function(o){tPrint(s,o[0],o[1])});
+    }else if(e.key==='ArrowUp'){e.preventDefault();if(s.term.hi>0){s.term.hi--;inp.value=s.term.hist[s.term.hi]}}
+    else if(e.key==='ArrowDown'){e.preventDefault();if(s.term.hi<s.term.hist.length-1){s.term.hi++;inp.value=s.term.hist[s.term.hi]}else{s.term.hi=s.term.hist.length;inp.value=''}}
+  });
+
+  /* overview */
+  function drawCols(id,arr,max){
+    var c=$(id);if(!c)return;
+    var g=c.getContext('2d'),cs=getComputedStyle(document.documentElement);
+    var col=cs.getPropertyValue('--accent').trim(),hi=cs.getPropertyValue('--ink').trim(),off=cs.getPropertyValue('--seg-off').trim();
+    g.clearRect(0,0,c.width,c.height);
+    var n=arr.length,step=c.width/n,w=step-2,h=c.height;
+    for(var i=0;i<n;i++){
+      g.fillStyle=off;g.fillRect(i*step,h-2,w,2);
+      var bh=Math.max(2,Math.round(arr[i]/max*(h-2)));
+      g.fillStyle=(i===n-1)?hi:col;g.fillRect(i*step,h-bh,w,bh);
+    }
+  }
+  function extraIf(s){return /^vpn/.test(s.id)?'wg0':/^build/.test(s.id)?'docker0':null}
+  function tabOverview(s){
+    var ex=extraIf(s);
+    function bar(k,l){return '<div class="m"><span class="ml">'+l+'</span><div class="bar" data-bar="'+k+'">'+SEG+'</div><span class="mv" data-f="'+k+'"></span></div>'}
+    $('panel').innerHTML=
+      '<div class="ov" id="ov">'+
+      '<div class="box"><h4>CPU</h4><div class="big" id="o-cpu"></div><canvas id="c-cpu" width="320" height="64"></canvas><div class="sm2" id="o-load"></div></div>'+
+      '<div class="box"><h4>RAM</h4><div class="big" id="o-ram"></div><canvas id="c-ram" width="320" height="64"></canvas><div class="sm2">Всего 8 GiB · swap 2 GiB</div></div>'+
+      '<div class="box"><h4>Сеть eth0 · приём</h4><div class="big" id="o-net"></div><canvas id="c-net" width="320" height="64"></canvas><div class="sm2" id="o-net2"></div></div>'+
+      '<div class="box"><h4>Диски</h4><div class="metrics">'+bar('m0','/')+bar('m1','/var')+bar('m2','/home')+'</div></div>'+
+      '<div class="box"><h4>Интерфейсы</h4><div class="tw"><table class="tbl"><thead><tr><th>Имя</th><th class="r">↓</th><th class="r">↑</th></tr></thead><tbody>'+
+        '<tr><td>eth0</td><td class="r" id="i0r"></td><td class="r" id="i0t"></td></tr>'+
+        '<tr><td>lo</td><td class="r" id="i1r"></td><td class="r" id="i1t"></td></tr>'+
+        (ex?'<tr><td>'+ex+'</td><td class="r" id="i2r"></td><td class="r" id="i2t"></td></tr>':'')+
+      '</tbody></table></div></div>'+
+      '<div class="box"><h4>Система</h4><dl class="kv"><dt>ОС</dt><dd>'+esc(s.os)+'</dd><dt>Ядро</dt><dd>'+(s.os==='Debian 11'?'5.10.0-33-amd64':'6.1.0-27-amd64')+'</dd><dt>Адрес</dt><dd>'+esc(s.ip)+'</dd><dt>Процессор</dt><dd>4 vCPU</dd><dt>Uptime</dt><dd>'+esc(s.up)+'</dd><dt>Агент</dt><dd>linager '+esc(s.av)+'</dd><dt>Контакт</dt><dd>2 с назад</dd></dl></div>'+
+      '</div>';
+    updateOverview(s);
+  }
+  function updateOverview(s){
+    if(!$('ov'))return;
+    $('o-cpu').textContent=Math.round(s.cpu)+'%';
+    $('o-load').textContent='load average: '+(s.cpu/25).toFixed(2)+' · '+(s.base.cpu/25).toFixed(2)+' · '+(s.base.cpu/27).toFixed(2);
+    $('o-ram').textContent=Math.round(s.ram)+'% · '+(7.8*s.ram/100).toFixed(1)+' GiB';
+    $('o-net').textContent=fmt(s.rx);
+    $('o-net2').textContent='↑ отдача '+fmt(s.tx);
+    drawCols('c-cpu',s.hist,100);
+    drawCols('c-ram',s.rhist,100);
+    drawCols('c-net',s.nhist,Math.max.apply(null,s.nhist)*1.15||1);
+    var vals=[s.disk,clamp(s.disk-14,3,99),clamp(s.disk-24,2,99)];
+    vals.forEach(function(v,i){setBar(detailEl,'m'+i,v,lv(v));detailEl.querySelector('[data-f="m'+i+'"]').textContent=Math.round(v)+'%'});
+    $('i0r').textContent=fmt(s.rx);$('i0t').textContent=fmt(s.tx);
+    $('i1r').textContent=fmt(rn(2,30));$('i1t').textContent=fmt(rn(2,30));
+    if($('i2r')){$('i2r').textContent=fmt(s.rx*.6);$('i2t').textContent=fmt(s.tx*.6)}
+  }
+
+  /* ===== files ===== */
+  D.fpath=[];D.fopen=null;D.fnew=null;D.dkView='c';D.dkLog=null;
+  function fsz(b){return b<1024?b+' Б':b<1048576?(b/1024).toFixed(1)+' КБ':(b/1048576).toFixed(1)+' МБ'}
+  function nowStr(){return new Date().toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+  function mkF(txt,m,mode,o){return {t:'f',txt:txt,size:0,m:m||'12 нояб., 09:14',mode:mode||'-rw-r--r--',o:o||'root'}}
+  function mkB(size,m,mode,o){return {t:'f',txt:null,size:size,m:m||'10 нояб., 03:00',mode:mode||'-rw-r--r--',o:o||'root'}}
+  function mkD(c,m,mode,o){return {t:'d',c:c,m:m||'01 нояб., 12:00',mode:mode||'drwxr-xr-x',o:o||'root'}}
+  function nsize(n){return n.txt!=null?n.txt.length:n.size}
+  var NGINX='user www-data;\nworker_processes auto;\n\nevents {\n    worker_connections 1024;\n}\n\nhttp {\n    include /etc/nginx/mime.types;\n    sendfile on;\n    keepalive_timeout 65;\n    include /etc/nginx/sites-enabled/*;\n}\n';
+  var SSHD='Port 22\nPermitRootLogin prohibit-password\nPasswordAuthentication no\nPubkeyAuthentication yes\nX11Forwarding no\nAllowUsers deploy root\nSubsystem sftp /usr/lib/openssh/sftp-server\n';
+  function nftConf(s){ensureFw(s);return '#!/usr/sbin/nft -f\n\nflush ruleset\n\n'+fwRaw(s.fw.live,false,'    ')+'\n'}
+  function ensureFs(s){
+    if(s.fs)return;
+    ensureLogs(s);
+    var web=/^web|^staging/.test(s.id);
+    var etc={hostname:mkF(s.id+'\n'),hosts:mkF('127.0.0.1\tlocalhost\n'+s.ip+'\t'+s.id+'\n'),'os-release':mkF('PRETTY_NAME="'+s.os+' GNU/Linux"\nNAME="Debian GNU/Linux"\nID=debian\n'),interfaces:mkF((ensureNet(s),netCfg(s.net.live,true))),fstab:mkF('UUID=3f1c9a2e-77b0 /     ext4 errors=remount-ro 0 1\nUUID=a81d44c0-12ef /var  ext4 defaults 0 2\n'),crontab:mkF('17 *\t* * *\troot\tcd / && run-parts --report /etc/cron.hourly\n'),'nftables.conf':mkF(nftConf(s)),ssh:mkD({sshd_config:mkF(SSHD)})};
+    if(web)etc.nginx=mkD({'nginx.conf':mkF(NGINX),'sites-enabled':mkD({'default':mkF('server {\n    listen 80 default_server;\n    root /var/www/html;\n    index index.html;\n}\n')})});
+    var log={syslog:mkF(s.logs.map(function(l){return 'ноя 14 '+l.t+' '+s.id+' '+l.u+': '+l.m}).join('\n')+'\n','14 нояб., 02:00'),'auth.log':mkF('ноя 14 01:12:44 '+s.id+' sshd[2211]: Accepted publickey for deploy from 10.0.0.5\n','14 нояб., 01:12')};
+    if(web)log.nginx=mkD({'access.log':mkB(rn(200000,9000000),'14 нояб., 02:09'),'error.log':mkF('2026/11/14 01:58:02 [error] upstream timed out (110: Connection timed out)\n','14 нояб., 01:58')},'14 нояб., 02:09');
+    var vr={log:mkD(log,'14 нояб., 02:09'),lib:mkD({}),tmp:mkD({})};
+    if(web)vr.www=mkD({html:mkD({'index.html':mkF('<!doctype html>\n<title>'+s.id+'</title>\n<h1>It works</h1>\n')})},'03 нояб., 10:20','drwxr-xr-x','www-data');
+    s.fs=mkD({
+      etc:mkD(etc,'12 нояб., 09:14'),
+      'var':mkD(vr),
+      home:mkD({deploy:mkD({'.bashrc':mkF('alias ll="ls -la"\nexport EDITOR=nano\n','03 окт., 18:02','-rw-r--r--','deploy'),app:mkD({'package.json':mkF('{\n  "name": "app",\n  "version": "2.4.1"\n}\n','08 нояб., 16:40','-rw-r--r--','deploy'),'server.js':mkF('require("http").createServer((q,r)=>r.end("ok")).listen(8080)\n','08 нояб., 16:40','-rw-r--r--','deploy')},'08 нояб., 16:40','drwxr-xr-x','deploy')},'08 нояб., 16:40','drwxr-x---','deploy')}),
+      root:mkD({'notes.txt':mkF('TODO: обновить ядро, проверить бэкапы\n','09 нояб., 11:05','-rw-------'),'backup.sh':mkF('#!/bin/sh\nrsync -a /var/www/ backup@10.0.6.3:/srv/backup/'+s.id+'/\n','01 сент., 14:30','-rwxr-xr-x')},'09 нояб., 11:05','drwx------'),
+      opt:mkD({}),srv:mkD({}),tmp:mkD({'sess_9fa2':mkB(612,'14 нояб., 02:01','-rw-------','www-data')},'14 нояб., 02:01','drwxrwxrwt'),
+      usr:mkD({local:mkD({bin:mkD({'linager-agent':mkB(11200000,'05 нояб., 12:00','-rwxr-xr-x')})})})
+    });
+  }
+  function curDir(s){
+    var d=s.fs;
+    for(var i=0;i<D.fpath.length;i++){var n=d.c[D.fpath[i]];if(!n||n.t!=='d'){D.fpath=D.fpath.slice(0,i);break}d=n}
+    return d;
+  }
+  function fPath(){return '/'+D.fpath.join('/')}
+  function tabFiles(s){
+    ensureFs(s);
+    var dir=curDir(s),p=$('panel');
+    var crumbs='<div class="crumbs"><button data-fx="crumb" data-i="0">/</button>'+D.fpath.map(function(n,i){return '<span>›</span><button data-fx="crumb" data-i="'+(i+1)+'">'+esc(n)+'</button>'}).join('')+'</div>';
+    if(D.fopen){
+      var f=dir.c[D.fopen];
+      if(f){
+        p.innerHTML='<div class="tools"><div class="crumbs"><span>'+esc(fPath()==='/'?'':fPath())+'/</span><b>'+esc(D.fopen)+'</b></div><div class="acts">'+(f.txt!=null?'<button class="btn sm primary" data-fx="save">Сохранить</button>':'')+'<button class="btn sm" data-fx="close">Закрыть</button></div></div>'+
+          (f.txt!=null?'<textarea class="editor" id="fed" spellcheck="false" aria-label="Содержимое файла">'+esc(f.txt)+'</textarea>':'<p class="sm2">Бинарный файл, '+fsz(nsize(f))+'. Предпросмотр недоступен.</p>')+
+          '<p class="hint">'+esc(f.mode)+' · владелец '+esc(f.o)+' · изменён '+esc(f.m)+'</p>';
+        return;
+      }
+      D.fopen=null;
+    }
+    var names=Object.keys(dir.c).sort(function(a,b){
+      var da=dir.c[a].t==='d',db=dir.c[b].t==='d';
+      return da!==db?(da?-1:1):a.localeCompare(b);
+    });
+    var rows=names.map(function(n){
+      var f=dir.c[n],isD=f.t==='d';
+      return '<tr><td><button class="fname" data-fx="open" data-n="'+esc(n)+'"><i class="ico'+(isD?'':' f')+'"></i>'+esc(n)+(isD?'/':'')+'</button></td><td class="sm2">'+esc(f.mode)+'</td><td class="sm2">'+esc(f.o)+'</td><td class="r">'+(isD?'—':fsz(nsize(f)))+'</td><td class="sm2">'+esc(f.m)+'</td><td class="r">'+(isD?'':'<button class="btn sm" data-fx="dl" data-n="'+esc(n)+'">Скачать</button> ')+'<button class="btn sm" data-fx="del" data-n="'+esc(n)+'">Удалить</button></td></tr>';
+    }).join('');
+    p.innerHTML='<div class="tools">'+crumbs+'<div class="acts"><button class="btn sm" data-fx="up"'+(D.fpath.length?'':' disabled')+'>↑ Вверх</button><button class="btn sm" data-fx="new" data-k="file">Новый файл</button><button class="btn sm" data-fx="new" data-k="dir">Новая папка</button><span class="btn sm upl">Загрузить<input type="file" id="fup" multiple aria-label="Загрузить файлы"></span></div></div>'+
+      (D.fnew?'<div class="inl"><input class="grow" id="fnn" placeholder="'+(D.fnew==='dir'?'Имя папки':'Имя файла')+'" aria-label="Имя"><button class="btn sm primary" data-fx="create">Создать</button><button class="btn sm" data-fx="cancel">Отмена</button><span class="errt" id="fnerr"></span></div>':'')+
+      '<div class="tw"><table class="tbl"><thead><tr><th>Имя</th><th>Права</th><th>Владелец</th><th class="r">Размер</th><th>Изменён</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" class="sm2">Папка пуста.</td></tr>')+'</tbody></table></div>';
+    if(D.fnew)$('fnn').focus();
+  }
+  detailEl.addEventListener('click',function(e){
+    var b=e.target.closest('[data-fx]');if(!b)return;
+    var s=cur();if(!s)return;
+    var dir=curDir(s),a=b.dataset.fx,n=b.dataset.n;
+    if(a==='crumb'){D.fpath=D.fpath.slice(0,+b.dataset.i);D.fopen=null;tabFiles(s)}
+    else if(a==='up'){D.fpath.pop();D.fopen=null;tabFiles(s)}
+    else if(a==='open'){var f=dir.c[n];if(f.t==='d'){D.fpath.push(n)}else D.fopen=n;tabFiles(s)}
+    else if(a==='close'){D.fopen=null;tabFiles(s)}
+    else if(a==='save'){var f2=dir.c[D.fopen];f2.txt=$('fed').value;f2.m=nowStr();showToast(D.fopen+' сохранён ('+fsz(nsize(f2))+')')}
+    else if(a==='new'){D.fnew=b.dataset.k;tabFiles(s)}
+    else if(a==='cancel'){D.fnew=null;tabFiles(s)}
+    else if(a==='create'){
+      var v=$('fnn').value.trim();
+      if(!v||/\//.test(v)){$('fnerr').textContent='Введите имя без символа «/».';return}
+      if(dir.c[v]){$('fnerr').textContent='Такое имя уже есть в этой папке.';return}
+      dir.c[v]=D.fnew==='dir'?mkD({},nowStr()):mkF('',nowStr());
+      showToast((D.fnew==='dir'?'Папка ':'Файл ')+v+' создан'+(D.fnew==='dir'?'а':''));D.fnew=null;tabFiles(s);
+    }
+    else if(a==='dl')showToast('Скачивание '+n+' начнётся в браузере (макет)');
+    else if(a==='del'){
+      var isD=dir.c[n].t==='d';
+      confirmBox('Удалить '+n+'?',isD?'Папка и всё внутри будут удалены без возможности восстановления.':'Файл будет удалён без возможности восстановления.','Удалить',function(){delete dir.c[n];showToast(n+' удалён');tabFiles(s)});
+    }
+  });
+  detailEl.addEventListener('keydown',function(e){
+    if(e.target.id==='fnn'&&e.key==='Enter'){var c=detailEl.querySelector('[data-fx="create"]');if(c)c.click()}
+  });
+  detailEl.addEventListener('change',function(e){
+    if(e.target.id!=='fup')return;
+    var s=cur(),dir=curDir(s),files=[].slice.call(e.target.files);
+    files.forEach(function(f){dir.c[f.name]=mkB(f.size,nowStr(),'-rw-r--r--','root')});
+    if(files.length)showToast('Загружено файлов: '+files.length);
+    tabFiles(s);
+  });
+
+  /* ===== docker ===== */
+  function hex(n){var t='';while(t.length<n)t+=Math.floor(Math.random()*16).toString(16);return t}
+  function dkHas(s){return /^web-01$|^build|^monitor|^staging/.test(s.id)}
+  function ensureDk(s){
+    if(s.dk!==undefined)return;
+    if(!dkHas(s)){s.dk=null;return}
+    function C(name,image,st,ports,cpu,mem,up){return {id:hex(12),name:name,image:image,st:st,ports:ports,cpu:cpu,mem:mem,up:up}}
+    var L;
+    if(s.id==='web-01')L=[C('nginx-proxy','nginx:1.25-alpine','running','80→80, 443→443',1.2,24,'12 дн'),C('app-api','registry.local/app-api:2.4.1','running','8080→8080',6.4,212,'12 дн'),C('redis-cache','redis:7.2','running','6379',0.8,38,'41 дн')];
+    else if(/^build/.test(s.id))L=[C('gitlab-runner','gitlab/gitlab-runner:v17.5','running','—',48,640,'9 дн'),C('buildkitd','moby/buildkit:v0.16','running','—',31,512,'9 дн'),C('registry','registry:2','running','5000→5000',0.5,31,'9 дн'),C('old-ci-cache','alpine:3.19','exited','—',0,0,'—')];
+    else if(/^monitor/.test(s.id))L=[C('prometheus','prom/prometheus:v2.55','running','9090→9090',4.1,420,'58 дн'),C('grafana','grafana/grafana:11.3','running','3000→3000',2.2,180,'58 дн'),C('node-exporter','prom/node-exporter:v1.8','running','9100',0.4,18,'58 дн'),C('alertmanager','prom/alertmanager:v0.27','busy','9093→9093',0,0,'—')];
+    else L=[C('app-api','registry.local/app-api:2.5.0-rc1','running','8080→8080',9.5,260,'4 дн'),C('postgres','postgres:15','running','5432',3.3,310,'4 дн'),C('mailhog','mailhog/mailhog:v1.0','exited','—',0,0,'—')];
+    L.forEach(function(c){if(c.st==='busy')c.st='restarting'});
+    var seen={},imgs=[];
+    L.forEach(function(c){if(!seen[c.image]){seen[c.image]=1;imgs.push({r:c.image,id:hex(12),mb:rn(20,700),age:rn(2,9)+' нед'})}});
+    imgs.push({r:'debian:12-slim',id:hex(12),mb:74,age:'11 нед'});
+    s.dk={c:L,img:imgs,logs:{}};
+  }
+  function dkInUse(s,r){return s.dk.c.some(function(c){return c.image===r})}
+  var DKMSG=['INFO  request handled in '+'{ms}'+'ms','INFO  GET /health 200','INFO  connection accepted from 172.17.0.1','WARN  slow query: {ms}ms','INFO  cache hit ratio 0.9{n}','DEBUG worker heartbeat ok'];
+  function dkLine(){return new Date().toLocaleTimeString('ru-RU')+'  '+pick(DKMSG).replace('{ms}',rn(3,240)).replace('{n}',rn(1,9))}
+  function dkStLabel(c){return {running:'running',exited:'exited',restarting:'restarting',busy:'…'}[c.st]}
+  function dkStCls(c){return c.st==='running'?'active':c.st==='exited'?'inactive':'busy'}
+  function dkLogRender(s){
+    var el=$('dklog');if(!el||!D.dkLog)return;
+    var l=s.dk.logs[D.dkLog]||[];
+    el.innerHTML='<pre>'+l.map(function(x){return '<span class="row2'+(/WARN/.test(x)?' warn':'')+'">'+esc(x)+'</span>'}).join('')+'</pre>';
+    el.scrollTop=el.scrollHeight;
+  }
+  function tabDocker(s){
+    ensureDk(s);
+    var p=$('panel');
+    if(!s.dk){p.innerHTML='<div class="offl"><div class="big">Docker не найден</div><p>На этом сервере не установлен Docker Engine. Когда он появится, агент покажет контейнеры и образы.</p></div>';return}
+    var run=s.dk.c.filter(function(c){return c.st==='running'}).length;
+    var head='<div class="tools"><div class="chips" role="group" aria-label="Раздел"><button class="chip" data-dk="view" data-v="c" aria-pressed="'+(D.dkView==='c')+'">Контейнеры '+s.dk.c.length+'</button><button class="chip" data-dk="view" data-v="i" aria-pressed="'+(D.dkView==='i')+'">Образы '+s.dk.img.length+'</button></div><span class="sm2">Docker Engine 27.3 · работает '+run+' из '+s.dk.c.length+'</span></div>';
+    if(D.dkView==='c'){
+      var rows=s.dk.c.map(function(c){
+        var act;
+        if(c.st==='busy')act='<span class="sm2">выполняется…</span>';
+        else if(c.st==='running')act='<button class="btn sm" data-dk="logs" data-n="'+c.name+'">Логи</button> <button class="btn sm" data-dk="restart" data-n="'+c.name+'">Перезапустить</button> <button class="btn sm" data-dk="stop" data-n="'+c.name+'">Остановить</button>';
+        else act='<button class="btn sm" data-dk="logs" data-n="'+c.name+'">Логи</button> <button class="btn sm" data-dk="start" data-n="'+c.name+'">Запустить</button> <button class="btn sm" data-dk="rm" data-n="'+c.name+'">Удалить</button>';
+        return '<tr><td><div class="nm">'+esc(c.name)+'</div><div class="sm2">'+esc(c.image)+'</div></td><td><span class="st '+dkStCls(c)+'">'+dkStLabel(c)+'</span></td><td class="sm2">'+esc(c.ports)+'</td><td class="r" data-dkc="'+c.name+'">'+(c.st==='running'?c.cpu.toFixed(1)+'%':'—')+'</td><td class="r" data-dkm="'+c.name+'">'+(c.st==='running'?Math.round(c.mem)+' МБ':'—')+'</td><td class="sm2">'+esc(c.up)+'</td><td class="r">'+act+'</td></tr>';
+      }).join('');
+      p.innerHTML=head+'<div class="tw"><table class="tbl"><thead><tr><th>Контейнер</th><th>Состояние</th><th>Порты</th><th class="r">CPU</th><th class="r">RAM</th><th>Работает</th><th class="r">Действия</th></tr></thead><tbody>'+(rows||'<tr><td colspan="7" class="sm2">Контейнеров нет.</td></tr>')+'</tbody></table></div>'+(D.dkLog?'<div class="chh"><b>Логи: '+esc(D.dkLog)+'</b><button class="btn sm" data-dk="closelog">Закрыть</button></div><div class="logs short" id="dklog" style="margin-top:0"></div>':'');
+      dkLogRender(s);
+    }else{
+      var ir=s.dk.img.map(function(i){
+        var u=dkInUse(s,i.r);
+        return '<tr><td><div class="nm">'+esc(i.r)+'</div></td><td class="sm2">'+i.id+'</td><td class="r">'+i.mb+' МБ</td><td class="sm2">'+i.age+'</td><td>'+(u?'<span class="st active">используется</span>':'<span class="st">не используется</span>')+'</td><td class="r"><button class="btn sm" data-dk="rmi" data-n="'+esc(i.r)+'"'+(u?' disabled':'')+'>Удалить</button></td></tr>';
+      }).join('');
+      p.innerHTML=head+'<div class="inl"><input class="grow" id="dkpull" placeholder="Образ, например nginx:1.27" aria-label="Образ для загрузки"><button class="btn sm primary" data-dk="pull">Pull</button><span class="errt" id="dkerr"></span></div><div class="tw"><table class="tbl"><thead><tr><th>Образ</th><th>ID</th><th class="r">Размер</th><th>Создан</th><th>Статус</th><th class="r"></th></tr></thead><tbody>'+ir+'</tbody></table></div>';
+    }
+  }
+  function dkAction(s,name,act){
+    var c=s.dk.c.filter(function(x){return x.name===name})[0];
+    if(!c||c.st==='busy')return;
+    function go(){
+      c.st='busy';
+      if(D.id===s.id&&D.tab==='docker')tabDocker(s);
+      setTimeout(function(){
+        if(act==='rm'){s.dk.c=s.dk.c.filter(function(x){return x!==c});if(D.dkLog===name)D.dkLog=null}
+        else if(act==='stop'){c.st='exited';c.cpu=0;c.mem=0;c.up='—'}
+        else{c.st='running';c.cpu=rn(2,40)/10;c.mem=rn(20,300);c.up='только что'}
+        showToast('Контейнер '+name+({rm:' удалён',stop:' остановлен',start:' запущен',restart:' перезапущен'}[act]));
+        if(D.id===s.id&&D.tab==='docker')tabDocker(s);
+      },800);
+    }
+    if(act==='rm')confirmBox('Удалить контейнер '+name+'?','Контейнер будет остановлен и удалён вместе с анонимными томами.','Удалить',go);else go();
+  }
+  function dkTick(s){
+    ensureDk(s);if(!s.dk||D.dkView!=='c')return;
+    s.dk.c.forEach(function(c){
+      if(c.st!=='running')return;
+      c.cpu=Math.max(.1,c.cpu+(Math.random()-.5)*Math.max(.4,c.cpu*.15));
+      c.mem=Math.max(5,c.mem+(Math.random()-.5)*4);
+      var a=detailEl.querySelector('[data-dkc="'+c.name+'"]'),m=detailEl.querySelector('[data-dkm="'+c.name+'"]');
+      if(a)a.textContent=c.cpu.toFixed(1)+'%';if(m)m.textContent=Math.round(c.mem)+' МБ';
+    });
+    if(D.dkLog&&s.dk.logs[D.dkLog]){
+      var c2=s.dk.c.filter(function(x){return x.name===D.dkLog})[0];
+      if(c2&&c2.st==='running'){s.dk.logs[D.dkLog].push(dkLine());if(s.dk.logs[D.dkLog].length>200)s.dk.logs[D.dkLog].shift();dkLogRender(s)}
+    }
+  }
+  detailEl.addEventListener('click',function(e){
+    var b=e.target.closest('[data-dk]');if(!b)return;
+    var s=cur();if(!s||!s.dk)return;
+    var a=b.dataset.dk,n=b.dataset.n;
+    if(a==='view'){D.dkView=b.dataset.v;tabDocker(s)}
+    else if(a==='logs'){D.dkLog=n;var l=[];for(var i=0;i<12;i++)l.push(dkLine());s.dk.logs[n]=l;tabDocker(s)}
+    else if(a==='closelog'){D.dkLog=null;tabDocker(s)}
+    else if(a==='start'||a==='stop'||a==='restart'||a==='rm')dkAction(s,n,a);
+    else if(a==='rmi'){
+      confirmBox('Удалить образ '+n+'?','Образ будет удалён с сервера. Его можно загрузить снова командой pull.','Удалить',function(){s.dk.img=s.dk.img.filter(function(i){return i.r!==n});showToast('Образ '+n+' удалён');tabDocker(s)});
+    }
+    else if(a==='pull'){
+      var v=$('dkpull').value.trim();
+      if(!/^[a-z0-9][a-z0-9._\/-]*(:[A-Za-z0-9._-]+)?$/.test(v)){$('dkerr').textContent='Укажите образ в формате имя:тег.';return}
+      if(v.indexOf(':')<0)v+=':latest';
+      if(s.dk.img.some(function(i){return i.r===v})){$('dkerr').textContent='Этот образ уже загружен.';return}
+      b.disabled=true;$('dkerr').textContent='';showToast('Загрузка '+v+'…');
+      setTimeout(function(){s.dk.img.push({r:v,id:hex(12),mb:rn(15,400),age:'только что'});showToast('Образ '+v+' загружен');if(D.id===s.id&&D.tab==='docker'&&D.dkView==='i')tabDocker(s)},1400);
+    }
+  });
+
+  /* ===== firewall (nftables) ===== */
+  function cl(o){return JSON.parse(JSON.stringify(o))}
+  function fwSig(st){return JSON.stringify([st.pol,st.rules.map(function(r){return [r.id,r.ch,r.proto,r.port,r.src,r.iface,r.state,r.act,r.cmt]})])}
+  function ensureFw(s){
+    if(s.fw)return;
+    var R=[],id=0;
+    function add(ch,o){o.ch=ch;o.id=++id;o.proto=o.proto||'any';o.port=o.port||'';o.src=o.src||'';o.iface=o.iface||'';o.state=o.state||'';o.cmt=o.cmt||'';o.pk=o.pk||rn(50,5000);o.by=o.pk*rn(60,900);R.push(o)}
+    add('input',{iface:'lo',act:'accept'});
+    add('input',{state:'invalid',act:'drop'});
+    add('input',{state:'established,related',act:'accept',pk:rn(90000,900000)});
+    add('input',{proto:'tcp',port:'22',src:'10.0.0.0/8',act:'accept',cmt:'ssh из локальной сети'});
+    add('input',{proto:'icmp',act:'accept',cmt:'ping'});
+    var i=s.id;
+    if(/^web|^staging/.test(i))add('input',{proto:'tcp',port:'80,443',act:'accept',cmt:'http и https',pk:rn(20000,400000)});
+    if(/^db/.test(i))add('input',{proto:'tcp',port:'5432',src:'10.0.1.0/24',act:'accept',cmt:'postgresql от веб-серверов'});
+    if(/^cache/.test(i))add('input',{proto:'tcp',port:'6379',src:'10.0.1.0/24',act:'accept',cmt:'redis от веб-серверов'});
+    if(/^vpn/.test(i)){add('input',{proto:'udp',port:'51820',act:'accept',cmt:'wireguard',pk:rn(5000,90000)});add('forward',{iface:'wg0',act:'accept'})}
+    if(/^monitor/.test(i))add('input',{proto:'tcp',port:'3000,9090',src:'10.0.0.0/8',act:'accept',cmt:'grafana и prometheus'});
+    if(/^mail/.test(i))add('input',{proto:'tcp',port:'25,587',act:'accept',cmt:'smtp'});
+    if(/^build/.test(i))add('forward',{iface:'docker0',act:'accept'});
+    s.fw={live:{pol:{input:'drop',forward:'drop',output:'accept'},rules:R},nid:id,rb:null,left:0,timer:null,raw:false,err:''};
+    s.fw.draft=cl(s.fw.live);
+  }
+  function fwRule(r,c){
+    var p=[];
+    if(r.iface)p.push('iifname "'+r.iface+'"');
+    if(r.state)p.push('ct state '+r.state);
+    if(r.src)p.push('ip saddr '+r.src);
+    if(r.proto==='tcp'||r.proto==='udp')p.push(r.port?r.proto+' dport '+(r.port.indexOf(',')>-1?'{ '+r.port.replace(/,/g,', ')+' }':r.port):'meta l4proto '+r.proto);
+    else if(r.proto==='icmp')p.push('ip protocol icmp');
+    p.push(c?'counter packets '+r.pk+' bytes '+r.by:'counter');
+    p.push(r.act);
+    if(r.cmt)p.push('comment "'+r.cmt+'"');
+    return p.join(' ');
+  }
+  function fwRaw(st,counters,ind){
+    var out=['table inet filter {'];
+    ['input','forward','output'].forEach(function(ch){
+      out.push(ind+'chain '+ch+' {');
+      out.push(ind+ind+'type filter hook '+ch+' priority filter; policy '+st.pol[ch]+';');
+      st.rules.filter(function(r){return r.ch===ch}).forEach(function(r){out.push(ind+ind+fwRule(r,counters))});
+      out.push(ind+'}');
+    });
+    out.push('}');
+    return out.join('\n');
+  }
+  function fwBanner(s){
+    var f=s.fw,el=$('fwb');if(!el)return;
+    var dirty=fwSig(f.live)!==fwSig(f.draft);
+    if(f.rb){
+      el.innerHTML='<div class="banner"><span>Правила применены. Подтвердите в течение <b id="fwleft">'+f.left+'</b> с, иначе они откатятся.</span><span class="acts"><button class="btn sm primary" data-fw="confirm">Подтвердить</button><button class="btn sm" data-fw="rollback">Откатить</button></span></div>';
+    }else if(dirty){
+      var n=Math.abs(f.draft.rules.length-f.live.rules.length);
+      el.innerHTML='<div class="banner"><span>Есть неприменённые изменения. Сервер работает по прежним правилам.</span><span class="acts"><button class="btn sm primary" data-fw="apply">Применить</button><button class="btn sm" data-fw="reset">Сбросить</button></span></div>';
+    }else{
+      el.innerHTML='<p class="sm2">Правила активны · /etc/nftables.conf · изменения применяются с откатом через 30 с.</p>';
+    }
+  }
+  function fwTable(s){
+    var f=s.fw,el=$('fwt');if(!el)return;
+    var h='';
+    ['input','forward','output'].forEach(function(ch,ci){
+      var list=f.draft.rules.filter(function(r){return r.ch===ch});
+      h+='<div class="chh'+(ci?'':' first')+'"><div><b>chain '+ch+'</b><span class="sm2">hook '+ch+' · policy</span></div><select class="search" data-fwp="'+ch+'" aria-label="Политика цепочки '+ch+'"><option value="accept"'+(f.draft.pol[ch]==='accept'?' selected':'')+'>accept</option><option value="drop"'+(f.draft.pol[ch]==='drop'?' selected':'')+'>drop</option></select></div>';
+      h+='<div class="tw"><table class="tbl"><thead><tr><th>Правило</th><th class="r">Пакеты</th><th class="r">Байты</th><th class="r"></th></tr></thead><tbody>'+(list.length?list.map(function(r,i){
+        var isNew=!f.live.rules.some(function(x){return x.id===r.id});
+        return '<tr><td class="rule">'+esc(fwRule(r,false))+(isNew?' <span class="tag warn">новое</span>':'')+'</td><td class="r" data-pk="'+r.id+'">'+r.pk+'</td><td class="r" data-by="'+r.id+'">'+fsz(r.by)+'</td><td class="r"><button class="ib" data-fw="up" data-id="'+r.id+'" aria-label="Выше"'+(i?'':' disabled')+'>▲</button> <button class="ib" data-fw="down" data-id="'+r.id+'" aria-label="Ниже"'+(i<list.length-1?'':' disabled')+'>▼</button> <button class="ib del" data-fw="del" data-id="'+r.id+'" aria-label="Удалить правило">×</button></td></tr>';
+      }).join(''):'<tr><td colspan="4" class="sm2">Правил нет. Действует политика цепочки.</td></tr>')+'</tbody></table></div>';
+    });
+    el.innerHTML=h;
+  }
+  function tabFirewall(s){
+    ensureFw(s);
+    var f=s.fw;
+    $('panel').innerHTML='<div id="fwb" style="margin-bottom:14px"></div><div id="fwt"></div>'+
+      '<div class="chh"><b>Добавить правило</b></div><div class="inl"><select id="fwch" aria-label="Цепочка"><option>input</option><option>forward</option><option>output</option></select><select id="fwact" aria-label="Действие"><option>accept</option><option>drop</option><option>reject</option></select><select id="fwpr" aria-label="Протокол"><option value="tcp">tcp</option><option value="udp">udp</option><option value="icmp">icmp</option><option value="any">любой</option></select><input class="w" id="fwport" placeholder="Порт: 22 или 80,443" aria-label="Порт"><input class="w" id="fwsrc" placeholder="Источник: 10.0.0.0/8" aria-label="Источник"><input class="grow" id="fwcmt" placeholder="Комментарий" aria-label="Комментарий"><button class="btn sm primary" data-fw="add">Добавить</button></div><div class="errt" id="fwerr"></div>'+
+      '<div class="chh"><b>nft list ruleset</b><button class="btn sm" data-fw="raw" aria-pressed="'+f.raw+'">'+(f.raw?'Скрыть':'Показать')+'</button></div><div id="fwraw"></div>';
+    fwBanner(s);fwTable(s);fwRawRender(s);
+  }
+  function fwRawRender(s){
+    var el=$('fwraw');if(!el)return;
+    el.innerHTML=s.fw.raw?'<div class="logs" style="height:auto;max-height:340px"><pre>'+esc(fwRaw(s.fw.live,true,'    '))+'</pre></div><p class="hint">Показаны правила, которые сейчас работают на сервере.</p>':'';
+  }
+  function fwTick(s){
+    ensureFw(s);var f=s.fw;
+    [f.live,f.draft].forEach(function(st){st.rules.forEach(function(r){
+      if(!f.live.rules.some(function(x){return x.id===r.id}))return;
+      var d=r.act==='accept'?rn(0,40):rn(0,6);
+      if(r.iface==='lo')d=rn(0,12);
+      r.pk+=d;r.by+=d*rn(60,900);
+    })});
+    // keep draft counters in sync with live to avoid drift
+    f.draft.rules.forEach(function(r){var l=f.live.rules.filter(function(x){return x.id===r.id})[0];if(l){r.pk=l.pk;r.by=l.by}});
+    f.draft.rules.forEach(function(r){
+      var a=detailEl.querySelector('[data-pk="'+r.id+'"]'),b=detailEl.querySelector('[data-by="'+r.id+'"]');
+      if(a)a.textContent=r.pk;if(b)b.textContent=fsz(r.by);
+    });
+    if(D.tab==='firewall'&&f.raw)fwRawRender(s);
+  }
+  function fwSync(s){
+    var n=s.fs&&s.fs.c.etc&&s.fs.c.etc.c['nftables.conf'];
+    if(n){n.txt=nftConf(s);n.m=nowStr()}
+  }
+  function fwApply(s,force){
+    var f=s.fw;if(f.rb)return;
+    var ssh=f.draft.pol.input==='accept'||f.draft.rules.some(function(r){return r.ch==='input'&&r.act==='accept'&&r.proto==='tcp'&&r.port.split(',').indexOf('22')>-1&&(!r.src||r.src==='10.0.0.0/8')});
+    if(!force&&!ssh){
+      confirmBox('Порт 22 будет закрыт','В новых правилах нет разрешения для SSH. Веб-терминал через агент продолжит работать, но обычное SSH-подключение пропадёт.','Всё равно применить',function(){fwApply(s,true)});
+      return;
+    }
+    f.rb=cl(f.live);f.live=cl(f.draft);f.left=30;
+    clearInterval(f.timer);
+    f.timer=setInterval(function(){
+      f.left--;
+      if(f.left<=0){fwRollback(s,true);return}
+      var el=$('fwleft');if(el&&D.id===s.id&&D.tab==='firewall')el.textContent=f.left;
+    },1000);
+    if(D.id===s.id&&D.tab==='firewall'){fwBanner(s);fwTable(s);fwRawRender(s)}
+  }
+  function fwRollback(s,auto){
+    var f=s.fw;if(!f.rb)return;
+    clearInterval(f.timer);
+    f.live=f.rb;f.draft=cl(f.live);f.rb=null;
+    showToast(auto?'Время вышло: правила на '+s.id+' откатились':'Правила на '+s.id+' откатились');
+    if(D.id===s.id&&D.tab==='firewall'){fwBanner(s);fwTable(s);fwRawRender(s)}
+  }
+  detailEl.addEventListener('click',function(e){
+    var b=e.target.closest('[data-fw]');if(!b)return;
+    var s=cur();if(!s)return;ensureFw(s);
+    var f=s.fw,a=b.dataset.fw,id=+b.dataset.id;
+    function redraw(){fwBanner(s);fwTable(s)}
+    if(a==='apply')fwApply(s);
+    else if(a==='reset'){f.draft=cl(f.live);redraw()}
+    else if(a==='confirm'){clearInterval(f.timer);f.rb=null;fwSync(s);showToast('Правила сохранены в /etc/nftables.conf');fwBanner(s);fwTable(s)}
+    else if(a==='rollback')fwRollback(s,false);
+    else if(a==='del'){f.draft.rules=f.draft.rules.filter(function(r){return r.id!==id});redraw()}
+    else if(a==='up'||a==='down'){
+      var rs=f.draft.rules,i=rs.findIndex(function(r){return r.id===id}),ch=rs[i].ch;
+      var j=i+(a==='up'?-1:1);
+      while(j>=0&&j<rs.length&&rs[j].ch!==ch)j+=(a==='up'?-1:1);
+      if(j>=0&&j<rs.length){var t=rs[i];rs[i]=rs[j];rs[j]=t}
+      redraw();
+    }
+    else if(a==='raw'){f.raw=!f.raw;b.setAttribute('aria-pressed',f.raw);b.textContent=f.raw?'Скрыть':'Показать';fwRawRender(s)}
+    else if(a==='add'){
+      var port=$('fwport').value.replace(/\s+/g,''),src=$('fwsrc').value.trim(),pr=$('fwpr').value,err=$('fwerr');
+      if((pr==='icmp'||pr==='any')&&port){err.textContent='Порт можно указать только для tcp и udp.';return}
+      if(port&&!/^\d{1,5}(,\d{1,5})*$/.test(port)){err.textContent='Порт: число или список через запятую, например 80,443.';return}
+      if(port&&port.split(',').some(function(x){return +x<1||+x>65535})){err.textContent='Порт должен быть от 1 до 65535.';return}
+      if(src&&!/^[0-9a-fA-F:.]+(\/\d{1,3})?$/.test(src)){err.textContent='Источник: адрес или сеть, например 10.0.0.0/8.';return}
+      if(pr==='any'&&!src&&!$('fwcmt').value.trim()){err.textContent='Правило без условий сработает для всех пакетов. Добавьте порт, источник или комментарий.';return}
+      err.textContent='';
+      f.nid++;
+      f.draft.rules.push({id:f.nid,ch:$('fwch').value,act:$('fwact').value,proto:pr,port:port,src:src,iface:'',state:'',cmt:$('fwcmt').value.trim().replace(/"/g,''),pk:0,by:0});
+      ['fwport','fwsrc','fwcmt'].forEach(function(x){$(x).value=''});
+      redraw();
+    }
+  });
+  detailEl.addEventListener('change',function(e){
+    var ch=e.target.dataset&&e.target.dataset.fwp;if(!ch)return;
+    var s=cur();ensureFw(s);s.fw.draft.pol[ch]=e.target.value;fwBanner(s);fwTable(s);
+  });
+
+  /* ===== network ===== */
+  function ip4(x){
+    var m=/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(x);if(!m)return null;
+    var n=0;for(var i=1;i<=4;i++){var o=+m[i];if(o>255)return null;n=n*256+o}
+    return n;
+  }
+  function cidr(x){
+    var m=/^([\d.]+)\/(\d{1,2})$/.exec(x);if(!m)return null;
+    var a=ip4(m[1]),p=+m[2];if(a===null||p<1||p>32)return null;
+    return {a:a,p:p,ip:m[1]};
+  }
+  function sameNet(a,b,p){var mask=(0xFFFFFFFF<<(32-p))>>>0;return ((a&mask)>>>0)===((b&mask)>>>0)}
+  function netAddrOf(c){var mask=(0xFFFFFFFF<<(32-c.p))>>>0;var n=(c.a&mask)>>>0;return [n>>>24,(n>>>16)&255,(n>>>8)&255,n&255].join('.')+'/'+c.p}
+  function fmtN(n){return Math.round(n).toLocaleString('ru-RU')}
+  function mac(){return '52:54:00:'+hex(2)+':'+hex(2)+':'+hex(2)}
+  function ensureNet(s){
+    if(s.net)return;
+    var base=s.ip.split('.').slice(0,3).join('.'),last=s.ip.split('.')[3];
+    var ifs=[
+      {n:'lo',kind:'loopback',up:true,mac:'—',mtu:65536,method:'loopback',addr:'127.0.0.1/8',gw:'',speed:'—',managed:'ядро'},
+      {n:'eth0',kind:'ethernet',up:true,mac:mac(),mtu:1500,method:'static',addr:s.ip+'/24',gw:base+'.1',speed:'1000 Mb/s · full',primary:true}
+    ];
+    if(/^db/.test(s.id))ifs.push({n:'eth1',kind:'ethernet',up:true,mac:mac(),mtu:9000,method:'static',addr:'192.168.10.'+last+'/24',gw:'',speed:'10000 Mb/s · full'});
+    if(/^vpn/.test(s.id))ifs.push({n:'wg0',kind:'wireguard',up:true,mac:'—',mtu:1420,method:'static',addr:'10.8.0.1/24',gw:'',speed:'—',managed:'wg-quick@wg0'});
+    if(/^build|^web-01|^staging/.test(s.id))ifs.push({n:'docker0',kind:'bridge',up:true,mac:mac(),mtu:1500,method:'static',addr:'172.17.0.1/16',gw:'',speed:'—',managed:'Docker'});
+    var cnt={};
+    ifs.forEach(function(i){cnt[i.n]={rxp:rn(1e6,9e7),txp:rn(1e6,9e7),rxb:rn(1e9,9e10),txb:rn(1e9,9e10),rxe:rn(0,3),txe:0,rxd:rn(0,40),txd:rn(0,5)}});
+    s.net={live:{ifs:ifs,dns:['10.0.0.2','1.1.1.1'],search:'corp.local'},rb:null,left:0,timer:null,raw:false,edit:null,cnt:cnt,baseIp:s.ip};
+    s.net.draft=cl(s.net.live);
+  }
+  function netSig(st){return JSON.stringify([st.dns,st.ifs.map(function(i){return [i.n,i.up,i.method,i.addr,i.gw,i.mtu]})])}
+  function netCfg(st,withNote){
+    var o=['# '+(withNote?'Сетевые интерфейсы (ifupdown)':'Черновик'),'','auto lo','iface lo inet loopback'];
+    var dnsDone=false;
+    st.ifs.forEach(function(i){
+      if(i.managed)return;
+      o.push('');
+      if(!i.up){o.push('# '+i.n+' отключён');o.push('iface '+i.n+' inet '+(i.method==='dhcp'?'dhcp':'static'));return}
+      o.push('auto '+i.n);
+      if(i.method==='dhcp'){o.push('iface '+i.n+' inet dhcp')}
+      else{
+        o.push('iface '+i.n+' inet static');
+        o.push('    address '+i.addr);
+        if(i.gw)o.push('    gateway '+i.gw);
+      }
+      if(i.mtu!==1500)o.push('    mtu '+i.mtu);
+      if(!dnsDone&&i.primary){o.push('    dns-nameservers '+st.dns.join(' '));o.push('    dns-search '+st.search);dnsDone=true}
+    });
+    return o.join('\n')+'\n';
+  }
+  function netRoutes(st){
+    var o=[];
+    st.ifs.forEach(function(i){if(i.up&&i.gw&&i.method!=='loopback')o.push('default via '+i.gw+' dev '+i.n+(i.method==='dhcp'?' proto dhcp':' onlink'))});
+    st.ifs.forEach(function(i){
+      if(!i.up||i.n==='lo')return;
+      var c=cidr(i.addr);if(!c)return;
+      o.push(netAddrOf(c)+' dev '+i.n+' proto kernel scope link src '+c.ip);
+    });
+    return o;
+  }
+  function ifRate(s,i){
+    if(!i.up||!s.online)return {rx:0,tx:0};
+    var k={eth0:1,eth1:.35,wg0:.6,docker0:.2,lo:.02}[i.n]||.1;
+    return {rx:s.rx*k,tx:s.tx*k};
+  }
+  function netBanner(s){
+    var n=s.net,el=$('nb');if(!el)return;
+    var dirty=netSig(n.live)!==netSig(n.draft);
+    if(n.rb){
+      el.innerHTML='<div class="banner"><span>Настройки применены. Подтвердите в течение <b id="nleft">'+n.left+'</b> с, иначе они откатятся.</span><span class="acts"><button class="btn sm primary" data-nx="confirm">Подтвердить</button><button class="btn sm" data-nx="rollback">Откатить</button></span></div>';
+    }else if(dirty){
+      el.innerHTML='<div class="banner"><span>Есть неприменённые изменения сети. Сервер работает по прежним настройкам.</span><span class="acts"><button class="btn sm primary" data-nx="apply">Применить</button><button class="btn sm" data-nx="reset">Сбросить</button></span></div>';
+    }else{
+      el.innerHTML='<p class="sm2">Настройки активны · /etc/network/interfaces · изменения применяются с откатом через 30 с.</p>';
+    }
+  }
+  function netEditForm(i){
+    var dh=i.method==='dhcp';
+    return '<div class="fgrid">'+
+      '<label>Режим<select id="nmeth"><option value="static"'+(dh?'':' selected')+'>Статический</option><option value="dhcp"'+(dh?' selected':'')+'>DHCP</option></select></label>'+
+      '<label>Состояние<select id="nup"><option value="1"'+(i.up?' selected':'')+'>UP</option><option value="0"'+(i.up?'':' selected')+'>DOWN</option></select></label>'+
+      '<label class="full">IPv4 адрес и префикс<input id="naddr" value="'+esc(i.addr)+'" placeholder="10.0.1.11/24"'+(dh?' disabled':'')+'></label>'+
+      '<label>Шлюз<input id="ngw" value="'+esc(i.gw)+'" placeholder="'+(i.primary?'10.0.1.1':'не используется')+'"'+(dh||!i.primary?' disabled':'')+'></label>'+
+      '<label>MTU<input id="nmtu" inputmode="numeric" value="'+i.mtu+'"></label></div>'+
+      '<div class="errt" id="nterr"></div><div class="acts"><button class="btn sm primary" data-nx="save">В черновик</button><button class="btn sm" data-nx="cancel">Отмена</button></div>';
+  }
+  function netIfs(s){
+    var n=s.net,el=$('nif');if(!el)return;
+    el.innerHTML=n.draft.ifs.map(function(i){
+      var l=n.live.ifs.filter(function(x){return x.n===i.n})[0];
+      var changed=l&&JSON.stringify([l.up,l.method,l.addr,l.gw,l.mtu])!==JSON.stringify([i.up,i.method,i.addr,i.gw,i.mtu]);
+      var dh=i.method==='dhcp';
+      var head='<div class="ifh"><span class="nm">'+esc(i.n)+'</span><span class="tag '+(i.up?'ok':'off')+'">'+(i.n==='lo'?'UNKNOWN':i.up?'UP':'DOWN')+'</span><span class="tag">'+i.kind+'</span>'+(i.primary?'<span class="tag warn">основной</span>':'')+(changed?'<span class="tag warn">изменено</span>':'')+'</div>';
+      var body;
+      if(n.edit===i.n)body=netEditForm(i);
+      else{
+        body='<dl class="kv"><dt>MAC</dt><dd>'+i.mac+'</dd><dt>MTU</dt><dd>'+i.mtu+'</dd><dt>Режим</dt><dd>'+(i.method==='loopback'?'—':dh?'DHCP (аренда 12 ч)':'статический')+'</dd><dt>IPv4</dt><dd>'+esc(i.addr)+'</dd><dt>Шлюз</dt><dd>'+(i.gw||'—')+'</dd><dt>Скорость</dt><dd>'+i.speed+'</dd>'+
+          '<dt>Приём / отдача</dt><dd><span data-cr="'+i.n+'"></span> / <span data-ct="'+i.n+'"></span></dd><dt>Пакеты ↓ / ↑</dt><dd data-cp="'+i.n+'"></dd><dt>Ошибки ↓ / ↑</dt><dd data-ce="'+i.n+'"></dd><dt>Потери ↓ / ↑</dt><dd data-cd="'+i.n+'"></dd></dl>'+
+          (i.managed?'<p class="sm2">Управляется: '+esc(i.managed)+'. Изменить можно только там.</p>':'<div class="acts"><button class="btn sm" data-nx="edit" data-n="'+i.n+'"'+(n.rb?' disabled':'')+'>Изменить</button></div>');
+      }
+      return '<div class="box" data-if="'+i.n+'">'+head+body+'</div>';
+    }).join('');
+    netTick(s,true);
+  }
+  function netMisc(s){
+    var n=s.net,el=$('nmisc');if(!el)return;
+    el.innerHTML='<div class="box"><h4>DNS</h4><div class="inl" style="margin:0"><input class="grow" id="ndns" value="'+esc(n.draft.dns.join(', '))+'" aria-label="DNS-серверы"><button class="btn sm" data-nx="dns">В черновик</button></div><div class="errt" id="ndnserr"></div><div class="sm2">Домен поиска: '+esc(n.draft.search)+'</div></div>'+
+      '<div class="box"><h4>Маршруты</h4><pre style="margin:0;font:inherit;font-size:12px;white-space:pre-wrap;word-break:break-word">'+esc(netRoutes(n.draft).join('\n')||'—')+'</pre></div>';
+  }
+  function netRaw(s){
+    var el=$('nraw');if(!el)return;
+    var n=s.net,dirty=netSig(n.live)!==netSig(n.draft);
+    el.innerHTML=n.raw?'<div class="logs" style="height:auto;max-height:320px"><pre>'+esc(netCfg(n.draft,true))+'</pre></div><p class="hint">'+(dirty?'Показан черновик: он будет записан после подтверждения.':'Показана действующая конфигурация.')+'</p>':'';
+  }
+  function netRedraw(s){netBanner(s);netIfs(s);netMisc(s);netRaw(s)}
+  function tabNetwork(s){
+    ensureNet(s);
+    $('panel').innerHTML='<div id="nb" style="margin-bottom:14px"></div><div class="ov" id="nif"></div><div class="ov" id="nmisc" style="margin-top:16px"></div><div class="chh"><b>/etc/network/interfaces</b><button class="btn sm" data-nx="raw" aria-pressed="'+s.net.raw+'">'+(s.net.raw?'Скрыть':'Показать')+'</button></div><div id="nraw"></div>';
+    netRedraw(s);
+  }
+  function netTick(s,once){
+    ensureNet(s);var n=s.net;
+    n.live.ifs.forEach(function(i){
+      var c=n.cnt[i.n],r=ifRate(s,i);
+      if(!once&&r.rx+r.tx>0){
+        c.rxb+=r.rx*2048;c.txb+=r.tx*2048;c.rxp+=r.rx*2.2;c.txp+=r.tx*2.2;
+        if(Math.random()<.05)c.rxd+=1;if(Math.random()<.02)c.rxe+=1;
+      }
+      function q(a){return detailEl.querySelector('['+a+'="'+i.n+'"]')}
+      var a=q('data-cr'),b=q('data-ct'),p=q('data-cp'),e=q('data-ce'),d=q('data-cd');
+      if(a)a.textContent=r.rx?fmt(r.rx):'—';
+      if(b)b.textContent=r.tx?fmt(r.tx):'—';
+      if(p)p.textContent=fmtN(c.rxp)+' / '+fmtN(c.txp);
+      if(e)e.textContent=c.rxe+' / '+c.txe;
+      if(d)d.textContent=c.rxd+' / '+c.txd;
+    });
+  }
+  function netPrimary(st){return st.ifs.filter(function(i){return i.primary})[0]}
+  function netApply(s,force){
+    var n=s.net;if(n.rb)return;
+    var a=netPrimary(n.live),b=netPrimary(n.draft);
+    var changed=a.up!==b.up||a.method!==b.method||a.addr!==b.addr||a.mtu!==b.mtu||a.gw!==b.gw;
+    if(!force&&changed){
+      confirmBox('Меняется основной интерфейс '+a.n,b.up?'Агент переподключится по новому адресу. Если связь не восстановится за 30 секунд, настройки откатятся сами.':'Интерфейс будет отключён, и панель потеряет связь с сервером. Через 30 секунд настройки откатятся сами.','Применить',function(){netApply(s,true)});
+      return;
+    }
+    n.rb=cl(n.live);n.live=cl(n.draft);n.left=30;n.baseIp=s.ip;
+    if(changed){
+      s.online=0;s.last='только что';
+      if(b.up){
+        setTimeout(function(){
+          if(!n.rb)return;
+          s.online=1;s.ip=b.addr.split('/')[0];
+          showToast('Агент переподключился с адреса '+s.ip);
+          refreshAll();
+          if(D.id===s.id){updateHead(true);renderTab()}
+        },2500);
+      }
+      refreshAll();
+    }
+    clearInterval(n.timer);
+    n.timer=setInterval(function(){
+      n.left--;
+      if(n.left<=0){netRollback(s,true);return}
+      var el=$('nleft');if(el&&D.id===s.id)el.textContent=n.left;
+    },1000);
+    if(D.id===s.id){updateHead(true);renderTab()}
+  }
+  function netRollback(s,auto){
+    var n=s.net;if(!n.rb)return;
+    clearInterval(n.timer);
+    var lost=!s.online;
+    n.live=n.rb;n.draft=cl(n.live);n.rb=null;
+    s.ip=n.baseIp;s.online=1;
+    showToast(auto?'Время вышло: сеть '+s.id+' откатилась'+(lost?', связь восстановлена':''):'Сетевые настройки откатились');
+    refreshAll();
+    if(D.id===s.id){updateHead(true);renderTab()}
+  }
+  function netSave(s,name){
+    var n=s.net,i=n.draft.ifs.filter(function(x){return x.n===name})[0],err=$('nterr');
+    var meth=$('nmeth').value,up=$('nup').value==='1',mtu=+$('nmtu').value;
+    if(!(mtu>=576&&mtu<=9000)){err.textContent='MTU: число от 576 до 9000.';return}
+    var addr=i.addr,gw=i.gw;
+    if(meth==='static'){
+      var c=cidr($('naddr').value.trim());
+      if(!c){err.textContent='Адрес в формате 10.0.1.11/24.';return}
+      addr=$('naddr').value.trim();
+      gw=i.primary?$('ngw').value.trim():'';
+      if(gw){
+        var g=ip4(gw);
+        if(g===null){err.textContent='Шлюз: некорректный IPv4-адрес.';return}
+        if(!sameNet(g,c.a,c.p)){err.textContent='Шлюз находится вне подсети интерфейса.';return}
+        if(g===c.a){err.textContent='Шлюз совпадает с адресом интерфейса.';return}
+      }
+      if(i.primary&&!gw){err.textContent='Для основного интерфейса нужен шлюз.';return}
+      var clash=n.draft.ifs.filter(function(o){
+        if(o.n===i.n||o.n==='lo'||!o.up)return false;
+        var oc=cidr(o.addr);return oc&&sameNet(c.a,oc.a,Math.min(c.p,oc.p));
+      })[0];
+      if(clash&&up){err.textContent='Подсеть пересекается с '+clash.n+' ('+clash.addr+').';return}
+    }else if(i.method!=='dhcp'){
+      var cc=cidr(i.addr);
+      if(cc)addr=cc.ip.split('.').slice(0,3).join('.')+'.57/'+cc.p;
+    }
+    i.method=meth;i.up=up;i.mtu=mtu;i.addr=addr;i.gw=gw;
+    n.edit=null;netRedraw(s);
+  }
+  detailEl.addEventListener('click',function(e){
+    var b=e.target.closest('[data-nx]');if(!b)return;
+    var s=cur();if(!s)return;ensureNet(s);
+    var n=s.net,a=b.dataset.nx;
+    if(a==='edit'){n.edit=b.dataset.n;netIfs(s)}
+    else if(a==='cancel'){n.edit=null;netIfs(s)}
+    else if(a==='save')netSave(s,n.edit);
+    else if(a==='dns'){
+      var list=$('ndns').value.split(/[\s,]+/).filter(Boolean);
+      if(!list.length||list.length>3||list.some(function(x){return ip4(x)===null})){$('ndnserr').textContent='Укажите от 1 до 3 адресов IPv4 через запятую.';return}
+      n.draft.dns=list;netRedraw(s);
+    }
+    else if(a==='apply')netApply(s);
+    else if(a==='reset'){n.draft=cl(n.live);n.edit=null;netRedraw(s)}
+    else if(a==='confirm'){
+      clearInterval(n.timer);n.rb=null;n.baseIp=s.ip;
+      var f=s.fs&&s.fs.c.etc&&s.fs.c.etc.c.interfaces;if(f){f.txt=netCfg(n.live,true);f.m=nowStr()}
+      showToast('Настройки сохранены в /etc/network/interfaces');netRedraw(s);
+    }
+    else if(a==='rollback')netRollback(s,false);
+    else if(a==='raw'){n.raw=!n.raw;b.setAttribute('aria-pressed',n.raw);b.textContent=n.raw?'Скрыть':'Показать';netRaw(s)}
+  });
+  detailEl.addEventListener('change',function(e){
+    if(e.target.id!=='nmeth')return;
+    var dh=e.target.value==='dhcp';
+    $('naddr').disabled=dh;
+    var s=cur(),i=s.net.draft.ifs.filter(function(x){return x.n===s.net.edit})[0];
+    $('ngw').disabled=dh||!i.primary;
+  });
+
+  /* ===== metrics history ===== */
+  D.mper='24h';
+  var PERIODS=[['1h','1 ч',3600,'5 с','1 час'],['24h','24 ч',86400,'1 мин','7 дней'],['7d','7 дн',604800,'1 мин','7 дней'],['30d','30 дн',2592000,'5 мин','90 дней'],['90d','90 дн',7776000,'5 мин','90 дней'],['180d','180 дн',15552000,'15 мин','180 дней'],['360d','360 дн',31104000,'1 час','360 дней']];
+  var TIERS=[['5 с','1 час'],['1 мин','7 дней'],['5 мин','90 дней'],['15 мин','180 дней'],['1 час','360 дней']];
+  function hstr(str){var h=2166136261;for(var i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+  function seeded(seed){var a=seed>>>0;return function(){a=(a+0x6D2B79F5)|0;var t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296}}
+  function niceMax(x){var p=Math.pow(10,Math.floor(Math.log(x)/Math.LN10)),f=x/p;return (f<=1?1:f<=2?2:f<=5?5:10)*p}
+  function perOf(k){return PERIODS.filter(function(p){return p[0]===k})[0]}
+  function mxEvents(s,per,now){
+    var span=per[2]*1000,L=[];
+    if(per[0]==='1h')return L;
+    var defs=[[.62,'Установлено 3 пакета (apt)',0]];
+    if(per[2]>=604800)defs=[[.28,'Перезагрузка: обновление ядра',1],[.71,'Агент Linager обновлён до 0.3.1',0]];
+    if(per[2]>=2592000)defs=defs.concat([[.09,'Плановая перезагрузка',1],[.47,'Установлено 8 пакетов (apt)',0]]);
+    if(per[2]>=15552000)defs=defs.concat([[.18,'Агент Linager обновлён до 0.3.0',0],[.55,'Переустановка службы postgresql',0]]);
+    defs.forEach(function(d,i){
+      var pos=Math.min(.95,d[0]+(hstr(s.id+i)%60)/1000);
+      L.push({pos:pos,t:now-span*(1-pos),label:d[1],gap:!!d[2]});
+    });
+    return L.sort(function(a,b){return a.pos-b.pos});
+  }
+  function mxSeries(s,metric,per){
+    var key=s.id+'|'+metric+'|'+per[0];s.mxc=s.mxc||{};
+    if(s.mxc[key])return s.mxc[key];
+    var N=72,r=seeded(hstr(key)),span=per[2]*1000,now=Date.now(),step=span/N;
+    var avg=[],max=[],ts=[],tx=[],evs=mxEvents(s,per,now),gaps={};
+    evs.forEach(function(e){if(e.gap&&per[2]>=86400)gaps[Math.round(e.pos*N)]=1});
+    for(var i=0;i<N;i++){
+      var t=now-(N-i)*step,d=new Date(t),hod=d.getHours()+d.getMinutes()/60;
+      var di=.5+.5*Math.sin(2*Math.PI*(hod-9)/24),wk=(d.getDay()===0||d.getDay()===6)?.75:1;
+      var v,m,x=0;
+      if(metric==='cpu'){v=s.base.cpu*(.6+.7*di)*wk+(r()-.5)*s.vol*1.4;if(r()<.05)v+=8+r()*14;v=clamp(v,1,99);m=clamp(v+r()*r()*(100-v)*.7,v,100)}
+      else if(metric==='ram'){v=clamp(s.base.ram+(di-.5)*6+(r()-.5)*2+((i%36)/36)*3,2,99);m=clamp(v+r()*3,v,100)}
+      else if(metric==='disk'){v=clamp(s.disk-.12*(span/86400000)*((N-1-i)/(N-1))+(r()-.5)*.3,3,99);m=v}
+      else{v=s.base.rx*(.35+1.3*di)*wk*(.7+.6*r());x=s.base.tx*(.35+1.3*di)*wk*(.7+.6*r());m=v*(1+r()*.9)}
+      if(gaps[i]||(!s.online&&t>now-12*60000)){v=null;m=null;x=null}
+      avg.push(v);max.push(m);tx.push(x);ts.push(t);
+    }
+    var pct=metric!=='net',top=pct?100:niceMax(Math.max.apply(null,avg.concat(tx).filter(function(z){return z!=null}))*1.15);
+    var res={avg:avg,max:max,tx:tx,ts:ts,top:top,pct:pct,ev:evs,N:N,span:span,metric:metric,per:per};
+    s.mxc[key]=res;return res;
+  }
+  function fmtAxis(ser,v){return ser.pct?Math.round(v)+'%':fmt(v).replace('/s','')}
+  function tLabel(ser,t){var d=new Date(t);return ser.span<=172800000?d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):d.toLocaleDateString('ru-RU',{day:'numeric',month:'short'})}
+  function tFull(t){return new Date(t).toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+  function drawMx(c,ser,hover){
+    var g=c.getContext('2d'),cs=getComputedStyle(document.documentElement);
+    function tok(n){return cs.getPropertyValue(n).trim()}
+    var col=tok('--accent'),ink=tok('--ink'),mut=tok('--muted'),off=tok('--seg-off'),warn=tok('--warn'),crit=tok('--crit');
+    var W=c.width,H=c.height,pl=46,pb=20,pt=14,pr=4,N=ser.N,ph=H-pt-pb;
+    g.clearRect(0,0,W,H);
+    g.font='11px "Medeo Mono",monospace';g.textBaseline='middle';
+    [0,.5,1].forEach(function(f){
+      var y=Math.round(pt+ph*(1-f));g.fillStyle=off;g.fillRect(pl,y,W-pl-pr,1);
+      g.fillStyle=mut;g.textAlign='right';g.fillText(fmtAxis(ser,ser.top*f),pl-6,Math.min(H-pb-4,Math.max(pt+4,y)));
+    });
+    var cw=(W-pl-pr)/N,bw=Math.max(2,Math.floor(cw)-1);
+    for(var i=0;i<N;i++){
+      var x=Math.round(pl+i*cw),v=ser.avg[i];
+      if(v==null){g.fillStyle=off;g.fillRect(x,H-pb-3,bw,3);continue}
+      var h=Math.max(1,Math.round(v/ser.top*ph)),color=col;
+      if(ser.pct&&ser.metric!=='disk'){if(v>90)color=crit;else if(v>75)color=warn}
+      if(ser.metric==='disk'&&v>90)color=crit;
+      if(hover===i)color=ink;
+      g.fillStyle=color;g.fillRect(x,H-pb-h,bw,h);
+      if(ser.metric==='net'){var th=Math.max(1,Math.round(ser.tx[i]/ser.top*ph));g.fillStyle=hover===i?col:ink;g.fillRect(x,H-pb-th-1,bw,2)}
+      else if(ser.metric!=='disk'){var mh=Math.round(ser.max[i]/ser.top*ph);if(mh>h+2){g.fillStyle=hover===i?col:ink;g.fillRect(x,H-pb-mh-1,bw,2)}}
+    }
+    g.fillStyle=mut;g.textBaseline='top';
+    g.textAlign='left';g.fillText(tLabel(ser,ser.ts[0]),pl,H-pb+5);
+    g.textAlign='center';g.fillText(tLabel(ser,ser.ts[Math.floor(N/2)]),pl+(W-pl-pr)/2,H-pb+5);
+    g.textAlign='right';g.fillText(tLabel(ser,ser.ts[N-1]),W-pr,H-pb+5);
+    ser.ev.forEach(function(e){
+      var x=Math.round(pl+e.pos*(W-pl-pr));
+      g.fillStyle=e.gap?crit:warn;g.fillRect(x-2,2,6,2);g.fillRect(x-1,4,4,2);g.fillRect(x,6,2,2);
+      g.fillRect(x,8,1,H-pb-8);
+    });
+  }
+  function mxStats(ser){
+    var a=ser.avg.filter(function(z){return z!=null}),mx=ser.max.filter(function(z){return z!=null});
+    if(!a.length)return 'нет данных';
+    var s2=a.slice().sort(function(x,y){return x-y}),sum=a.reduce(function(p,q){return p+q},0)/a.length;
+    function f(v){return ser.pct?Math.round(v)+'%':fmt(v)}
+    return 'мин <b>'+f(s2[0])+'</b> · средн <b>'+f(sum)+'</b> · p95 <b>'+f(s2[Math.floor(s2.length*.95)-1]||s2[s2.length-1])+'</b> · пик <b>'+f(Math.max.apply(null,mx))+'</b>';
+  }
+  function mxDrawAll(s){
+    var per=perOf(D.mper);
+    [].forEach.call(detailEl.querySelectorAll('canvas.mx'),function(c){
+      var ser=mxSeries(s,c.dataset.m,per);
+      c.width=Math.max(260,c.parentElement.clientWidth);c.height=170;c._ser=ser;
+      drawMx(c,ser,-1);
+    });
+  }
+  function tabMetrics(s){
+    var per=perOf(D.mper);
+    var chips=PERIODS.map(function(p){return '<button class="chip" data-mp="'+p[0]+'" aria-pressed="'+(p[0]===D.mper)+'">'+p[1]+'</button>'}).join('');
+    function box(m,t,extra){return '<div class="box"><h4>'+t+'</h4><div class="mxw"><canvas class="mx" data-m="'+m+'"></canvas><div class="mxtip" hidden></div></div><div class="stl" id="st-'+m+'"></div>'+(extra||'')+'</div>'}
+    var tiers=TIERS.map(function(t){return '<tr'+(t[0]===per[3]?' class="cur"':'')+'><td>'+t[0]+'</td><td>'+t[1]+'</td></tr>'}).join('');
+    var evs=mxEvents(s,per,Date.now());
+    var er=evs.length?evs.map(function(e){return '<tr><td class="sm2">'+tFull(e.t)+'</td><td>'+(e.gap?'<span class="tag crit">перезагрузка</span> ':'')+esc(e.label)+'</td></tr>'}).join(''):'<tr><td colspan="2" class="sm2">За этот период событий нет.</td></tr>';
+    $('panel').innerHTML=
+      '<div class="tools"><div class="chips" role="group" aria-label="Период">'+chips+'</div><div class="acts"><span class="sm2">Точность данных: <b>'+per[3]+'</b> · хранится '+per[4]+'</span><button class="btn sm" data-d="mexp">Экспорт CSV</button></div></div>'+
+      (s.online?'':'<div class="banner" style="margin-bottom:14px"><span>Сервер сейчас offline. Показана накопленная история, последние минуты без данных.</span></div>')+
+      '<div class="mxg">'+box('cpu','CPU, %')+box('ram','RAM, %')+box('disk','Диск /, %')+box('net','Сеть eth0 · ↓ столбцы, ↑ линия')+'</div>'+
+      '<div class="ugrid" style="margin-top:16px"><div class="box"><h4>События за период</h4><div class="tw"><table class="tbl"><tbody>'+er+'</tbody></table></div><p class="sm2" style="margin:0">Метки на графиках: жёлтые, красные означают перезагрузку.</p></div>'+
+      '<div class="box"><h4>Хранение метрик</h4><div class="tw"><table class="tbl"><thead><tr><th>Точность</th><th>Хранится</th></tr></thead><tbody>'+tiers+'</tbody></table></div><p class="sm2" style="margin:0">Старые данные автоматически укрупняются. Сроки меняются в настройках сервера.</p></div></div>';
+    mxDrawAll(s);
+    ['cpu','ram','disk','net'].forEach(function(m){$('st-'+m).innerHTML=mxStats(mxSeries(s,m,per))});
+  }
+  detailEl.addEventListener('mousemove',function(e){
+    var c=e.target;if(!c.classList||!c.classList.contains('mx'))return;
+    var ser=c._ser;if(!ser)return;
+    var r=c.getBoundingClientRect(),sc=c.width/r.width,x=(e.clientX-r.left)*sc,pl=46,pr=4;
+    var i=Math.floor((x-pl)/((c.width-pl-pr)/ser.N)),tip=c.parentElement.querySelector('.mxtip');
+    if(i<0||i>=ser.N){tip.hidden=true;drawMx(c,ser,-1);return}
+    var ev=ser.ev.filter(function(q){return Math.abs(pl+q.pos*(c.width-pl-pr)-x)<7})[0],txt;
+    if(ev)txt='<b>'+esc(ev.label)+'</b><br>'+tFull(ev.t);
+    else if(ser.avg[i]==null)txt=tFull(ser.ts[i])+'<br>нет данных';
+    else if(ser.metric==='net')txt=tFull(ser.ts[i])+'<br>↓ '+fmt(ser.avg[i])+' · ↑ '+fmt(ser.tx[i])+'<br>пик ↓ '+fmt(ser.max[i]);
+    else if(ser.metric==='disk')txt=tFull(ser.ts[i])+'<br>занято '+ser.avg[i].toFixed(1)+'%';
+    else txt=tFull(ser.ts[i])+'<br>средн '+Math.round(ser.avg[i])+'% · пик '+Math.round(ser.max[i])+'%';
+    tip.innerHTML=txt;tip.hidden=false;
+    var px=(e.clientX-r.left),w=tip.offsetWidth;
+    tip.style.left=Math.max(0,Math.min(r.width-w,px-w/2))+'px';tip.style.top='6px';
+    drawMx(c,ser,i);
+  });
+  detailEl.addEventListener('mouseout',function(e){
+    var c=e.target;if(!c.classList||!c.classList.contains('mx'))return;
+    c.parentElement.querySelector('.mxtip').hidden=true;if(c._ser)drawMx(c,c._ser,-1);
+  });
+  detailEl.addEventListener('click',function(e){
+    var b=e.target.closest('[data-mp]');if(b){D.mper=b.dataset.mp;tabMetrics(cur());return}
+    var x=e.target.closest('[data-d="mexp"]');if(x)showToast('Экспорт CSV за выбранный период (макет)');
+  });
+  window.addEventListener('resize',function(){var s=cur();if(s&&inDetail()&&D.tab==='metrics')mxDrawAll(s)});
+
+  /* ===== Linager updates ===== */
+  var U={cur:'0.3.2',latest:'0.4.0',min:'0.3.0',channel:'stable',checked:'сегодня, 09:58',st:'idle',log:[],checking:false,caching:false,strategy:'canary',stopOnErr:true,sel:{},
+    cache:[{v:'0.3.2',size:'18.4 МБ',date:'28 окт.',src:'GitHub'},{v:'0.3.1',size:'18.3 МБ',date:'11 окт.',src:'GitHub'}],
+    hist:[{t:'28 окт., 12:10',what:'Сервер',from:'0.3.1',to:'0.3.2',res:'ok'},{t:'28 окт., 12:14',what:'Агенты (6)',from:'0.3.1',to:'0.3.2',res:'ok'},{t:'11 окт., 09:30',what:'Сервер',from:'0.3.0',to:'0.3.1',res:'ok'}]};
+  var NOTES={'0.4.0':['История метрик за 360 дней и экспорт в CSV','Новый модуль Docker для агента','Исправлено переподключение агента за обратным прокси','Миграции БД: 3 (секционирование метрик)'],'0.5.0-beta.1':['Роли пользователей (бета)','Запись терминальных сессий','Миграции БД: 5']};
+  var SU_STEPS=['Проверка подписи релиза','Резервная копия БД (pg_dump)','Остановка службы linager','Замена бинарника','Применение миграций БД','Запуск и проверка работоспособности'];
+  var AU_STEPS=['Загрузка с сервера','Проверка подписи','Замена бинарника','Перезапуск агента','Ожидание связи (до 60 с)'];
+  function vnum(v){var m=/^(\d+)\.(\d+)\.(\d+)/.exec(v);return m?(+m[1])*10000+(+m[2])*100+(+m[3]):0}
+  function agentState(s){
+    if(s.us.st!=='idle')return s.us.st;
+    if(s.av===U.cur)return 'ok';
+    if(vnum(s.av)<vnum(U.min+'.0'))return 'old';
+    return vnum(s.av)<vnum(U.cur)?'avail':'ok';
+  }
+  function updCount(){return (U.cur!==U.latest?1:0)+lib.filter(function(s){var a=agentState(s);return a==='avail'||a==='old'}).length}
+  function updBadge(){var n=updCount(),b=$('updBadge');b.textContent=n;b.hidden=!n}
+  function nowH(){return new Date().toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+  function agBanner(s){
+    var a=agentState(s);
+    if(!s.online||(a!=='avail'&&a!=='old'))return '';
+    return '<div class="banner"><span>'+(a==='old'?'Версия агента '+esc(s.av)+' больше не поддерживается сервером.':'Доступна версия '+esc(U.cur)+' агента Linager.')+'</span><button class="btn sm" data-d="agupd">Обновить агент</button></div>';
+  }
+  function agentUpdate(s,cb){
+    if(s.us.st==='running')return;
+    if(!s.online){s.us={st:'queued',step:0,msg:'Обновится, когда агент выйдет на связь'};renderUpdates();refreshAll();if(cb)cb(false,true);return}
+    var from=s.av,target=U.cur;
+    s.us={st:'running',step:0,msg:AU_STEPS[0]+'…'};renderUpdates();refreshAll();
+    (function next(){
+      var u=s.us;
+      if(u.step<AU_STEPS.length){
+        if(u.step===4&&s.failOnce){
+          s.failOnce=false;
+          s.us={st:'rolled',step:4,msg:'Агент не вышел на связь за 60 с. Выполнен откат на '+from+'.'};
+          U.hist.unshift({t:nowH(),what:s.id,from:from,to:target,res:'rolled'});
+          renderUpdates();refreshAll();showToast('Откат агента на '+s.id+': связь не восстановилась');
+          if(D.id===s.id){updateHead(true)}
+          if(cb)cb(false,false);return;
+        }
+        u.msg=AU_STEPS[u.step]+'…';renderUpdates();
+        setTimeout(function(){u.step++;next()},600+rn(0,350));
+      }else{
+        s.av=target;s.us={st:'idle',step:0,msg:''};
+        U.hist.unshift({t:nowH(),what:s.id,from:from,to:target,res:'ok'});
+        renderUpdates();refreshAll();showToast('Агент '+s.id+' обновлён до '+target);
+        if(D.id===s.id){updateHead(true);if(D.tab==='overview')renderTab()}
+        if(cb)cb(true,false);
+      }
+    })();
+  }
+  function rollout(list){
+    var q=list.slice(),mode=U.strategy;
+    function one(s,done){agentUpdate(s,done)}
+    if(mode==='all'){q.forEach(function(s){one(s)})}
+    else if(mode==='one'){
+      (function nxt(){
+        var s=q.shift();if(!s)return;
+        one(s,function(ok,queued){
+          if(!ok&&!queued&&U.stopOnErr){q.forEach(function(x){x.us={st:'idle',step:0,msg:''}});renderUpdates();showToast('Раскатка остановлена: ошибка на '+s.id);return}
+          nxt();
+        });
+      })();
+    }else{
+      var first=q.shift();if(!first)return;
+      q.forEach(function(x){x.us={st:'queued',step:0,msg:'Ждёт результата на '+first.id}});renderUpdates();
+      one(first,function(ok,queued){
+        if(!ok&&!queued&&U.stopOnErr){q.forEach(function(x){x.us={st:'idle',step:0,msg:''}});renderUpdates();showToast('Проверочный сервер '+first.id+' не прошёл: остальные не обновлены');return}
+        q.forEach(function(x){x.us={st:'idle',step:0,msg:''};one(x)});
+      });
+    }
+  }
+  function serverUpdate(){
+    if(U.st==='running')return;
+    var to=U.latest,from=U.cur;
+    U.st='running';U.log=[];renderUpdates();
+    var i=0;
+    (function next(){
+      if(i<SU_STEPS.length){
+        U.log.push('['+(i+1)+'/'+SU_STEPS.length+'] '+SU_STEPS[i]+'… ok');i++;renderUpdates();
+        setTimeout(next,750);
+      }else{
+        U.cur=to;U.st='idle';U.log.push('Сервер Linager '+to+' запущен.');
+        U.cache.unshift({v:to,size:'19.1 МБ',date:'сегодня',src:'GitHub'});
+        U.hist.unshift({t:nowH(),what:'Сервер',from:from,to:to,res:'ok'});
+        U.checked='только что';
+        renderUpdates();refreshAll();showToast('Сервер Linager обновлён до '+to);
+      }
+    })();
+  }
+  function stPill(s){
+    var a=agentState(s),on=!s.online;
+    if(a==='running')return '<span class="st busy">обновляется</span>';
+    if(a==='queued')return '<span class="st">в очереди</span>';
+    if(a==='rolled')return '<span class="st failed">откат</span>';
+    if(a==='old')return '<span class="st failed">не поддерживается</span>';
+    if(a==='avail')return '<span class="st busy">доступна '+esc(U.cur)+'</span>';
+    return '<span class="st active">актуален</span>';
+  }
+  function renderUpdates(){
+    updBadge();
+    var el=$('updbody');if(!el||!document.body.classList.contains('in-updates'))return;
+    var newer=U.cur!==U.latest,running=U.st==='running';
+    var notes=newer?(NOTES[U.latest]||[]):[];
+    var srv='<div class="box"><h4>Сервер Linager</h4><div class="vers"><span class="big">'+esc(U.cur)+'</span>'+(newer?'<span class="tag warn">доступна '+esc(U.latest)+'</span>':'<span class="tag ok">актуальная версия</span>')+'</div>'+
+      '<dl class="kv"><dt>Канал</dt><dd><select class="search" id="uch" aria-label="Канал обновлений"'+(running?' disabled':'')+'><option value="stable"'+(U.channel==='stable'?' selected':'')+'>stable</option><option value="beta"'+(U.channel==='beta'?' selected':'')+'>beta</option></select></dd><dt>Проверено</dt><dd>'+esc(U.checked)+'</dd><dt>Миграции БД</dt><dd>'+(newer?'к применению':'нет')+'</dd><dt>Бэкап БД</dt><dd>14 нояб., 02:00</dd><dt>Источник</dt><dd>github.com/bolgov0zero/linager</dd></dl>'+
+      (notes.length?'<ul class="ulist">'+notes.map(function(n){return '<li>'+esc(n)+'</li>'}).join('')+'</ul>':'')+
+      '<div class="acts"><button class="btn sm" data-ux="check"'+(running||U.checking?' disabled':'')+'>'+(U.checking?'Проверка…':'Проверить обновления')+'</button><button class="btn sm primary" data-ux="srv"'+(!newer||running?' disabled':'')+'>'+(running?'Обновляется…':newer?'Обновить до '+esc(U.latest):'Нет обновлений')+'</button></div>'+
+      (U.log.length?'<div class="logs short" style="margin-top:0"><pre>'+esc(U.log.join('\n'))+'</pre></div>':'')+'</div>';
+    var avail=lib.filter(function(s){var a=agentState(s);return a==='avail'||a==='old'||a==='rolled'});
+    var selN=avail.filter(function(s){return U.sel[s.id]}).length;
+    var rows=lib.map(function(s){
+      var a=agentState(s),can=(a==='avail'||a==='old'||a==='rolled')&&!running,u=s.us;
+      var prog='—';
+      if(a==='running')prog='<div class="pb">'+AU_STEPS.map(function(x,i){return '<i'+(i<=u.step?' class="on"':'')+'></i>'}).join('')+'</div><div class="sm2">'+esc(u.msg)+'</div>';
+      else if(a==='queued'||a==='rolled')prog='<div class="'+(a==='rolled'?'':'sm2')+'" style="font-size:12px;'+(a==='rolled'?'color:var(--crit)':'')+'">'+esc(u.msg)+'</div>';
+      else if(!s.online&&a!=='ok')prog='<span class="sm2">офлайн: обновится при подключении</span>';
+      return '<tr><td>'+((a==='avail'||a==='old'||a==='rolled')?'<input type="checkbox" data-ux="sel" data-id="'+s.id+'" aria-label="Выбрать '+s.id+'"'+(U.sel[s.id]?' checked':'')+(running?' disabled':'')+'>':'')+'</td><td><div class="nm">'+esc(s.id)+'</div><div class="sm2">'+esc(s.os)+' · '+esc(s.ip)+'</div></td><td>'+esc(s.av)+'</td><td>'+stPill(s)+'</td><td>'+prog+'</td><td class="r">'+(can?'<button class="btn sm" data-ux="one" data-id="'+s.id+'">'+(a==='rolled'?'Повторить':'Обновить')+'</button>':'')+'</td></tr>';
+    }).join('');
+    var ag='<div class="box"><h4>Агенты</h4><p class="sm2" style="margin:0">Агенты получают версию с сервера: сейчас это <b>'+esc(U.cur)+'</b>.'+(newer?' Чтобы раздать '+esc(U.latest)+', сначала обновите сервер.':'')+'</p>'+
+      '<div class="inl" style="margin:0"><label class="sm2">Порядок&nbsp;<select id="ustr" aria-label="Порядок раскатки"><option value="all"'+(U.strategy==='all'?' selected':'')+'>Все сразу</option><option value="one"'+(U.strategy==='one'?' selected':'')+'>По одному</option><option value="canary"'+(U.strategy==='canary'?' selected':'')+'>Сначала один, потом остальные</option></select></label><label class="sm2"><input type="checkbox" id="ustop"'+(U.stopOnErr?' checked':'')+'> Остановить при ошибке</label>'+
+      '<button class="btn sm" data-ux="runsel"'+(selN&&!running?'':' disabled')+'>Обновить выбранные ('+selN+')</button><button class="btn sm primary" data-ux="runall"'+(avail.length&&!running?'':' disabled')+'>Обновить все ('+avail.length+')</button></div>'+
+      '<div class="tw"><table class="tbl"><thead><tr><th><input type="checkbox" data-ux="selall" aria-label="Выбрать все"'+(avail.length&&selN===avail.length?' checked':'')+(avail.length&&!running?'':' disabled')+'></th><th>Сервер</th><th>Версия</th><th>Статус</th><th>Ход</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+    var cache='<div class="box"><h4>Кэш релизов на сервере</h4><div class="tw"><table class="tbl"><thead><tr><th>Версия</th><th>Размер</th><th>Загружена</th><th>Подпись</th></tr></thead><tbody>'+
+      (newer&&!U.cache.some(function(c){return c.v===U.latest})?'<tr><td>'+esc(U.latest)+'</td><td class="sm2">—</td><td class="sm2">не загружена</td><td><button class="btn sm" data-ux="cache"'+(U.caching?' disabled':'')+'>'+(U.caching?'Загрузка…':'Загрузить заранее')+'</button></td></tr>':'')+
+      U.cache.map(function(c){return '<tr><td>'+esc(c.v)+'</td><td class="sm2">'+c.size+'</td><td class="sm2">'+c.date+'</td><td><span class="st active">проверена</span></td></tr>'}).join('')+'</tbody></table></div><p class="sm2" style="margin:0">Подпись проверяется встроенным в бинарник публичным ключом.</p></div>';
+    var cli='<div class="box"><h4>То же из терминала</h4><div class="logs" style="height:auto"><pre>linager update --check      # проверить обновления сервера\nlinager update              # обновить сервер: бэкап БД, миграции, откат при сбое\nlinager agent update        # обновить агента на этом сервере\nlinager agent status        # версия агента и состояние связи</pre></div></div>';
+    var hist='<div class="box"><h4>История обновлений</h4><div class="tw"><table class="tbl"><thead><tr><th>Время</th><th>Что</th><th>Версии</th><th>Результат</th></tr></thead><tbody>'+U.hist.slice(0,8).map(function(h){return '<tr><td class="sm2">'+h.t+'</td><td>'+esc(h.what)+'</td><td class="sm2">'+h.from+' → '+h.to+'</td><td><span class="st '+(h.res==='ok'?'active':'failed')+'">'+(h.res==='ok'?'успешно':'откат')+'</span></td></tr>'}).join('')+'</tbody></table></div></div>';
+    var keep=document.activeElement&&document.activeElement.id;
+    el.innerHTML='<div class="d-head"><div class="d-ttl"><button class="btn sm" data-ux="back">← Серверы</button><h2>Обновления Linager</h2></div><span class="sm2">канал: '+U.channel+'</span></div><div class="ugrid">'+srv+cache+'</div>'+ag+'<div class="ugrid">'+hist+cli+'</div>';
+    if(keep){var f=$(keep);if(f)f.focus()}
+  }
+  function showUpdates(){
+    document.body.classList.remove('in-detail');D.id=null;
+    document.body.classList.add('in-updates');renderUpdates();window.scrollTo(0,0);
+  }
+  function hideUpdates(){document.body.classList.remove('in-updates');refreshAll();window.scrollTo(0,0)}
+  $('updBtn').addEventListener('click',function(){try{location.hash='updates'}catch(e){}showUpdates()});
+  $('updates').addEventListener('click',function(e){
+    var b=e.target.closest('[data-ux]');if(!b)return;
+    var a=b.dataset.ux;
+    if(a==='back'){try{location.hash=''}catch(x){}hideUpdates()}
+    else if(a==='check'){
+      U.checking=true;renderUpdates();
+      setTimeout(function(){U.checking=false;U.checked='только что';renderUpdates();showToast(U.cur!==U.latest?'Найдена версия '+U.latest:'Новых версий нет')},1100);
+    }
+    else if(a==='cache'){
+      U.caching=true;renderUpdates();
+      setTimeout(function(){U.caching=false;U.cache.unshift({v:U.latest,size:'19.1 МБ',date:'сегодня',src:'GitHub'});renderUpdates();showToast('Версия '+U.latest+' загружена в кэш')},1300);
+    }
+    else if(a==='srv')confirmBox('Обновить сервер до '+U.latest+'?','Перед обновлением создаётся резервная копия БД и применяются миграции. Админка на минуту станет недоступна. При сбое сервер откатится сам.','Обновить',serverUpdate);
+    else if(a==='sel'){U.sel[b.dataset.id]=b.checked;renderUpdates()}
+    else if(a==='selall'){lib.forEach(function(s){var x=agentState(s);if(x==='avail'||x==='old'||x==='rolled')U.sel[s.id]=b.checked});renderUpdates()}
+    else if(a==='one')agentUpdate(byId[b.dataset.id]);
+    else if(a==='runsel'||a==='runall'){
+      var list=lib.filter(function(s){var x=agentState(s);return (x==='avail'||x==='old'||x==='rolled')&&(a==='runall'||U.sel[s.id])});
+      confirmBox('Обновить агентов: '+list.length+'?','Агенты перезапустятся, связь с каждым прервётся на несколько секунд. Если агент не выйдет на связь за 60 секунд, он откатится на прежнюю версию.','Обновить',function(){U.sel={};rollout(list)});
+    }
+  });
+  $('updates').addEventListener('change',function(e){
+    if(e.target.id==='uch'){
+      U.channel=e.target.value;U.latest=U.channel==='beta'?'0.5.0-beta.1':'0.4.0';U.checked='только что';renderUpdates();
+    }else if(e.target.id==='ustr'){U.strategy=e.target.value}
+    else if(e.target.id==='ustop'){U.stopOnErr=e.target.checked}
+  });
+
+  /* shell of the detail page */
+  function updateHead(force){
+    var s=cur();if(!s)return;
+    var k=[s.online,s.reboot,level(s),s.id,s.av,agentState(s)].join('|');
+    if(!force&&k===D.headKey)return;
+    D.headKey=k;
+    var L=level(s);
+    detailEl.dataset.level=L;
+    $('dhead').innerHTML=
+      '<div class="d-head"><div class="d-ttl"><button class="btn sm" data-d="back">← Серверы</button><span class="dot"></span><h2>'+esc(s.id)+'</h2><span class="tag '+L+'">'+({ok:'в норме',warn:'предупреждение',crit:'критично',off:'офлайн'}[L])+'</span></div>'+
+      '<div class="acts"><button class="btn sm" data-d="reboot"'+(s.online?'':' disabled')+'>Перезагрузить</button></div></div>'+
+      '<p class="c-sub" style="margin-top:0">'+esc(s.os)+' · '+esc(s.ip)+' · linager-agent '+esc(s.av)+'</p>'+
+      (s.online&&s.reboot?'<div class="banner"><span>Нужна перезагрузка: обновлено ядро или системная библиотека.</span><button class="btn sm" data-d="reboot">Перезагрузить сейчас</button></div>':'')+agBanner(s);
+  }
+  function renderTab(){
+    var s=cur();if(!s)return;
+    [].forEach.call(document.querySelectorAll('#dtabs .tab'),function(b){b.setAttribute('aria-selected',b.dataset.tab===D.tab)});
+    var p=$('panel');
+    if(!s.online&&D.tab!=='metrics'){p.innerHTML='<div class="offl"><div class="big">Нет связи с агентом</div><p>Последний контакт: '+esc(lastTxt(s))+'. Управление и метрики недоступны, пока агент не подключится снова.</p>'+(s.net&&s.net.rb?'<p>Применены сетевые настройки. Если связь не восстановится, они откатятся через <b id="nleft">'+s.net.left+'</b> с.</p>':'')+'</div>';return}
+    if(D.tab==='overview')tabOverview(s);
+    else if(D.tab==='terminal')tabTerminal(s);
+    else if(D.tab==='services')tabServices(s);
+    else if(D.tab==='updates')tabUpdates(s);
+    else if(D.tab==='procs')tabProcs(s);
+    else if(D.tab==='logs')tabLogs(s);
+    else if(D.tab==='files')tabFiles(s);
+    else if(D.tab==='docker')tabDocker(s);
+    else if(D.tab==='firewall')tabFirewall(s);
+    else if(D.tab==='network')tabNetwork(s);
+    else if(D.tab==='metrics')tabMetrics(s);
+  }
+  function showDetail(id){
+    if(D.id!==id){D.plog=null;D.busy=false;D.paused=false;D.logUnit='all';D.fpath=[];D.fopen=null;D.fnew=null;D.dkView='c';D.dkLog=null}
+    D.id=id;
+    document.body.classList.add('in-detail');document.body.classList.remove('in-updates');
+    $('dtabs').innerHTML=TABS.map(function(t){return '<button class="tab" role="tab" data-tab="'+t[0]+'" aria-selected="false">'+t[1]+'</button>'}).join('');
+    updateHead(true);renderTab();
+    window.scrollTo(0,0);
+  }
+  function hideDetail(){
+    document.body.classList.remove('in-detail');D.id=null;
+    refreshAll();window.scrollTo(0,0);
+  }
+  function openDetail(id,tab){
+    D.tab=tab||'overview';
+    try{location.hash='srv-'+id}catch(e){}
+    showDetail(id);
+  }
+  function route(){
+    var m=/^#srv-(.+)$/.exec(location.hash);
+    if(m&&byId[m[1]]){if(!inDetail()||D.id!==m[1])showDetail(m[1])}
+    else if(location.hash==='#updates')showUpdates();
+    else{if(inDetail())hideDetail();if(document.body.classList.contains('in-updates'))hideUpdates()}
+  }
+  window.addEventListener('hashchange',route);
+
+  function doReboot(s){
+    ensureTerm(s);
+    tPrint(s,'Connection to '+s.id+' closed by remote host.','err');
+    s.online=0;s.last='только что';
+    showToast(s.id+' перезагружается…');
+    refreshAll();
+    if(D.id===s.id){updateHead(true);renderTab()}
+    setTimeout(function(){
+      s.online=1;s.reboot=0;s.up='0д 0ч';s.cpu=clamp(s.base.cpu+25,2,99);
+      showToast(s.id+' снова online');
+      refreshAll();
+      if(D.id===s.id){updateHead(true);renderTab()}
+    },7000);
+  }
+
+  detailEl.addEventListener('click',function(e){
+    var s=cur();if(!s)return;
+    var tb=e.target.closest('.tab');
+    if(tb){D.tab=tb.dataset.tab;renderTab();return}
+    var sv=e.target.closest('[data-svc]');
+    if(sv){svcAction(s,sv.dataset.svc,sv.dataset.act);return}
+    var kp=e.target.closest('[data-kill]');
+    if(kp){
+      var pid=+kp.dataset.kill,pr=s.procs.filter(function(p){return p.pid===pid})[0];
+      s.procs=s.procs.filter(function(p){return p.pid!==pid});
+      renderProcs(s);showToast('SIGTERM → '+pid+' ('+(pr?pr.cmd:'')+')');return;
+    }
+    var so=e.target.closest('[data-sort]');
+    if(so){D.procSort=so.dataset.sort;tabProcs(s);return}
+    var b=e.target.closest('[data-d]');if(!b)return;
+    var d=b.dataset.d;
+    if(d==='back'){try{location.hash=''}catch(x){}hideDetail()}
+    else if(d==='reboot')confirmBox('Перезагрузить '+s.id+'?','Все сеансы и службы на сервере остановятся. Сервер вернётся в панель после загрузки.','Перезагрузить',function(){doReboot(s)});
+    else if(d==='agupd')agentUpdate(s);
+    else if(d==='pcheck')runCheck(s);
+    else if(d==='pall')runUpgrade(s,false);
+    else if(d==='psec')runUpgrade(s,true);
+    else if(d==='tclear'){s.term.lines=[];tRender(s);$('tcmd').focus()}
+    else if(d==='lpause'){D.paused=!D.paused;b.setAttribute('aria-pressed',D.paused);b.textContent=D.paused?'Продолжить':'Пауза';if(!D.paused)renderLogs(s)}
+  });
+  detailEl.addEventListener('input',function(e){
+    if(e.target.id==='svcq'){
+      var q=e.target.value.trim().toLowerCase();
+      [].forEach.call(detailEl.querySelectorAll('tbody tr[data-n]'),function(r){r.hidden=q&&r.dataset.n.toLowerCase().indexOf(q)<0});
+    }
+  });
+  detailEl.addEventListener('change',function(e){
+    if(e.target.id==='lu'){D.logUnit=e.target.value;renderLogs(cur())}
+  });
+  function detailTick(){
+    var s=cur();if(!s||!inDetail())return;
+    updateHead();
+    if(!s.online)return;
+    if(D.tab==='overview')updateOverview(s);
+    else if(D.tab==='procs')renderProcs(s);
+    else if(D.tab==='logs'){addLogs(s);if(!D.paused)renderLogs(s)}
+    else if(D.tab==='docker')dkTick(s);
+    else if(D.tab==='firewall')fwTick(s);
+    else if(D.tab==='network')netTick(s);
+  }
+
+  /* live simulation */
+  function tick(){
+    lib.forEach(function(s){
+      if(!s.online)return;
+      s.cpu=clamp(s.cpu+(s.base.cpu-s.cpu)*.15+(Math.random()-.5)*s.vol,2,99);
+      s.ram=clamp(s.ram+(s.base.ram-s.ram)*.1+(Math.random()-.5)*1.2,5,97);
+      s.rx=Math.max(5,s.base.rx*(0.6+Math.random()*0.8));
+      s.tx=Math.max(5,s.base.tx*(0.6+Math.random()*0.8));
+      s.hist.push(s.cpu);if(s.hist.length>HIST)s.hist.shift();
+      s.rhist.push(s.ram);if(s.rhist.length>HIST)s.rhist.shift();
+      s.nhist.push(s.rx);if(s.nhist.length>HIST)s.nhist.shift();
+    });
+    refreshAll();
+    detailTick();
+    var d=new Date();
+    document.getElementById('clock').textContent='live · '+d.toLocaleTimeString('ru-RU');
+  }
+
+  onBoard.slice().forEach(function(id){grid.appendChild(buildCard(byId[id]))});
+  refreshAll();
+  tick();
+  route();
+  updBadge();
+  setInterval(tick,2000);
+})();
+</script>
+</body>
+</html>
