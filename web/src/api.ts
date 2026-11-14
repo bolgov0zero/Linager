@@ -112,6 +112,7 @@ export interface NetRoute { dst: string; gateway: string; dev: string; metric: n
 export interface NetChange { iface: string; mode: 'static' | 'dhcp'; address: string; gateway: string; mtu: number; up: boolean }
 export interface NetworkDraft { changes: NetChange[] }
 export interface PendingChange { id: string; kind: 'network' | 'firewall'; deadline: number /* unix seconds */ }
+export interface NetplanFile { name: string; text: string; cloud_init: boolean }
 export interface NetworkInfo {
   backend: 'ifupdown' | 'netplan' | 'unknown';
   editable: boolean; // false for netplan in this version
@@ -119,6 +120,10 @@ export interface NetworkInfo {
   dns: { nameservers: string[]; search: string[] };
   routes: NetRoute[];
   config_preview: string;
+  /** The configuration can be edited as text: ifupdown (one file) or netplan (pick a file). Absent on older agents. */
+  config_editable?: boolean;
+  netplan_files?: NetplanFile[];
+  netplan_effective?: string;
   pending: PendingChange | null;
   draft: NetworkDraft | null;
 }
@@ -323,6 +328,9 @@ export const api = {
 
   services: (id: string) => request<{ services: ServiceUnit[] }>('GET', `api/servers/${enc(id)}/services`),
   /** Rejects with ApiError status 409 and `dangerous` when the action needs `confirm: true`. */
+  servicesIgnored: (id: string) => request<{ ignored: string[] }>('GET', `api/servers/${enc(id)}/services-ignored`),
+  serviceIgnore: (id: string, unit: string, ignore: boolean) =>
+    request<{ ok: boolean }>('PUT', `api/servers/${enc(id)}/services-ignored`, { unit, ignore }),
   serviceAction: (id: string, unit: string, action: ServiceAction, confirm: boolean) =>
     request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/services/${enc(unit)}/${action}`, { confirm }),
   apt: (id: string) => request<AptList>('GET', `api/servers/${enc(id)}/apt`),
@@ -372,8 +380,8 @@ export const api = {
   networkApply: (id: string, confirm: boolean) =>
     request<PendingChange>('POST', `api/servers/${enc(id)}/network/apply`, { confirm }),
   /** Applies a hand-edited interfaces file; it is rolled back by the agent unless confirmed in time. */
-  networkApplyConfig: (id: string, text: string) =>
-    request<PendingChange>('POST', `api/servers/${enc(id)}/network/config`, { text, confirm: true }),
+  networkApplyConfig: (id: string, text: string, file?: string) =>
+    request<PendingChange>('POST', `api/servers/${enc(id)}/network/config`, { text, file, confirm: true }),
   networkConfirm: (id: string, changeId: string) =>
     request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/network/confirm`, { id: changeId }),
   networkRollback: (id: string, changeId: string) =>

@@ -88,5 +88,7 @@
   "audit.action.group.rename": "Group: rename",
   "audit.action.group.delete": "Group: delete",
   "audit.action.group.assign": "Group: assign to server",
-  "audit.action.network.config.apply": "Network: edit configuration"
+  "audit.action.network.config.apply": "Network: edit configuration",
+  "audit.action.service.ignore": "Service: ignore",
+  "audit.action.service.unignore": "Service: stop ignoring"
 }

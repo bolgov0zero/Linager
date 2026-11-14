@@ -28,6 +28,7 @@ type serverState struct {
 	system    *protocol.SystemInfo
 	spark     []float64
 	persisted time.Time
+	ignored   map[string]bool // failed units the administrator ignores
 }
 
 // Metrics ingests samples, keeps the latest state and feeds the live stream.
@@ -95,8 +96,45 @@ func (m *Metrics) state(ctx context.Context, id string) *serverState {
 		if v, err := m.DB.RecentCPU(ctx, id, sparkLen); err == nil {
 			st.spark = v
 		}
+		st.ignored = map[string]bool{}
+		if list, err := m.DB.IgnoredServices(ctx, id); err == nil {
+			for _, u := range list {
+				st.ignored[u] = true
+			}
+		}
 	}
 	return st
+}
+
+// effectiveFailed counts the failed units that are not ignored; without unit names the reported count stays.
+func effectiveFailed(s *protocol.Sample, ignored map[string]bool) {
+	if len(s.FailedUnits) == 0 || len(ignored) == 0 {
+		return
+	}
+	n := 0
+	for _, u := range s.FailedUnits {
+		if !ignored[u] {
+			n++
+		}
+	}
+	s.FailedServices = n
+}
+
+// SetIgnored replaces the ignore list of a server and recounts its last sample at once.
+func (m *Metrics) SetIgnored(ctx context.Context, id string, units []string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	st := m.state(ctx, id)
+	st.ignored = map[string]bool{}
+	for _, u := range units {
+		st.ignored[u] = true
+	}
+	if st.last != nil && len(st.last.FailedUnits) > 0 {
+		cp := *st.last
+		cp.FailedServices = len(cp.FailedUnits)
+		effectiveFailed(&cp, st.ignored)
+		st.last = &cp
+	}
 }
 
 // View is a copy of the state for API responses.
@@ -163,6 +201,7 @@ func (m *Metrics) Ingest(ctx context.Context, serverID string, b *protocol.Metri
 	var events []store.Event
 	for i := range samples {
 		s := samples[i]
+		effectiveFailed(&s, st.ignored)
 		if st.last != nil && s.TS <= st.last.TS {
 			continue
 		}

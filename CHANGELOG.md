@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.20
+
+- Network tab on netplan systems (Ubuntu): the configuration can be edited by hand. Pick a file from `/etc/netplan` (or create a new one); it is checked with `netplan generate` and applied with `netplan apply` under the same 30-second automatic rollback. cloud-init generated files get a warning, and "Effective configuration" shows the merged result (`netplan get`).
+- Services: the actions moved into a menu. New "Ignore" item: an ignored failed service no longer counts towards the server status and the dashboard counters.
+- Terminal tab: the "In a window" button moves the terminal into a floating window.
+- File editor: opens in floating windows like the terminals (move, resize, minimize, several at once) and uses CodeMirror 6 with syntax highlighting (PHP, HTML, CSS, JavaScript, JSON, YAML, XML, SQL, Markdown, Python, shell, nginx, Dockerfile, TOML, ini and more), line numbers and search.
+- Agents must be updated to 0.1.20 for netplan editing and for ignoring services. Database migration 00006 adds the ignore list.
+
 ## 0.1.19
 
 - Network tab: the configuration block can be edited by hand (ifupdown systems): the whole `/etc/network/interfaces` is edited, checked with `ifup --no-act`, applied with the same 30-second rollback as form changes, and written to the audit log. Netplan systems stay read-only. Agents must be updated to this version to use it.

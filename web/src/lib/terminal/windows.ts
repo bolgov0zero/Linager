@@ -5,10 +5,18 @@ import { showToast } from '../toast';
 /** Simultaneous terminals per server allowed by the server (server/api_mgmt.go termLimit). */
 export const TERM_LIMIT = 3;
 
+/** Floating windows share one store, z-order and dock: terminals and file editors. */
 export interface TermWindow {
   key: number;
+  kind: 'terminal' | 'editor';
   serverId: string;
+  /** Terminal: server name. Editor: file name. */
   name: string;
+  /** Editor only: file path, server name and the content loaded when the window was opened. */
+  path?: string;
+  serverName?: string;
+  initialText?: string;
+  initialMtime?: number;
   x: number;
   y: number;
   w: number;
@@ -23,6 +31,9 @@ export const termWindows = writable<TermWindow[]>([]);
 let nextKey = 1;
 let topZ = 1;
 
+/** Open editor windows allowed at once. */
+const EDITOR_LIMIT = 8;
+
 const DEFAULT_W = 720;
 const DEFAULT_H = 440;
 const CASCADE = 28;
@@ -33,21 +44,44 @@ const CASCADE = 28;
  */
 export function openTermWindow(serverId: string, name: string): void {
   const list = get(termWindows);
-  if (list.filter((w) => w.serverId === serverId).length >= TERM_LIMIT) {
+  if (list.filter((w) => w.kind === 'terminal' && w.serverId === serverId).length >= TERM_LIMIT) {
     showToast(t('term.limit'));
     return;
   }
+  addWindow({ kind: 'terminal', serverId, name });
+}
+
+/** Opens a file in a floating editor; an already open file of the same server is brought to the front. */
+export function openEditorWindow(serverId: string, serverName: string, path: string, name: string, text: string, mtime: number): void {
+  const list = get(termWindows);
+  const open = list.find((w) => w.kind === 'editor' && w.serverId === serverId && w.path === path);
+  if (open) {
+    focusTermWindow(open.key);
+    return;
+  }
+  if (list.filter((w) => w.kind === 'editor').length >= EDITOR_LIMIT) {
+    showToast(t('edwin.limit'));
+    return;
+  }
+  addWindow({ kind: 'editor', serverId, name, path, serverName, initialText: text, initialMtime: mtime });
+}
+
+/** Closes the editor windows of a file (it was deleted). */
+export function closeEditorWindows(serverId: string, path: string): void {
+  termWindows.update((list) => list.filter((w) => !(w.kind === 'editor' && w.serverId === serverId && w.path === path)));
+}
+
+function addWindow(init: Pick<TermWindow, 'kind' | 'serverId' | 'name'> & Partial<TermWindow>): void {
+  const list = get(termWindows);
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const w = Math.min(DEFAULT_W, vw - 32);
-  const h = Math.min(DEFAULT_H, vh - 96);
+  const editor = init.kind === 'editor';
+  const w = Math.min(editor ? 760 : DEFAULT_W, vw - 32);
+  const h = Math.min(editor ? 520 : DEFAULT_H, vh - 96);
   const step = (list.length % 8) * CASCADE;
   const x = Math.max(16, Math.min(Math.round((vw - w) / 2) + step - 3 * CASCADE, vw - w - 16));
   const y = Math.max(16, Math.min(72 + step, vh - h - 16));
-  termWindows.set([
-    ...list,
-    { key: nextKey++, serverId, name, x, y, w, h, z: ++topZ, minimized: false, maximized: false },
-  ]);
+  termWindows.set([...list, { x, y, w, h, key: nextKey++, z: ++topZ, minimized: false, maximized: false, ...init }]);
 }
 
 export function updateTermWindow(key: number, patch: Partial<TermWindow>): void {

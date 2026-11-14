@@ -3,6 +3,7 @@
   import { api, type ServerDetail, type ServiceAction, type ServiceUnit } from '../../../api';
   import { tr as tStore } from '../../../i18n';
   import Modal from '../../Modal.svelte';
+  import ActionMenu from '../../ui/ActionMenu.svelte';
   import { showToast } from '../../toast';
   import {
     confirmText,
@@ -36,6 +37,7 @@
   };
 
   let units = $state<ServiceUnit[]>([]);
+  let ignored = $state<string[]>([]);
   let loadState = $state<'loading' | 'ready' | 'offline' | 'disabled' | 'error'>('loading');
   let filter = $state<ServiceFilter>('all');
   let query = $state('');
@@ -51,6 +53,7 @@
       if (req !== reqSeq) return;
       units = res.services;
       loadState = 'ready';
+      void api.servicesIgnored(id).then((r) => (req === reqSeq ? (ignored = r.ignored) : undefined)).catch(() => undefined);
     } catch (e) {
       if (req !== reqSeq) return;
       loadState = unavailableKind(e) ?? 'error';
@@ -120,6 +123,35 @@
   function isBusy(unit: string, action: ServiceAction): boolean {
     return busy === `${unit}:${action}`;
   }
+
+  async function setIgnored(unit: string, ignore: boolean) {
+    try {
+      await api.serviceIgnore(server.id, unit, ignore);
+      ignored = ignore ? [...ignored, unit] : ignored.filter((u) => u !== unit);
+      showToast($tStore(ignore ? 'svc.ignoredDone' : 'svc.unignoredDone', { unit }));
+    } catch (e) {
+      showToast(errorText(e, $tStore));
+    }
+  }
+
+  function menuItems(unit: ServiceUnit, kind: StateKind) {
+    const toggle: ServiceAction = unit.enabled === 'enabled' ? 'disable' : 'enable';
+    const canToggle = unit.enabled === 'enabled' || unit.enabled === 'disabled';
+    const lock = unreachable || busy !== null;
+    const isIgnored = ignored.includes(unit.name);
+    return [
+      { key: 'start', label: $tStore('svc.act.start'), disabled: lock || kind === 'running', onselect: () => request(unit.name, 'start') },
+      { key: 'restart', label: $tStore('svc.act.restart'), disabled: lock || kind === 'stopped', onselect: () => request(unit.name, 'restart') },
+      { key: 'stop', label: $tStore('svc.act.stop'), disabled: lock || kind === 'stopped', onselect: () => request(unit.name, 'stop') },
+      { key: 'toggle', label: $tStore(`svc.act.${toggle}`), disabled: lock || !canToggle, onselect: () => request(unit.name, toggle) },
+      {
+        key: 'ignore',
+        label: $tStore(isIgnored ? 'svc.act.unignore' : 'svc.act.ignore'),
+        disabled: server.online === false,
+        onselect: () => void setIgnored(unit.name, !isIgnored),
+      },
+    ];
+  }
 </script>
 
 <div class="svc">
@@ -170,9 +202,8 @@
           <tbody>
             {#each shown as unit (unit.name)}
               {@const kind = stateKind(unit)}
-              {@const toggle = unit.enabled === 'enabled' ? 'disable' : 'enable'}
-              {@const canToggle = unit.enabled === 'enabled' || unit.enabled === 'disabled'}
-              <tr class:failed={kind === 'failed'}>
+              {@const isIgnored = ignored.includes(unit.name)}
+              <tr class:failed={kind === 'failed' && !isIgnored}>
                 <td>
                   <div class="name">
                     <span class="unit mono">{unit.name}</span>
@@ -181,6 +212,7 @@
                 </td>
                 <td>
                   <span class="badge state {kind}">{stateLabel(unit)}</span>
+                  {#if isIgnored}<span class="badge state other" title={$tStore('svc.ignoreHint')}>{$tStore('svc.badge.ignored')}</span>{/if}
                 </td>
                 <td>
                   <span class="badge auto {unit.enabled === 'enabled' ? 'on' : unit.enabled === 'masked' ? 'warn' : 'off'}">
@@ -188,32 +220,7 @@
                   </span>
                 </td>
                 <td class="actions">
-                  <div class="btns">
-                    <button
-                      class="btn small-btn"
-                      type="button"
-                      disabled={unreachable || busy !== null || kind === 'running'}
-                      aria-busy={isBusy(unit.name, 'start')}
-                      onclick={() => request(unit.name, 'start')}>{$tStore('svc.act.start')}</button>
-                    <button
-                      class="btn small-btn"
-                      type="button"
-                      disabled={unreachable || busy !== null || kind === 'stopped'}
-                      aria-busy={isBusy(unit.name, 'restart')}
-                      onclick={() => request(unit.name, 'restart')}>{$tStore('svc.act.restart')}</button>
-                    <button
-                      class="btn small-btn"
-                      type="button"
-                      disabled={unreachable || busy !== null || kind === 'stopped'}
-                      aria-busy={isBusy(unit.name, 'stop')}
-                      onclick={() => request(unit.name, 'stop')}>{$tStore('svc.act.stop')}</button>
-                    <button
-                      class="btn small-btn"
-                      type="button"
-                      disabled={unreachable || busy !== null || !canToggle}
-                      aria-busy={isBusy(unit.name, toggle)}
-                      onclick={() => request(unit.name, toggle)}>{$tStore(`svc.act.${toggle}`)}</button>
-                  </div>
+                  <ActionMenu label={$tStore('svc.menu')} items={menuItems(unit, kind)} disabled={busy !== null} />
                 </td>
               </tr>
             {/each}

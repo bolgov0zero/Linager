@@ -4,6 +4,7 @@
   import { api, type FileEntry, type ServerDetail } from '../../../api';
   import { locale, t, tr as tStore, type Vars } from '../../../i18n';
   import Modal from '../../Modal.svelte';
+  import { closeEditorWindows, openEditorWindow } from '../../terminal/windows';
   import { showToast } from '../../toast';
   import { formatBytes, formatDateTime } from '../format';
   import FileTree from './FileTree.svelte';
@@ -22,17 +23,6 @@
   let { server }: { server: ServerDetail } = $props();
 
   type LoadState = 'loading' | 'ready' | 'offline' | 'disabled' | 'error';
-
-  interface Editor {
-    path: string;
-    name: string;
-    text: string;
-    saved: string;
-    mtime: number;
-    askClose: boolean;
-    conflict: boolean;
-    saving: boolean;
-  }
 
   interface Ask {
     title: string;
@@ -54,7 +44,6 @@
   let prompt = $state<{ kind: 'dir' | 'file'; name: string; error: string; busy: boolean } | null>(null);
   let ask = $state<Ask | null>(null);
   let askBusy = $state(false);
-  let editor = $state<Editor | null>(null);
   let upload = $state<{ name: string; index: number; total: number; fraction: number } | null>(null);
   let picker = $state<HTMLInputElement | undefined>(undefined);
   let selected = $state<string | null>(null);
@@ -91,7 +80,6 @@
 
   const offline = $derived(loadState === 'offline' || !server.online);
   const readOnly = $derived(offline || loadState === 'disabled');
-  const dirty = $derived(editor !== null && editor.text !== editor.saved);
 
   function T(key: string, vars?: Vars): string {
     return t(key, get(locale), vars);
@@ -212,7 +200,7 @@
       run: async () => {
         try {
           await api.fileDelete(id, full);
-          if (editor?.path === full) editor = null;
+          closeEditorWindows(id, full);
           showToast(T('files.deleted', { name: entry.name }));
           await go(path, id);
         } catch (e) {
@@ -238,16 +226,7 @@
     const full = joinPath(path, entry.name);
     try {
       const f = await api.fileContent(serverId, full);
-      editor = {
-        path: full,
-        name: entry.name,
-        text: f.content,
-        saved: f.content,
-        mtime: f.mtime,
-        askClose: false,
-        conflict: false,
-        saving: false,
-      };
+      openEditorWindow(serverId, server.name, full, entry.name, f.content, f.mtime);
     } catch (e) {
       if (isStatus(e, 413) || isStatus(e, 415)) {
         noEdit = { name: entry.name, href: api.fileDownloadUrl(serverId, full), text: openErrorText(e, T) };
@@ -315,49 +294,6 @@
   function navigateTree(dir: string): void {
     treeOpen = false;
     void go(dir);
-  }
-
-  function closeEditor(): void {
-    if (!editor) return;
-    if (editor.text !== editor.saved) {
-      editor.askClose = true;
-      return;
-    }
-    editor = null;
-  }
-
-  async function saveEditor(): Promise<void> {
-    const ed = editor;
-    if (!ed || ed.saving) return;
-    const sent = ed.text;
-    ed.saving = true;
-    try {
-      const res = await api.fileSave(serverId, ed.path, sent, ed.mtime);
-      ed.saved = sent;
-      ed.mtime = res.mtime;
-      showToast(T('files.saved'));
-    } catch (e) {
-      if (isStatus(e, 409)) ed.conflict = true;
-      else showToast(errorText(e, T));
-    } finally {
-      ed.saving = false;
-    }
-  }
-
-  async function reloadEditor(): Promise<void> {
-    const ed = editor;
-    if (!ed) return;
-    try {
-      const f = await api.fileContent(serverId, ed.path);
-      if (editor !== ed) return;
-      ed.text = f.content;
-      ed.saved = f.content;
-      ed.mtime = f.mtime;
-      ed.conflict = false;
-      ed.askClose = false;
-    } catch (e) {
-      showToast(openErrorText(e, T));
-    }
   }
 
   function kindLabel(type: FileEntry['type']): string {
@@ -564,51 +500,6 @@
       <a class="btn primary" href={n.href} download={n.name} onclick={() => (noEdit = null)}>{$tStore('files.download')}</a>
     </div>
   </Modal>
-{/if}
-
-{#if editor}
-  {@const ed = editor}
-  <div class="wide">
-    <Modal title={ed.name} labelId="files-editor-title" onclose={closeEditor}>
-      <p class="hint mono">{ed.path}</p>
-      <textarea
-        class="editor mono"
-        bind:value={ed.text}
-        spellcheck="false"
-        autocapitalize="off"
-        aria-label={ed.name}
-        readonly={offline}
-      ></textarea>
-
-      {#if ed.conflict}
-        <div class="strip" role="alert">
-          <p>{$tStore('files.err.conflict')}</p>
-          <div class="row end">
-            <button class="btn" type="button" onclick={() => (ed.conflict = false)}>{$tStore('common.cancel')}</button>
-            <button class="btn primary" type="button" onclick={reloadEditor}>{$tStore('files.editor.reload')}</button>
-          </div>
-        </div>
-      {:else if ed.askClose}
-        <div class="strip" role="alert">
-          <p>{$tStore('files.editor.unsaved')}</p>
-          <div class="row end">
-            <button class="btn" type="button" onclick={() => (ed.askClose = false)}>{$tStore('files.editor.stay')}</button>
-            <button class="btn danger" type="button" onclick={() => (editor = null)}>{$tStore('files.editor.discard')}</button>
-          </div>
-        </div>
-      {/if}
-
-      <div class="row between">
-        <span class="small muted">{dirty ? $tStore('files.editor.dirty') : $tStore('files.editor.clean')}</span>
-        <div class="row">
-          <button class="btn" type="button" onclick={closeEditor}>{$tStore('files.editor.close')}</button>
-          <button class="btn primary" type="button" disabled={!dirty || offline || ed.saving} onclick={saveEditor}>
-            {ed.saving ? $tStore('files.editor.saving') : $tStore('files.editor.save')}
-          </button>
-        </div>
-      </div>
-    </Modal>
-  </div>
 {/if}
 
 <style>
@@ -865,44 +756,6 @@
     opacity: 0.5;
     pointer-events: none;
     box-shadow: none;
-  }
-
-  .wide :global(.dialog) {
-    max-width: 960px;
-  }
-
-  .editor {
-    width: 100%;
-    min-height: 50vh;
-    padding: 8px 10px;
-    background: var(--surface);
-    color: var(--ink);
-    border: 2px solid var(--line);
-    border-radius: 0;
-    font: inherit;
-    font-size: 13px;
-    line-height: 1.45;
-    white-space: pre;
-    overflow: auto;
-    tab-size: 4;
-    resize: vertical;
-  }
-
-  .editor:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-
-  .strip {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 10px 12px;
-    border: 2px solid var(--warn);
-  }
-
-  .strip p {
-    margin: 0;
   }
 
   .between {

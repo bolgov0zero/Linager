@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tr } from '../../i18n';
+  import EditorWindowView from './EditorWindowView.svelte';
   import TermWindowView from './TermWindowView.svelte';
   import { focusTermWindow, termWindows, updateTermWindow } from './windows';
 
@@ -33,7 +34,11 @@
 {#if $termWindows.length > 0}
   <div class="layer">
     {#each $termWindows as win (win.key)}
-      <TermWindowView {win} top={win.key === topKey} />
+      {#if win.kind === 'editor'}
+        <EditorWindowView {win} top={win.key === topKey} />
+      {:else}
+        <TermWindowView {win} top={win.key === topKey} />
+      {/if}
     {/each}
     <nav class="dock" aria-label={$tr('termwin.dock')}>
       {#each $termWindows as win (win.key)}
@@ -43,7 +48,7 @@
           class:off={win.minimized}
           type="button"
           title={win.minimized ? $tr('termwin.restore') : $tr('termwin.minimize')}
-          onclick={() => toggle(win.key, win.minimized)}>&gt;_ {win.name}</button>
+          onclick={() => toggle(win.key, win.minimized)}>{win.kind === 'editor' ? '✎' : '>_'} {win.name}</button>
       {/each}
     </nav>
   </div>

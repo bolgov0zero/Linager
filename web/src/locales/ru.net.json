@@ -85,5 +85,15 @@
   "net.config.confirmTitle": "Применить конфигурацию?",
   "net.config.confirmText": "Изменённые интерфейсы будут переподняты с новой конфигурацией. Если связь с сервером пропадёт и вы не подтвердите изменение в течение 30 секунд, агент сам вернёт прежний файл.",
   "net.config.confirmButton": "Применить",
-  "net.config.unchanged": "Файл не изменён."
+  "net.config.unchanged": "Файл не изменён.",
+  "net.config.hintNetplan": "Правится один файл из /etc/netplan. Файлы читаются по алфавиту и сливаются, более поздний перекрывает более раннего, поэтому смотрите «Итоговая конфигурация». Файл проверяется командой netplan generate, затем применяется с откатом через 30 секунд.",
+  "net.config.file": "Файл",
+  "net.config.newFile": "Новый файл",
+  "net.config.newFileName": "Имя нового файла",
+  "net.config.newFileDefault": "99-linager.yaml",
+  "net.config.fileInvalid": "Имя: латиница, цифры, . _ -, с расширением .yaml.",
+  "net.config.cloudInit": "Файл создан cloud-init и может быть перезаписан при перезагрузке. Чтобы правки сохранялись, отключите управление сетью в cloud-init (файл /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg со строкой network: {config: disabled}) или создайте свой файл с более поздним именем.",
+  "net.config.effective": "Итоговая конфигурация",
+  "net.config.effectiveHide": "Скрыть итоговую",
+  "net.config.effectiveEmpty": "Недоступна на этой системе."
 }

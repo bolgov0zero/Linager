@@ -2,7 +2,7 @@
 export const KNOWN_ACTIONS: ReadonlySet<string> = new Set([
   'auth.login', 'auth.logout', 'auth.totp.enable', 'auth.totp.disable',
   'enroll.approve', 'enroll.reject', 'server.delete', 'server.reboot',
-  'service.start', 'service.stop', 'service.restart', 'service.enable', 'service.disable',
+  'service.start', 'service.stop', 'service.restart', 'service.enable', 'service.disable', 'service.ignore', 'service.unignore',
   'process.kill',
   'files.write', 'files.mkdir', 'files.create', 'files.delete', 'files.upload', 'files.download',
   'network.apply', 'network.config.apply', 'network.confirm', 'network.rollback', 'network.draft.save', 'network.draft.reset',

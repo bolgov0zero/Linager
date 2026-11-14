@@ -2,6 +2,7 @@
   import type { ServerDetail } from '../../../api';
   import { tr } from '../../../i18n';
   import TermSession, { type TermPhase } from '../../terminal/TermSession.svelte';
+  import { openTermWindow } from '../../terminal/windows';
 
   let { server }: { server: ServerDetail } = $props();
 
@@ -12,6 +13,12 @@
   // `server.*` straight through would restart the terminal each time (losing the shell).
   const serverId = $derived(server.id);
   const isOnline = $derived(server.online);
+
+  /** Moves the terminal into a floating window: the tab's own session ends first so the per-server limit is not hit. */
+  function popOut(): void {
+    session?.close();
+    setTimeout(() => openTermWindow(serverId, server.name), 150);
+  }
 
   const statusText = $derived(
     phase === 'connecting' ? $tr('term.connecting') : phase === 'open' ? $tr('term.open') : $tr('term.closed'),
@@ -31,6 +38,7 @@
       <div class="actions">
         <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.copy()}>{$tr('term.copy')}</button>
         <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.paste()}>{$tr('term.paste')}</button>
+        <button class="btn" type="button" title={$tr('termwin.openWindow')} onclick={popOut}>{$tr('termwin.openWindow')}</button>
         <button class="btn" type="button" onclick={() => session?.close()}>{$tr('term.close')}</button>
       </div>
     {/if}

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"path"
+	"regexp"
 	"strings"
 	"time"
 
@@ -448,6 +449,8 @@ func (a *Admin) networkApply(w http.ResponseWriter, r *http.Request, u *store.Us
 	writeJSON(w, http.StatusOK, pv)
 }
 
+var netplanFileRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,60}\.yaml$`)
+
 // networkApplyConfig applies a hand-edited interfaces file through the same pending/rollback flow.
 func (a *Admin) networkApplyConfig(w http.ResponseWriter, r *http.Request, u *store.User) {
 	s := a.serverOr404(w, r)
@@ -456,9 +459,14 @@ func (a *Admin) networkApplyConfig(w http.ResponseWriter, r *http.Request, u *st
 	}
 	var req struct {
 		Text    string `json:"text"`
+		File    string `json:"file"` // netplan file name; empty for /etc/network/interfaces
 		Confirm bool   `json:"confirm"`
 	}
 	if !decode(w, r, &req) {
+		return
+	}
+	if req.File != "" && !netplanFileRe.MatchString(req.File) {
+		jsonErr(w, http.StatusBadRequest, msg(r, "Недопустимое имя файла", "Invalid file name"))
 		return
 	}
 	if !req.Confirm {
@@ -473,8 +481,8 @@ func (a *Admin) networkApplyConfig(w http.ResponseWriter, r *http.Request, u *st
 		jsonErr(w, http.StatusConflict, msg(r, "Есть неподтверждённое изменение", "Another change is waiting for confirmation"))
 		return
 	}
-	pv, ok := a.startChange(w, r, s, "network", "network", map[string]any{"raw": req.Text}, true)
-	a.audit(r, u, "network.config.apply", "server", s.ID, s.Name, map[bool]string{true: "ok", false: "failed"}[ok], map[string]any{"bytes": len(req.Text), "lines": strings.Count(req.Text, "\n") + 1})
+	pv, ok := a.startChange(w, r, s, "network", "network", map[string]any{"raw": req.Text, "file": req.File}, true)
+	a.audit(r, u, "network.config.apply", "server", s.ID, s.Name, map[bool]string{true: "ok", false: "failed"}[ok], map[string]any{"file": req.File, "bytes": len(req.Text), "lines": strings.Count(req.Text, "\n") + 1})
 	if !ok {
 		return
 	}

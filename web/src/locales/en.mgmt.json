@@ -65,5 +65,12 @@
   "reboot.server": "Server: {name}",
   "reboot.typeName": "To confirm, type the server name “{name}”",
   "reboot.confirm": "Reboot",
-  "reboot.started": "Reboot started"
+  "reboot.started": "Reboot started",
+  "svc.menu": "Actions",
+  "svc.act.ignore": "Ignore",
+  "svc.act.unignore": "Stop ignoring",
+  "svc.badge.ignored": "ignored",
+  "svc.ignoredDone": "{unit}: ignored, the server status no longer counts it",
+  "svc.unignoredDone": "{unit}: counted in the server status again",
+  "svc.ignoreHint": "An ignored failed service does not affect the server status or the dashboard counters. Needs agent 0.1.20 or newer."
 }

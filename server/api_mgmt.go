@@ -83,6 +83,52 @@ func (a *Admin) servicesList(w http.ResponseWriter, r *http.Request, _ *store.Us
 	a.proxyCall(w, r, "services", "list", nil, 30*time.Second)
 }
 
+// servicesIgnored returns the units whose failure does not count towards the server status.
+func (a *Admin) servicesIgnored(w http.ResponseWriter, r *http.Request, _ *store.User) {
+	s := a.serverOr404(w, r)
+	if s == nil {
+		return
+	}
+	list, err := a.DB.IgnoredServices(r.Context(), s.ID)
+	if err != nil {
+		jsonErr(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ignored": list})
+}
+
+// servicesIgnore adds a unit to the ignore list or removes it.
+func (a *Admin) servicesIgnore(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s := a.serverOr404(w, r)
+	if s == nil {
+		return
+	}
+	var req struct {
+		Unit   string `json:"unit"`
+		Ignore bool   `json:"ignore"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	if req.Unit == "" || len(req.Unit) > 256 || strings.ContainsAny(req.Unit, " \t\n/") {
+		jsonErr(w, http.StatusBadRequest, "invalid unit")
+		return
+	}
+	if err := a.DB.SetServiceIgnored(r.Context(), s.ID, req.Unit, req.Ignore); err != nil {
+		jsonErr(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	list, _ := a.DB.IgnoredServices(r.Context(), s.ID)
+	a.Metrics.SetIgnored(r.Context(), s.ID, list)
+	action := "service.ignore"
+	if !req.Ignore {
+		action = "service.unignore"
+	}
+	a.audit(r, u, action, "server", s.ID, s.Name, "ok", map[string]any{"unit": req.Unit})
+	a.Live.Publish("dashboard", map[string]any{})
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
 func (a *Admin) aptList(w http.ResponseWriter, r *http.Request, _ *store.User) {
 	a.proxyCall(w, r, "apt", "list", nil, 90*time.Second)
 }

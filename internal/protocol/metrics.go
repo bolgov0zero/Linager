@@ -44,6 +44,7 @@ type Sample struct {
 	Uptime          int64      `json:"uptime"`
 	BootTime        int64      `json:"boot_time"`
 	FailedServices  int        `json:"failed_services"`
+	FailedUnits     []string   `json:"failed_units,omitempty"` // names of the failed units; the server may subtract ignored ones from the count
 	RebootRequired  bool       `json:"reboot_required"`
 	Updates         int        `json:"updates"` // -1 = unknown
 	SecurityUpdates int        `json:"security_updates"`

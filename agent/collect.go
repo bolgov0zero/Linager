@@ -161,6 +161,7 @@ type linuxCollector struct {
 	slow struct { // values refreshed outside the 5 s loop
 		sync.Mutex
 		failed   int
+		failedN  []string
 		updates  int
 		security int
 	}
@@ -210,13 +211,22 @@ func (c *linuxCollector) updateFailed(ctx context.Context) {
 		return
 	}
 	n := 0
+	var names []string
 	for _, l := range bytes.Split(out, []byte("\n")) {
-		if len(bytes.TrimSpace(l)) > 0 {
-			n++
+		f := strings.Fields(string(l))
+		if len(f) == 0 {
+			continue
 		}
+		n++
+		// the unit name is the first word; a leading bullet marks failed units on some systemd versions
+		name := f[0]
+		if (name == "●" || name == "*") && len(f) > 1 {
+			name = f[1]
+		}
+		names = append(names, name)
 	}
 	c.slow.Lock()
-	c.slow.failed = n
+	c.slow.failed, c.slow.failedN = n, names
 	c.slow.Unlock()
 }
 
@@ -315,6 +325,7 @@ func (c *linuxCollector) Collect(now time.Time) protocol.Sample {
 
 	c.slow.Lock()
 	s.FailedServices, s.Updates, s.SecurityUpdates = c.slow.failed, c.slow.updates, c.slow.security
+	s.FailedUnits = append([]string(nil), c.slow.failedN...)
 	c.slow.Unlock()
 	return s
 }

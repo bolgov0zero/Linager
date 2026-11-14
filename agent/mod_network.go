@@ -26,11 +26,12 @@ type netModule struct {
 	pend   *Pending
 	dir    string // agent data dir (candidate files, backups)
 	ifPath string
+	npDir  string // netplan directory
 	run    cmdRunner
 }
 
 func newNetModule(p *Pending, dir string) *netModule {
-	return &netModule{pend: p, dir: dir, ifPath: "/etc/network/interfaces", run: execRunner}
+	return &netModule{pend: p, dir: dir, ifPath: "/etc/network/interfaces", npDir: "/etc/netplan", run: execRunner}
 }
 
 type ipAddrInfo struct {
@@ -235,7 +236,13 @@ func (m *netModule) state(ctx context.Context, _ json.RawMessage, _ bool) (any, 
 	for _, r := range routes {
 		rl = append(rl, map[string]any{"dst": r.Dst, "gateway": r.Gateway, "dev": r.Dev, "metric": r.Metric, "protocol": r.Protocol})
 	}
-	return map[string]any{"backend": backend, "editable": backend == "ifupdown", "interfaces": ifs, "dns": dns, "routes": rl, "config_preview": preview}, nil
+	st := map[string]any{"backend": backend, "editable": backend == "ifupdown", "config_editable": backend == "ifupdown" || backend == "netplan",
+		"interfaces": ifs, "dns": dns, "routes": rl, "config_preview": preview}
+	if backend == "netplan" {
+		st["netplan_files"] = m.netplanFiles()
+		st["netplan_effective"] = m.netplanEffective(ctx)
+	}
+	return st, nil
 }
 
 type netPendingData struct {
@@ -243,6 +250,12 @@ type netPendingData struct {
 	Old    string   `json:"old"`
 	Ifaces []string `json:"ifaces"`
 	Up     []bool   `json:"up"`
+
+	// netplan: one file replaced in place, the backup is restored on rollback
+	Netplan   bool   `json:"netplan,omitempty"`
+	NpPath    string `json:"np_path,omitempty"`
+	NpBak     string `json:"np_bak,omitempty"`
+	NpExisted bool   `json:"np_existed,omitempty"`
 }
 
 func validateNetChange(c NetChange) error {
@@ -278,12 +291,17 @@ func (m *netModule) apply(ctx context.Context, raw json.RawMessage, dangerous bo
 	var p struct {
 		ID      string      `json:"id"`
 		Changes []NetChange `json:"changes"`
-		Raw     *string     `json:"raw"` // the whole interfaces file, edited by hand
+		Raw     *string     `json:"raw"`  // the whole interfaces / netplan file, edited by hand
+		File    string      `json:"file"` // netplan file name (netplan backend only)
 	}
 	if err := json.Unmarshal(raw, &p); err != nil || p.ID == "" || (p.Raw == nil && len(p.Changes) == 0) {
 		return nil, errors.New("invalid request")
 	}
-	if m.backend() != "ifupdown" {
+	backend := m.backend()
+	if backend == "netplan" && p.Raw != nil && p.File != "" {
+		return m.applyNetplan(ctx, p.ID, p.File, *p.Raw)
+	}
+	if backend != "ifupdown" {
 		return nil, errors.New("network editing is not available on this system")
 	}
 	old := read(m.ifPath)
@@ -398,6 +416,9 @@ func (m *netModule) kind() PendingKind {
 			if err := json.Unmarshal(raw, &d); err != nil {
 				return err
 			}
+			if d.Netplan {
+				return m.netplanRollback(d)
+			}
 			ctx := context.Background()
 			var firstErr error
 			for _, ifc := range d.Ifaces {
@@ -415,6 +436,9 @@ func (m *netModule) kind() PendingKind {
 			var d netPendingData
 			if err := json.Unmarshal(raw, &d); err != nil {
 				return err
+			}
+			if d.Netplan {
+				return m.netplanCommit(d)
 			}
 			cand, err := os.ReadFile(d.Cand) //nolint:gosec // our own candidate file
 			if err != nil {

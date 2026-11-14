@@ -88,5 +88,7 @@
   "audit.action.group.rename": "Группа: переименование",
   "audit.action.group.delete": "Группа: удаление",
   "audit.action.group.assign": "Группа: назначение серверу",
-  "audit.action.network.config.apply": "Сеть: правка конфигурации"
+  "audit.action.network.config.apply": "Сеть: правка конфигурации",
+  "audit.action.service.ignore": "Служба: игнорировать",
+  "audit.action.service.unignore": "Служба: не игнорировать"
 }

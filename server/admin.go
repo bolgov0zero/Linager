@@ -99,6 +99,8 @@ func (a *Admin) Handler() http.Handler {
 	mux.HandleFunc("POST /api/updates/agents", a.auth(a.updatesAgents))
 	mux.HandleFunc("GET /api/audit", a.auth(a.auditList))
 	mux.HandleFunc("GET /api/servers/{id}/services", a.auth(a.servicesList))
+	mux.HandleFunc("GET /api/servers/{id}/services-ignored", a.auth(a.servicesIgnored))
+	mux.HandleFunc("PUT /api/servers/{id}/services-ignored", a.auth(a.servicesIgnore))
 	mux.HandleFunc("POST /api/servers/{id}/services/{unit}/{action}", a.auth(a.serviceAction))
 	mux.HandleFunc("GET /api/servers/{id}/apt", a.auth(a.aptList))
 	mux.HandleFunc("POST /api/servers/{id}/reboot", a.auth(a.reboot))

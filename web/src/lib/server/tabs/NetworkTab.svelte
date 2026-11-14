@@ -281,11 +281,48 @@
   let editingConfig = $state(false);
   let configText = $state('');
   let confirmConfig = $state(false);
+  let showEffective = $state(false);
+  /** netplan: the file being edited and whether it is a new one. */
+  let npFile = $state('');
+  let npNew = $state(false);
+  let newName = $state('');
+
+  const isNetplan = $derived(info?.backend === 'netplan');
+  const canEditConfig = $derived(info?.config_editable ?? editable);
+  const npFiles = $derived(info?.netplan_files ?? []);
+  const npCurrent = $derived(npFiles.find((f) => f.name === npFile) ?? null);
+  const originalText = $derived(isNetplan ? (npCurrent?.text ?? '') : (info?.config_preview ?? ''));
+  const fileNameOk = $derived(!npNew || /^[A-Za-z0-9][A-Za-z0-9._-]{0,60}\.yaml$/.test(newName));
+
+  /** The file most likely to hold the primary interface; later files override earlier ones, so the last match wins. */
+  function defaultNetplanFile(): string {
+    const primary = info?.interfaces.find((i) => i.primary)?.name;
+    const matching = primary ? npFiles.filter((f) => new RegExp(`\\b${primary}\\b`).test(f.text)) : [];
+    return (matching.at(-1) ?? npFiles.at(-1))?.name ?? '';
+  }
+
+  function pickFile(name: string) {
+    npFile = name;
+    npNew = false;
+    configText = npFiles.find((f) => f.name === name)?.text ?? '';
+  }
+
+  function startNewFile() {
+    npNew = true;
+    npFile = '';
+    newName = t('net.config.newFileDefault');
+    configText = 'network:\n  version: 2\n';
+  }
 
   function startConfigEdit() {
-    configText = info?.config_preview ?? '';
     actionError = null;
     editingConfig = true;
+    if (isNetplan) {
+      if (npFiles.length === 0) startNewFile();
+      else pickFile(defaultNetplanFile());
+    } else {
+      configText = info?.config_preview ?? '';
+    }
   }
 
   async function applyConfig() {
@@ -294,7 +331,7 @@
     actionError = null;
     confirmConfig = false;
     try {
-      await api.networkApplyConfig(serverId, configText);
+      await api.networkApplyConfig(serverId, configText, isNetplan ? (npNew ? newName : npFile) : undefined);
       editingConfig = false;
       await load(serverId);
     } catch (e) {
@@ -627,7 +664,7 @@
       <div class="head">
         <h2>{$tr('net.config.title')}</h2>
         <div class="row">
-          {#if editable && !editingConfig}
+          {#if canEditConfig && !editingConfig}
             <button class="btn" type="button" disabled={busy || pending !== null} onclick={startConfigEdit}
               >{$tr('net.config.edit')}</button
             >
@@ -640,7 +677,33 @@
         </div>
       </div>
       {#if editingConfig}
-        <p class="small muted">{$tr('net.config.hint')}</p>
+        <p class="small muted">{$tr(isNetplan ? 'net.config.hintNetplan' : 'net.config.hint')}</p>
+        {#if isNetplan}
+          <div class="row">
+            {#if npNew}
+              <input
+                class="input mono grow"
+                maxlength="64"
+                placeholder={$tr('net.config.newFileName')}
+                aria-label={$tr('net.config.newFileName')}
+                bind:value={newName} />
+            {:else}
+              <Select
+                size="sm"
+                value={npFile}
+                ariaLabel={$tr('net.config.file')}
+                options={npFiles.map((f) => ({ value: f.name, label: f.name }))}
+                onchange={pickFile} />
+            {/if}
+            <button class="btn" type="button" disabled={npNew} onclick={startNewFile}>{$tr('net.config.newFile')}</button>
+          </div>
+          {#if !fileNameOk}
+            <p class="error" role="alert">{$tr('net.config.fileInvalid')}</p>
+          {/if}
+          {#if npCurrent?.cloud_init}
+            <p class="banner" role="status">{$tr('net.config.cloudInit')}</p>
+          {/if}
+        {/if}
         <textarea
           class="input mono config-edit"
           rows="22"
@@ -657,12 +720,26 @@
           <button
             class="btn primary"
             type="button"
-            disabled={busy || configText.trim() === '' || configText.trim() === (info.config_preview ?? '').trim()}
+            disabled={busy || !fileNameOk || configText.trim() === '' || configText.trim() === originalText.trim()}
             onclick={() => (confirmConfig = true)}>{$tr('net.config.apply')}</button
           >
         </div>
       {:else if showConfig}
         <pre class="config mono">{info.config_preview}</pre>
+      {/if}
+      {#if isNetplan}
+        <div class="row">
+          <button class="btn" type="button" onclick={() => (showEffective = !showEffective)}
+            >{showEffective ? $tr('net.config.effectiveHide') : $tr('net.config.effective')}</button
+          >
+        </div>
+        {#if showEffective}
+          {#if info.netplan_effective}
+            <pre class="config mono">{info.netplan_effective}</pre>
+          {:else}
+            <p class="small muted">{$tr('net.config.effectiveEmpty')}</p>
+          {/if}
+        {/if}
       {/if}
     </section>
   {/if}
@@ -708,6 +785,11 @@
 {/if}
 
 <style>
+  .grow {
+    flex: 1 1 200px;
+    min-width: 0;
+  }
+
   .config-edit {
     width: 100%;
     resize: vertical;

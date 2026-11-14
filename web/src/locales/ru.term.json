@@ -61,6 +61,8 @@
   "termwin.minimize": "Свернуть",
   "termwin.maximize": "Развернуть",
   "termwin.restore": "Восстановить",
-  "termwin.close": "Закрыть терминал",
-  "termwin.dock": "Открытые терминалы"
+  "termwin.close": "Закрыть",
+  "termwin.dock": "Открытые окна",
+  "edwin.limit": "Открыто слишком много редакторов (не больше 8)",
+  "termwin.openWindow": "В окне"
 }
