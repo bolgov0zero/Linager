@@ -2,6 +2,7 @@
   import type { ServerCard } from '../../api';
   import { tr } from '../../i18n';
   import { openTermWindow } from '../terminal/windows';
+  import CardIcon from './CardIcon.svelte';
   import Segments from '../ui/Segments.svelte';
   import Spark from '../ui/Spark.svelte';
   import EditBar from './EditBar.svelte';
@@ -19,6 +20,7 @@
     onopen,
     onmove,
     onremove,
+    ondelete,
   }: {
     card: ServerCard;
     /** Agent update state from the updates API. */
@@ -30,6 +32,8 @@
     onopen: (name: string, tab?: string) => void;
     onmove: (dir: -1 | 1) => void;
     onremove: () => void;
+    /** Delete the server from the admin panel altogether (the owner asks for confirmation). */
+    ondelete: () => void;
   } = $props();
 
   const level = $derived(levelOf(card));
@@ -89,8 +93,9 @@
   <footer class="foot">
     <span class="small mono muted">{footText}</span>
     <div class="row end">
-      <button class="btn" type="button" disabled={!card.online} onclick={() => openTermWindow(card.id, card.name)}>{$tr('dash.terminal')}</button>
-      <button class="btn" type="button" onclick={() => onopen(card.name)}>{$tr('dash.open')}</button>
+      <button class="btn ic" type="button" title={$tr('dash.terminal')} aria-label={$tr('dash.terminal')} disabled={!card.online} onclick={() => openTermWindow(card.id, card.name)}><CardIcon name="terminal" /></button>
+      <button class="btn ic" type="button" title={$tr('dash.open')} aria-label={$tr('dash.open')} onclick={() => onopen(card.name)}><CardIcon name="open" /></button>
+      <button class="btn ic del" type="button" title={$tr('dash.deleteServer')} aria-label={$tr('dash.deleteServer')} onclick={ondelete}><CardIcon name="trash" /></button>
     </div>
   </footer>
 </article>
@@ -219,5 +224,18 @@
   .foot .btn {
     padding: 4px 10px;
     font-size: 13px;
+  }
+
+  /* Icon buttons: the same height as text buttons, square-ish. */
+  .foot .btn.ic {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+  }
+
+  .foot .btn.del:hover:not(:disabled) {
+    color: var(--crit);
+    border-color: var(--crit);
   }
 </style>

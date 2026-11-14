@@ -94,5 +94,6 @@
   "audit.action.files.rename": "Файлы: переименование",
   "audit.action.files.copy": "Файлы: копирование",
   "audit.action.files.move": "Файлы: перемещение",
-  "audit.action.files.zip": "Файлы: скачивание zip"
+  "audit.action.files.zip": "Файлы: скачивание zip",
+  "audit.action.update.cache.prune": "Обновления: очистка кеша"
 }

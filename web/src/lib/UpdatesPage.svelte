@@ -8,7 +8,7 @@
   import CachePanel from './updates/CachePanel.svelte';
   import AgentsPanel from './updates/AgentsPanel.svelte';
   import HistoryPanel from './updates/HistoryPanel.svelte';
-  import { errorText } from './updates/format';
+  import { errorText, fmtBytes } from './updates/format';
 
   let { onBack, onchanged }: { onBack: () => void; onchanged?: () => void } = $props();
 
@@ -148,6 +148,22 @@
     }
   }
 
+  let pruning = $state(false);
+
+  async function prune(): Promise<void> {
+    pruning = true;
+    try {
+      const next = await api.updatesCachePrune();
+      applyInfo(next);
+      const done = next.pruned;
+      if (done) showToast(say('upd.cache.pruneDone', { n: done.count, size: fmtBytes(done.bytes, get(trans)) }));
+    } catch (error) {
+      showToast(say('upd.err.prune', { error: errorText(error) }));
+    } finally {
+      pruning = false;
+    }
+  }
+
   async function prefetch(version: string): Promise<void> {
     prefetching = version;
     try {
@@ -204,7 +220,7 @@
         onchannel={changeChannel}
         onupdate={startServerUpdate}
       />
-      <CachePanel cache={info.cache} {prefetching} onprefetch={prefetch} />
+      <CachePanel cache={info.cache} prunable={info.cache_prunable ?? 0} {pruning} {prefetching} onprefetch={prefetch} onprune={prune} />
     </div>
 
     <AgentsPanel {info} onrun={runAgents} />

@@ -157,5 +157,6 @@
   "app.updates": "Обновления",
   "app.audit": "Журнал",
   "dash.view.map": "Карта",
-  "dash.menu": "Действия с сервером"
+  "dash.menu": "Действия с сервером",
+  "dash.deleteServer": "Удалить сервер"
 }

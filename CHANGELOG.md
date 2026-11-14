@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.25
+
+- Dashboard map: bigger tiles with the address, three metrics with mini bars (CPU, RAM, disk), network with coloured arrows, uptime and an event badge (also "no issues"); six tiles per row on wide screens; long press opens the menu on touch screens.
+- Dashboard map menu: "Delete server" removes the server from the admin panel (with the usual confirmation); choosing the group is available only in edit mode.
+- Dashboard cards: the buttons are pixel icons (terminal, open) plus a trash button that deletes the server from the admin panel (with confirmation).
+- Updates: "Delete old" removes cached releases except the newest one and the version the server runs (refused while an update or rollout is running).
+
 ## 0.1.24
 
 - Dashboard: only the server list scrolls, the summary and the filters stay in place (screens wider than 720 px).

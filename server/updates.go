@@ -265,6 +265,22 @@ func (u *Updates) Available() string {
 	return ""
 }
 
+// PruneCache deletes cached releases except the newest one and the version this server runs (agents are served
+// from it). It refuses while a server update or an agent rollout is running.
+func (u *Updates) PruneCache() (removed []string, freed int64, err error) {
+	if st := updater.ReadStatus(updater.StatusFile(u.Cfg.DataDir)); st.State == "running" {
+		return nil, 0, errors.New("a server update is running")
+	}
+	u.mu.Lock()
+	busy := u.ro != nil && u.ro.state == "running"
+	u.mu.Unlock()
+	if busy {
+		return nil, 0, errors.New("an agent rollout is running")
+	}
+	removed, freed = update.PruneCached(u.Key, u.Cache, version.Version)
+	return removed, freed, nil
+}
+
 // Prefetch downloads and verifies a release into the cache.
 func (u *Updates) Prefetch(ctx context.Context, ver string) (*update.Cached, error) {
 	if c, err := update.LoadCached(u.Key, u.Cache, ver); err == nil {
@@ -705,7 +721,11 @@ func (u *Updates) Overview(ctx context.Context) map[string]any {
 	}
 	cache := []map[string]any{}
 	have := map[string]bool{}
-	for _, c := range update.ListCached(u.Key, u.Cache) {
+	prunable := 0
+	for i, c := range update.ListCached(u.Key, u.Cache) {
+		if i > 0 && c.Version != "v"+trimV(version.Version) {
+			prunable++
+		}
 		have[c.Version] = true
 		cache = append(cache, map[string]any{"version": c.Version, "size": c.Size, "downloaded_at": c.Time.Unix(), "verified": true, "downloaded": true})
 	}
@@ -719,7 +739,7 @@ func (u *Updates) Overview(ctx context.Context) map[string]any {
 		minAgent = c.Manifest.MinAgent
 	}
 	return map[string]any{"channel": u.Channel(), "server": server, "cache": cache, "agents": agents, "rollout": u.RolloutInfo(),
-		"history": hist, "min_agent": minAgent, "agents_target": version.Version, "latest_known": nilIfEmpty(latest.Tag)}
+		"cache_prunable": prunable, "history": hist, "min_agent": minAgent, "agents_target": version.Version, "latest_known": nilIfEmpty(latest.Tag)}
 }
 
 func trimV(s string) string {

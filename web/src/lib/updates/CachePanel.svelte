@@ -1,18 +1,28 @@
 <script lang="ts">
   import type { UpdatesInfo } from '../../api';
   import { locale, tr as trans } from '../../i18n';
+  import Modal from '../Modal.svelte';
   import { fmtBytes, fmtDate } from './format';
 
   let {
     cache,
+    prunable,
+    pruning,
     prefetching,
     onprefetch,
+    onprune,
   }: {
     cache: UpdatesInfo['cache'];
+    /** Cached releases that "delete old" would remove. */
+    prunable: number;
+    pruning: boolean;
+    onprune: () => void;
     /** Version currently being downloaded, or null. */
     prefetching: string | null;
     onprefetch: (version: string) => void;
   } = $props();
+
+  let confirming = $state(false);
 </script>
 
 <section class="upd-panel">
@@ -62,5 +72,29 @@
     </table>
   </div>
 
+  {#if prunable > 0}
+    <div class="row end">
+      <button class="btn sm" type="button" disabled={pruning || prefetching !== null} onclick={() => (confirming = true)}>
+        {$trans('upd.cache.prune', { n: prunable })}
+      </button>
+    </div>
+  {/if}
+
   <p class="upd-hint">{$trans('upd.cache.note')}</p>
 </section>
+
+{#if confirming}
+  <Modal title={$trans('upd.cache.pruneTitle')} labelId="upd-prune-title" onclose={() => (confirming = false)}>
+    <p>{$trans('upd.cache.pruneText', { n: prunable })}</p>
+    <div class="row end">
+      <button class="btn" type="button" onclick={() => (confirming = false)}>{$trans('common.cancel')}</button>
+      <button
+        class="btn danger"
+        type="button"
+        onclick={() => {
+          confirming = false;
+          onprune();
+        }}>{$trans('upd.cache.pruneConfirm')}</button>
+    </div>
+  </Modal>
+{/if}

@@ -94,5 +94,6 @@
   "audit.action.files.rename": "Files: rename",
   "audit.action.files.copy": "Files: copy",
   "audit.action.files.move": "Files: move",
-  "audit.action.files.zip": "Files: zip download"
+  "audit.action.files.zip": "Files: zip download",
+  "audit.action.update.cache.prune": "Updates: clean the cache"
 }

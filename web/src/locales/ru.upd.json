@@ -111,5 +111,11 @@
   "upd.toast.found": "Найдена версия {version}",
   "upd.toast.none": "Новых версий нет",
   "upd.err.request": "Не удалось выполнить: {error}",
-  "upd.err.prefetch": "Не удалось загрузить релиз: {error}"
+  "upd.err.prefetch": "Не удалось загрузить релиз: {error}",
+  "upd.cache.prune": "Удалить старые ({n})",
+  "upd.cache.pruneTitle": "Удалить старые релизы из кеша?",
+  "upd.cache.pruneText": "Будут удалены релизы из кеша, кроме самого нового и версии, на которой работает сервер: {n}. Если они понадобятся, их можно скачать снова.",
+  "upd.cache.pruneConfirm": "Удалить",
+  "upd.cache.pruneDone": "Удалено релизов: {n}, освобождено {size}",
+  "upd.err.prune": "Не удалось очистить кеш: {error}"
 }

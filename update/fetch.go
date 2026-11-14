@@ -192,3 +192,44 @@ func ListCached(key *release.Key, cacheDir string) []Cached {
 	sort.Slice(out, func(i, j int) bool { return release.Newer(out[i].Version, out[j].Version) })
 	return out
 }
+
+// PruneCached removes cached releases: everything except the newest verified one and the versions in keep.
+// Directories that do not verify are removed too; hidden ones (downloads in progress) are left alone.
+// It returns the removed versions and the bytes freed.
+func PruneCached(key *release.Key, cacheDir string, keep ...string) (removed []string, freed int64) {
+	good := ListCached(key, cacheDir)
+	keepSet := map[string]bool{}
+	for _, k := range keep {
+		keepSet[normVersion(k)] = true
+	}
+	if len(good) > 0 {
+		keepSet[good[0].Version] = true
+	}
+	ents, _ := os.ReadDir(cacheDir)
+	for _, e := range ents {
+		if !e.IsDir() || strings.HasPrefix(e.Name(), ".") || keepSet[normVersion(e.Name())] {
+			continue
+		}
+		dir := filepath.Join(cacheDir, e.Name())
+		size := dirSize(dir)
+		if err := os.RemoveAll(dir); err != nil {
+			continue
+		}
+		removed = append(removed, e.Name())
+		freed += size
+	}
+	return removed, freed
+}
+
+func dirSize(dir string) int64 {
+	var n int64
+	_ = filepath.WalkDir(dir, func(_ string, d os.DirEntry, err error) error {
+		if err == nil && !d.IsDir() {
+			if info, ierr := d.Info(); ierr == nil {
+				n += info.Size()
+			}
+		}
+		return nil
+	})
+	return n
+}

@@ -157,5 +157,6 @@
   "app.updates": "Updates",
   "app.audit": "Audit log",
   "dash.view.map": "Map",
-  "dash.menu": "Server actions"
+  "dash.menu": "Server actions",
+  "dash.deleteServer": "Delete server"
 }

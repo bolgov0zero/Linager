@@ -67,6 +67,30 @@ func (a *Admin) updatesCache(w http.ResponseWriter, r *http.Request, u *store.Us
 	writeJSON(w, http.StatusOK, a.Updates.Overview(r.Context()))
 }
 
+// updatesCachePrune deletes cached releases except the newest one and the current version.
+func (a *Admin) updatesCachePrune(w http.ResponseWriter, r *http.Request, u *store.User) {
+	var req struct {
+		Confirm bool `json:"confirm"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	if !req.Confirm {
+		needConfirm(w)
+		return
+	}
+	removed, freed, err := a.Updates.PruneCache()
+	if err != nil {
+		a.audit(r, u, "update.cache.prune", "system", "", "", "failed", map[string]any{"error": err.Error()})
+		jsonErr(w, http.StatusConflict, err.Error())
+		return
+	}
+	a.audit(r, u, "update.cache.prune", "system", "", "", "ok", map[string]any{"removed": removed, "bytes": freed})
+	out := a.Updates.Overview(r.Context())
+	out["pruned"] = map[string]any{"count": len(removed), "bytes": freed}
+	writeJSON(w, http.StatusOK, out)
+}
+
 func (a *Admin) updatesServer(w http.ResponseWriter, r *http.Request, u *store.User) {
 	var req struct {
 		Version string `json:"version"`

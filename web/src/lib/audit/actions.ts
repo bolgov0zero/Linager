@@ -9,7 +9,7 @@ export const KNOWN_ACTIONS: ReadonlySet<string> = new Set([
   'firewall.apply', 'firewall.confirm', 'firewall.rollback', 'firewall.draft.save', 'firewall.draft.reset',
   'docker.container.start', 'docker.container.stop', 'docker.container.restart', 'docker.container.remove',
   'docker.image.remove',
-  'update.check', 'update.channel', 'update.prefetch', 'update.server', 'update.agents',
+  'update.check', 'update.channel', 'update.prefetch', 'update.cache.prune', 'update.server', 'update.agents',
   'stream.open', 'stream.close',
   'metrics.export',
   'dashboard.add', 'dashboard.remove', 'dashboard.reorder',

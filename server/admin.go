@@ -95,6 +95,7 @@ func (a *Admin) Handler() http.Handler {
 	mux.HandleFunc("POST /api/updates/check", a.auth(a.updatesCheck))
 	mux.HandleFunc("PUT /api/updates/channel", a.auth(a.updatesChannel))
 	mux.HandleFunc("POST /api/updates/cache", a.auth(a.updatesCache))
+	mux.HandleFunc("POST /api/updates/cache/prune", a.auth(a.updatesCachePrune))
 	mux.HandleFunc("POST /api/updates/server", a.auth(a.updatesServer))
 	mux.HandleFunc("POST /api/updates/agents", a.auth(a.updatesAgents))
 	mux.HandleFunc("GET /api/audit", a.auth(a.auditList))

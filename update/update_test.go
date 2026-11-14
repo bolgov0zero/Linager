@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -138,5 +139,33 @@ func TestDownloadRejectsTamperingAndForeignKeys(t *testing.T) {
 	}
 	if ents, _ := os.ReadDir(empty); len(ents) != 0 {
 		t.Fatal("nothing may be left in the cache after a failed download")
+	}
+}
+
+func TestPruneCachedKeepsNewestAndKept(t *testing.T) {
+	r := newFakeRepo(t)
+	for _, v := range []string{"v0.1.0", "v0.1.1", "v0.1.2", "v0.1.3"} {
+		r.publish(v, false, "#!/bin/sh\necho "+v+"\n", false)
+	}
+	rels, _ := URL(r.srv.URL).Releases(context.Background())
+	dir := t.TempDir()
+	for _, rel := range rels {
+		if _, err := Download(context.Background(), rel, r.key, dir); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.MkdirAll(filepath.Join(dir, ".download-x"), 0o750); err != nil { // a download in progress
+		t.Fatal(err)
+	}
+	removed, freed := PruneCached(r.key, dir, "v0.1.1") // v0.1.1 is the running version
+	if len(removed) != 2 || freed == 0 {
+		t.Fatalf("removed %v, freed %d", removed, freed)
+	}
+	left := ListCached(r.key, dir)
+	if len(left) != 2 || left[0].Version != "v0.1.3" || left[1].Version != "v0.1.1" {
+		t.Fatalf("left: %+v", left)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".download-x")); err != nil {
+		t.Fatal("a download in progress must not be touched")
 	}
 }

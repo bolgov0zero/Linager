@@ -172,6 +172,10 @@ export interface UpdatesInfo {
     last_backup: number; source: string; can_update: boolean; update_run: ServerUpdateRun;
   };
   cache: { version: string; size: number; downloaded_at: number; verified: boolean; downloaded: boolean }[];
+  /** Cached releases that "delete old" would remove (all but the newest and the running version). */
+  cache_prunable?: number;
+  /** Present in the answer of the prune call. */
+  pruned?: { count: number; bytes: number };
   agents: AgentUpdateRow[];
   rollout: { state: 'running' | 'done' | 'stopped'; mode: RolloutMode; stop_on_error: boolean; version: string } | null;
   history: UpdateHistoryRow[];
@@ -424,6 +428,7 @@ export const api = {
   updatesCheck: () => request<UpdatesInfo>('POST', 'api/updates/check'),
   updatesChannel: (channel: 'stable' | 'beta') => request<UpdatesInfo>('PUT', 'api/updates/channel', { channel }),
   /** Download and verify a release into the server cache ahead of time. */
+  updatesCachePrune: () => request<UpdatesInfo>('POST', 'api/updates/cache/prune', { confirm: true }),
   updatesPrefetch: (version: string) => request<UpdatesInfo>('POST', 'api/updates/cache', { version }),
   /** Starts the server update (backup, replace, migrate, restart); the panel is unreachable for a short time. */
   updatesServer: (version: string) => request<{ ok: boolean }>('POST', 'api/updates/server', { version, confirm: true }),

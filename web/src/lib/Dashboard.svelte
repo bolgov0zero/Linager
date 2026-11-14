@@ -4,11 +4,14 @@
   import { locale, t, tr } from '../i18n';
   import { subscribeLive } from '../live';
   import CardView from './dashboard/CardView.svelte';
-  import { pluralForm } from './dashboard/format';
+  import { fmtAgo, fmtRate, fmtUptime, pluralForm, type Units } from './dashboard/format';
   import GroupsModal from './dashboard/GroupsModal.svelte';
   import Summary from './dashboard/Summary.svelte';
-  import { levelOf, summarize, type AgentFlag } from './dashboard/status';
+  import Tags from './dashboard/Tags.svelte';
+  import { levelOf, summarize, tagsOf, toneOfPct, type AgentFlag } from './dashboard/status';
   import ContextMenu, { type MenuItem } from './ui/ContextMenu.svelte';
+  import DeleteServerModal from './DeleteServerModal.svelte';
+  import Segments from './ui/Segments.svelte';
   import Select from './ui/Select.svelte';
   import { openTermWindow } from './terminal/windows';
   import { showToast } from './toast';
@@ -259,9 +262,22 @@
     storeView(next);
   }
 
+  // ---- map tiles ----
+
+  const units = $derived<Units>({ d: $tr('dash.unit.d'), h: $tr('dash.unit.h'), min: $tr('dash.unit.min') });
+
+  /** Uptime of an online server, or how long an offline one has been silent. */
+  function uptimeText(card: ServerCard): string {
+    if (card.online) return card.sample ? $tr('dash.uptime', { v: fmtUptime(card.sample.uptime, units) }) : '';
+    const ago = fmtAgo(card.last_seen_at, now, units);
+    return ago ? $tr('dash.offlineFor', { v: ago }) : $tr('dash.offline');
+  }
+
   // ---- context menu of a map tile ----
 
   let menu = $state<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  /** The server whose full deletion (from the admin panel) waits for confirmation. */
+  let deleting = $state<ServerCard | null>(null);
 
   // Long press (touch and pen) opens the same menu; the click that follows the press must not open the server.
   const LONG_PRESS_MS = 500;
@@ -309,7 +325,8 @@
       { key: 'term', label: $tr('dash.terminal'), disabled: !card.online, onselect: () => openTermWindow(card.id, card.name) },
       { key: 'open', label: $tr('dash.open'), onselect: () => onopen(card.name) },
     ];
-    if (groups.length > 0) {
+    // Choosing the group of a server is part of editing the dashboard.
+    if (editing && groups.length > 0) {
       for (const g of groups) {
         items.push({
           key: `g${g.id}`,
@@ -322,7 +339,7 @@
         items.push({ key: 'g0', label: `${$tr('dash.group.label')}: ${$tr('dash.group.none')}`, onselect: () => void setCardGroup(card, '0') });
       }
     }
-    items.push({ key: 'remove', label: $tr('dash.remove'), danger: true, separated: true, onselect: () => void removeCard(card) });
+    items.push({ key: 'delete', label: $tr('dash.deleteServer'), danger: true, separated: true, onselect: () => (deleting = card) });
     menu = { x, y, items };
   }
 
@@ -523,7 +540,8 @@
               count={visible.length}
               {onopen}
               onmove={(dir) => move(card.id, dir)}
-              onremove={() => void removeCard(card)} />
+              onremove={() => void removeCard(card)}
+              ondelete={() => (deleting = card)} />
             {#if editing && groups.length > 0}
               <div class="pick">
                 <Select size="sm" value={String(card.group_id ?? 0)} options={cardGroupOptions} ariaLabel={$tr('dash.group.label')} onchange={(v) => void setCardGroup(card, v)} />
@@ -557,7 +575,24 @@
             ondrop={(e) => onDrop(e, card.id)}
             ondragend={onDragEnd}>
             <b class="tname">{card.name}</b>
-            <span class="tsub">{sample ? `c ${Math.round(sample.cpu)}% · r ${Math.round(sample.mem_pct)}%` : $tr('dash.tag.offline')}</span>
+            <span class="tsub mono">{card.address}</span>
+            {#if sample}
+              <div class="tmeters">
+                {#each [['dash.cpu', sample.cpu], ['dash.ram', sample.mem_pct], ['dash.disk', sample.disk_pct]] as [key, value] (key)}
+                  <div class="tmeter">
+                    <span class="tlbl">{$tr(String(key))}</span>
+                    <span class="tval mono {toneOfPct(Number(value))}">{Math.round(Number(value))}%</span>
+                    <span class="tbar"><Segments value={Number(value)} segments={10} /></span>
+                  </div>
+                {/each}
+              </div>
+              <div class="tnet mono">
+                <span><b class="rx" aria-hidden="true">↓</b> {fmtRate(sample.rx_bps)}</span>
+                <span><b class="tx" aria-hidden="true">↑</b> {fmtRate(sample.tx_bps)}</span>
+              </div>
+            {/if}
+            <span class="tsub mono tup">{uptimeText(card)}</span>
+            <div class="ttags"><Tags tags={tagsOf(card, agentFlags[card.id] ?? null)} /></div>
           </div>
         {/each}
       </div>
@@ -565,6 +600,21 @@
     {/if}
   {/if}
 </section>
+
+{#if deleting}
+  <DeleteServerModal
+    server={deleting}
+    onclose={() => (deleting = null)}
+    ondeleted={() => {
+      const gone = deleting;
+      deleting = null;
+      if (gone) items = items.filter((c) => c.id !== gone.id);
+      showToast(t('srv.deleted'));
+      void load();
+    }}
+    {onauthlost}
+  />
+{/if}
 
 {#if menu}
   <ContextMenu x={menu.x} y={menu.y} items={menu.items} label={$tr('dash.menu')} onclose={() => (menu = null)} />
@@ -637,15 +687,34 @@
   /* The status map: small tiles, the left edge shows the status. */
   .map {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(130px, 100%), 1fr));
-    gap: 6px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  @media (min-width: 600px) {
+    .map {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 900px) {
+    .map {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  /* Six tiles in a row on wide screens. */
+  @media (min-width: 1150px) {
+    .map {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
   }
 
   .tile {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    padding: 4px 8px;
+    padding: 6px 10px 8px;
     background: var(--surface);
     border: 2px solid var(--line);
     border-left-width: 6px;
@@ -695,9 +764,93 @@
 
   .tname {
     overflow: hidden;
+    font-size: 14px;
     font-weight: 500;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .tmeters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .tmeter {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 3px 4px;
+    align-items: baseline;
+  }
+
+  .tlbl {
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .tval {
+    font-size: 13px;
+    font-weight: 600;
+    text-align: right;
+  }
+
+  .tval.warn {
+    color: var(--warn);
+  }
+
+  .tval.crit {
+    color: var(--crit);
+  }
+
+  .tbar {
+    grid-column: 1 / -1;
+    display: block;
+  }
+
+  .tbar :global(i) {
+    height: 5px;
+  }
+
+  .tbar :global(.seg) {
+    gap: 1px;
+  }
+
+  /* Network: receive and send use the chart series colours. */
+  .tnet {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+    margin-top: 6px;
+    font-size: 12px;
+  }
+
+  .tnet b {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .tnet .rx {
+    color: var(--series-1);
+  }
+
+  .tnet .tx {
+    color: var(--series-2);
+  }
+
+  .tup {
+    margin-top: 4px;
+  }
+
+  .ttags {
+    margin-top: 6px;
+  }
+
+  .ttags :global(.tag) {
+    font-size: 11px;
+    padding: 1px 5px;
   }
 
   .tsub {

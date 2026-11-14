@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api, isUnauthorized, type Server } from '../api';
+  import { api, isUnauthorized } from '../api';
   import { t, tr } from '../i18n';
   import Modal from './Modal.svelte';
 
@@ -9,7 +9,8 @@
     ondeleted,
     onauthlost,
   }: {
-    server: Server;
+    /** A server from the server page or a card on the dashboard. */
+    server: { id: string; name: string; online: boolean };
     onclose: () => void;
     ondeleted: () => void;
     onauthlost: () => void;

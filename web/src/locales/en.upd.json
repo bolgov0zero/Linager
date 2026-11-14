@@ -111,5 +111,11 @@
   "upd.toast.found": "Version {version} found",
   "upd.toast.none": "No new versions",
   "upd.err.request": "Request failed: {error}",
-  "upd.err.prefetch": "Could not download the release: {error}"
+  "upd.err.prefetch": "Could not download the release: {error}",
+  "upd.cache.prune": "Delete old ({n})",
+  "upd.cache.pruneTitle": "Delete old releases from the cache?",
+  "upd.cache.pruneText": "Cached releases will be deleted except the newest one and the version this server runs: {n}. You can download them again if needed.",
+  "upd.cache.pruneConfirm": "Delete",
+  "upd.cache.pruneDone": "Releases deleted: {n}, freed {size}",
+  "upd.err.prune": "Could not clean the cache: {error}"
 }
