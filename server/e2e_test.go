@@ -479,7 +479,12 @@ func TestEndToEnd(t *testing.T) {
 	}
 
 	// --- deleting a client ---
-	name := servers[0].Name
+	// Re-read the name: it follows the hostname the agent reports, and the fake collector reports "h".
+	var cur struct {
+		Name string `json:"name"`
+	}
+	api.do("GET", "/api/servers/"+id, nil, &cur)
+	name := cur.Name
 	if code := api.do("DELETE", "/api/servers/"+id, map[string]any{"name": "nope", "uninstall": true}, nil); code != http.StatusUnprocessableEntity {
 		t.Fatalf("delete with wrong confirmation name: %d", code)
 	}
