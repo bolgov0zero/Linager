@@ -77,13 +77,13 @@ func (m *netModule) applyNetplan(ctx context.Context, id, name, text string) (an
 	}
 	bak := filepath.Join(m.dir, "net-"+id+".netplan.bak")
 	if existed {
-		if err := os.WriteFile(bak, oldBytes, 0o600); err != nil {
+		if err := os.WriteFile(bak, oldBytes, 0o600); err != nil { //nolint:gosec // bak is inside the agent data dir, named from the change id
 			return nil, err
 		}
 	}
 	restore := func() {
 		if existed {
-			_ = os.WriteFile(path, oldBytes, 0o600)
+			_ = os.WriteFile(path, oldBytes, 0o600) //nolint:gosec // path is /etc/netplan plus a name checked by netplanFileRe
 		} else {
 			_ = os.Remove(path)
 		}
@@ -121,7 +121,7 @@ func (m *netModule) netplanRollback(d netPendingData) error {
 		if err != nil {
 			return err
 		}
-		if err := os.WriteFile(d.NpPath, old, 0o600); err != nil {
+		if err := os.WriteFile(d.NpPath, old, 0o600); err != nil { //nolint:gosec // NpPath was built from a checked name when the change began
 			return err
 		}
 	} else {

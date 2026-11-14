@@ -21,7 +21,7 @@ func TestApplyNetplanRestoresFileWhenGenerateFails(t *testing.T) {
 	if _, err := m.applyNetplan(context.Background(), "id1", "01-netcfg.yaml", "network:\n  version: 2\n  bad: [\n"); err == nil {
 		t.Fatal("a failing netplan generate must reject the change")
 	}
-	if got, _ := os.ReadFile(path); string(got) != orig {
+	if got, _ := os.ReadFile(path); string(got) != orig { //nolint:gosec // a temp file of this test
 		t.Fatalf("the original file must be restored, got %q", got)
 	}
 	if _, err := m.applyNetplan(context.Background(), "id2", "../evil.yaml", "x: 1\n"); err == nil {
