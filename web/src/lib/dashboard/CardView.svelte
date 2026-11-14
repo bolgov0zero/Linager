@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ServerCard } from '../../api';
   import { tr } from '../../i18n';
+  import { openTermWindow } from '../terminal/windows';
   import Segments from '../ui/Segments.svelte';
   import Spark from '../ui/Spark.svelte';
   import EditBar from './EditBar.svelte';
@@ -88,7 +89,7 @@
   <footer class="foot">
     <span class="small mono muted">{footText}</span>
     <div class="row end">
-      <button class="btn" type="button" disabled={!card.online} onclick={() => onopen(card.name, 'terminal')}>{$tr('dash.terminal')}</button>
+      <button class="btn" type="button" disabled={!card.online} onclick={() => openTermWindow(card.id, card.name)}>{$tr('dash.terminal')}</button>
       <button class="btn" type="button" onclick={() => onopen(card.name)}>{$tr('dash.open')}</button>
     </div>
   </footer>

@@ -55,5 +55,12 @@
   "term.copied": "Copied",
   "term.copyFail": "Copy failed",
   "term.pasteHint": "Press Ctrl+V (or ⌘V) to paste",
-  "term.clipboardHint": "Copy: select text (Ctrl+Shift+C or ⌘C). Paste: Ctrl+Shift+V or ⌘V."
+  "term.clipboardHint": "Copy: select text (Ctrl+Shift+C or ⌘C). Paste: Ctrl+Shift+V or ⌘V.",
+  "term.limit": "Limit reached: at most 3 terminals per server",
+  "termwin.title": "Terminal · {name}",
+  "termwin.minimize": "Minimize",
+  "termwin.maximize": "Maximize",
+  "termwin.restore": "Restore",
+  "termwin.close": "Close terminal",
+  "termwin.dock": "Open terminals"
 }

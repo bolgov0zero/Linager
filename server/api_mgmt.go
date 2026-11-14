@@ -212,6 +212,9 @@ var (
 	termLimit = 3 // simultaneous terminals per server
 )
 
+// termLimitCode is the WebSocket close code sent when the terminal limit for a server is reached.
+const termLimitCode websocket.StatusCode = 4029
+
 func atoiClamp(s string, lo, hi, def int) int {
 	n, err := strconv.Atoi(s)
 	if err != nil || n < lo || n > hi {
@@ -272,7 +275,11 @@ func (a *Admin) streamWS(w http.ResponseWriter, r *http.Request, u *store.User) 
 		return
 	}
 	if module == "terminal" && !a.termSlot(s.ID, +1) {
-		jsonErr(w, http.StatusTooManyRequests, "too many open terminals")
+		// Browsers cannot read the status of a failed WebSocket handshake, so the limit is reported
+		// as close code 4029 on an accepted socket (Accept answers non-WebSocket requests itself).
+		if ws, err := websocket.Accept(w, r, nil); err == nil {
+			_ = ws.Close(termLimitCode, "too many open terminals")
+		}
 		return
 	}
 	releaseTerm := func() {

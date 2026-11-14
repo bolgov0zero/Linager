@@ -55,5 +55,12 @@
   "term.copied": "Скопировано",
   "term.copyFail": "Не удалось скопировать",
   "term.pasteHint": "Нажмите Ctrl+V (или ⌘V), чтобы вставить",
-  "term.clipboardHint": "Копирование: выделите текст (Ctrl+Shift+C или ⌘C). Вставка: Ctrl+Shift+V или ⌘V."
+  "term.clipboardHint": "Копирование: выделите текст (Ctrl+Shift+C или ⌘C). Вставка: Ctrl+Shift+V или ⌘V.",
+  "term.limit": "Достигнут лимит: не больше 3 терминалов к одному серверу",
+  "termwin.title": "Терминал · {name}",
+  "termwin.minimize": "Свернуть",
+  "termwin.maximize": "Развернуть",
+  "termwin.restore": "Восстановить",
+  "termwin.close": "Закрыть терминал",
+  "termwin.dock": "Открытые терминалы"
 }

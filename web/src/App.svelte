@@ -14,6 +14,8 @@
   import ServerPage from './lib/server/ServerPage.svelte';
   import UpdatesPage from './lib/UpdatesPage.svelte';
   import AuditPage from './lib/AuditPage.svelte';
+  import TermWindows from './lib/terminal/TermWindows.svelte';
+  import { closeAllTermWindows } from './lib/terminal/windows';
 
   type Theme = 'light' | 'dark';
   type Phase = 'loading' | 'login' | 'app';
@@ -131,6 +133,7 @@
     editing = false;
     addOpen = false;
     enrollOpen = false;
+    closeAllTermWindows();
     unsubscribeLive?.();
     unsubscribeLive = undefined;
     lastLive = null;
@@ -274,6 +277,10 @@
     onclose={() => (securityOpen = false)}
     onauthlost={endSession}
   />
+{/if}
+
+{#if session}
+  <TermWindows />
 {/if}
 
 <Toast />

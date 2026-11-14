@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ServerCard } from '../../api';
   import { tr } from '../../i18n';
+  import { openTermWindow } from '../terminal/windows';
   import EditBar from './EditBar.svelte';
   import { fmtAgo, fmtPct, fmtRate, type Units } from './format';
   import Tags from './Tags.svelte';
@@ -48,7 +49,7 @@
     <h3 class="name"><span class="sq" aria-hidden="true"></span>{card.name}</h3>
   </div>
   <div class="row acts">
-    <button class="btn" type="button" disabled={!card.online} onclick={() => onopen(card.name, 'terminal')}>{$tr('dash.terminal')}</button>
+    <button class="btn" type="button" disabled={!card.online} onclick={() => openTermWindow(card.id, card.name)}>{$tr('dash.terminal')}</button>
     <button class="btn" type="button" onclick={() => onopen(card.name)}>{$tr('dash.open')}</button>
   </div>
   <div class="metrics">

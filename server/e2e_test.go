@@ -380,6 +380,25 @@ func TestEndToEnd(t *testing.T) {
 		}
 		term.Write(b)
 	}
+	// The per-server limit (3) is reported as close code 4029, which browsers can read.
+	var extra []*websocket.Conn
+	for range 2 {
+		c, _, err := websocket.Dial(wctx, wsURL, &websocket.DialOptions{HTTPClient: api.hc})
+		if err != nil {
+			t.Fatalf("terminal websocket: %v", err)
+		}
+		extra = append(extra, c)
+	}
+	over, _, err := websocket.Dial(wctx, wsURL, &websocket.DialOptions{HTTPClient: api.hc})
+	if err != nil {
+		t.Fatalf("over-limit terminal websocket: %v", err)
+	}
+	if _, _, err := over.Read(wctx); websocket.CloseStatus(err) != 4029 {
+		t.Fatalf("over-limit terminal: want close 4029, got %v", err)
+	}
+	for _, c := range extra {
+		_ = c.Close(websocket.StatusNormalClosure, "")
+	}
 	_ = wc.Close(websocket.StatusNormalClosure, "")
 	wcancel()
 	var nAudit int
