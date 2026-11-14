@@ -330,4 +330,41 @@
   .confirm-text {
     margin: 0;
   }
+
+  @media (max-width: 600px) {
+    .tbl {
+      min-width: 0;
+    }
+
+    .tbl thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+
+    .tbl,
+    .tbl tbody {
+      display: block;
+    }
+
+    .tbl tr {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 12px;
+      padding: 8px 4px;
+      border-bottom: 1px dashed var(--seg-off);
+    }
+
+    .tbl td {
+      padding: 0;
+      border: 0;
+    }
+
+    .tbl td.name {
+      flex: 1 0 100%;
+    }
+  }
 </style>

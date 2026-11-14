@@ -266,4 +266,33 @@
     text-align: right;
     overflow-wrap: anywhere;
   }
+
+  /* Phones: the four metric cards sit two by two and are much smaller. */
+  @media (max-width: 600px) {
+    .grid-top {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .panel.card {
+      gap: 6px;
+      padding: 10px;
+    }
+
+    .panel h3 {
+      font-size: 12px;
+    }
+
+    .big {
+      font-size: 20px;
+    }
+
+    .unit {
+      font-size: 11px;
+    }
+
+    .panel :global(.mini) {
+      height: 24px;
+    }
+  }
 </style>

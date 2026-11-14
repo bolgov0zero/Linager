@@ -408,4 +408,61 @@
       width: 100%;
     }
   }
+
+  /* Phones: every service becomes a small block instead of a wide table. */
+  @media (max-width: 600px) {
+    .tbl {
+      min-width: 0;
+    }
+
+    .tbl thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+
+    .tbl,
+    .tbl tbody {
+      display: block;
+    }
+
+    .tbl tr {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 8px;
+      padding: 8px 4px;
+      border-bottom: 1px dashed var(--seg-off);
+    }
+
+    .tbl td {
+      padding: 0;
+      border: 0;
+    }
+
+    .tbl td:first-child {
+      flex: 1 0 100%;
+      min-width: 0;
+    }
+
+    .tbl td.actions {
+      flex: none;
+      width: auto;
+      margin-left: auto;
+    }
+
+    .tbl tr.failed {
+      background: color-mix(in srgb, var(--crit) 8%, transparent);
+    }
+
+    .tbl tr.failed td {
+      background: none;
+    }
+
+    .name {
+      min-width: 0;
+    }
+  }
 </style>

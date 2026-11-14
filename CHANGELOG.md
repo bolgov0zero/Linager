@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.26
+
+- Phones: the four metric cards on the server overview are smaller and sit two by two.
+- Phones: the lists on the Services, Processes, Updates and Docker tabs are shown as compact blocks instead of wide tables, so there is no horizontal scrolling in them.
+
 ## 0.1.25
 
 - Dashboard map: bigger tiles with the address, three metrics with mini bars (CPU, RAM, disk), network with coloured arrows, uptime and an event badge (also "no issues"); six tiles per row on wide screens; long press opens the menu on touch screens.

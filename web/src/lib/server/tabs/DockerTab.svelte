@@ -294,7 +294,7 @@
                   <span class="badge {stateTone(c.state)}">{c.state}</span>
                 </td>
                 <td class="hide-sm mono small">{c.ports.length ? c.ports.join(', ') : '—'}</td>
-                <td class="num mono small">{cpuText(c)}</td>
+                <td class="num mono small" data-label="CPU">{cpuText(c)}</td>
                 <td class="num mono small hide-sm">{ramText(c)}</td>
                 <td class="small">{c.status}</td>
                 <td class="acts">
@@ -636,6 +636,65 @@
     .acts .row {
       flex-wrap: wrap;
       min-width: 260px;
+    }
+  }
+
+  /* Phones: containers and images as small blocks. */
+  @media (max-width: 600px) {
+    table.grid {
+      min-width: 0;
+    }
+
+    table.grid,
+    table.grid tbody {
+      display: block;
+    }
+
+    table.grid thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+
+    table.grid tr {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 12px;
+      padding: 8px 4px;
+      border-bottom: 2px dashed var(--seg-off);
+    }
+
+    table.grid td {
+      padding: 0;
+      border: 0;
+    }
+
+    table.grid td.name {
+      flex: 1 0 100%;
+      min-width: 0;
+    }
+
+    table.grid td.num {
+      text-align: left;
+    }
+
+    table.grid td[data-label]::before {
+      content: attr(data-label) ' ';
+      color: var(--muted);
+    }
+
+    table.grid td.acts {
+      flex: 1 0 100%;
+      width: auto;
+      white-space: normal;
+    }
+
+    .acts .row {
+      min-width: 0;
+      justify-content: flex-start;
     }
   }
 </style>

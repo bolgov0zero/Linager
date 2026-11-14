@@ -130,8 +130,8 @@
               <tr>
                 <td class="num">{p.pid}</td>
                 <td>{p.user}</td>
-                <td class="num">{p.cpu.toFixed(1)}</td>
-                <td class="num">
+                <td class="num" data-label="CPU">{p.cpu.toFixed(1)}</td>
+                <td class="num" data-label="RAM">
                   {p.mem_pct.toFixed(1)}
                   <span class="muted small">{formatBytes(p.rss)}</span>
                 </td>
@@ -283,6 +283,62 @@
   @media (max-width: 600px) {
     .ellipsis {
       max-width: 180px;
+    }
+  }
+
+  /* Phones: the command on its own line, the numbers and the button below it. */
+  @media (max-width: 600px) {
+    table,
+    tbody {
+      display: block;
+    }
+
+    thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+
+    tr {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 12px;
+      padding: 8px 4px;
+      border-bottom: 1px dashed var(--seg-off);
+    }
+
+    td {
+      padding: 0;
+      border: 0;
+    }
+
+    td.cmd {
+      order: -1;
+      flex: 1 0 100%;
+      width: auto;
+      max-width: none;
+      min-width: 0;
+    }
+
+    td.num {
+      text-align: left;
+    }
+
+    td[data-label]::before {
+      content: attr(data-label) ' ';
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    td.action {
+      margin-left: auto;
+    }
+
+    .ellipsis {
+      max-width: none;
     }
   }
 </style>
