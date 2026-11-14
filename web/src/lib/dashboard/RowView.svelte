@@ -41,46 +41,81 @@
 </script>
 
 <article class="row-card {level}">
-  <div class="line">
+  <div class="head">
     <h3 class="name"><span class="sq" aria-hidden="true"></span>{card.name}</h3>
-    <div class="row acts">
-      <button class="btn" type="button" disabled title={$tr('dash.terminalSoon')}>{$tr('dash.terminal')}</button>
-      <button class="btn" type="button" onclick={() => onopen(card.name)}>{$tr('dash.open')}</button>
-    </div>
-    {#if editing}
-      <EditBar {index} {count} {onmove} {onremove} />
-    {/if}
+  </div>
+  <div class="row acts">
+    <button class="btn" type="button" disabled title={$tr('dash.terminalSoon')}>{$tr('dash.terminal')}</button>
+    <button class="btn" type="button" onclick={() => onopen(card.name)}>{$tr('dash.open')}</button>
+  </div>
+  <div class="metrics">
     <div class="stats mono">
       <span class="stat"><span class="lbl">{$tr('dash.cpu')}</span> <b class={toneOfPct(cpu)}>{fmtPct(cpu)}</b></span>
       <span class="stat"><span class="lbl">{$tr('dash.ram')}</span> <b class={toneOfPct(ram)}>{fmtPct(ram)}</b></span>
       <span class="stat"><span class="lbl">{$tr('dash.disk')}</span> <b class={toneOfPct(disk)}>{fmtPct(disk)}</b></span>
     </div>
+    {#if editing}
+      <EditBar {index} {count} {onmove} {onremove} />
+    {/if}
   </div>
 
-  <div class="line sub-line">
-    <span class="addr mono small muted">{card.address} · {card.os} · {$tr('dash.agent')} {card.agent_version}</span>
+  <span class="addr mono small muted">{card.address} · {card.os} · {$tr('dash.agent')} {card.agent_version}</span>
+  <div class="tagbox">
     <Tags {tags} />
-    <span class="net mono small">
-      {#if card.online}
-        ↓ {fmtRate(sample?.rx_bps)} &nbsp;↑ {fmtRate(sample?.tx_bps)}
-      {:else}
-        <span class="muted">{offlineText}</span>
-      {/if}
-    </span>
   </div>
+  <span class="net mono small">
+    {#if card.online}
+      ↓ {fmtRate(sample?.rx_bps)} &nbsp;↑ {fmtRate(sample?.tx_bps)}
+    {:else}
+      <span class="muted">{offlineText}</span>
+    {/if}
+  </span>
 </article>
 
 <style>
+  /* Two lines per server, laid out like the design's list view:
+     name | buttons | ..... | metrics
+     address (spans) | tags | ..... | network */
   .row-card {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 10px 14px;
+    display: grid;
+    grid-template-columns: 250px auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'head acts . metrics'
+      'addr addr tags net';
+    column-gap: 16px;
+    row-gap: 4px;
+    align-items: center;
+    padding: 9px 14px 9px 18px;
     background: var(--surface);
     border: 2px solid var(--line);
     border-left: 6px solid var(--strip);
     box-shadow: 3px 3px 0 var(--shade);
     min-width: 0;
+  }
+
+  .head {
+    grid-area: head;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .acts {
+    grid-area: acts;
+  }
+
+  .tagbox {
+    grid-area: tags;
+    min-width: 0;
+  }
+
+  .addr {
+    grid-area: addr;
+  }
+
+  .net {
+    grid-area: net;
   }
 
   .row-card.ok {
@@ -102,13 +137,6 @@
     --strip: var(--muted);
     --sq: var(--muted);
     color: var(--muted);
-  }
-
-  .line {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 12px;
   }
 
   .name {
@@ -138,11 +166,20 @@
     font-size: 13px;
   }
 
+  .metrics {
+    grid-area: metrics;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px 14px;
+  }
+
   .stats {
     display: flex;
     flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 14px;
-    margin-left: auto;
   }
 
   .stat b {
@@ -163,16 +200,12 @@
     color: var(--warn);
   }
 
-  .sub-line {
-    padding-left: 22px;
-  }
-
   .addr {
     overflow-wrap: anywhere;
   }
 
   .net {
-    margin-left: auto;
+    justify-self: end;
     white-space: nowrap;
   }
 
@@ -180,18 +213,25 @@
     color: var(--muted);
   }
 
+  /* Narrow screens: one column, four lines per server. */
   @media (max-width: 560px) {
-    .sub-line {
-      padding-left: 0;
+    .row-card {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'head acts'
+        'addr addr'
+        'metrics metrics'
+        'tags net';
+      padding: 9px 12px;
+      row-gap: 6px;
+    }
+
+    .metrics {
+      justify-content: flex-start;
     }
 
     .stats {
-      margin-left: 0;
-      width: 100%;
-    }
-
-    .net {
-      margin-left: 0;
+      justify-content: flex-start;
     }
   }
 </style>

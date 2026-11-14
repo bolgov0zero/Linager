@@ -159,6 +159,11 @@ button {
   color: var(--surface);
 }
 
+.btn.ink {
+  background: var(--ink);
+  color: var(--surface);
+}
+
 .chip[aria-pressed='true'] {
   background: var(--ink);
   color: var(--surface);

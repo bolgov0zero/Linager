@@ -92,26 +92,29 @@
 </script>
 
 <section class="srv">
-  <div class="topbar">
-    <button class="btn" type="button" onclick={onBack}>{$tr('srv.back')}</button>
-    <div class="row">
+  <header class="titlebar">
+    <div class="title-row">
+      <button class="btn" type="button" onclick={onBack}>{$tr('srv.back')}</button>
+      <div class="name">
+        {#if detail}
+          <span class="dot" class:online aria-hidden="true"></span>
+        {/if}
+        <h1>{detail?.name ?? name}</h1>
+        {#if detail}
+          <span class="state" class:online>{online ? $tr('srv.online') : $tr('srv.offline')}</span>
+        {/if}
+      </div>
       {#if detail}
-        <RebootButton server={detail} />
-        <button class="btn danger" type="button" onclick={() => (deleteOpen = true)}>{$tr('srv.delete')}</button>
+        <div class="row actions">
+          <RebootButton server={detail} />
+          <button class="btn danger" type="button" onclick={() => (deleteOpen = true)}>{$tr('srv.delete')}</button>
+        </div>
       {/if}
     </div>
-  </div>
-
-  <header class="titlebar">
-    <h1>{detail?.name ?? name}</h1>
     {#if detail}
-      <p class="status">
-        <span class="dot" class:online aria-hidden="true"></span>
-        <span>{online ? $tr('srv.online') : $tr('srv.offline')}</span>
-        {#if !online && detail.last_seen_at}
-          <span class="muted">· {$tr('srv.lastSeen', { date: formatDateTime(detail.last_seen_at, $locale) })}</span>
-        {/if}
-      </p>
+      {#if !online && detail.last_seen_at}
+        <p class="muted small">{$tr('srv.lastSeen', { date: formatDateTime(detail.last_seen_at, $locale) })}</p>
+      {/if}
       <p class="muted small mono">
         {$tr('srv.subline', {
           os: detail.system?.os ?? detail.os,
@@ -203,12 +206,26 @@
     max-width: 1200px;
   }
 
-  .topbar {
+  .titlebar {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .title-row {
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
+  }
+
+  .name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1 1 auto;
   }
 
   .titlebar h1 {
@@ -218,24 +235,33 @@
     overflow-wrap: anywhere;
   }
 
-  .status {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    margin: 6px 0 0;
+  .actions {
+    margin-left: auto;
   }
 
   .dot {
     flex: none;
-    width: 14px;
-    height: 14px;
-    border: 2px solid var(--line);
+    width: 12px;
+    height: 12px;
     background: var(--muted);
   }
 
   .dot.online {
     background: var(--good);
+  }
+
+  /* Status pill next to the server name, like the design's "в норме" tag. */
+  .state {
+    padding: 1px 8px;
+    border: 2px solid var(--muted);
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .state.online {
+    border-color: var(--good);
+    color: var(--good);
   }
 
   .banner {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pquerna/otp/totp"
 	"io"
 	"log/slog"
 	"net"
@@ -520,5 +521,99 @@ func TestEndToEnd(t *testing.T) {
 		}
 	case <-time.After(15 * time.Second):
 		t.Fatal("server did not shut down")
+	}
+}
+
+func TestSecurityHeadersAndTOTPGate(t *testing.T) {
+	dsn := os.Getenv("LINAGER_TEST_DSN")
+	if dsn == "" {
+		t.Skip("LINAGER_TEST_DSN is not set")
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	conn, err := pgx.Connect(ctx, dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(ctx, `DROP SCHEMA public CASCADE; CREATE SCHEMA public`); err != nil {
+		t.Fatal(err)
+	}
+	_ = conn.Close(ctx)
+	dir := t.TempDir()
+	cfg := &config.Server{DataDir: dir}
+	cfg.Database.DSN = dsn
+	cfg.Admin.Listen, cfg.Agents.Listen = freeAddr(t), freeAddr(t)
+	cfg.Agents.Hosts = []string{"127.0.0.1"}
+	cfg.Admin.CookieSecure = "never"
+	cfg.Admin.RequireTOTP = true
+	cfg.Admin.TrustedProxies = []string{"0.0.0.0/0"}
+	if err := server.InitKeys(dir, cfg.Agents.Hosts); err != nil {
+		t.Fatal(err)
+	}
+	db, err := store.Open(ctx, dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if err := server.CreateAdmin(ctx, db, "admin", "a-long-test-password"); err != nil {
+		t.Fatal(err)
+	}
+	go func() { _ = server.Run(ctx, cfg, nil, slog.New(slog.NewTextHandler(io.Discard, nil))) }()
+	waitFor(t, "server", func() bool {
+		c, e := net.Dial("tcp", cfg.Admin.Listen)
+		if e == nil {
+			_ = c.Close()
+		}
+		return e == nil
+	})
+
+	jar, _ := cookiejar.New(nil)
+	api := &apiClient{t: t, base: "http://" + cfg.Admin.Listen, hc: &http.Client{Jar: jar}}
+	var lr struct{ CSRF string }
+	api.do("POST", "/api/login", map[string]string{"login": "admin", "password": "a-long-test-password"}, &lr)
+	api.csrf = lr.CSRF
+
+	// the TOTP gate: everything except the 2FA setup endpoints is refused until 2FA is on
+	if code := api.do("GET", "/api/servers", nil, nil); code != http.StatusForbidden {
+		t.Fatalf("with require_totp the API must be closed until 2FA is enabled, got %d", code)
+	}
+	var me struct {
+		Required bool `json:"totp_required"`
+	}
+	if code := api.do("GET", "/api/me", nil, &me); code != 200 || !me.Required {
+		t.Fatalf("me must announce the requirement: %d %+v", code, me)
+	}
+	var setup struct{ Secret string }
+	if code := api.do("POST", "/api/me/totp/setup", nil, &setup); code != 200 || setup.Secret == "" {
+		t.Fatalf("setup must stay reachable: %d", code)
+	}
+	code, _ := totp.GenerateCode(setup.Secret, time.Now())
+	if c := api.do("POST", "/api/me/totp/enable", map[string]string{"code": code}, nil); c != 200 {
+		t.Fatalf("enable: %d", c)
+	}
+	if c := api.do("GET", "/api/servers", nil, nil); c != 200 {
+		t.Fatalf("after enabling 2FA the API must open, got %d", c)
+	}
+
+	// security headers on every response
+	resp, err := api.hc.Get(api.base + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resp.Body.Close()
+	for _, h := range []string{"Content-Security-Policy", "X-Content-Type-Options", "X-Frame-Options", "Referrer-Policy", "Permissions-Policy", "Cross-Origin-Opener-Policy"} {
+		if resp.Header.Get(h) == "" {
+			t.Errorf("missing security header %s", h)
+		}
+	}
+	if resp.Header.Get("Strict-Transport-Security") != "" {
+		t.Error("HSTS must not be sent for a plain-HTTP request")
+	}
+	req, _ := http.NewRequest("GET", api.base+"/", nil)
+	req.Header.Set("X-Forwarded-Proto", "https")
+	r2, _ := api.hc.Do(req)
+	_ = r2.Body.Close()
+	if r2.Header.Get("Strict-Transport-Security") == "" {
+		t.Error("HSTS must be sent when the original request used HTTPS")
 	}
 }

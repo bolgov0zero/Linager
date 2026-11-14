@@ -44,10 +44,16 @@
     gap: 6px;
   }
 
+  /* Square icon buttons, as in the design's edit mode. */
   .sm {
-    padding: 0 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
     font-size: 16px;
-    line-height: 1.4;
+    line-height: 1;
     box-shadow: 2px 2px 0 var(--shade);
   }
 </style>

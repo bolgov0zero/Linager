@@ -129,12 +129,18 @@ func (a *Admin) Handler() http.Handler {
 	if bp := strings.TrimRight(a.Cfg.Admin.BasePath, "/"); bp != "" {
 		h = http.StripPrefix(bp, mux)
 	}
-	return secureHeaders(h)
+	return a.secureHeaders(h)
 }
 
-func secureHeaders(next http.Handler) http.Handler {
+func (a *Admin) secureHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
+		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
+		h.Set("Cross-Origin-Opener-Policy", "same-origin")
+		h.Set("Cross-Origin-Resource-Policy", "same-origin")
+		if a.Trust.IsHTTPS(r) {
+			h.Set("Strict-Transport-Security", "max-age=31536000")
+		}
 		h.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("X-Frame-Options", "DENY")
@@ -218,6 +224,10 @@ func (a *Admin) auth(next func(http.ResponseWriter, *http.Request, *store.User))
 			jsonErr(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
+		if a.Cfg.Admin.RequireTOTP && !u.TOTPEnabled && !totpSetupPath(r.URL.Path) {
+			jsonErr(w, http.StatusForbidden, "2fa_required")
+			return
+		}
 		next(w, r.WithContext(context.WithValue(r.Context(), keySession, se)), u)
 	}
 }
@@ -280,7 +290,8 @@ func (a *Admin) login(w http.ResponseWriter, r *http.Request) {
 		Path: "/", HttpOnly: true, Secure: a.secureCookie(r),
 		SameSite: http.SameSiteStrictMode, MaxAge: int(sessionTTL.Seconds())})
 	a.audit(r, u, "auth.login", "user", "", login, "ok", nil)
-	writeJSON(w, http.StatusOK, map[string]any{"csrf": csrf, "login": u.Login, "totp_enabled": u.TOTPEnabled})
+	writeJSON(w, http.StatusOK, map[string]any{"csrf": csrf, "login": u.Login, "totp_enabled": u.TOTPEnabled,
+		"totp_required": a.Cfg.Admin.RequireTOTP && !u.TOTPEnabled})
 }
 
 func (a *Admin) logout(w http.ResponseWriter, r *http.Request, u *store.User) {
@@ -294,7 +305,8 @@ func (a *Admin) logout(w http.ResponseWriter, r *http.Request, u *store.User) {
 
 func (a *Admin) me(w http.ResponseWriter, r *http.Request, u *store.User) {
 	se := r.Context().Value(keySession).(*store.Session)
-	writeJSON(w, http.StatusOK, map[string]any{"login": u.Login, "totp_enabled": u.TOTPEnabled, "csrf": se.CSRF})
+	writeJSON(w, http.StatusOK, map[string]any{"login": u.Login, "totp_enabled": u.TOTPEnabled, "csrf": se.CSRF,
+		"totp_required": a.Cfg.Admin.RequireTOTP && !u.TOTPEnabled})
 }
 
 func (a *Admin) totpSetup(w http.ResponseWriter, r *http.Request, u *store.User) {
@@ -509,3 +521,12 @@ func (a *Admin) deleteServer(w http.ResponseWriter, r *http.Request, u *store.Us
 
 // bg returns a context for work that must outlive a request.
 func (a *Admin) bg() context.Context { return context.Background() }
+
+// totpSetupPath lists the endpoints usable before 2FA is enabled when it is required.
+func totpSetupPath(p string) bool {
+	switch p {
+	case "/api/me", "/api/logout", "/api/me/totp/setup", "/api/me/totp/enable":
+		return true
+	}
+	return false
+}

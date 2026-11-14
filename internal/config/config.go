@@ -22,6 +22,7 @@ type Server struct {
 		BasePath       string   `yaml:"base_path"`       // e.g. /linager, empty by default
 		TrustedProxies []string `yaml:"trusted_proxies"` // CIDRs; default: any
 		CookieSecure   string   `yaml:"cookie_secure"`   // auto|always|never
+		RequireTOTP    bool     `yaml:"require_totp"`    // force the administrator to enable 2FA before using the panel
 	} `yaml:"admin"`
 	Update struct {
 		Source  string `yaml:"source"`  // "" = GitHub releases of bolgov0zero/linager, "owner/repo", or a mirror URL

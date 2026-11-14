@@ -141,6 +141,12 @@
     box-shadow: 3px 3px 0 var(--shade);
   }
 
+  .item .btn {
+    flex: none;
+    padding: 4px 10px;
+    font-size: 13px;
+  }
+
   .info {
     display: flex;
     flex-direction: column;

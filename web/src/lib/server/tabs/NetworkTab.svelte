@@ -528,7 +528,7 @@
               {/if}
 
               <div class="row">
-                <button class="btn primary" type="submit" disabled={saving || checking || hasErrors}
+                <button class="btn ink" type="submit" disabled={saving || checking || hasErrors}
                   >{$tr('net.draft.save')}</button
                 >
                 <button class="btn" type="button" disabled={saving} onclick={closeForm}>{$tr('common.cancel')}</button>
@@ -732,7 +732,7 @@
 
   .ifaces {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
     gap: 12px;
   }
 

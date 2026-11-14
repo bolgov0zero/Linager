@@ -2,6 +2,8 @@ export interface Session {
   csrf: string;
   login: string;
   totp_enabled: boolean;
+  /** The server requires 2FA (admin.require_totp) and it is not enabled yet: the API stays closed until it is. */
+  totp_required?: boolean;
 }
 
 export interface Server {

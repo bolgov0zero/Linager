@@ -96,6 +96,7 @@
   function startSession(next: Session): void {
     session = next;
     phase = 'app';
+    if (next.totp_required) securityOpen = true; // force the 2FA setup dialog
     void refreshUpdatesCount();
     if (!unsubscribeLive) {
       unsubscribeLive = subscribeLive(() => {
@@ -155,15 +156,21 @@
 
 <header class="top">
   <div class="brand">
+    <svg class="logo" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true">
+      <rect x="0" y="0" width="8" height="2" fill="var(--ink)" />
+      <rect x="0" y="3" width="8" height="2" fill="var(--ink)" />
+      <rect x="0" y="6" width="8" height="2" fill="var(--ink)" />
+      <rect x="5" y="0" width="1" height="2" fill="var(--surface)" />
+      <rect x="6" y="3" width="1" height="2" fill="var(--accent)" />
+      <rect x="5" y="6" width="1" height="2" fill="var(--surface)" />
+    </svg>
     <h1>{$tr('app.title')}</h1>
+  </div>
+  <div class="controls">
     {#if phase === 'app'}
       <p class="live mono small">
         <span class="dot" class:on={$liveConnected} aria-hidden="true"></span>{$tr('dash.live', { time: clock })}
       </p>
-    {/if}
-  </div>
-  <div class="controls">
-    {#if phase === 'app'}
       <a class="btn" href="#updates">{$tr('app.updates')}{#if updatesCount > 0} <span class="badge">{updatesCount}</span>{/if}</a>
       <a class="btn" href="#audit">{$tr('app.audit')}</a>
     {/if}
@@ -259,6 +266,18 @@
     box-shadow: 3px 3px 0 var(--shade);
   }
 
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo {
+    width: 32px;
+    height: 32px;
+    display: block;
+  }
+
   .brand h1 {
     margin: 0;
     font-size: 26px;
@@ -269,8 +288,16 @@
   .live {
     display: flex;
     align-items: center;
-    margin: 6px 0 0;
+    margin: 0 6px 0 0;
     color: var(--muted);
+  }
+
+  /* Header links styled as buttons: no underline. */
+  a.btn {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
 
   .dot {
@@ -290,11 +317,6 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
-  }
-
-  .btn.ink {
-    background: var(--ink);
-    color: var(--surface);
   }
 
   .seg {

@@ -341,9 +341,9 @@
           <tr>
             <th class="kind"><span class="sr-only">{$tStore('files.col.type')}</span></th>
             <th>{$tStore('files.col.name')}</th>
-            <th class="num">{$tStore('files.col.size')}</th>
             <th class="hide-sm">{$tStore('files.col.mode')}</th>
             <th class="hide-sm">{$tStore('files.col.owner')}</th>
+            <th class="num">{$tStore('files.col.size')}</th>
             <th>{$tStore('files.col.mtime')}</th>
             <th class="acts-head"><span class="sr-only">{$tStore('files.col.actions')}</span></th>
           </tr>
@@ -366,9 +366,9 @@
                   <span>{entry.name}</span>
                 {/if}
               </td>
-              <td class="num mono">{entry.type === 'dir' ? '—' : formatBytes(entry.size)}</td>
               <td class="hide-sm mono small">{entry.mode_str}</td>
               <td class="hide-sm mono small">{entry.owner}:{entry.group}</td>
+              <td class="num mono">{entry.type === 'dir' ? '—' : formatBytes(entry.size)}</td>
               <td class="mono small">{formatDateTime(entry.mtime, $locale)}</td>
               <td class="acts">
                 <div class="row end">
@@ -660,6 +660,12 @@
   .acts {
     width: 1%;
     white-space: nowrap;
+  }
+
+  /* Download and delete sit side by side, as in the design. */
+  .acts .row {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
   }
 
   .acts-head {
