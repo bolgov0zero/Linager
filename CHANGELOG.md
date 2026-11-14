@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.29
+
+- Metrics: the "Events for the period" list scrolls inside its block (up to 320 px) instead of stretching it.
+
 ## 0.1.28
 
 - Docker tab: the container and image actions moved into a drop-down "Actions" menu in each row.

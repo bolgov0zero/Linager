@@ -80,10 +80,13 @@
     letter-spacing: 0.04em;
   }
 
+  /* The list scrolls inside the block, so a long history does not stretch it. */
   .events {
     list-style: none;
     margin: 0;
-    padding: 0;
+    padding: 0 6px 0 0;
+    max-height: 320px;
+    overflow-y: auto;
   }
 
   .events li {
