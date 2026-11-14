@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.7
+
+- Files tab: the tree and the list fill the window height and scroll inside (the table header stays visible) instead of
+  making the page grow.
+
 ## 0.1.6
 
 - The "Linager updates" page no longer freezes after "Check" finds a release without notes: the server always sends a
