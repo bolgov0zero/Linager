@@ -164,12 +164,6 @@
     align-items: start;
   }
 
-  @media (min-width: 760px) {
-    .grid-bottom {
-      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-    }
-  }
-
   .panel {
     display: flex;
     flex-direction: column;
@@ -217,12 +211,12 @@
   .grid-table {
     display: flex;
     flex-direction: column;
-    min-width: 640px;
+    min-width: 930px;
   }
 
   .nrow {
     display: grid;
-    grid-template-columns: 0.7fr 0.8fr 1fr 1.3fr 1fr 1fr 1fr 1fr;
+    grid-template-columns: minmax(150px, 1.4fr) 100px minmax(110px, 1fr) minmax(150px, 1.3fr) repeat(4, minmax(84px, 1fr));
     gap: 8px;
     align-items: center;
     padding: 6px 8px;
@@ -235,6 +229,12 @@
     border-bottom: 2px solid var(--line);
   }
 
+  .nrow > :global(span) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .num {
     text-align: right;
   }
@@ -243,11 +243,12 @@
     color: var(--good);
   }
 
+  /* The interfaces table needs the full width, so the system block sits below it with its rows in several columns. */
   .info {
     margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 6px 40px;
   }
 
   .info > div {

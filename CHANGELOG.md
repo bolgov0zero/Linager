@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.17
+
+- Server overview: the interfaces table takes the full width with aligned columns; the system block moved below it and shows its rows in several columns.
+
 ## 0.1.16
 
 - The pairing ("Adding a server") dialog has a Back button that returns to the "Add server" dialog.
