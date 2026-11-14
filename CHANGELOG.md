@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.22
+
+- File manager: right-click context menu (open, download, cut, copy, paste, rename, delete; on the empty area: paste, new folder, new file, refresh). The row buttons are gone; touch screens get a "⋯" button in the row.
+- Multiple selection with Ctrl/⌘+click and Shift+click (also Shift+arrows, Ctrl/⌘+A), and the keys Ctrl/⌘+C, X, V, Delete, F2. Several files and folders download as one zip.
+- Paste asks "Overwrite" or "Keep both" when a name already exists, with a "For all" checkbox when there are several conflicts.
+- Agents must be updated to 0.1.22 for rename, copy, move and zip.
+
 ## 0.1.21
 
 - Files: uploading a file no longer fails with "target is a directory" (the panel sent the folder instead of the full target path). Only the panel changed, agents need no update.

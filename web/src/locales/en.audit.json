@@ -90,5 +90,9 @@
   "audit.action.group.assign": "Group: assign to server",
   "audit.action.network.config.apply": "Network: edit configuration",
   "audit.action.service.ignore": "Service: ignore",
-  "audit.action.service.unignore": "Service: stop ignoring"
+  "audit.action.service.unignore": "Service: stop ignoring",
+  "audit.action.files.rename": "Files: rename",
+  "audit.action.files.copy": "Files: copy",
+  "audit.action.files.move": "Files: move",
+  "audit.action.files.zip": "Files: zip download"
 }

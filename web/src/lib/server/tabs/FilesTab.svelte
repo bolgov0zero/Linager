@@ -1,10 +1,12 @@
 <script lang="ts">
   import { get } from 'svelte/store';
   import { untrack } from 'svelte';
-  import { api, type FileEntry, type ServerDetail } from '../../../api';
+  import { api, type FileConflictMode, type FileEntry, type ServerDetail } from '../../../api';
   import { locale, t, tr as tStore, type Vars } from '../../../i18n';
   import Modal from '../../Modal.svelte';
   import { closeEditorWindows, openEditorWindow } from '../../terminal/windows';
+  import ContextMenu, { type MenuItem } from '../../ui/ContextMenu.svelte';
+  import { clip } from './files-clip';
   import { showToast } from '../../toast';
   import { formatBytes, formatDateTime } from '../format';
   import FileTree from './FileTree.svelte';
@@ -41,12 +43,17 @@
   let loadError = $state('');
   let seq = 0;
 
-  let prompt = $state<{ kind: 'dir' | 'file'; name: string; error: string; busy: boolean } | null>(null);
+  let prompt = $state<{ kind: 'dir' | 'file' | 'rename'; name: string; error: string; busy: boolean; target?: FileEntry } | null>(null);
   let ask = $state<Ask | null>(null);
   let askBusy = $state(false);
   let upload = $state<{ name: string; index: number; total: number; fraction: number } | null>(null);
   let picker = $state<HTMLInputElement | undefined>(undefined);
-  let selected = $state<string | null>(null);
+  /** Selected names (click, Ctrl/⌘+click, Shift+click) and the row a Shift range starts from. */
+  let sel = $state<string[]>([]);
+  let anchor = $state<string | null>(null);
+  let menu = $state<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  let pasting = $state(false);
+  let conflict = $state<{ name: string; remaining: number; all: boolean; resolve: (r: { mode: FileConflictMode | null; all: boolean }) => void } | null>(null);
   let noEdit = $state<{ name: string; href: string; text: string } | null>(null);
   let treeOpen = $state(false);
 
@@ -86,7 +93,10 @@
   }
 
   function apply(res: { path: string; entries: FileEntry[] }): void {
-    if (res.path !== path) selected = null;
+    if (res.path !== path) {
+      sel = [];
+      anchor = null;
+    }
     path = res.path;
     listing = sortEntries(res.entries);
     loadState = 'ready';
@@ -179,10 +189,22 @@
     current.busy = true;
     current.error = '';
     try {
-      if (kind === 'dir') await api.fileMkdir(id, full);
-      else await api.fileCreate(id, full);
-      prompt = null;
-      showToast(T('files.created', { name }));
+      if (kind === 'rename' && current.target) {
+        if (name !== current.target.name) {
+          const old = joinPath(path, current.target.name);
+          await api.fileRename(id, old, name);
+          closeEditorWindows(id, old);
+          sel = [name];
+          anchor = name;
+        }
+        prompt = null;
+        showToast(T('files.renamed', { name }));
+      } else {
+        if (kind === 'dir') await api.fileMkdir(id, full);
+        else await api.fileCreate(id, full);
+        prompt = null;
+        showToast(T('files.created', { name }));
+      }
       await go(path, id);
     } catch (e) {
       current.busy = false;
@@ -190,23 +212,34 @@
     }
   }
 
-  function requestDelete(entry: FileEntry): void {
+  function requestDelete(entries: FileEntry[]): void {
+    if (entries.length === 0) return;
     const id = serverId;
-    const full = joinPath(path, entry.name);
-    const isDir = entry.type === 'dir';
+    const dir = path;
+    const one = entries.length === 1 ? entries[0] : undefined;
     ask = {
-      title: T('files.deleteTitle'),
-      text: T(isDir ? 'files.deleteDir' : 'files.deleteFile', { path: full }),
+      title: T(one ? 'files.deleteTitle' : 'files.deleteManyTitle'),
+      text: one
+        ? T(one.type === 'dir' ? 'files.deleteDir' : 'files.deleteFile', { path: joinPath(dir, one.name) })
+        : T('files.deleteMany', { n: entries.length }),
       label: T('files.delete'),
       run: async () => {
-        try {
-          await api.fileDelete(id, full);
-          closeEditorWindows(id, full);
-          showToast(T('files.deleted', { name: entry.name }));
-          await go(path, id);
-        } catch (e) {
-          showToast(errorText(e, T));
+        let done = 0;
+        const failed: string[] = [];
+        for (const entry of entries) {
+          const full = joinPath(dir, entry.name);
+          try {
+            await api.fileDelete(id, full);
+            closeEditorWindows(id, full);
+            done++;
+          } catch (e) {
+            failed.push(`${entry.name}: ${errorText(e, T)}`);
+          }
         }
+        if (done > 0) showToast(one ? T('files.deleted', { name: one.name }) : T('files.deletedMany', { n: done }));
+        if (failed.length > 0) showToast(failed.slice(0, 3).join('; '));
+        sel = [];
+        await go(path, id);
       },
     };
   }
@@ -246,15 +279,40 @@
   const coarse = () => window.matchMedia('(pointer: coarse)').matches;
   const onControl = (event: Event) => !!(event.target as HTMLElement).closest('a, button');
 
-  /** Click selects; on touch screens a tap opens right away. */
+  const selectedEntries = (): FileEntry[] => (listing ?? []).filter((e) => sel.includes(e.name));
+  const clipHere = $derived($clip && $clip.serverId === serverId ? $clip : null);
+
+  function selectRange(to: FileEntry, add: boolean): void {
+    const names = (listing ?? []).map((e) => e.name);
+    const a = anchor ? names.indexOf(anchor) : -1;
+    const b = names.indexOf(to.name);
+    if (a < 0 || b < 0) {
+      sel = [to.name];
+      anchor = to.name;
+      return;
+    }
+    const range = names.slice(Math.min(a, b), Math.max(a, b) + 1);
+    sel = add ? [...new Set([...sel, ...range])] : range;
+  }
+
+  /** Click selects; Ctrl/⌘ toggles one row, Shift selects a range; on touch screens a tap opens right away. */
   function rowClick(event: MouseEvent, entry: FileEntry): void {
     if (onControl(event)) return;
-    selected = entry.name;
-    if (coarse()) openEntry(entry);
+    if (event.shiftKey) selectRange(entry, event.ctrlKey || event.metaKey);
+    else if (event.ctrlKey || event.metaKey) {
+      sel = sel.includes(entry.name) ? sel.filter((n) => n !== entry.name) : [...sel, entry.name];
+      anchor = entry.name;
+    } else {
+      sel = [entry.name];
+      anchor = entry.name;
+    }
+    if (coarse() && !event.shiftKey && !event.ctrlKey && !event.metaKey) openEntry(entry);
   }
 
   function rowKey(event: KeyboardEvent, entry: FileEntry, index: number): void {
     if (event.target !== event.currentTarget) return;
+    const mod = event.ctrlKey || event.metaKey;
+    const key = event.key.toLowerCase();
     if (event.key === 'Enter') {
       event.preventDefault();
       openEntry(entry);
@@ -262,8 +320,216 @@
       event.preventDefault();
       const rows = (event.currentTarget as HTMLElement).parentElement?.children;
       const next = rows?.[index + (event.key === 'ArrowDown' ? 1 : -1)] as HTMLElement | undefined;
-      next?.focus();
+      const target = listing?.[index + (event.key === 'ArrowDown' ? 1 : -1)];
+      if (next && target) {
+        if (event.shiftKey) selectRange(target, false);
+        else {
+          sel = [target.name];
+          anchor = target.name;
+        }
+        next.focus();
+      }
+    } else if (mod && key === 'a') {
+      event.preventDefault();
+      sel = (listing ?? []).map((e) => e.name);
+    } else if (mod && (key === 'c' || key === 'x') && !readOnly) {
+      event.preventDefault();
+      if (!sel.includes(entry.name)) sel = [entry.name];
+      setClip(key === 'x' ? 'cut' : 'copy');
+    } else if (mod && key === 'v' && !readOnly) {
+      event.preventDefault();
+      void paste(path);
+    } else if (event.key === 'Delete' && !readOnly) {
+      event.preventDefault();
+      if (!sel.includes(entry.name)) sel = [entry.name];
+      requestDelete(selectedEntries());
+    } else if (event.key === 'F2' && !readOnly) {
+      event.preventDefault();
+      requestRename(entry);
+    } else if (event.key === 'Escape') {
+      sel = [];
     }
+  }
+
+  // ---- context menu ----
+
+  function menuItems(entries: FileEntry[]): MenuItem[] {
+    const lock = readOnly;
+    const one = entries.length === 1 ? entries[0] : undefined;
+    const items: MenuItem[] = [];
+    if (one) {
+      items.push({ key: 'open', label: T('files.menu.open'), onselect: () => openEntry(one) });
+      if (one.type === 'dir') items.push({ key: 'zip', label: T('files.menu.downloadZip'), disabled: offline, onselect: () => downloadZip(entries) });
+      else items.push({ key: 'dl', label: T('files.menu.download'), disabled: offline, onselect: () => downloadFile(one) });
+    } else if (entries.length > 1) {
+      items.push({ key: 'zip', label: T('files.menu.downloadZip'), disabled: offline, onselect: () => downloadZip(entries) });
+    }
+    if (entries.length > 0) {
+      items.push({ key: 'cut', label: T('files.menu.cut'), disabled: lock, separated: true, onselect: () => setClip('cut') });
+      items.push({ key: 'copy', label: T('files.menu.copy'), disabled: lock, onselect: () => setClip('copy') });
+    }
+    if (clipHere) {
+      items.push({ key: 'paste', label: T('files.menu.paste'), disabled: lock || pasting, separated: entries.length === 0, onselect: () => void paste(path) });
+      if (one?.type === 'dir') {
+        items.push({ key: 'pasteInto', label: T('files.menu.pasteInto'), disabled: lock || pasting, onselect: () => void paste(joinPath(path, one.name)) });
+      }
+    }
+    if (one) items.push({ key: 'rename', label: T('files.menu.rename'), disabled: lock, separated: true, onselect: () => requestRename(one) });
+    if (entries.length > 0) {
+      items.push({
+        key: 'delete',
+        label: entries.length > 1 ? T('files.menu.deleteN', { n: entries.length }) : T('files.menu.delete'),
+        disabled: lock,
+        danger: true,
+        separated: !one,
+        onselect: () => requestDelete(entries),
+      });
+    }
+    if (entries.length === 0) {
+      items.push({ key: 'mkdir', label: T('files.newFolder'), disabled: lock, separated: true, onselect: () => (prompt = { kind: 'dir', name: '', error: '', busy: false }) });
+      items.push({ key: 'mkfile', label: T('files.newFile'), disabled: lock, onselect: () => (prompt = { kind: 'file', name: '', error: '', busy: false }) });
+      items.push({ key: 'refresh', label: T('files.refresh'), onselect: () => void go(path) });
+    }
+    return items;
+  }
+
+  function showMenu(x: number, y: number, entries: FileEntry[]): void {
+    const items = menuItems(entries);
+    menu = items.length > 0 ? { x, y, items } : null;
+  }
+
+  /** Right click on a row: the row joins the selection first unless it is already part of it. */
+  function rowContext(event: MouseEvent, entry: FileEntry): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!sel.includes(entry.name)) {
+      sel = [entry.name];
+      anchor = entry.name;
+    }
+    showMenu(event.clientX, event.clientY, selectedEntries());
+  }
+
+  /** Right click on the empty part of the list. */
+  function listContext(event: MouseEvent): void {
+    event.preventDefault();
+    sel = [];
+    showMenu(event.clientX, event.clientY, []);
+  }
+
+  function moreClick(event: MouseEvent, entry: FileEntry): void {
+    event.stopPropagation();
+    if (!sel.includes(entry.name)) {
+      sel = [entry.name];
+      anchor = entry.name;
+    }
+    const r = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    showMenu(r.left, r.bottom, selectedEntries());
+  }
+
+  // ---- clipboard, rename, download ----
+
+  function setClip(mode: 'cut' | 'copy'): void {
+    const names = selectedEntries().map((e) => e.name);
+    if (names.length === 0) return;
+    clip.set({ mode, serverId, dir: path, names });
+    showToast(T(mode === 'cut' ? 'files.cut' : 'files.copied', { n: names.length }));
+  }
+
+  function askConflict(name: string, remaining: number): Promise<{ mode: FileConflictMode | null; all: boolean }> {
+    return new Promise((resolve) => {
+      conflict = { name, remaining, all: false, resolve };
+    });
+  }
+
+  function answerConflict(mode: FileConflictMode | null): void {
+    const c = conflict;
+    if (!c) return;
+    conflict = null;
+    c.resolve({ mode, all: c.all && c.remaining > 1 });
+  }
+
+  /** Pastes the clipboard into a folder. A name that already exists asks: overwrite or keep both (optionally for all). */
+  async function paste(targetDir: string): Promise<void> {
+    const c = $clip;
+    if (!c || c.serverId !== serverId || pasting || readOnly) return;
+    const id = serverId;
+    pasting = true;
+    try {
+      let existing: Set<string>;
+      if (targetDir === path && listing) existing = new Set(listing.map((e) => e.name));
+      else existing = new Set((await api.files(id, targetDir)).entries.map((e) => e.name));
+      const sameDir = c.dir === targetDir;
+      if (c.mode === 'cut' && sameDir) {
+        clip.set(null);
+        return;
+      }
+      let remaining = c.names.filter((n) => existing.has(n) && !(c.mode === 'copy' && sameDir)).length;
+      let forAll: FileConflictMode | null = null;
+      let done = 0;
+      const failed: string[] = [];
+      let cancelled = false;
+      for (const name of c.names) {
+        let mode: FileConflictMode = 'fail';
+        if (existing.has(name)) {
+          if (c.mode === 'copy' && sameDir) mode = 'keep'; // copy next to the original: a free name
+          else {
+            if (forAll) mode = forAll;
+            else {
+              const r = await askConflict(name, remaining);
+              if (!r.mode) {
+                cancelled = true;
+                break;
+              }
+              mode = r.mode;
+              if (r.all) forAll = r.mode;
+            }
+            remaining--;
+          }
+        }
+        const src = joinPath(c.dir, name);
+        try {
+          if (c.mode === 'cut') {
+            await api.fileMove(id, src, targetDir, mode);
+            closeEditorWindows(id, src);
+          } else {
+            await api.fileCopy(id, src, targetDir, mode);
+          }
+          done++;
+        } catch (e) {
+          failed.push(`${name}: ${errorText(e, T)}`);
+        }
+      }
+      if (c.mode === 'cut' && !cancelled && failed.length === 0) clip.set(null);
+      if (done > 0) showToast(T('files.paste.done', { n: done }));
+      if (failed.length > 0) showToast(T('files.paste.failed', { list: failed.slice(0, 3).join('; ') }));
+      await go(path, id);
+    } catch (e) {
+      showToast(errorText(e, T));
+    } finally {
+      pasting = false;
+    }
+  }
+
+  function requestRename(entry: FileEntry): void {
+    prompt = { kind: 'rename', name: entry.name, error: '', busy: false, target: entry };
+  }
+
+  function startDownload(url: string, name: string): void {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  function downloadFile(entry: FileEntry): void {
+    startDownload(api.fileDownloadUrl(serverId, joinPath(path, entry.name)), entry.name);
+  }
+
+  function downloadZip(entries: FileEntry[]): void {
+    const names = entries.map((e) => e.name);
+    startDownload(api.fileZipUrl(serverId, path, names), names.length === 1 ? `${names[0]}.zip` : 'files.zip');
   }
 
   /** Drag of the splitter between the tree and the list. */
@@ -358,6 +624,10 @@
     </div>
   {/if}
 
+  {#if sel.length > 1}
+    <p class="small muted">{$tStore('files.selected', { n: sel.length })}</p>
+  {/if}
+
   <div class="panes" class:tree-open={treeOpen} style:--tree-w="{treeWidth}px" style:--panes-h="{panesH}px" bind:this={panesEl}>
   {#if loadState !== 'offline' && loadState !== 'disabled'}
     <aside class="treepane">
@@ -365,7 +635,8 @@
     </aside>
     <div class="split" role="separator" aria-orientation="vertical" aria-label={$tStore('files.splitter')} onpointerdown={startSplit}></div>
   {/if}
-  <div class="listpane">
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="listpane" oncontextmenu={listContext}>
   {#if !listing}
     {#if loadState === 'error'}
       <div class="state">
@@ -397,13 +668,14 @@
           {#each listing as entry, i (entry.name)}
             <tr
               class="item"
-              class:sel={selected === entry.name}
+              class:sel={sel.includes(entry.name)}
+              class:cut={clipHere?.mode === 'cut' && clipHere.dir === path && clipHere.names.includes(entry.name)}
               tabindex="0"
-              aria-selected={selected === entry.name}
+              aria-selected={sel.includes(entry.name)}
               onclick={(e) => rowClick(e, entry)}
               ondblclick={(e) => !onControl(e) && openEntry(entry)}
               onkeydown={(e) => rowKey(e, entry, i)}
-              onfocus={() => (selected = entry.name)}
+              oncontextmenu={(e) => rowContext(e, entry)}
             >
               <td class="kind">
                 <span class="kind-icon kind-{entry.type}" role="img" title={kindLabel(entry.type)} aria-label={kindLabel(entry.type)}></span>
@@ -423,21 +695,7 @@
               <td class="num mono">{entry.type === 'dir' ? '—' : formatBytes(entry.size)}</td>
               <td class="hide-xs mono small">{formatDateTime(entry.mtime, $locale)}</td>
               <td class="acts">
-                <div class="row end">
-                  {#if entry.type === 'file' || entry.type === 'link'}
-                    <a
-                      class="btn"
-                      class:off={offline}
-                      href={api.fileDownloadUrl(serverId, joinPath(path, entry.name))}
-                      download={entry.name}
-                      aria-disabled={offline}
-                      tabindex={offline ? -1 : undefined}>{$tStore('files.download')}</a
-                    >
-                  {/if}
-                  <button class="btn" type="button" disabled={readOnly} onclick={() => requestDelete(entry)}>
-                    {$tStore('files.delete')}
-                  </button>
-                </div>
+                <button class="btn more" type="button" aria-label={$tStore('files.menu.more')} onclick={(e) => moreClick(e, entry)}>⋯</button>
               </td>
             </tr>
           {/each}
@@ -452,7 +710,7 @@
 {#if prompt}
   {@const p = prompt}
   <Modal
-    title={$tStore(p.kind === 'dir' ? 'files.promptDir' : 'files.promptFile')}
+    title={$tStore(p.kind === 'dir' ? 'files.promptDir' : p.kind === 'rename' ? 'files.promptRename' : 'files.promptFile')}
     labelId="files-prompt-title"
     onclose={() => {
       if (!p.busy) prompt = null;
@@ -469,7 +727,7 @@
       {/if}
       <div class="row end">
         <button class="btn" type="button" disabled={p.busy} onclick={() => (prompt = null)}>{$tStore('common.cancel')}</button>
-        <button class="btn primary" type="submit" disabled={p.busy}>{$tStore('files.create')}</button>
+        <button class="btn primary" type="submit" disabled={p.busy}>{$tStore(p.kind === 'rename' ? 'files.rename.submit' : 'files.create')}</button>
       </div>
     </form>
   </Modal>
@@ -503,7 +761,47 @@
   </Modal>
 {/if}
 
+{#if menu}
+  <ContextMenu x={menu.x} y={menu.y} items={menu.items} label={$tStore('files.menu')} onclose={() => (menu = null)} />
+{/if}
+
+{#if conflict}
+  {@const c = conflict}
+  <Modal title={$tStore('files.conflict.title')} labelId="files-conflict-title" onclose={() => answerConflict(null)}>
+    <div class="stack">
+      <p>{$tStore('files.conflict.text', { name: c.name })}</p>
+      {#if c.remaining > 1}
+        <label class="check">
+          <input type="checkbox" bind:checked={c.all} />
+          <span>{$tStore('files.conflict.all', { n: c.remaining })}</span>
+        </label>
+      {/if}
+      <div class="row end">
+        <button class="btn" type="button" onclick={() => answerConflict(null)}>{$tStore('files.conflict.cancel')}</button>
+        <button class="btn" type="button" onclick={() => answerConflict('keep')}>{$tStore('files.conflict.keep')}</button>
+        <button class="btn danger" type="button" onclick={() => answerConflict('overwrite')}>{$tStore('files.conflict.overwrite')}</button>
+      </div>
+    </div>
+  </Modal>
+{/if}
+
 <style>
+  tr.cut {
+    opacity: 0.5;
+  }
+
+  /* The "more" button replaces the old row buttons on touch screens; with a mouse the context menu is used. */
+  .more {
+    display: none;
+    padding: 2px 10px;
+  }
+
+  @media (pointer: coarse) {
+    .more {
+      display: inline-block;
+    }
+  }
+
   .files {
     display: flex;
     flex-direction: column;
@@ -736,12 +1034,6 @@
   .acts {
     width: 1%;
     white-space: nowrap;
-  }
-
-  /* Download and delete sit side by side, as in the design. */
-  .acts .row {
-    flex-wrap: nowrap;
-    justify-content: flex-end;
   }
 
   .acts-head {

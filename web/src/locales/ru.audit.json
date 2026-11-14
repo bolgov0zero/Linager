@@ -90,5 +90,9 @@
   "audit.action.group.assign": "Группа: назначение серверу",
   "audit.action.network.config.apply": "Сеть: правка конфигурации",
   "audit.action.service.ignore": "Служба: игнорировать",
-  "audit.action.service.unignore": "Служба: не игнорировать"
+  "audit.action.service.unignore": "Служба: не игнорировать",
+  "audit.action.files.rename": "Файлы: переименование",
+  "audit.action.files.copy": "Файлы: копирование",
+  "audit.action.files.move": "Файлы: перемещение",
+  "audit.action.files.zip": "Файлы: скачивание zip"
 }

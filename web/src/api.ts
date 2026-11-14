@@ -74,6 +74,7 @@ export interface ServerCard {
 export interface Group { id: number; name: string }
 /** What a client needs to connect: agent port, agent-port certificate fingerprint, names/IPs of that certificate. */
 export interface ConnectInfo { port: string; fingerprint: string; hosts: string[] }
+export type FileConflictMode = 'fail' | 'overwrite' | 'keep';
 export interface AvailableServer { id: string; name: string; address: string; os: string }
 export interface ServiceUnit {
   name: string; description: string;
@@ -351,6 +352,16 @@ export const api = {
     request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/files/delete`, { path, confirm: true }),
   /** Relative URL for a download link. */
   fileDownloadUrl: (id: string, path: string) => `api/servers/${enc(id)}/files/download?path=${enc(path)}`,
+  fileRename: (id: string, path: string, name: string) =>
+    request<{ ok: boolean; name: string }>('POST', `api/servers/${enc(id)}/files/rename`, { path, name }),
+  /** Copies or moves one entry into dir; mode: fail (default), overwrite or keep (both stay, the new one gets a free name). */
+  fileCopy: (id: string, path: string, dir: string, mode: FileConflictMode = 'fail') =>
+    request<{ ok: boolean; name: string }>('POST', `api/servers/${enc(id)}/files/copy`, { path, dir, mode, confirm: mode === 'overwrite' }),
+  fileMove: (id: string, path: string, dir: string, mode: FileConflictMode = 'fail') =>
+    request<{ ok: boolean; name: string }>('POST', `api/servers/${enc(id)}/files/move`, { path, dir, mode, confirm: mode === 'overwrite' }),
+  /** Relative URL of a zip archive of the named entries of a directory. */
+  fileZipUrl: (id: string, dir: string, names: string[]) =>
+    `api/servers/${enc(id)}/files/zip?dir=${enc(dir)}${names.map((n) => `&name=${enc(n)}`).join('')}`,
   uploadFile: (id: string, path: string, file: File, onProgress?: (fraction: number) => void) =>
     new Promise<void>((resolve, reject) => {
       const xhr = new XMLHttpRequest();

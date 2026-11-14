@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"path"
 	"regexp"
 	"strings"
@@ -155,6 +156,149 @@ func (a *Admin) fileDownload(w http.ResponseWriter, r *http.Request, u *store.Us
 			if !started { // empty file
 				w.Header().Set("Content-Type", "application/octet-stream")
 				w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, safeFile(path.Base(p))))
+			}
+			return
+		case <-r.Context().Done():
+			return
+		}
+	}
+}
+
+// fileRename renames an entry inside its directory.
+func (a *Admin) fileRename(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s := a.serverOr404(w, r)
+	if s == nil {
+		return
+	}
+	var req struct {
+		Path string `json:"path"`
+		Name string `json:"name"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	if req.Path == "" || !strings.HasPrefix(req.Path, "/") || req.Name == "" || strings.ContainsAny(req.Name, "/\x00") {
+		jsonErr(w, http.StatusBadRequest, "invalid path")
+		return
+	}
+	data, err := a.Hub.Call(r.Context(), s.ID, "files", "rename", map[string]any{"path": req.Path, "name": req.Name}, false, 30*time.Second)
+	res := "ok"
+	if err != nil {
+		res = "failed"
+	}
+	a.audit(r, u, "files.rename", "server", s.ID, s.Name, res, map[string]any{"path": req.Path, "name": req.Name})
+	if err != nil {
+		callErr(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(data)
+}
+
+// fileTransfer copies or moves one entry into a directory. mode: fail (default), overwrite (needs confirm), keep.
+func (a *Admin) fileTransfer(action string) func(http.ResponseWriter, *http.Request, *store.User) {
+	return func(w http.ResponseWriter, r *http.Request, u *store.User) {
+		s := a.serverOr404(w, r)
+		if s == nil {
+			return
+		}
+		var req struct {
+			Path    string `json:"path"`
+			Dir     string `json:"dir"`
+			Mode    string `json:"mode"`
+			Confirm bool   `json:"confirm"`
+		}
+		if !decode(w, r, &req) {
+			return
+		}
+		if !strings.HasPrefix(req.Path, "/") || !strings.HasPrefix(req.Dir, "/") || len(req.Path) > 4096 || len(req.Dir) > 4096 {
+			jsonErr(w, http.StatusBadRequest, "invalid path")
+			return
+		}
+		if req.Mode != "" && req.Mode != "fail" && req.Mode != "overwrite" && req.Mode != "keep" {
+			jsonErr(w, http.StatusBadRequest, "invalid mode")
+			return
+		}
+		danger := req.Mode == "overwrite"
+		if danger && !req.Confirm {
+			needConfirm(w)
+			return
+		}
+		data, err := a.Hub.Call(r.Context(), s.ID, "files", action, map[string]any{"src": req.Path, "dir": req.Dir, "mode": req.Mode}, danger, 180*time.Second)
+		res := "ok"
+		if err != nil {
+			res = "failed"
+		}
+		a.audit(r, u, "files."+action, "server", s.ID, s.Name, res, map[string]any{"path": req.Path, "dir": req.Dir, "mode": req.Mode})
+		if err != nil {
+			callErr(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(data)
+	}
+}
+
+// fileZip streams a zip archive of the named entries of a directory: ?dir=/x&name=a&name=b.
+func (a *Admin) fileZip(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s := a.serverOr404(w, r)
+	if s == nil {
+		return
+	}
+	dir := r.URL.Query().Get("dir")
+	names := r.URL.Query()["name"]
+	if !strings.HasPrefix(dir, "/") || len(dir) > 4096 || len(names) == 0 || len(names) > 1000 {
+		jsonErr(w, http.StatusBadRequest, "invalid path")
+		return
+	}
+	for _, n := range names {
+		if n == "" || n == "." || n == ".." || strings.ContainsAny(n, "/\x00") {
+			jsonErr(w, http.StatusBadRequest, "invalid name")
+			return
+		}
+	}
+	sh, err := a.Hub.OpenStream(r.Context(), s.ID, "files.zip", map[string]any{"dir": dir, "names": names})
+	if err != nil {
+		callErr(w, err)
+		return
+	}
+	defer sh.Close()
+	zipName := "files.zip"
+	if len(names) == 1 {
+		zipName = names[0] + ".zip"
+	} else if b := path.Base(dir); b != "/" && b != "." {
+		zipName = b + ".zip"
+	}
+	a.audit(r, u, "files.zip", "server", s.ID, s.Name, "ok", map[string]any{"dir": dir, "count": len(names)})
+	started := false
+	start := func() {
+		if started {
+			return
+		}
+		started = true
+		w.Header().Set("Content-Type", "application/zip")
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"; filename*=UTF-8''%s`, safeFile(zipName), url.PathEscape(zipName)))
+	}
+	for {
+		select {
+		case b := <-sh.Data:
+			start()
+			if _, err := w.Write(b); err != nil {
+				return
+			}
+		case <-sh.Done():
+			for {
+				select {
+				case b := <-sh.Data:
+					start()
+					_, _ = w.Write(b)
+					continue
+				default:
+				}
+				break
+			}
+			if reason := sh.Reason(); reason != "" && !started {
+				callErr(w, &AgentError{Msg: reason})
 			}
 			return
 		case <-r.Context().Done():
