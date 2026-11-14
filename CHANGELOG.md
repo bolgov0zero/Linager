@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.10
+
+- Phones: the admin panel no longer zooms (pinch, double tap and focusing an input field).
+
 ## 0.1.9
 
 - The top bar stays pinned to the top of the window while the page scrolls (on screens wider than 720 px).
