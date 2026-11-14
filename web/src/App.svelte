@@ -26,16 +26,27 @@
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
 
-  /** '#srv-<encoded name>' is the server page; anything else is the dashboard. */
-  function parseServerHash(value: string): string | null {
+  /**
+   * '#srv-<encoded name>[/<tab>]' is the server page (the name is URI-encoded, so it never contains a slash);
+   * anything else is the dashboard.
+   */
+  function parseServerHash(value: string): { name: string; tab: string | null } | null {
     if (!value.startsWith(SRV_PREFIX)) return null;
-    const raw = value.slice(SRV_PREFIX.length);
+    const rest = value.slice(SRV_PREFIX.length);
+    const slash = rest.indexOf('/');
+    const raw = slash < 0 ? rest : rest.slice(0, slash);
+    const tab = slash < 0 ? '' : rest.slice(slash + 1);
     if (!raw) return null;
     try {
-      return decodeURIComponent(raw);
+      return { name: decodeURIComponent(raw), tab: tab || null };
     } catch {
       return null;
     }
+  }
+
+  function serverHash(name: string, tab?: string): string {
+    const base = `${SRV_PREFIX}${encodeURIComponent(name)}`;
+    return tab && tab !== 'overview' ? `${base}/${encodeURIComponent(tab)}` : base;
   }
 
   let theme = $state<Theme>(initialTheme());
@@ -51,7 +62,8 @@
   let openedFromApp = false;
   let unsubscribeLive: (() => void) | undefined;
 
-  const serverName = $derived(parseServerHash(hash));
+  const serverRoute = $derived(parseServerHash(hash));
+  const serverName = $derived(serverRoute?.name ?? null);
   const page = $derived<'updates' | 'audit' | null>(hash === '#updates' ? 'updates' : hash === '#audit' ? 'audit' : null);
   let updatesCount = $state(0);
   const clock = $derived(lastLive ? fmtClock(lastLive) : '--:--:--');
@@ -61,9 +73,17 @@
     if (!hash.startsWith(SRV_PREFIX)) openedFromApp = false;
   }
 
-  function openServer(name: string): void {
+  function openServer(name: string, tab?: string): void {
     openedFromApp = true;
-    location.hash = `${SRV_PREFIX}${encodeURIComponent(name)}`;
+    location.hash = serverHash(name, tab);
+  }
+
+  /** Keeps the active tab in the hash without adding a history entry (replaceState fires no hashchange). */
+  function setServerTab(name: string, tab: string): void {
+    const next = serverHash(name, tab);
+    if (location.hash === next) return;
+    history.replaceState(history.state, '', `${location.pathname}${location.search}${next}`);
+    hash = next;
   }
 
   function backToDashboard(): void {
@@ -214,7 +234,12 @@
       <AuditPage onBack={() => (location.hash = '')} />
     {:else if serverName !== null}
       {#key serverName}
-        <ServerPage name={serverName} onBack={backToDashboard} />
+        <ServerPage
+          name={serverName}
+          tab={serverRoute?.tab ?? null}
+          ontab={(next) => setServerTab(serverName, next)}
+          onBack={backToDashboard}
+          onagentchanged={refreshUpdatesCount} />
       {/key}
     {:else}
       <Dashboard {editing} {reloadKey} onopen={openServer} onauthlost={endSession} />
@@ -280,6 +305,7 @@
 
   .brand h1 {
     margin: 0;
+    font-variation-settings: "ELSH" 40;
     font-size: 26px;
     letter-spacing: 0.02em;
     line-height: 1;

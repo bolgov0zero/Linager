@@ -96,5 +96,13 @@
   "srv.policy.title": "Хранение метрик",
   "srv.policy.period": "Период",
   "srv.policy.precision": "Точность",
-  "srv.policy.note": "Старые данные автоматически укрупняются."
+  "srv.policy.note": "Старые данные автоматически укрупняются.",
+  "srv.agent.available": "Доступна версия {version} агента Linager.",
+  "srv.agent.unsupported": "Версия агента {version} больше не поддерживается сервером.",
+  "srv.agent.update": "Обновить агент",
+  "srv.agent.confirmTitle": "Обновить агент {name}?",
+  "srv.agent.confirmText": "Агент перезапустится, связь прервётся на несколько секунд. Если агент не выйдет на связь за 60 секунд, он откатится на прежнюю версию.",
+  "srv.agent.confirmOk": "Обновить",
+  "srv.agent.done": "Агент {name} обновлён до {version}",
+  "srv.agent.rolledBack": "Откат агента на {name}: связь не восстановилась"
 }

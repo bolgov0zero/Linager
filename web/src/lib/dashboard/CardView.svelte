@@ -6,10 +6,11 @@
   import EditBar from './EditBar.svelte';
   import { fmtAgo, fmtPct, fmtRate, fmtUptime, type Units } from './format';
   import Tags from './Tags.svelte';
-  import { levelOf, tagsOf } from './status';
+  import { levelOf, tagsOf, type AgentFlag } from './status';
 
   let {
     card,
+    agent = null,
     now,
     editing,
     index,
@@ -19,17 +20,19 @@
     onremove,
   }: {
     card: ServerCard;
+    /** Agent update state from the updates API. */
+    agent?: AgentFlag;
     now: number;
     editing: boolean;
     index: number;
     count: number;
-    onopen: (name: string) => void;
+    onopen: (name: string, tab?: string) => void;
     onmove: (dir: -1 | 1) => void;
     onremove: () => void;
   } = $props();
 
   const level = $derived(levelOf(card));
-  const tags = $derived(tagsOf(card));
+  const tags = $derived(tagsOf(card, agent));
   const sample = $derived(card.online ? card.sample : null);
   const cpu = $derived(sample ? sample.cpu : null);
   const ram = $derived(sample ? sample.mem_pct : null);
@@ -85,7 +88,7 @@
   <footer class="foot">
     <span class="small mono muted">{footText}</span>
     <div class="row end">
-      <button class="btn" type="button" disabled title={$tr('dash.terminalSoon')}>{$tr('dash.terminal')}</button>
+      <button class="btn" type="button" disabled={!card.online} onclick={() => onopen(card.name, 'terminal')}>{$tr('dash.terminal')}</button>
       <button class="btn" type="button" onclick={() => onopen(card.name)}>{$tr('dash.open')}</button>
     </div>
   </footer>
@@ -131,6 +134,7 @@
 
   .name {
     display: flex;
+    font-variation-settings: "ELSH" 40;
     align-items: center;
     gap: 10px;
     margin: 0;

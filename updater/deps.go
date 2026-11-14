@@ -17,6 +17,9 @@ import (
 // Paths used on a real installation.
 const (
 	BinPath = "/usr/local/bin/linager"
+	// StateDir belongs to root only (0700): the staged binary and the previous binaries live here, out of
+	// reach of the unprivileged server user.
+	StateDir = "/var/lib/linager-updater"
 )
 
 // StatusFile, RequestFile and cache directories derive from the data directory.
@@ -36,7 +39,7 @@ func DefaultDeps(cfgPath string) (Deps, *config.Server, error) {
 	}
 	d := Deps{
 		Cfg: cfg, ConfigPath: cfgPath, BinPath: BinPath,
-		CacheDir: CacheDir(cfg.DataDir), PrevDir: filepath.Join(cfg.DataDir, "prev"),
+		CacheDir: CacheDir(cfg.DataDir), PrevDir: filepath.Join(StateDir, "prev"), StageDir: StateDir,
 		StatusPath: StatusFile(cfg.DataDir), RequestPath: RequestFile(cfg.DataDir),
 		Source: update.NewSource(cfg.Update.Source), Key: key, CurrentVersion: version.Version,
 		Run: func(ctx context.Context, name string, args ...string) ([]byte, error) {
@@ -44,6 +47,9 @@ func DefaultDeps(cfgPath string) (Deps, *config.Server, error) {
 		},
 		Backup: func(ctx context.Context) (string, error) {
 			return backup.Run(ctx, backup.Options{DSN: cfg.Database.DSN, OutDir: backup.DefaultDir, Files: []string{cfgPath}, DataDir: cfg.DataDir, Keep: 7, Prefix: "linager-pre-update"})
+		},
+		Restore: func(ctx context.Context, archive string) error {
+			return backup.RestoreDB(ctx, archive, cfg.Database.DSN)
 		},
 		Health: HealthCheck(cfg),
 		Record: func(ctx context.Context, r store.UpdateRun) {

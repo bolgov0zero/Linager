@@ -4,10 +4,11 @@
   import EditBar from './EditBar.svelte';
   import { fmtAgo, fmtPct, fmtRate, type Units } from './format';
   import Tags from './Tags.svelte';
-  import { levelOf, tagsOf, toneOfPct } from './status';
+  import { levelOf, tagsOf, toneOfPct, type AgentFlag } from './status';
 
   let {
     card,
+    agent = null,
     now,
     editing,
     index,
@@ -17,17 +18,19 @@
     onremove,
   }: {
     card: ServerCard;
+    /** Agent update state from the updates API. */
+    agent?: AgentFlag;
     now: number;
     editing: boolean;
     index: number;
     count: number;
-    onopen: (name: string) => void;
+    onopen: (name: string, tab?: string) => void;
     onmove: (dir: -1 | 1) => void;
     onremove: () => void;
   } = $props();
 
   const level = $derived(levelOf(card));
-  const tags = $derived(tagsOf(card));
+  const tags = $derived(tagsOf(card, agent));
   const sample = $derived(card.online ? card.sample : null);
   const cpu = $derived(sample ? sample.cpu : null);
   const ram = $derived(sample ? sample.mem_pct : null);
@@ -45,7 +48,7 @@
     <h3 class="name"><span class="sq" aria-hidden="true"></span>{card.name}</h3>
   </div>
   <div class="row acts">
-    <button class="btn" type="button" disabled title={$tr('dash.terminalSoon')}>{$tr('dash.terminal')}</button>
+    <button class="btn" type="button" disabled={!card.online} onclick={() => onopen(card.name, 'terminal')}>{$tr('dash.terminal')}</button>
     <button class="btn" type="button" onclick={() => onopen(card.name)}>{$tr('dash.open')}</button>
   </div>
   <div class="metrics">
@@ -141,6 +144,7 @@
 
   .name {
     display: flex;
+    font-variation-settings: "ELSH" 40;
     align-items: center;
     gap: 10px;
     margin: 0;

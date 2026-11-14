@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/coder/websocket"
 
+	"github.com/bolgov0zero/linager/internal/config"
 	"github.com/bolgov0zero/linager/internal/protocol"
 	"github.com/bolgov0zero/linager/server/store"
 )
@@ -34,7 +36,9 @@ type AgentPort struct {
 	Metrics *Metrics
 	Updates *Updates
 	Log     *slog.Logger
-	enrollL *ipLimiter
+	// CertLifetime is the validity of renewed agent certificates (0 = the default).
+	CertLifetime time.Duration
+	enrollL      *ipLimiter
 }
 
 // NewAgentPort builds the handler set.
@@ -149,12 +153,16 @@ func (a *AgentPort) ws(w http.ResponseWriter, r *http.Request) {
 	}
 	id, err := a.Keys.CA.VerifyAgentCert(r.TLS.PeerCertificates[0])
 	if err != nil {
+		var inv x509.CertificateInvalidError
+		if errors.As(err, &inv) && inv.Reason == x509.Expired {
+			w.Header().Set("X-Linager-Reason", protocol.ReasonExpired)
+		}
 		http.Error(w, "invalid certificate", http.StatusUnauthorized)
 		return
 	}
 	srv, err := a.DB.ServerByID(r.Context(), id)
 	if err != nil || !bytes.Equal(srv.AgentPubkey, r.TLS.PeerCertificates[0].PublicKey.(ed25519.PublicKey)) {
-		w.Header().Set("X-Linager-Reason", "revoked")
+		w.Header().Set("X-Linager-Reason", protocol.ReasonRevoked)
 		http.Error(w, "server is not registered", http.StatusUnauthorized)
 		return
 	}
@@ -205,6 +213,11 @@ func (a *AgentPort) ws(w http.ResponseWriter, r *http.Request) {
 		a.Updates.AgentHello(ctx, id, h.AgentVersion)
 	}
 	a.Log.Info("agent connected", "server", srv.Name, "version", h.AgentVersion)
+	certLife := a.CertLifetime
+	if certLife <= 0 {
+		certLife = config.DefaultAgentCertLifetime
+	}
+	var lastRenew time.Time
 
 	for {
 		env, err := read()
@@ -227,6 +240,23 @@ func (a *AgentPort) ws(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			a.Metrics.Ingest(ctx, id, &batch)
+		case protocol.TypeCertRenew:
+			// The agent is authenticated (mTLS and a signed message) and still registered, so it may have a
+			// fresh certificate for the same key. Requests are rate-limited per connection; a connection that
+			// stays up for years still gets every renewal it needs.
+			if !lastRenew.IsZero() && time.Since(lastRenew) < min(time.Hour, certLife/6) {
+				continue
+			}
+			lastRenew = time.Now()
+			pem, err := a.Keys.CA.IssueAgentCert(pub, id, certLife)
+			if err != nil {
+				a.Log.Error("renew agent certificate", "server", srv.Name, "err", err)
+				continue
+			}
+			if c.send(ctx, protocol.TypeCertRenewed, protocol.CertRenewed{CertPEM: string(pem)}) != nil {
+				return
+			}
+			a.Log.Info("agent certificate renewed", "server", srv.Name)
 		case protocol.TypePing:
 			_ = a.DB.TouchServer(ctx, id, "", "", env.V)
 			if c.send(ctx, protocol.TypePong, nil) != nil {

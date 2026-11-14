@@ -37,3 +37,29 @@ export const TABS = [
 ] as const;
 
 export type TabId = (typeof TABS)[number]['id'];
+
+/** Agent module that backs a tab; tabs not listed here (overview, metrics) are always shown. */
+const TAB_MODULE: Partial<Record<TabId, string>> = {
+  terminal: 'terminal',
+  files: 'files',
+  services: 'services',
+  network: 'network',
+  firewall: 'firewall',
+  docker: 'docker',
+  updates: 'apt',
+  processes: 'processes',
+  logs: 'logs',
+};
+
+/**
+ * Tabs to show for the reported agent modules. An empty list means the agent did not report
+ * its modules (old agent): all tabs stay except Docker, which needs the module to be reported.
+ */
+export function visibleTabs(modules: readonly string[]): (typeof TABS)[number][] {
+  return TABS.filter((tab) => {
+    const module = TAB_MODULE[tab.id];
+    if (!module) return true;
+    if (modules.length === 0) return module !== 'docker';
+    return modules.includes(module);
+  });
+}

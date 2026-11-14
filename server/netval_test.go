@@ -88,8 +88,16 @@ func TestFirewallWarnings(t *testing.T) {
 		{"output drop", chain("output", "drop"), "agent_link,"},
 	}
 	for _, c := range cases {
-		if got := codes(fwWarnings([]FwDraftChain{c.chain}, en)); got != c.want {
+		if got := codes(fwWarnings([]FwDraftChain{c.chain}, nil, en)); got != c.want {
 			t.Errorf("%s: got %q want %q", c.name, got, c.want)
 		}
+	}
+	// sshd on a non-default port: opening 22 does not help, the real port must stay reachable
+	moved := []int{2222}
+	if got := codes(fwWarnings([]FwDraftChain{chain("input", "drop", "ct state established accept", "tcp dport 22 accept")}, moved, en)); got != "ssh_port," {
+		t.Errorf("custom port closed: got %q", got)
+	}
+	if got := codes(fwWarnings([]FwDraftChain{chain("input", "drop", "ct state established accept", "tcp dport 2000-3000 accept")}, moved, en)); got != "" {
+		t.Errorf("custom port open through a range: got %q", got)
 	}
 }

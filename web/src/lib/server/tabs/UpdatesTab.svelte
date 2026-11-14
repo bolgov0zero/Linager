@@ -207,6 +207,7 @@
 
   .big {
     margin: 0;
+    font-variation-settings: "ELSH" 40;
     font-family: var(--font-display);
     font-size: 36px;
     line-height: 1;

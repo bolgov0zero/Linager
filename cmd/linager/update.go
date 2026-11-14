@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -23,7 +25,7 @@ import (
 
 func newUpdateCmd() *cobra.Command {
 	var cfgPath, channel, ver string
-	var check, yes, applyRequest bool
+	var check, yes, applyRequest, allowDowngrade bool
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Check for and install a new Linager server version (signed, with backup and automatic rollback)",
@@ -65,10 +67,14 @@ func newUpdateCmd() *cobra.Command {
 				}
 				return nil
 			}
-			if ver == "" && !release.Newer(target, version.Version) {
-				_, _ = fmt.Fprintln(out, "Linager is up to date.")
-				return nil
+			if !release.Newer(target, version.Version) && !allowDowngrade {
+				if ver == "" || release.Compare(release.ParseVersion(target), release.ParseVersion(version.Version)) == 0 {
+					_, _ = fmt.Fprintln(out, "Linager is up to date.")
+					return nil
+				}
+				return errors.New(target + " is older than the installed " + version.Version + "; pass --allow-downgrade if you really want it (the database is not migrated back)")
 			}
+			d.AllowDowngrade = allowDowngrade
 			if !yes {
 				_, _ = fmt.Fprintf(out, "Update %s -> %s? A database backup is taken first. [y/N]: ", version.Version, target)
 				ans, _ := bufio.NewReader(os.Stdin).ReadString('\n')
@@ -98,6 +104,7 @@ func newUpdateCmd() *cobra.Command {
 	f.StringVar(&ver, "version", "", "install this exact version")
 	f.BoolVar(&check, "check", false, "only check, do not install")
 	f.BoolVar(&yes, "yes", false, "do not ask for confirmation")
+	f.BoolVar(&allowDowngrade, "allow-downgrade", false, "allow installing a version that is not newer than the current one")
 	f.BoolVar(&applyRequest, "apply-request", false, "process the update request written by the admin panel (used by systemd)")
 	_ = f.MarkHidden("apply-request")
 	return cmd
@@ -125,6 +132,53 @@ func newBackupCmd() *cobra.Command {
 	cmd.Flags().StringVar(&cfgPath, "config", defaultServerConfig, "path to server.yaml")
 	cmd.Flags().StringVar(&outDir, "output", backup.DefaultDir, "backup directory")
 	cmd.Flags().IntVar(&keep, "keep", 0, "keep only the newest N backups (0 = keep all)")
+	return cmd
+}
+
+func newRestoreCmd() *cobra.Command {
+	var cfgPath string
+	var withKeys, yes bool
+	cmd := &cobra.Command{
+		Use:   "restore <archive>",
+		Short: "Restore the database (and optionally the keys) from a backup made by `linager backup`",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			cfg, err := config.LoadServer(cfgPath)
+			if err != nil {
+				return err
+			}
+			out := c.OutOrStdout()
+			if !yes {
+				_, _ = fmt.Fprintf(out, "Replace the current Linager database with %s? The server is stopped meanwhile. [y/N]: ", args[0])
+				ans, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+				if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(ans)), "y") {
+					return errors.New("cancelled")
+				}
+			}
+			active := exec.CommandContext(c.Context(), "systemctl", "is-active", "--quiet", "linager-server").Run() == nil
+			if active {
+				if err := exec.CommandContext(c.Context(), "systemctl", "stop", "linager-server").Run(); err != nil {
+					return fmt.Errorf("stop service: %w", err)
+				}
+				defer func() { _ = exec.Command("systemctl", "start", "linager-server").Run() }()
+			}
+			if err := backup.RestoreDB(c.Context(), args[0], cfg.Database.DSN); err != nil {
+				return fmt.Errorf("the database was left unchanged: %w", err)
+			}
+			_, _ = fmt.Fprintln(out, "Database restored.")
+			if withKeys {
+				names, err := backup.RestoreKeys(args[0], cfg.DataDir)
+				if err != nil {
+					return err
+				}
+				_, _ = fmt.Fprintln(out, "Keys restored:", strings.Join(names, ", "))
+			}
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&cfgPath, "config", defaultServerConfig, "path to server.yaml")
+	cmd.Flags().BoolVar(&withKeys, "with-keys", false, "also restore the CA, certificates and signing keys into the data directory")
+	cmd.Flags().BoolVar(&yes, "yes", false, "do not ask for confirmation")
 	return cmd
 }
 
@@ -160,7 +214,7 @@ func newAgentUpdateCmds(dataDir *string) []*cobra.Command {
 			if err := agent.UpdateFromServer(ctx, *dataDir, version.Version, ver, func(s string) { _, _ = fmt.Fprintln(out, s) }); err != nil {
 				return err
 			}
-			_, _ = fmt.Fprintln(out, "Installed. The agent restarts now and rolls back by itself if it cannot reconnect within 60 seconds.")
+			_, _ = fmt.Fprintln(out, "Installed. The agent restarts now and rolls back by itself if it cannot reconnect to the server in about a minute.")
 			return nil
 		},
 	}
@@ -183,5 +237,13 @@ func newAgentUpdateCmds(dataDir *string) []*cobra.Command {
 		RunE:   func(*cobra.Command, []string) error { return agent.RollbackUpdate(*dataDir, exe) },
 	}
 	rollback.Flags().StringVar(&exe, "binary", "/usr/local/bin/linager", "path of the installed binary")
-	return []*cobra.Command{upd, status, rollback}
+	rollbackChange := &cobra.Command{
+		Use:    "rollback-change",
+		Short:  "Roll back an unconfirmed network or firewall change (run by the systemd timer)",
+		Hidden: true,
+		RunE: func(*cobra.Command, []string) error {
+			return agent.RollbackPendingChange(*dataDir, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+		},
+	}
+	return []*cobra.Command{upd, status, rollback, rollbackChange}
 }

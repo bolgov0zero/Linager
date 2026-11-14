@@ -100,6 +100,10 @@ func (u *updater) Apply(ctx context.Context, version string, key *release.Key) e
 	if !agentVersionRe.MatchString(version) {
 		return errors.New("invalid version")
 	}
+	// A signed but older release must not replace a newer agent: old versions may have known flaws.
+	if release.Compare(release.ParseVersion(version), release.ParseVersion(u.version)) < 0 {
+		return fmt.Errorf("refusing to downgrade from %s to %s", u.version, version)
+	}
 	u.mu.Lock()
 	if u.busy {
 		u.mu.Unlock()

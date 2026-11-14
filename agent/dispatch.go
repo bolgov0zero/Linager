@@ -94,8 +94,7 @@ func NewRegistry(cfg *config.Agent, col Collector, log *slog.Logger, dataDir str
 	if cfg.Enabled("apt") {
 		r.cmds["apt.list"] = aptList
 		r.streams["apt"] = func(ctx context.Context, p json.RawMessage, io *StreamIO) error {
-			defer refreshUpdates(col)
-			return aptStream(ctx, p, io)
+			return aptStream(ctx, p, io, func() { refreshUpdates(col) })
 		}
 	}
 	if cfg.Enabled("processes") {
@@ -116,6 +115,7 @@ func NewRegistry(cfg *config.Agent, col Collector, log *slog.Logger, dataDir str
 		r.streams["files.upload"] = filesUpload
 	}
 	pend := NewPending(dataDir, log)
+	pend.EnableWatchdog()
 	if cfg.Enabled("network") {
 		nm := newNetModule(pend, dataDir)
 		pend.Register("network", nm.kind())

@@ -61,6 +61,7 @@
 
   .val {
     font-family: var(--font-display);
+    font-variation-settings: "ELSH" 40;
     font-weight: 400;
     font-size: 34px;
     line-height: 1.1;

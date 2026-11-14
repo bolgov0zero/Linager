@@ -649,6 +649,7 @@
 
   h3 {
     margin: 0;
+    font-variation-settings: "ELSH" 40;
     font-size: 20px;
     line-height: 1.1;
     overflow-wrap: anywhere;

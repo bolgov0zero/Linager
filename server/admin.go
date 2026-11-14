@@ -430,7 +430,7 @@ func (a *Admin) approve(w http.ResponseWriter, r *http.Request, u *store.User) {
 		return
 	}
 	srv, err := a.DB.ApproveEnrollment(r.Context(), e, func(serverID string) (string, error) {
-		pem, err := a.Keys.CA.IssueAgentCert(e.AgentPubkey, serverID, 365*24*time.Hour)
+		pem, err := a.Keys.CA.IssueAgentCert(e.AgentPubkey, serverID, a.Cfg.AgentCertLifetime())
 		return string(pem), err
 	})
 	if err != nil {

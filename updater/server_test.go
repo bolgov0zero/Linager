@@ -173,3 +173,29 @@ func TestUnverifiedReleaseIsRefused(t *testing.T) {
 		t.Fatal("a path-like version must be refused")
 	}
 }
+
+func TestFailureAfterMigrationsRestoresDatabase(t *testing.T) {
+	e := newEnv(t)
+	e.cache("v0.2.0", "NEW")
+	e.d.HealthTimeout = 1
+	e.d.Health = func(context.Context) error { return errors.New("no answer") }
+	restored := ""
+	e.d.Restore = func(_ context.Context, archive string) error { restored = archive; return nil }
+	if err := ServerUpdate(context.Background(), e.d, "v0.2.0", "stable"); err == nil {
+		t.Fatal("an unhealthy update must fail")
+	}
+	if restored != "backup.tar.gz" || e.binary() != "OLD" {
+		t.Fatalf("binary %q, restored from %q", e.binary(), restored)
+	}
+}
+
+func TestDowngradeIsRefused(t *testing.T) {
+	e := newEnv(t)
+	e.cache("v0.0.9", "ANCIENT")
+	if err := ServerUpdate(context.Background(), e.d, "v0.0.9", "stable"); err == nil || !strings.Contains(err.Error(), "downgrade") {
+		t.Fatalf("a signed older release must be refused, got %v", err)
+	}
+	if e.binary() != "OLD" || len(e.calls) != 0 {
+		t.Fatalf("nothing may be touched: %q %v", e.binary(), e.calls)
+	}
+}
