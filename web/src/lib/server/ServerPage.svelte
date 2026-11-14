@@ -298,14 +298,15 @@
     gap: 12px;
   }
 
-  /* Horizontally scrollable tab bar; active tab sits on the panel's top border. */
+  /* Horizontally scrollable tab bar; active tab sits on the panel's top border. The page is a column with a 12px gap,
+     so the bar pulls 12px + the 2px border back to touch the panel. */
   .tabs {
     display: flex;
     gap: 4px;
     overflow-x: auto;
     scrollbar-width: thin;
     margin-top: 12px;
-    margin-bottom: -2px;
+    margin-bottom: -14px;
     padding-bottom: 0;
   }
 
