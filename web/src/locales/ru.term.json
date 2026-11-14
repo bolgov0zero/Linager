@@ -6,7 +6,6 @@
   "term.close": "Закрыть сессию",
   "term.reconnect": "Подключиться снова",
   "term.offline": "Сервер не в сети. Терминал недоступен.",
-
   "logs.source": "Источник",
   "logs.source.all": "Все источники",
   "logs.source.kernel": "Ядро (kernel)",
@@ -26,8 +25,7 @@
   "logs.empty": "Записей пока нет",
   "logs.closed": "Соединение закрыто",
   "logs.reconnect": "Подключиться снова",
-  "logs.offline": "Сервер не в сети. Логи недоступны."
-  ,
+  "logs.offline": "Сервер не в сети. Логи недоступны.",
   "proc.sort.cpu": "По CPU",
   "proc.sort.mem": "По RAM",
   "proc.show": "Показать",
@@ -51,5 +49,11 @@
   "proc.offline": "Сервер не в сети. Список процессов недоступен.",
   "proc.disabled": "Модуль процессов отключён на агенте.",
   "proc.loadFailed": "Не удалось получить список процессов",
-  "proc.empty": "Процессов нет"
+  "proc.empty": "Процессов нет",
+  "term.copy": "Копировать",
+  "term.paste": "Вставить",
+  "term.copied": "Скопировано",
+  "term.copyFail": "Не удалось скопировать",
+  "term.pasteHint": "Нажмите Ctrl+V (или ⌘V), чтобы вставить",
+  "term.clipboardHint": "Копирование: выделите текст (Ctrl+Shift+C или ⌘C). Вставка: Ctrl+Shift+V или ⌘V."
 }

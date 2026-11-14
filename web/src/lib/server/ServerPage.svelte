@@ -74,10 +74,14 @@
       if (e.type === 'dashboard' || e.server_id !== id || !detail) return;
       if (e.type === 'metrics') {
         const s = e.sample;
-        detail = { ...detail, online: true, sample: s };
+        // Mutate in place: tabs depend on individual fields (id, online); replacing the object would
+        // restart their streams and polling on every sample.
+        detail.online = true;
+        detail.sample = s;
         live = [...live, { cpu: s.cpu, mem: s.mem_pct, rx: s.rx_bps, tx: s.tx_bps }].slice(-HISTORY_LIMIT);
       } else if (e.type === 'status') {
-        detail = { ...detail, online: e.online, last_seen_at: e.last_seen_at };
+        detail.online = e.online;
+        detail.last_seen_at = e.last_seen_at;
       }
     });
   });

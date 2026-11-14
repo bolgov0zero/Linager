@@ -6,7 +6,6 @@
   "term.close": "End session",
   "term.reconnect": "Reconnect",
   "term.offline": "Server is offline. Terminal unavailable.",
-
   "logs.source": "Source",
   "logs.source.all": "All sources",
   "logs.source.kernel": "Kernel (kernel)",
@@ -26,8 +25,7 @@
   "logs.empty": "No entries yet",
   "logs.closed": "Connection closed",
   "logs.reconnect": "Reconnect",
-  "logs.offline": "Server is offline. Logs unavailable."
-  ,
+  "logs.offline": "Server is offline. Logs unavailable.",
   "proc.sort.cpu": "By CPU",
   "proc.sort.mem": "By RAM",
   "proc.show": "Show",
@@ -51,5 +49,11 @@
   "proc.offline": "Server is offline. Process list unavailable.",
   "proc.disabled": "The processes module is disabled on the agent.",
   "proc.loadFailed": "Failed to load the process list",
-  "proc.empty": "No processes"
+  "proc.empty": "No processes",
+  "term.copy": "Copy",
+  "term.paste": "Paste",
+  "term.copied": "Copied",
+  "term.copyFail": "Copy failed",
+  "term.pasteHint": "Press Ctrl+V (or ⌘V) to paste",
+  "term.clipboardHint": "Copy: select text (Ctrl+Shift+C or ⌘C). Paste: Ctrl+Shift+V or ⌘V."
 }

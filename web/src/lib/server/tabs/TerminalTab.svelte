@@ -1,6 +1,7 @@
 <script lang="ts">
   import { openStream, type ServerDetail } from '../../../api';
-  import { tr } from '../../../i18n';
+  import { tr, t } from '../../../i18n';
+  import { showToast } from '../../toast';
 
   let { server }: { server: ServerDetail } = $props();
 
@@ -19,15 +20,48 @@
   let reason = $state<string | null>(null);
   let attempt = $state(0);
 
-  // Non-reactive handle to the live session, used by the close button.
-  let current: { close: () => void } | null = null;
+  // Non-reactive handle to the live session, used by the header buttons.
+  let current: { close: () => void; copy: () => void; paste: () => void; focus: () => void } | null = null;
+
+  /** Copies text with the async Clipboard API (secure contexts) or the legacy execCommand fallback (plain HTTP). */
+  async function copyText(text: string): Promise<boolean> {
+    try {
+      if (window.isSecureContext && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch {
+      // permission denied - fall through to the legacy path
+    }
+    const area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+    document.body.appendChild(area);
+    area.select();
+    let ok = false;
+    try {
+      ok = document.execCommand('copy');
+    } catch {
+      ok = false;
+    }
+    area.remove();
+    return ok;
+  }
 
   // One terminal + one socket per mount/reconnect. Torn down on unmount, offline, or reconnect.
   // xterm is loaded on demand so it stays out of the main bundle.
+  // Derived primitives: the parent replaces the `server` object on every live metrics event, and an effect
+  // reading `server.*` directly would restart the terminal each time (losing the shell). Deriveds only
+  // notify when the value really changes.
+  const serverId = $derived(server.id);
+  const isOnline = $derived(server.online);
+
   $effect(() => {
     const el = host;
-    const online = server.online;
-    const id = server.id;
+    const online = isOnline;
+    const id = serverId;
     void attempt;
     if (!el || !online) return;
 
@@ -55,6 +89,24 @@
       term.loadAddon(fit);
       term.open(el);
       fit.fit();
+
+      const copySelection = async () => {
+        if (!term.hasSelection()) return;
+        showToast(t((await copyText(term.getSelection())) ? 'term.copied' : 'term.copyFail'));
+      };
+      // Ctrl+C copies only when text is selected (otherwise it stays SIGINT); Ctrl+Shift+C always copies.
+      // Paste keys return false so xterm ignores them and the browser's native paste event reaches xterm,
+      // which works on plain HTTP too (no Clipboard API needed). Cmd+C is handled natively by xterm.
+      term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+        if (e.type !== 'keydown') return true;
+        const key = e.key.toLowerCase();
+        if (e.ctrlKey && !e.metaKey && key === 'c' && (e.shiftKey || term.hasSelection())) {
+          void copySelection();
+          return false;
+        }
+        if ((e.ctrlKey || e.metaKey) && key === 'v') return false;
+        return true;
+      });
 
       const encoder = new TextEncoder();
       const socket = openStream(id, 'terminal', { cols: term.cols, rows: term.rows });
@@ -103,7 +155,24 @@
       const observer = new ResizeObserver(() => fit.fit());
       observer.observe(el);
 
-      current = { close: () => socket.close() };
+      term.focus();
+      current = {
+        focus: () => term.focus(),
+        close: () => socket.close(),
+        copy: () => void copySelection(),
+        paste: async () => {
+          term.focus();
+          if (window.isSecureContext && navigator.clipboard?.readText) {
+            try {
+              term.paste(await navigator.clipboard.readText());
+              return;
+            } catch {
+              // permission denied - ask for the keyboard shortcut instead
+            }
+          }
+          showToast(t('term.pasteHint'));
+        },
+      };
 
       teardown = () => {
         active = false;
@@ -137,14 +206,19 @@
       {/if}
     </p>
     {#if server.online && phase !== 'closed'}
-      <button class="btn" type="button" onclick={() => current?.close()}>{$tr('term.close')}</button>
+      <div class="actions">
+        <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => current?.copy()}>{$tr('term.copy')}</button>
+        <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => current?.paste()}>{$tr('term.paste')}</button>
+        <button class="btn" type="button" onclick={() => current?.close()}>{$tr('term.close')}</button>
+      </div>
     {/if}
   </div>
 
   {#if !server.online}
     <p class="note">{$tr('term.offline')}</p>
   {:else}
-    <div class="screen" bind:this={host}></div>
+    <!-- Clicking anywhere in the terminal panel (also outside the character grid) focuses the terminal. -->
+    <div class="screen" role="presentation" bind:this={host} onpointerdown={() => current?.focus()}></div>
     {#if phase === 'closed'}
       <div class="closed">
         <p class="error" role="alert">{reason ?? $tr('term.closed')}</p>
@@ -155,6 +229,12 @@
 </div>
 
 <style>
+  .actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
   .term {
     display: flex;
     flex-direction: column;
