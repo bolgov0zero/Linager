@@ -129,6 +129,7 @@
               disabled={!canAct || applicable.length === 0}
               onchange={(event) => toggleAll(event.currentTarget.checked)}
             />
+            <span class="upd-selall-label">{$trans('upd.agents.selectAll')}</span>
           </th>
           <th>{$trans('upd.agents.colServer')}</th>
           <th>{$trans('upd.agents.colVersion')}</th>
@@ -192,7 +193,7 @@
               {:else if agent.status === 'queued' && agent.message}
                 <span class="upd-sub">{agent.message}</span>
               {:else}
-                <span class="upd-sub">—</span>
+                <span class="upd-sub upd-dash">—</span>
               {/if}
             </td>
             <td class="upd-r">

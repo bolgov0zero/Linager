@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.27
+
+- Phones: the agents, cache and history tables on the Updates page are shown as compact blocks, so there is no horizontal scrolling.
+
 ## 0.1.26
 
 - Phones: the four metric cards on the server overview are smaller and sit two by two.

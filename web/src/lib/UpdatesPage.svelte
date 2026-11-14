@@ -613,4 +613,92 @@
   .upd-term .dim {
     color: #7f8898;
   }
+
+  :global(.upd-selall-label) {
+    display: none;
+  }
+
+  /* Phones: the update tables become lists of small blocks, so nothing scrolls sideways. */
+  @media (max-width: 600px) {
+    :global(.upd-tbl),
+    :global(.upd-tbl tbody) {
+      display: block;
+    }
+
+    :global(.upd-tbl:not(.upd-agents) thead) {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+
+    /* The agents header keeps only the "select all" checkbox with its label. */
+    :global(.upd-agents thead tr) {
+      display: flex;
+      border-bottom: 2px solid var(--line);
+    }
+
+    :global(.upd-agents thead th:not(.upd-sel)) {
+      display: none;
+    }
+
+    :global(.upd-agents thead th.upd-sel) {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: auto;
+      border-bottom: 0;
+    }
+
+    :global(.upd-selall-label) {
+      display: inline;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    :global(.upd-tbl tbody tr) {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 10px;
+      padding: 8px 4px;
+      border-bottom: 2px dashed var(--seg-off);
+    }
+
+    :global(.upd-tbl tbody td) {
+      padding: 0;
+      border: 0;
+    }
+
+    :global(.upd-tbl tbody td[colspan]) {
+      flex: 1 0 100%;
+    }
+
+    :global(.upd-agents tbody td.upd-sel) {
+      width: auto;
+    }
+
+    /* Server name takes the rest of the first line, the progress its own line, the button sits right. */
+    :global(.upd-agents tbody td:nth-child(2)) {
+      flex: 1 0 calc(100% - 44px);
+      min-width: 0;
+    }
+
+    :global(.upd-agents tbody td:nth-child(5)) {
+      flex: 1 0 100%;
+      order: 5;
+    }
+
+    :global(.upd-agents tbody td:nth-child(5):has(.upd-dash)) {
+      display: none;
+    }
+
+    :global(.upd-agents tbody td.upd-r) {
+      order: 6;
+      margin-left: auto;
+    }
+  }
 </style>
