@@ -80,6 +80,13 @@ body {
   font-synthesis: none;
 }
 
+/* No zoom on phones: no double-tap zoom (pinch and focus zoom are off in the viewport meta and main.ts). */
+html {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   background: var(--bg);
   color: var(--ink);
