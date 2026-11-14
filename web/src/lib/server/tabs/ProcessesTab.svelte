@@ -1,5 +1,6 @@
 <script lang="ts">
   import { get } from 'svelte/store';
+  import Select from '../../ui/Select.svelte';
   import { api, ApiError, type ProcessInfo, type ServerDetail } from '../../../api';
   import { tr } from '../../../i18n';
   import Modal from '../../Modal.svelte';
@@ -100,11 +101,7 @@
         </button>
         <label class="count">
           <span class="muted small">{$tr('proc.show')}</span>
-          <select class="input" bind:value={count}>
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
+          <Select bind:value={count} width="auto" options={[10, 20, 50].map((n) => ({ value: n, label: String(n) }))} />
         </label>
       </div>
       <p class="muted small">{$tr('proc.refresh', { n: count })}</p>
@@ -194,9 +191,6 @@
     gap: 6px;
   }
 
-  .count .input {
-    width: auto;
-  }
 
   .note {
     margin: 0;

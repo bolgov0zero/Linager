@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { UpdateStep, UpdatesInfo } from '../../api';
+  import Select from '../ui/Select.svelte';
   import Modal from '../Modal.svelte';
   import { locale, tr as trans } from '../../i18n';
   import { RUN_VISIBLE_SEC, SERVER_STEPS, fmtDateTime } from './format';
@@ -62,16 +63,17 @@
   <dl class="upd-kv">
     <dt>{$trans('upd.srv.channel')}</dt>
     <dd>
-      <select
-        class="upd-select"
-        aria-label={$trans('upd.srv.channelAria')}
-        value={info.channel}
+      <Select
+        size="sm"
+        ariaLabel={$trans('upd.srv.channelAria')}
+        value={info.channel as 'stable' | 'beta'}
         disabled={busy || channelBusy}
-        onchange={(event) => onchannel(event.currentTarget.value as 'stable' | 'beta')}
-      >
-        <option value="stable">stable</option>
-        <option value="beta">beta</option>
-      </select>
+        onchange={onchannel}
+        options={[
+          { value: 'stable', label: 'stable' },
+          { value: 'beta', label: 'beta' },
+        ]}
+      />
     </dd>
     <dt>{$trans('upd.srv.checked')}</dt>
     <dd>{fmtDateTime(srv.checked_at, $trans, $locale)}</dd>

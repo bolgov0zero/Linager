@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import Select from '../../ui/Select.svelte';
   import {
     api,
     ApiError,
@@ -469,19 +470,25 @@
               <div class="grid2">
                 <label class="field">
                   <span class="label">{$tr('net.form.mode')}</span>
-                  <select class="input" bind:value={form.mode}>
-                    <option value="static">{$tr('net.option.static')}</option>
-                    <option value="dhcp">{$tr('net.option.dhcp')}</option>
-                  </select>
+                  <Select
+                    bind:value={form.mode}
+                    options={[
+                      { value: 'static', label: $tr('net.option.static') },
+                      { value: 'dhcp', label: $tr('net.option.dhcp') },
+                    ]}
+                  />
                   {#if fieldError('mode')}<p class="error small">{fieldError('mode')}</p>{/if}
                 </label>
 
                 <label class="field">
                   <span class="label">{$tr('net.form.state')}</span>
-                  <select class="input" bind:value={form.state}>
-                    <option value="UP">{$tr('net.option.up')}</option>
-                    <option value="DOWN">{$tr('net.option.down')}</option>
-                  </select>
+                  <Select
+                    bind:value={form.state}
+                    options={[
+                      { value: 'UP', label: $tr('net.option.up') },
+                      { value: 'DOWN', label: $tr('net.option.down') },
+                    ]}
+                  />
                   {#if fieldError('state')}<p class="error small">{fieldError('state')}</p>{/if}
                 </label>
 

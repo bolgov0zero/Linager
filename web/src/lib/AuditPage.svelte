@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import Select from './ui/Select.svelte';
   import { api, type AuditItem } from '../api';
   import { tr } from '../i18n';
   import AuditTable from './audit/AuditTable.svelte';
@@ -95,34 +96,26 @@
     <div class="filters row">
       <label class="field">
         <span class="label small">{$tr('audit.filter.result')}</span>
-        <select
-          class="input"
+        <Select
           value={result}
-          onchange={(e) => {
-            result = e.currentTarget.value;
+          options={RESULT_OPTIONS.map((o) => ({ value: o.value, label: $tr(o.key) }))}
+          onchange={(v) => {
+            result = v;
             void load(true);
           }}
-        >
-          {#each RESULT_OPTIONS as option (option.value)}
-            <option value={option.value}>{$tr(option.key)}</option>
-          {/each}
-        </select>
+        />
       </label>
 
       <label class="field">
         <span class="label small">{$tr('audit.filter.group')}</span>
-        <select
-          class="input"
+        <Select
           value={group}
-          onchange={(e) => {
-            group = e.currentTarget.value;
+          options={ACTION_GROUPS.map((o) => ({ value: o.value, label: $tr(o.key) }))}
+          onchange={(v) => {
+            group = v;
             void load(true);
           }}
-        >
-          {#each ACTION_GROUPS as option (option.value)}
-            <option value={option.value}>{$tr(option.key)}</option>
-          {/each}
-        </select>
+        />
       </label>
 
       <label class="field grow">

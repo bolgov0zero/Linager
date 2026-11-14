@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { AgentUpdateRow, RolloutMode, UpdatesInfo } from '../../api';
+  import Select from '../ui/Select.svelte';
   import { tr as trans } from '../../i18n';
 
   let {
@@ -82,11 +83,17 @@
   <div class="upd-bar">
     <label class="upd-label">
       {$trans('upd.agents.order')}
-      <select class="upd-select" aria-label={$trans('upd.agents.orderAria')} bind:value={mode} disabled={!canAct}>
-        <option value="all">{$trans('upd.mode.all')}</option>
-        <option value="one_by_one">{$trans('upd.mode.one')}</option>
-        <option value="first_then_rest">{$trans('upd.mode.first')}</option>
-      </select>
+      <Select
+        size="sm"
+        ariaLabel={$trans('upd.agents.orderAria')}
+        bind:value={mode}
+        disabled={!canAct}
+        options={[
+          { value: 'all' as RolloutMode, label: $trans('upd.mode.all') },
+          { value: 'one_by_one' as RolloutMode, label: $trans('upd.mode.one') },
+          { value: 'first_then_rest' as RolloutMode, label: $trans('upd.mode.first') },
+        ]}
+      />
     </label>
     <label class="upd-check">
       <input type="checkbox" bind:checked={stopOnError} />

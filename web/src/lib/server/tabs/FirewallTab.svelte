@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import Select from '../../ui/Select.svelte';
   import { get } from 'svelte/store';
   import {
     api,
@@ -505,15 +506,17 @@
                 <span class="chain-name">chain {name}</span>
                 <span class="hook mono">{$trs('fw.chain.hook', { chain: name })}</span>
               </div>
-              <select
-                class="ctl policy"
-                aria-label={$trs('fw.chain.policyLabel')}
+              <Select
+                size="sm"
+                width="200px"
+                ariaLabel={$trs('fw.chain.policyLabel')}
                 value={chain.policy}
-                onchange={(event) => setPolicy(name, event.currentTarget.value as Policy)}
-              >
-                <option value="accept">accept</option>
-                <option value="drop">drop</option>
-              </select>
+                onchange={(v) => setPolicy(name, v)}
+                options={[
+                  { value: 'accept' as Policy, label: 'accept' },
+                  { value: 'drop' as Policy, label: 'drop' },
+                ]}
+              />
             </div>
 
             <div class="tw">
@@ -580,22 +583,22 @@
             void addFromForm();
           }}
         >
-          <select class="ctl" bind:value={addChain} aria-label={$trs('fw.add.chain')}>
-            {#each CHAIN_NAMES as chainName (chainName)}
-              <option value={chainName}>{chainName}</option>
-            {/each}
-          </select>
-          <select class="ctl" bind:value={addAction} aria-label={$trs('fw.add.action')}>
-            <option value="accept">accept</option>
-            <option value="drop">drop</option>
-            <option value="reject">reject</option>
-          </select>
-          <select class="ctl" bind:value={addProto} aria-label={$trs('fw.add.proto')}>
-            <option value="tcp">tcp</option>
-            <option value="udp">udp</option>
-            <option value="icmp">icmp</option>
-            <option value="any">{$trs('fw.add.protoAny')}</option>
-          </select>
+          <Select size="sm" bind:value={addChain} ariaLabel={$trs('fw.add.chain')} options={CHAIN_NAMES.map((c) => ({ value: c, label: c }))} />
+          <Select
+            size="sm"
+            bind:value={addAction}
+            ariaLabel={$trs('fw.add.action')}
+            options={(['accept', 'drop', 'reject'] as RuleAction[]).map((a) => ({ value: a, label: a }))}
+          />
+          <Select
+            size="sm"
+            bind:value={addProto}
+            ariaLabel={$trs('fw.add.proto')}
+            options={[
+              ...(['tcp', 'udp', 'icmp'] as RuleProto[]).map((p) => ({ value: p, label: p as string })),
+              { value: 'any' as RuleProto, label: $trs('fw.add.protoAny') },
+            ]}
+          />
           <input
             class="ctl w mono"
             type="text"
@@ -926,10 +929,6 @@
     color: var(--muted);
   }
 
-  .ctl.policy {
-    background: var(--surface);
-    min-width: 200px;
-  }
 
   .ctl.w {
     width: 170px;

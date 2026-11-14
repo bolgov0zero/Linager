@@ -1,5 +1,6 @@
 <script lang="ts">
   import { openStream, type ServerDetail } from '../../../api';
+  import Select from '../../ui/Select.svelte';
   import { tr } from '../../../i18n';
   import { LOG_LIMIT, LogLines, logTone, type LogTone } from './logs-lines';
 
@@ -145,17 +146,19 @@
       <div class="group">
         <label class="ctl">
           <span class="label">{$tr('logs.source')}</span>
-          <select class="input" value={source} onchange={(e) => pickSource(e.currentTarget.value)}>
-            <option value="all">{$tr('logs.source.all')}</option>
-            <option value="kernel">{$tr('logs.source.kernel')}</option>
-            <option value="ssh">ssh</option>
-            <option value="cron">cron</option>
-            <option value="nginx">nginx</option>
-            <option value="docker">docker</option>
-            {#if source === 'custom'}
-              <option value="custom">{$tr('logs.source.custom')}</option>
-            {/if}
-          </select>
+          <Select
+            value={source}
+            onchange={pickSource}
+            options={[
+              { value: 'all', label: $tr('logs.source.all') },
+              { value: 'kernel', label: $tr('logs.source.kernel') },
+              { value: 'ssh', label: 'ssh' },
+              { value: 'cron', label: 'cron' },
+              { value: 'nginx', label: 'nginx' },
+              { value: 'docker', label: 'docker' },
+              ...(source === 'custom' ? [{ value: 'custom', label: $tr('logs.source.custom') }] : []),
+            ]}
+          />
         </label>
         <label class="ctl">
           <span class="label">{$tr('logs.unit')}</span>
@@ -175,12 +178,15 @@
         </label>
         <label class="ctl">
           <span class="label">{$tr('logs.priority')}</span>
-          <select class="input" bind:value={priority}>
-            <option value="7">{$tr('logs.priority.all')}</option>
-            <option value="3">{$tr('logs.priority.err')}</option>
-            <option value="4">{$tr('logs.priority.warn')}</option>
-            <option value="6">{$tr('logs.priority.info')}</option>
-          </select>
+          <Select
+            bind:value={priority}
+            options={[
+              { value: '7', label: $tr('logs.priority.all') },
+              { value: '3', label: $tr('logs.priority.err') },
+              { value: '4', label: $tr('logs.priority.warn') },
+              { value: '6', label: $tr('logs.priority.info') },
+            ]}
+          />
         </label>
       </div>
 
