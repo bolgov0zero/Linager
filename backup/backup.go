@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -35,26 +34,13 @@ type Options struct {
 
 // PgDump runs pg_dump in custom format. The password is passed in the environment, not on the command line.
 func PgDump(ctx context.Context, dsn, dst string) error {
-	u, err := url.Parse(dsn)
+	conn, env, db, err := pgConn(dsn)
 	if err != nil {
 		return err
 	}
-	args := []string{"--format=custom", "--no-owner", "--file=" + dst}
-	if h := u.Hostname(); h != "" {
-		args = append(args, "--host="+h)
-	}
-	if p := u.Port(); p != "" {
-		args = append(args, "--port="+p)
-	}
-	if n := u.User.Username(); n != "" {
-		args = append(args, "--username="+n)
-	}
-	args = append(args, strings.TrimPrefix(u.Path, "/"))
-	cmd := exec.CommandContext(ctx, "pg_dump", args...) //nolint:gosec // arguments are parsed from the operator's own config
-	cmd.Env = os.Environ()
-	if pw, ok := u.User.Password(); ok {
-		cmd.Env = append(cmd.Env, "PGPASSWORD="+pw)
-	}
+	args := append([]string{"--format=custom", "--no-owner", "--file=" + dst}, conn...)
+	cmd := exec.CommandContext(ctx, "pg_dump", append(args, db)...) //nolint:gosec // arguments are parsed from the operator's own config
+	cmd.Env = env
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("pg_dump: %w: %s", err, strings.TrimSpace(string(out)))
 	}

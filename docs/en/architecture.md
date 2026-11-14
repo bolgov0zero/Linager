@@ -1,6 +1,6 @@
 # Linager architecture
 
-Status: draft for approval. Code not yet written. Source requirements: `docs/kickoff/PROMPT.md`, decisions: `docs/decisions.md`, interface: `docs/design/ui-spec.md`.
+Status: implemented in 0.1; sections 12a–12e describe what was built and where the implementation departed from the initial plan. Source requirements: `docs/kickoff/PROMPT.md`, decisions: `docs/decisions.md`, interface: `docs/design/ui-spec.md`.
 
 ## 1. Overall scheme
 
@@ -223,6 +223,22 @@ Done when: on clean Debian 12/13 and Ubuntu 22.04/24.04/26.04, a single wizard r
 - Audit log: `GET /api/audit` with filters (comma-separated action prefixes, result, user, search) and the "Audit log" page.
 - Backups: `linager backup` (pg_dump + configuration + keys, permissions 600, rotation), a daily timer, and a pre-update backup.
 - Notifications (Telegram, email) are not implemented, by the owner's decision.
+
+## 12e. Changes after the 0.1 review
+- The agent certificate is renewed over the channel (`cert.renew` / `cert.renewed`) when less than a third of its lifetime is left;
+  the agent re-reads the certificate before every connection. The reconnect pause is reset after a session longer than 30 seconds.
+- The backup rollback of network and firewall changes (section 4.3, item 3) is implemented: the one-shot timer `linager-agent-change-rollback`
+  runs `linager agent rollback-change` after 35 seconds and takes over the journal if the agent did not cope itself.
+- apt operations are not tied to the stream: a lost connection does not stop `apt-get`, and a new stream attaches to the running operation.
+- The SSH lock-out warning is computed from the ports reported by `sshd -T` (the agent returns them in `firewall.state`).
+- Server update: the verified binary is copied into a root-only directory (`/var/lib/linager-updater`) and its checksum is compared
+  before installation; after a failure past the migrations the database is restored from the pre-update backup; downgrades are
+  refused (server and agent); the stable channel does not accept versions with a suffix. New command `linager restore`.
+- An agent rollout keeps its state in `settings` (`updates.rollout`) and continues after a server restart;
+  a failed first agent in "first, then the rest" mode no longer stalls the rollout.
+- `install.sh` started through a pipe (`curl … | sudo sh`) gives the wizard the terminal back.
+- Interface: the `ELSH 40` dot shape on large headings, the "Terminal" button on cards (address `#srv-<name>/<tab>`),
+  agent update tags and banner, tabs of disabled modules are hidden.
 
 ## 13. Decisions and open questions
 

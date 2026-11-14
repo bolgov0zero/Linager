@@ -17,13 +17,27 @@
   import FirewallTab from './tabs/FirewallTab.svelte';
   import DockerTab from './tabs/DockerTab.svelte';
   import { formatDateTime } from './format';
-  import { HISTORY_LIMIT, TABS, type LiveSample, type TabId } from './model';
+  import AgentUpdateBanner from './AgentUpdateBanner.svelte';
+  import { HISTORY_LIMIT, visibleTabs, type LiveSample, type TabId } from './model';
 
-  let { name, onBack }: { name: string; onBack: () => void } = $props();
+  let {
+    name,
+    tab: requestedTab = null,
+    ontab,
+    onBack,
+    onagentchanged,
+  }: {
+    name: string;
+    /** Tab from the URL hash; unknown or hidden tabs fall back to the overview. */
+    tab?: string | null;
+    ontab?: (tab: TabId) => void;
+    onBack: () => void;
+    /** Called when an agent update of this server finished (refreshes the header counter). */
+    onagentchanged?: () => void;
+  } = $props();
 
   let detail = $state<ServerDetail | null>(null);
   let status = $state<'loading' | 'ready' | 'missing' | 'error'>('loading');
-  let tab = $state<TabId>('overview');
   let live = $state<LiveSample[]>([]);
   let deleteOpen = $state(false);
   let attempt = $state(0);
@@ -31,6 +45,8 @@
   const serverId = $derived(detail?.id ?? null);
   const sample = $derived<Sample | null>(detail?.sample ?? null);
   const online = $derived(detail?.online ?? false);
+  const tabs = $derived(visibleTabs(detail?.modules ?? []));
+  const tab = $derived<TabId>(tabs.find((x) => x.id === requestedTab)?.id ?? 'overview');
 
   // Resolve the server by name, then load its detail. Reruns on name change or retry.
   $effect(() => {
@@ -137,18 +153,20 @@
       </div>
     </div>
   {:else}
+    <AgentUpdateBanner server={detail} onchanged={onagentchanged} />
+
     {#if sample?.reboot_required}
       <p class="banner" role="status">{$tr('srv.rebootRequired')}</p>
     {/if}
 
     <div class="tabs" role="tablist" aria-label={$tr('srv.tabsLabel')}>
-      {#each TABS as t (t.id)}
+      {#each tabs as t (t.id)}
         <button
           class="tab"
           type="button"
           role="tab"
           aria-selected={tab === t.id}
-          onclick={() => (tab = t.id)}
+          onclick={() => ontab?.(t.id)}
         >
           {$tr(t.key)}
         </button>
@@ -230,6 +248,7 @@
 
   .titlebar h1 {
     margin: 0;
+    font-variation-settings: "ELSH" 40;
     font-size: 30px;
     line-height: 1.1;
     overflow-wrap: anywhere;

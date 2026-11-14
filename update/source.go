@@ -121,10 +121,13 @@ func Latest(rels []Release, channel string) (Release, bool) {
 	var best Release
 	found := false
 	for _, r := range rels {
-		if !r.Complete() || (channel != Beta && r.Prerelease) {
+		v := release.ParseVersion(r.Tag)
+		if !r.Complete() || !v.Valid {
 			continue
 		}
-		if !release.ParseVersion(r.Tag).Valid {
+		// The pre-release flag comes from the (unsigned) release list; the tag is bound to the signed
+		// manifest, so a version with a suffix never counts as stable whatever the list claims.
+		if channel != Beta && (r.Prerelease || v.Pre != "") {
 			continue
 		}
 		if !found || release.Newer(r.Tag, best.Tag) {

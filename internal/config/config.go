@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -31,7 +32,21 @@ type Server struct {
 	Agents struct {
 		Listen string   `yaml:"listen"` // host:port, port is mandatory
 		Hosts  []string `yaml:"hosts"`  // names/IPs placed into the agent TLS certificate
+		// CertLifetime is how long an agent certificate is valid (Go duration, default 8760h = one year).
+		// Agents renew it by themselves when a third of the lifetime is left.
+		CertLifetime string `yaml:"cert_lifetime"`
 	} `yaml:"agents"`
+}
+
+// DefaultAgentCertLifetime is used when agents.cert_lifetime is not set.
+const DefaultAgentCertLifetime = 365 * 24 * time.Hour
+
+// AgentCertLifetime returns the configured validity of agent certificates.
+func (c *Server) AgentCertLifetime() time.Duration {
+	if d, err := time.ParseDuration(c.Agents.CertLifetime); err == nil && d > 0 {
+		return d
+	}
+	return DefaultAgentCertLifetime
 }
 
 // LoadServer reads, defaults and validates a server config.
@@ -75,6 +90,11 @@ func (c *Server) Validate() error {
 	}
 	if c.Admin.Listen == c.Agents.Listen {
 		return errors.New("admin.listen and agents.listen must differ")
+	}
+	if v := c.Agents.CertLifetime; v != "" {
+		if d, err := time.ParseDuration(v); err != nil || d < time.Minute {
+			return errors.New("agents.cert_lifetime must be a duration of at least 1m, for example 8760h")
+		}
 	}
 	switch c.Admin.CookieSecure {
 	case "auto", "always", "never":

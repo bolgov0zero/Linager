@@ -23,7 +23,22 @@ const (
 	TypePing        = "ping"
 	TypePong        = "pong"
 	TypeAgentRemove = "agent.uninstall"
+	// TypeCertRenew is sent by an agent whose certificate is close to expiry; the server answers
+	// with TypeCertRenewed. Both sides ignore the messages when they do not know them.
+	TypeCertRenew   = "cert.renew"
+	TypeCertRenewed = "cert.renewed"
 )
+
+// Values of the X-Linager-Reason header on a refused agent connection.
+const (
+	ReasonRevoked = "revoked" // the server no longer knows this agent
+	ReasonExpired = "expired" // the agent certificate is outside its validity period
+)
+
+// CertRenewed carries a freshly issued agent certificate.
+type CertRenewed struct {
+	CertPEM string `json:"cert_pem"`
+}
 
 // MaxSkew is how far a message timestamp may differ from the local clock.
 const MaxSkew = 2 * time.Minute

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -24,6 +25,9 @@ var ErrRevoked = errors.New("this agent was removed from the server")
 // ErrUninstalled is returned after the server asked the agent to remove itself.
 var ErrUninstalled = errors.New("agent was uninstalled by the server")
 
+// ErrCertExpired means the server refused the agent certificate because it is no longer valid.
+var ErrCertExpired = errors.New("the agent certificate has expired")
+
 // RunOptions configure the connection loop.
 type RunOptions struct {
 	DataDir      string
@@ -37,6 +41,8 @@ type RunOptions struct {
 	Config *config.Agent
 	// Uninstall performs self-removal; nil uses the real implementation.
 	Uninstall func(purge bool, dataDir string) error
+	// RenewRetryEvery is the longest pause between certificate renewal requests (default 12 h).
+	RenewRetryEvery time.Duration
 }
 
 // Run keeps a signed WebSocket connection to the server until ctx ends,
@@ -47,6 +53,9 @@ func Run(ctx context.Context, o RunOptions) error {
 	}
 	if o.SampleEvery == 0 {
 		o.SampleEvery = 5 * time.Second
+	}
+	if o.RenewRetryEvery == 0 {
+		o.RenewRetryEvery = 12 * time.Hour
 	}
 	if o.Uninstall == nil {
 		o.Uninstall = Uninstall
@@ -68,8 +77,14 @@ func Run(ctx context.Context, o RunOptions) error {
 	if err != nil {
 		return err
 	}
-	backoff := time.Second
+	backoff := minBackoff
+	expiredLogged := false
 	for {
+		// The certificate is re-read before every connection: a renewed one is picked up without a restart.
+		if s2, c2, lerr := loadState(o.DataDir); lerr == nil {
+			st, cert = s2, c2
+		}
+		started := time.Now()
 		err := session(ctx, o, st, cert, key, buf, reg)
 		switch {
 		case errors.Is(err, ErrRevoked), errors.Is(err, ErrUninstalled), ctx.Err() != nil:
@@ -78,24 +93,56 @@ func Run(ctx context.Context, o RunOptions) error {
 			}
 			return err
 		}
-		o.Log.Warn("disconnected", "err", err, "retry_in", backoff.String())
+		wait := reconnectPause(backoff, time.Since(started))
+		if errors.Is(err, ErrCertExpired) {
+			if !expiredLogged {
+				o.Log.Error("the agent certificate has expired and the server refuses it; enroll this host again with `linager install`")
+				expiredLogged = true
+			}
+			wait = maxBackoff
+		}
+		o.Log.Warn("disconnected", "err", err, "retry_in", wait.String())
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(backoff + time.Duration(rand.Int64N(int64(backoff/2)+1))): //nolint:gosec // jitter, not security
+		case <-time.After(wait + time.Duration(rand.Int64N(int64(wait/2)+1))): //nolint:gosec // jitter, not security
 		}
-		if backoff < time.Minute {
-			backoff *= 2
-		}
+		backoff = min(wait*2, maxBackoff)
 	}
+}
+
+const (
+	minBackoff = time.Second
+	maxBackoff = time.Minute
+	// A session that lasted this long was a working connection: the next outage starts from a short pause again.
+	healthySession = 30 * time.Second
+)
+
+// reconnectPause returns the pause before the next connection attempt. The pause grows while attempts
+// keep failing (the caller doubles it) and starts over after a session that stayed connected for a while.
+func reconnectPause(backoff, sessionLasted time.Duration) time.Duration {
+	if sessionLasted >= healthySession || backoff < minBackoff {
+		return minBackoff
+	}
+	return min(backoff, maxBackoff)
 }
 
 func session(ctx context.Context, o RunOptions, st *State, cert tls.Certificate, key ed25519.PrivateKey, buf *sampleBuffer, reg *Registry) error {
 	hc := &http.Client{Transport: &http.Transport{TLSClientConfig: pinnedTLS(st.ServerFP, &cert)}}
+	leaf, _ := leafOf(cert)
 	ws, resp, err := websocket.Dial(ctx, "wss://"+st.Server+"/v1/ws", &websocket.DialOptions{HTTPClient: hc})
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusUnauthorized && resp.Header.Get("X-Linager-Reason") == "revoked" {
-			return ErrRevoked
+		if resp != nil && resp.StatusCode == http.StatusUnauthorized {
+			switch resp.Header.Get("X-Linager-Reason") {
+			case protocol.ReasonRevoked:
+				return ErrRevoked
+			case protocol.ReasonExpired:
+				return ErrCertExpired
+			}
+		}
+		// An expired client certificate is normally refused during the TLS handshake already.
+		if leaf != nil && time.Now().After(leaf.NotAfter) {
+			return errors.Join(ErrCertExpired, err)
 		}
 		return err
 	}
@@ -145,6 +192,27 @@ func session(ctx context.Context, o RunOptions, st *State, cert tls.Certificate,
 	defer reg.SetEmitter(nil)
 	ConfirmUpdate(o.DataDir, func(m string, a ...any) { o.Log.Info(m, a...) }) // the new version is connected: cancel the rollback
 	o.Log.Info("connected", "server", st.Server)
+
+	// Certificate renewal: asked over the signed channel when a third of the lifetime is left, and again
+	// after every renewal, so a connection that stays up for years never runs out of certificate.
+	renewedCh := make(chan *x509.Certificate, 1)
+	go func(cur *x509.Certificate) {
+		for cur != nil {
+			wait := time.Until(renewDue(cur))
+			if wait <= 0 {
+				if send(protocol.TypeCertRenew, nil) != nil {
+					return
+				}
+				wait = renewRetry(cur, o.RenewRetryEvery)
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case cur = <-renewedCh:
+			case <-time.After(wait):
+			}
+		}
+	}(leaf)
 
 	errc := make(chan error, 1)
 	go func() {
@@ -241,6 +309,24 @@ func session(ctx context.Context, o RunOptions, st *State, cert tls.Certificate,
 				if json.Unmarshal(env.Payload, &sc) == nil {
 					reg.StreamClose(sc.SID)
 				}
+				continue
+			}
+			if env.Type == protocol.TypeCertRenewed {
+				var cr protocol.CertRenewed
+				if json.Unmarshal(env.Payload, &cr) != nil || leaf == nil {
+					continue
+				}
+				nl, err := installRenewedCert(o.DataDir, key, leaf, []byte(cr.CertPEM), time.Now())
+				if err != nil {
+					o.Log.Error("renewed certificate rejected", "err", err)
+					continue
+				}
+				leaf = nl // the new certificate is used from the next connection on
+				select {
+				case renewedCh <- nl:
+				default:
+				}
+				o.Log.Info("agent certificate renewed", "valid_until", nl.NotAfter.Format(time.RFC3339))
 				continue
 			}
 			if env.Type == protocol.TypeAgentRemove {

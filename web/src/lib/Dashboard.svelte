@@ -7,7 +7,7 @@
   import { pluralForm } from './dashboard/format';
   import RowView from './dashboard/RowView.svelte';
   import Summary from './dashboard/Summary.svelte';
-  import { levelOf, summarize } from './dashboard/status';
+  import { levelOf, summarize, type AgentFlag } from './dashboard/status';
   import { showToast } from './toast';
 
   type Filter = 'all' | 'problems' | 'offline';
@@ -22,7 +22,7 @@
     editing: boolean;
     /** Bumped by the parent after the server list changed (add or pair). */
     reloadKey: number;
-    onopen: (name: string) => void;
+    onopen: (name: string, tab?: string) => void;
     onauthlost: () => void;
   } = $props();
 
@@ -52,6 +52,8 @@
   }
 
   let items = $state<ServerCard[]>([]);
+  /** Agent update state per server id, from the same endpoint as the updates page. */
+  let agentFlags = $state<Record<string, AgentFlag>>({});
   let loaded = $state(false);
   let loadFailed = $state(false);
   let filter = $state<Filter>('all');
@@ -84,7 +86,21 @@
     return items.findIndex((c) => c.id === id);
   }
 
+  async function loadAgentFlags(): Promise<void> {
+    try {
+      const info = await api.updates();
+      const next: Record<string, AgentFlag> = {};
+      for (const agent of info.agents) {
+        if (agent.status === 'available' || agent.status === 'unsupported') next[agent.id] = agent.status;
+      }
+      agentFlags = next;
+    } catch {
+      // the tags are optional: keep the previous state
+    }
+  }
+
   async function load(): Promise<void> {
+    void loadAgentFlags();
     try {
       const res = await api.dashboard();
       const hidden = pending?.card.id;
@@ -350,6 +366,7 @@
             ondragend={onDragEnd}>
             <CardView
               {card}
+              agent={agentFlags[card.id] ?? null}
               {now}
               {editing}
               index={indexOf(card.id)}
@@ -376,6 +393,7 @@
             ondragend={onDragEnd}>
             <RowView
               {card}
+              agent={agentFlags[card.id] ?? null}
               {now}
               {editing}
               index={indexOf(card.id)}

@@ -59,4 +59,15 @@ else
 fi
 
 install -m 0755 linager_linux_amd64 /usr/local/bin/linager
+
+# The downloads are no longer needed; `exec` below would skip the EXIT trap.
+cd /
+rm -rf "$tmp"
+trap - EXIT INT TERM
+
+# With `curl ... | sudo sh` stdin is the pipe, not the keyboard: give the wizard the terminal back.
+# Without a terminal (automation) the wizard runs non-interactively and needs its flags.
+if [ ! -t 0 ] && [ -t 1 ] && (: </dev/tty) 2>/dev/null; then
+  exec /usr/local/bin/linager install "$@" </dev/tty
+fi
 exec /usr/local/bin/linager install "$@"

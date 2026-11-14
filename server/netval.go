@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -158,10 +159,42 @@ func netWarnings(changes []NetChange, ifaces []netIfaceInfo, text func(ru, en st
 }
 
 var (
-	sshAcceptRe  = regexp.MustCompile(`(?i)\b(tcp\s+dport|dport)\s+(\{[^}]*\b22\b[^}]*\}|22\b|ssh\b)[^#]*\b(accept)\b`)
-	sshBlockRe   = regexp.MustCompile(`(?i)\b(tcp\s+dport|dport)\s+(\{[^}]*\b22\b[^}]*\}|22\b|ssh\b)[^#]*\b(drop|reject)\b`)
+	dportRe      = regexp.MustCompile(`(?i)\b(udp\s+)?dport\s+(\{[^}]*\}|[\w-]+)`)
+	verdictRe    = regexp.MustCompile(`(?i)\b(accept|drop|reject)\b`)
 	establishedR = regexp.MustCompile(`(?i)\bct\s+state\b[^#]*\bestablished\b[^#]*\baccept\b|\baccept\b[^#]*\bct\s+state\b[^#]*\bestablished\b`)
 )
+
+// ruleVerdictFor reports whether a rule matches TCP destination port `port` and with which verdict
+// ("accept", "drop", "reject", or "" when the rule only counts or logs).
+func ruleVerdictFor(rule string, port int) (matches bool, verdict string) {
+	if i := strings.IndexByte(rule, '#'); i >= 0 {
+		rule = rule[:i]
+	}
+	m := dportRe.FindStringSubmatch(rule)
+	if m == nil || m[1] != "" { // no port match, or a UDP rule
+		return false, ""
+	}
+	hit := false
+	for _, item := range strings.Split(strings.Trim(m[2], "{} "), ",") {
+		item = strings.ToLower(strings.TrimSpace(item))
+		lo, hi, isRange := strings.Cut(item, "-")
+		switch {
+		case item == "ssh":
+			hit = hit || port == 22
+		case isRange:
+			a, err1 := strconv.Atoi(strings.TrimSpace(lo))
+			b, err2 := strconv.Atoi(strings.TrimSpace(hi))
+			hit = hit || (err1 == nil && err2 == nil && a <= port && port <= b)
+		default:
+			n, err := strconv.Atoi(item)
+			hit = hit || (err == nil && n == port)
+		}
+	}
+	if !hit {
+		return false, ""
+	}
+	return true, strings.ToLower(verdictRe.FindString(rule))
+}
 
 // FwDraftChain is one chain of a firewall draft.
 type FwDraftChain struct {
@@ -172,30 +205,32 @@ type FwDraftChain struct {
 	} `json:"rules"`
 }
 
-// fwWarnings lists the risks of applying the firewall draft.
-func fwWarnings(chains []FwDraftChain, text func(ru, en string) string) []Warning {
+// fwWarnings lists the risks of applying the firewall draft. sshPorts are the ports sshd really
+// listens on (reported by the agent); an empty list means the default port 22.
+func fwWarnings(chains []FwDraftChain, sshPorts []int, text func(ru, en string) string) []Warning {
+	if len(sshPorts) == 0 {
+		sshPorts = []int{22}
+	}
 	var w []Warning
 	for _, c := range chains {
 		switch c.Name {
 		case "input":
-			sshOpen := false
-			for _, r := range c.Rules {
-				if sshBlockRe.MatchString(r.Text) && !sshOpen {
-					break
-				}
-				if sshAcceptRe.MatchString(r.Text) {
-					sshOpen = true
-					break
-				}
-			}
-			if c.Policy == "drop" && !sshOpen {
-				w = append(w, Warning{"ssh_port", text("Правила закрывают порт 22 (SSH): доступ по SSH может пропасть", "The rules close port 22 (SSH): SSH access may be lost")})
-			} else if c.Policy == "accept" {
-				for _, r := range c.Rules {
-					if sshBlockRe.MatchString(r.Text) {
-						w = append(w, Warning{"ssh_port", text("Правила блокируют порт 22 (SSH)", "A rule blocks port 22 (SSH)")})
+			for _, port := range sshPorts {
+				open := c.Policy == "accept"
+				for _, r := range c.Rules { // the first rule with a verdict for the port decides
+					if hit, v := ruleVerdictFor(r.Text, port); hit && v != "" {
+						open = v == "accept"
 						break
 					}
+				}
+				if open {
+					continue
+				}
+				p := strconv.Itoa(port)
+				if c.Policy == "drop" {
+					w = append(w, Warning{"ssh_port", text("Правила закрывают порт "+p+" (SSH): доступ по SSH может пропасть", "The rules close port "+p+" (SSH): SSH access may be lost")})
+				} else {
+					w = append(w, Warning{"ssh_port", text("Правила блокируют порт "+p+" (SSH)", "A rule blocks port "+p+" (SSH)")})
 				}
 			}
 			if c.Policy == "drop" {

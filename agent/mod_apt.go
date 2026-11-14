@@ -1,11 +1,9 @@
 package agent
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,8 +20,6 @@ type AptPackage struct {
 	Security  bool   `json:"security"`
 	Reboot    bool   `json:"reboot"`
 }
-
-var aptMu sync.Mutex // one apt operation at a time
 
 var instRe = regexp.MustCompile(`^Inst (\S+)(?: \[([^\]]+)\])? \((\S+) ([^)]*?)(?: \[[^\]]*\])?\)`)
 
@@ -83,68 +79,139 @@ func aptList(ctx context.Context, _ json.RawMessage, _ bool) (any, error) {
 		pk = []AptPackage{}
 	}
 	_, rerr := os.Stat("/var/run/reboot-required")
-	return map[string]any{"packages": pk, "reboot_required": rerr == nil, "last_check": lastAptCheck()}, nil
+	return map[string]any{"packages": pk, "reboot_required": rerr == nil, "last_check": lastAptCheck(), "busy": aptBusy()}, nil
 }
 
-// aptStream runs update / upgrade / security-only upgrade and streams the output.
-func aptStream(ctx context.Context, raw json.RawMessage, sio *StreamIO) error {
-	var p struct{ Mode string }
-	_ = json.Unmarshal(raw, &p)
-	if !aptMu.TryLock() {
-		return errBusy
-	}
-	defer aptMu.Unlock()
-
-	common := []string{"-y", "-q", "-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold", "-o", "Dpkg::Progress-Fancy=0"}
-	var args []string
-	switch p.Mode {
-	case "update":
-		args = []string{"update", "-q"}
-	case "upgrade":
-		args = append([]string{"upgrade", "--with-new-pkgs"}, common...)
-	case "security":
-		pk, err := aptSimulate(ctx)
-		if err != nil {
-			return err
-		}
-		names := []string{}
-		for _, x := range pk {
-			if x.Security {
-				names = append(names, x.Name)
-			}
-		}
-		if len(names) == 0 {
-			return sio.Out([]byte("No security updates available.\n"))
-		}
-		args = append(append([]string{"install", "--only-upgrade"}, common...), names...)
-	default:
-		return errors.New("unknown mode")
-	}
-	cmd := exec.CommandContext(ctx, "apt-get", args...) //nolint:gosec // fixed command, package names come from apt itself
-	cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive", "LC_ALL=C")
-	return pipeCommand(cmd, sio)
+// aptJob is one running apt operation. It is not tied to the stream that started it: closing the
+// browser tab or losing the server connection must not kill apt in the middle of an upgrade.
+type aptJob struct {
+	mu   sync.Mutex
+	cond *sync.Cond
+	log  []byte // output so far (the tail, at most aptLogMax bytes)
+	base int    // number of bytes dropped from the head of log
+	done bool
 }
 
-// pipeCommand streams stdout and stderr of cmd into the stream until it exits.
-func pipeCommand(cmd *exec.Cmd, sio *StreamIO) error {
-	pr, pw := io.Pipe()
-	cmd.Stdout, cmd.Stderr = pw, pw
-	if err := cmd.Start(); err != nil {
-		return err
+const aptLogMax = 1 << 20
+
+func (j *aptJob) Write(p []byte) (int, error) {
+	j.mu.Lock()
+	j.log = append(j.log, p...)
+	if over := len(j.log) - aptLogMax; over > 0 {
+		j.log = append([]byte(nil), j.log[over:]...)
+		j.base += over
 	}
-	go func() { _ = cmd.Wait(); _ = pw.Close() }()
-	rd := bufio.NewReaderSize(pr, 16<<10)
-	buf := make([]byte, 8<<10)
+	j.cond.Broadcast()
+	j.mu.Unlock()
+	return len(p), nil
+}
+
+// follow copies the job output to the stream from the beginning until the job ends or ctx is cancelled.
+func (j *aptJob) follow(ctx context.Context, sio *StreamIO) error {
+	stop := context.AfterFunc(ctx, func() { j.mu.Lock(); j.cond.Broadcast(); j.mu.Unlock() })
+	defer stop()
+	pos := 0
 	for {
-		n, err := rd.Read(buf)
-		if n > 0 {
-			if oerr := sio.Out(append([]byte(nil), buf[:n]...)); oerr != nil {
-				_ = pr.Close()
-				return oerr
-			}
+		j.mu.Lock()
+		for pos >= j.base+len(j.log) && !j.done && ctx.Err() == nil {
+			j.cond.Wait()
 		}
-		if err != nil {
+		pos = max(pos, j.base)
+		chunk := append([]byte(nil), j.log[pos-j.base:]...)
+		done := j.done
+		j.mu.Unlock()
+		if len(chunk) > 0 {
+			if err := sio.Out(chunk); err != nil {
+				return err
+			}
+			pos += len(chunk)
+			continue
+		}
+		if done || ctx.Err() != nil {
 			return nil
 		}
 	}
+}
+
+var (
+	aptMu  sync.Mutex // guards aptCur; one apt operation at a time
+	aptCur *aptJob
+	// aptCommand builds the command; tests replace it.
+	aptCommand = func(args ...string) *exec.Cmd {
+		cmd := exec.Command("apt-get", args...) //nolint:gosec // fixed command, package names come from apt itself
+		cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive", "LC_ALL=C")
+		return cmd
+	}
+)
+
+// aptBusy reports whether an apt operation started from the panel is still running.
+func aptBusy() bool {
+	aptMu.Lock()
+	defer aptMu.Unlock()
+	return aptCur != nil
+}
+
+// aptStream runs update / upgrade / security-only upgrade and streams the output. When an operation
+// is already running, the stream attaches to it and replays its log instead of starting another one.
+func aptStream(ctx context.Context, raw json.RawMessage, sio *StreamIO, onDone func()) error {
+	var p struct{ Mode string }
+	_ = json.Unmarshal(raw, &p)
+
+	aptMu.Lock()
+	job := aptCur
+	if job == nil {
+		// wait up to two minutes for a lock held by another package manager (unattended-upgrades)
+		common := []string{"-y", "-q", "-o", "DPkg::Lock::Timeout=120", "-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold", "-o", "Dpkg::Progress-Fancy=0"}
+		var args []string
+		switch p.Mode {
+		case "update":
+			args = []string{"update", "-q"}
+		case "upgrade":
+			args = append([]string{"upgrade", "--with-new-pkgs"}, common...)
+		case "security":
+			pk, err := aptSimulate(ctx)
+			if err != nil {
+				aptMu.Unlock()
+				return err
+			}
+			names := []string{}
+			for _, x := range pk {
+				if x.Security {
+					names = append(names, x.Name)
+				}
+			}
+			if len(names) == 0 {
+				aptMu.Unlock()
+				return sio.Out([]byte("No security updates available.\n"))
+			}
+			args = append(append([]string{"install", "--only-upgrade"}, common...), names...)
+		default:
+			aptMu.Unlock()
+			return errors.New("unknown mode")
+		}
+		job = &aptJob{}
+		job.cond = sync.NewCond(&job.mu)
+		cmd := aptCommand(args...)
+		cmd.Stdout, cmd.Stderr = job, job
+		if err := cmd.Start(); err != nil {
+			aptMu.Unlock()
+			return err
+		}
+		aptCur = job
+		go func() {
+			_ = cmd.Wait()
+			aptMu.Lock()
+			aptCur = nil
+			aptMu.Unlock()
+			job.mu.Lock()
+			job.done = true
+			job.cond.Broadcast()
+			job.mu.Unlock()
+			if onDone != nil {
+				onDone()
+			}
+		}()
+	}
+	aptMu.Unlock()
+	return job.follow(ctx, sio)
 }

@@ -187,6 +187,7 @@
 
   .head h1 {
     margin: 0;
+    font-variation-settings: "ELSH" 40;
     font-size: 20px;
   }
 

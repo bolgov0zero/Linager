@@ -18,6 +18,16 @@ modules:
 
 Reboot (`reboot`) is always available and requires confirmation.
 
+## Module notes
+- **apt.** Installing updates is not tied to the browser tab: if you close the tab or the server connection drops, `apt-get` runs to the end.
+  When the tab is opened again, the installation log is shown from the beginning. If the package database is locked by another process (for example `unattended-upgrades`), the agent waits up to two minutes.
+- **Network and firewall.** An unconfirmed change is rolled back by the agent itself after 30 seconds. In case the agent process has crashed or hangs there is a second line of defence:
+  a one-shot systemd timer (`linager-agent-change-rollback`) runs the rollback in a separate process after 35 seconds.
+- **Firewall.** The "rules close SSH" warning uses the ports sshd really listens on (`sshd -T`), not only port 22.
+- **The agent certificate** is issued for one year and renews itself: when less than a third of the lifetime is left, the agent asks for a new one over the protected channel.
+  If a host was switched off for longer than the certificate lifetime, enroll it again (`linager install`).
+  The lifetime is set on the server: `agents.cert_lifetime` in `server.yaml` (for example `2160h`, default `8760h`).
+
 ## Agent files and directories
 | Path | Purpose |
 |---|---|

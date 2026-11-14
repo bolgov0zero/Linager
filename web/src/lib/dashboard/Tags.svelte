@@ -14,6 +14,10 @@
         {$tr('dash.tag.updates', { n: tag.n ?? 0 })}
       {:else if tag.id === 'failed'}
         {$tr('dash.tag.failed', { n: tag.n ?? 0 })}
+      {:else if tag.id === 'agentUpdate'}
+        {$tr('dash.tag.agentUpdate')}
+      {:else if tag.id === 'agentOld'}
+        {$tr('dash.tag.agentOld')}
       {:else if tag.id === 'offline'}
         {$tr('dash.tag.offline')}
       {:else}

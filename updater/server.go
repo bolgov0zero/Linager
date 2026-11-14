@@ -4,6 +4,8 @@ package updater
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -64,11 +66,18 @@ var versionRe = regexp.MustCompile(`^v?\d+\.\d+\.\d+(-[A-Za-z0-9.]+)?$`)
 
 // Deps are the collaborators of an update run; tests replace them.
 type Deps struct {
-	Cfg            *config.Server
-	ConfigPath     string
-	BinPath        string
-	CacheDir       string
-	PrevDir        string
+	Cfg        *config.Server
+	ConfigPath string
+	BinPath    string
+	CacheDir   string
+	PrevDir    string
+	// StageDir is a root-only directory where the verified binary is copied before the service stops.
+	// Nothing the unprivileged server user can write is trusted after that copy. Empty = PrevDir.
+	StageDir string
+	// AllowDowngrade permits installing a version that is not newer than the running one (CLI only).
+	AllowDowngrade bool
+	// Restore puts the database back from a backup archive after a failed update that already ran migrations.
+	Restore        func(ctx context.Context, archive string) error
 	StatusPath     string
 	RequestPath    string
 	Source         update.Source
@@ -97,9 +106,14 @@ func (r *runner) now() time.Time {
 
 func (r *runner) save() {
 	b, _ := json.Marshal(r.st)
+	// The status file lives in a directory the unprivileged server owns: O_EXCL never follows a planted link.
 	tmp := r.d.StatusPath + ".tmp"
-	if os.WriteFile(tmp, b, 0o644) == nil { //nolint:gosec // the unprivileged server reads this file
-		_ = os.Rename(tmp, r.d.StatusPath)
+	_ = os.Remove(tmp)
+	if f, err := os.OpenFile(tmp, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644); err == nil { //nolint:gosec // the unprivileged server reads this file
+		_, werr := f.Write(b)
+		if cerr := f.Close(); werr == nil && cerr == nil {
+			_ = os.Rename(tmp, r.d.StatusPath)
+		}
 	}
 	if r.d.OnStatus != nil {
 		r.d.OnStatus(r.st)
@@ -128,22 +142,33 @@ func ReadStatus(path string) Status {
 	return s
 }
 
-func copyFile(src, dst string, mode os.FileMode) error {
-	in, err := os.Open(src) //nolint:gosec // paths are built by the updater itself
+// copyFile copies src to dst through a temporary file and a rename. Neither side follows symbolic links,
+// and when wantSHA is set the copy is rejected unless its SHA-256 matches.
+func copyFile(src, dst string, mode os.FileMode, wantSHA string) error {
+	in, err := os.OpenFile(src, os.O_RDONLY|syscall.O_NOFOLLOW, 0) //nolint:gosec // paths are built by the updater itself
 	if err != nil {
 		return err
 	}
 	defer func() { _ = in.Close() }()
+	if st, err := in.Stat(); err != nil || !st.Mode().IsRegular() {
+		return errors.New(src + " is not a regular file")
+	}
 	tmp := dst + ".tmp"
-	out, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode) //nolint:gosec // see above
+	_ = os.Remove(tmp)
+	out, err := os.OpenFile(tmp, os.O_CREATE|os.O_EXCL|os.O_WRONLY, mode) //nolint:gosec // see above
 	if err != nil {
 		return err
 	}
-	if _, err := io.Copy(out, in); err != nil {
-		_ = out.Close()
-		return err
+	h := sha256.New()
+	_, err = io.Copy(io.MultiWriter(out, h), in)
+	if cerr := out.Close(); err == nil {
+		err = cerr
 	}
-	if err := out.Close(); err != nil {
+	if err == nil && wantSHA != "" && hex.EncodeToString(h.Sum(nil)) != strings.ToLower(wantSHA) {
+		err = errors.New("the binary changed after it was verified")
+	}
+	if err != nil {
+		_ = os.Remove(tmp)
 		return err
 	}
 	return os.Rename(tmp, dst)
@@ -187,19 +212,42 @@ func ServerUpdate(ctx context.Context, d Deps, version, channel string) (err err
 		return verr
 	}
 	r.st.To = cached.Version
-	if !release.Newer(cached.Version, d.CurrentVersion) && version == "" {
-		r.set(StepVerify, "failed")
-		return errors.New("already up to date")
+	failVerify := func(e error) error { r.set(StepVerify, "failed"); return e }
+	switch cmp := release.Compare(release.ParseVersion(cached.Version), release.ParseVersion(d.CurrentVersion)); {
+	case cmp == 0 && !d.AllowDowngrade:
+		return failVerify(errors.New("already up to date"))
+	case cmp < 0 && !d.AllowDowngrade:
+		return failVerify(fmt.Errorf("refusing to downgrade from %s to %s", d.CurrentVersion, cached.Version))
 	}
+	if version == "" && channel != update.Beta && cached.Manifest.Channel == update.Beta {
+		return failVerify(errors.New("the release is marked beta in its signed manifest; switch the channel to install it"))
+	}
+	// Keep a private copy of the verified binary: the release cache is writable by the unprivileged
+	// server, so it must not be read again once the checks have passed.
+	stageDir := d.StageDir
+	if stageDir == "" {
+		stageDir = d.PrevDir
+	}
+	if merr := os.MkdirAll(stageDir, 0o700); merr != nil {
+		return failVerify(merr)
+	}
+	staged := filepath.Join(stageDir, "staged-"+strings.TrimPrefix(cached.Version, "v"))
+	if cerr := copyFile(cached.BinaryPath(), staged, 0o755, cached.Manifest.SHA256); cerr != nil {
+		return failVerify(fmt.Errorf("stage binary: %w", cerr))
+	}
+	defer func() { _ = os.Remove(staged) }()
 	r.set(StepVerify, "done")
 
 	// 2. backup (nothing has been changed yet; a failure here aborts safely)
 	r.set(StepBackup, "running")
+	dbBackup := ""
 	if d.Backup != nil {
-		if _, berr := d.Backup(ctx); berr != nil {
+		p, berr := d.Backup(ctx)
+		if berr != nil {
 			r.set(StepBackup, "failed")
 			return fmt.Errorf("backup: %w", berr)
 		}
+		dbBackup = p
 	}
 	r.set(StepBackup, "done")
 
@@ -214,15 +262,15 @@ func ServerUpdate(ctx context.Context, d Deps, version, channel string) (err err
 	// 4. replace the binary, keeping the previous one for rollback
 	r.set(StepReplace, "running")
 	prev := filepath.Join(d.PrevDir, "linager-"+strings.TrimPrefix(d.CurrentVersion, "v"))
-	_ = os.MkdirAll(d.PrevDir, 0o750)
-	if cerr := copyFile(d.BinPath, prev, 0o755); cerr != nil {
+	_ = os.MkdirAll(d.PrevDir, 0o700)
+	if cerr := copyFile(d.BinPath, prev, 0o755, ""); cerr != nil {
 		r.set(StepReplace, "failed")
 		_, _ = d.Run(ctx, "systemctl", "start", "linager-server")
 		return fmt.Errorf("keep previous binary: %w", cerr)
 	}
-	if cerr := copyFile(cached.BinaryPath(), d.BinPath, 0o755); cerr != nil {
+	if cerr := copyFile(staged, d.BinPath, 0o755, cached.Manifest.SHA256); cerr != nil {
 		r.set(StepReplace, "failed")
-		r.rollback(ctx, prev)
+		r.rollback(ctx, prev, "")
 		return fmt.Errorf("install binary: %w", cerr)
 	}
 	r.set(StepReplace, "done")
@@ -231,8 +279,7 @@ func ServerUpdate(ctx context.Context, d Deps, version, channel string) (err err
 	r.set(StepMigrate, "running")
 	if out, merr := d.Run(ctx, d.BinPath, "server", "migrate", "--config", d.ConfigPath); merr != nil {
 		r.set(StepMigrate, "failed")
-		r.rollback(ctx, prev)
-		return fmt.Errorf("migrations: %s", lastLine(out, merr))
+		return fmt.Errorf("migrations: %s%s", lastLine(out, merr), r.rollback(ctx, prev, dbBackup))
 	}
 	r.set(StepMigrate, "done")
 
@@ -240,13 +287,11 @@ func ServerUpdate(ctx context.Context, d Deps, version, channel string) (err err
 	r.set(StepStart, "running")
 	if out, serr := d.Run(ctx, "systemctl", "start", "linager-server"); serr != nil {
 		r.set(StepStart, "failed")
-		r.rollback(ctx, prev)
-		return fmt.Errorf("start service: %s", lastLine(out, serr))
+		return fmt.Errorf("start service: %s%s", lastLine(out, serr), r.rollback(ctx, prev, dbBackup))
 	}
 	if herr := r.waitHealthy(ctx); herr != nil {
 		r.set(StepStart, "failed")
-		r.rollback(ctx, prev)
-		return fmt.Errorf("the new version did not become healthy: %w", herr)
+		return fmt.Errorf("the new version did not become healthy: %w%s", herr, r.rollback(ctx, prev, dbBackup))
 	}
 	r.set(StepStart, "done")
 	return nil
@@ -316,12 +361,23 @@ func (r *runner) shareCache() {
 	})
 }
 
-func (r *runner) rollback(ctx context.Context, prev string) {
+// rollback puts the previous binary back. When the migrations of the new version have already run
+// (dbBackup is set), the database is restored from the pre-update backup too: migrations are forward
+// only, and the previous binary must not run on a newer schema. It returns a note for the error text.
+func (r *runner) rollback(ctx context.Context, prev, dbBackup string) (note string) {
 	bg := context.WithoutCancel(ctx)
 	_, _ = r.d.Run(bg, "systemctl", "stop", "linager-server")
-	_ = copyFile(prev, r.d.BinPath, 0o755)
+	_ = copyFile(prev, r.d.BinPath, 0o755, "")
+	if dbBackup != "" && r.d.Restore != nil {
+		if err := r.d.Restore(bg, dbBackup); err != nil {
+			note = fmt.Sprintf("; the previous version is back, but the database could not be restored automatically (%v): run `linager restore %s`", err, dbBackup)
+		} else {
+			note = "; the previous version and the database from " + filepath.Base(dbBackup) + " were restored"
+		}
+	}
 	_, _ = r.d.Run(bg, "systemctl", "start", "linager-server")
 	r.st.State = "rolled_back"
+	return note
 }
 
 func (r *runner) waitHealthy(ctx context.Context) error {

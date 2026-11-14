@@ -4,7 +4,7 @@ import type { ServerCard } from '../../api';
 export type Level = 'ok' | 'warn' | 'crit' | 'off';
 
 export interface Tag {
-  id: 'reboot' | 'updates' | 'failed' | 'offline' | 'clean';
+  id: 'reboot' | 'updates' | 'failed' | 'offline' | 'agentUpdate' | 'agentOld' | 'clean';
   n?: number;
   tone: 'ok' | 'warn' | 'crit' | 'muted' | 'plain';
 }
@@ -49,12 +49,23 @@ export function toneOfPct(value: number | null): 'crit' | 'warn' | 'plain' {
   return 'plain';
 }
 
-export function tagsOf(card: ServerCard): Tag[] {
+/** Agent update state taken from the updates API: an update is available, or the version is unsupported. */
+export type AgentFlag = 'available' | 'unsupported' | null;
+
+function agentTag(agent: AgentFlag): Tag | null {
+  if (agent === 'unsupported') return { id: 'agentOld', tone: 'warn' };
+  if (agent === 'available') return { id: 'agentUpdate', tone: 'plain' };
+  return null;
+}
+
+export function tagsOf(card: ServerCard, agent: AgentFlag = null): Tag[] {
   const s = card.sample;
   if (!card.online) {
     const tags: Tag[] = [{ id: 'offline', tone: 'muted' }];
     const updates = s?.updates ?? -1;
     if (updates > 0) tags.push({ id: 'updates', n: updates, tone: updates >= 10 ? 'warn' : 'plain' });
+    const offlineAgent = agentTag(agent);
+    if (offlineAgent) tags.push(offlineAgent);
     return tags;
   }
   const tags: Tag[] = [];
@@ -63,6 +74,8 @@ export function tagsOf(card: ServerCard): Tag[] {
     if (s.updates > 0) tags.push({ id: 'updates', n: s.updates, tone: s.updates >= 10 ? 'warn' : 'plain' });
     if (s.failed_services > 0) tags.push({ id: 'failed', n: s.failed_services, tone: 'crit' });
   }
+  const agentFlag = agentTag(agent);
+  if (agentFlag) tags.push(agentFlag);
   if (tags.length === 0) tags.push({ id: 'clean', tone: 'ok' });
   return tags;
 }

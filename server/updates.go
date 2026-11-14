@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 	"time"
 
@@ -46,6 +47,86 @@ type Updates struct {
 	checkErr  string
 	latestMan *release.Manifest
 	ro        *rollout
+	roSaved   string // last persisted rollout state, to skip identical writes
+}
+
+// rolloutSetting keeps the running rollout in the settings table, so a server restart (including the
+// server's own update) does not strand the agents that are still queued.
+const rolloutSetting = "updates.rollout"
+
+type rolloutState struct {
+	Mode        string   `json:"mode"`
+	StopOnError bool     `json:"stop_on_error"`
+	Version     string   `json:"version"`
+	Order       []string `json:"order"`
+	Started     []string `json:"started"`
+	First       string   `json:"first"`
+	FirstDone   bool     `json:"first_done"`
+	OK          int      `json:"ok"`
+	Failed      int      `json:"failed"`
+	Rolled      int      `json:"rolled"`
+}
+
+// persistRollout stores the running rollout, or clears the record when none is running.
+func (u *Updates) persistRollout(ctx context.Context) {
+	u.mu.Lock()
+	val := ""
+	if ro := u.ro; ro != nil && ro.state == "running" {
+		b, _ := json.Marshal(rolloutState{Mode: ro.mode, StopOnError: ro.stopOnError, Version: ro.version, Order: ro.order,
+			Started: keys(ro.started), First: ro.first, FirstDone: ro.firstDone, OK: ro.ok, Failed: ro.failed, Rolled: ro.rolled})
+		val = string(b)
+	}
+	if val == u.roSaved {
+		u.mu.Unlock()
+		return
+	}
+	u.roSaved = val
+	u.mu.Unlock()
+	_ = u.DB.SetSetting(context.WithoutCancel(ctx), rolloutSetting, val)
+}
+
+// restoreRollout continues the rollout that was running when the server stopped.
+func (u *Updates) restoreRollout(ctx context.Context) {
+	var st rolloutState
+	raw := u.DB.Setting(ctx, rolloutSetting)
+	rows, _ := u.DB.AgentUpdates(ctx)
+	switch {
+	case raw != "" && json.Unmarshal([]byte(raw), &st) == nil && st.Version == version.Version:
+	case raw != "": // the server itself was updated meanwhile: the old target no longer applies
+		u.cancelQueued(ctx)
+		_ = u.DB.SetSetting(ctx, rolloutSetting, "")
+		return
+	default: // queued agents without a stored rollout: start them as they connect
+		for id, r := range rows {
+			if r.Status == "queued" && r.Version == version.Version {
+				st.Order = append(st.Order, id)
+			}
+		}
+		if len(st.Order) == 0 {
+			return
+		}
+		sort.Strings(st.Order)
+		st.Mode, st.Version = ModeAll, version.Version
+	}
+	ro := &rollout{mode: st.Mode, stopOnError: st.StopOnError, version: st.Version, order: st.Order, started: map[string]bool{},
+		first: st.First, firstDone: st.FirstDone, state: "running", ok: st.OK, failed: st.Failed, rolled: st.Rolled}
+	for _, id := range st.Started {
+		ro.started[id] = true
+	}
+	u.mu.Lock()
+	if u.ro == nil {
+		u.ro = ro
+	}
+	u.mu.Unlock()
+	u.Log.Info("continuing the agent rollout after a restart", "mode", st.Mode, "agents", len(st.Order))
+}
+
+// canaryFailed lets a "first, then the rest" rollout go on after its first agent failed, when the
+// administrator chose not to stop on errors. Caller holds u.mu.
+func (ro *rollout) canaryFailed(id string) {
+	if ro.mode == ModeFirstRest && ro.first == id && !ro.stopOnError {
+		ro.firstDone = true
+	}
 }
 
 type rollout struct {
@@ -385,6 +466,7 @@ func (u *Updates) pump(ctx context.Context) {
 	if finished {
 		u.finishRollout(ctx)
 	}
+	u.persistRollout(ctx)
 }
 
 func keys(m map[string]bool) []string {
@@ -445,6 +527,7 @@ func (u *Updates) fail(ctx context.Context, id, msg string) {
 	ro := u.ro
 	if ro != nil && ro.state == "running" {
 		ro.failed++
+		ro.canaryFailed(id)
 		if ro.stopOnError {
 			ro.state = "stopped"
 		}
@@ -502,6 +585,7 @@ func (u *Updates) markRolledBack(ctx context.Context, id, ver string) {
 	u.mu.Lock()
 	if u.ro != nil && u.ro.state == "running" {
 		u.ro.rolled++
+		u.ro.canaryFailed(id)
 		if u.ro.stopOnError {
 			u.ro.state = "stopped"
 		}
@@ -511,12 +595,14 @@ func (u *Updates) markRolledBack(ctx context.Context, id, ver string) {
 	if stopped {
 		u.cancelQueued(ctx)
 	}
+	u.persistRollout(ctx)
 }
 
 // Run watches for stuck updates until ctx ends.
 func (u *Updates) Run(ctx context.Context) {
 	t := time.NewTicker(5 * time.Second)
 	defer t.Stop()
+	u.restoreRollout(ctx)
 	if err := u.Check(ctx); err != nil {
 		u.Log.Warn("release check failed", "err", err)
 	}

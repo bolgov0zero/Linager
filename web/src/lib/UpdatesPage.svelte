@@ -247,6 +247,7 @@
 
   .upd-title {
     margin: 0;
+    font-variation-settings: "ELSH" 40;
     font-family: var(--font-display);
     font-size: 30px;
     font-weight: 400;
@@ -287,6 +288,7 @@
   }
 
   :global(.upd-big) {
+    font-variation-settings: "ELSH" 40;
     font-family: var(--font-display);
     font-size: 26px;
     line-height: 1.1;
@@ -427,6 +429,7 @@
   }
 
   :global(.upd-name) {
+    font-variation-settings: "ELSH" 40;
     font-family: var(--font-display);
     font-size: 15px;
   }

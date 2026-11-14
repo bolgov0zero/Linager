@@ -529,7 +529,14 @@ func (a *Admin) firewallApply(w http.ResponseWriter, r *http.Request, u *store.U
 		jsonErr(w, http.StatusConflict, msg(r, "Есть неподтверждённое изменение", "Another change is waiting for confirmation"))
 		return
 	}
-	warns := fwWarnings(d.Chains, func(ru, en string) string { return msg(r, ru, en) })
+	// The agent reports the ports sshd really listens on; older agents do not, then port 22 is assumed.
+	var fst struct {
+		SSHPorts []int `json:"ssh_ports"`
+	}
+	if data, err := a.Hub.Call(r.Context(), s.ID, "firewall", "state", nil, false, 30*time.Second); err == nil {
+		_ = json.Unmarshal(data, &fst)
+	}
+	warns := fwWarnings(d.Chains, fst.SSHPorts, func(ru, en string) string { return msg(r, ru, en) })
 	if len(warns) > 0 && !req.Confirm {
 		writeJSON(w, http.StatusConflict, map[string]any{"error": "confirmation required", "dangerous": true, "warnings": warns})
 		return

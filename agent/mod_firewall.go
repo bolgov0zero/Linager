@@ -231,7 +231,45 @@ func (m *fwModule) state(ctx context.Context, _ json.RawMessage, _ bool) (any, e
 			ufw = true
 		}
 	}
-	return map[string]any{"available": true, "ufw_active": ufw, "chains": chains, "ruleset": string(ruleset), "other_tables": others}, nil
+	return map[string]any{"available": true, "ufw_active": ufw, "chains": chains, "ruleset": string(ruleset), "other_tables": others,
+		"ssh_ports": m.sshPorts(ctx)}, nil
+}
+
+var sshPortRe = regexp.MustCompile(`(?mi)^\s*port\s+(\d{1,5})\s*$`)
+
+// parseSSHPorts extracts the listening ports from `sshd -T` output or sshd_config text.
+func parseSSHPorts(conf string) []int {
+	var ports []int
+	seen := map[int]bool{}
+	for _, m := range sshPortRe.FindAllStringSubmatch(conf, -1) {
+		if n, err := strconv.Atoi(m[1]); err == nil && n > 0 && n < 65536 && !seen[n] {
+			seen[n] = true
+			ports = append(ports, n)
+		}
+	}
+	return ports
+}
+
+// sshPorts returns the ports sshd listens on, so the panel can warn before a rule locks the
+// administrator out. The effective configuration is preferred, the files are the fallback.
+func (m *fwModule) sshPorts(ctx context.Context) []int {
+	if out, err := m.run(ctx, "sshd", "-T"); err == nil {
+		if p := parseSSHPorts(string(out)); len(p) > 0 {
+			return p
+		}
+	}
+	files, _ := filepath.Glob("/etc/ssh/sshd_config.d/*.conf")
+	var conf strings.Builder
+	for _, f := range append([]string{"/etc/ssh/sshd_config"}, files...) {
+		if b, err := os.ReadFile(f); err == nil { //nolint:gosec // fixed sshd configuration paths
+			conf.Write(b)
+			conf.WriteByte('\n')
+		}
+	}
+	if p := parseSSHPorts(conf.String()); len(p) > 0 {
+		return p
+	}
+	return []int{22}
 }
 
 func (m *fwModule) validate(ctx context.Context, raw json.RawMessage, _ bool) (any, error) {
