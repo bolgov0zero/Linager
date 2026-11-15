@@ -19,7 +19,7 @@ modules:
 Reboot (`reboot`) is always available and requires confirmation.
 
 ## Module notes
-- **apt.** Installing updates is not tied to the browser tab: if you close the tab or the server connection drops, `apt-get` runs to the end.
+- **apt.** Installing updates is not tied to the browser tab: if you close the tab or the server connection drops, `apt-get` runs to the end. When you come back to the tab, the browser attaches to the running operation and receives all accumulated events and the log. Package statuses come from `APT::Status-Fd` (the `pmstatus`/`pmerror`/`dlstatus` channel), not from the output text: queued → updating → done or error; packages apt never reached after a failure are marked "not updated".
   When the tab is opened again, the installation log is shown from the beginning. If the package database is locked by another process (for example `unattended-upgrades`), the agent waits up to two minutes.
 - **Network and firewall.** An unconfirmed change is rolled back by the agent itself after 30 seconds. In case the agent process has crashed or hangs there is a second line of defence:
   a one-shot systemd timer (`linager-agent-change-rollback`) runs the rollback in a separate process after 35 seconds.

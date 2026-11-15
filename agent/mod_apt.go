@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 )
 
 // AptPackage is one upgradable package.
@@ -90,6 +92,10 @@ type aptJob struct {
 	log  []byte // output so far (the tail, at most aptLogMax bytes)
 	base int    // number of bytes dropped from the head of log
 	done bool
+
+	events  [][]byte // event lines (see aptMark), all of them: there are only a few per package
+	prog    aptProg  // latest progress
+	progVer int      // changes with prog
 }
 
 const aptLogMax = 1 << 20
@@ -106,25 +112,48 @@ func (j *aptJob) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// follow copies the job output to the stream from the beginning until the job ends or ctx is cancelled.
+// follow copies the job events and output to the stream from the beginning until the job ends or ctx
+// is cancelled.
 func (j *aptJob) follow(ctx context.Context, sio *StreamIO) error {
 	stop := context.AfterFunc(ctx, func() { j.mu.Lock(); j.cond.Broadcast(); j.mu.Unlock() })
 	defer stop()
-	pos := 0
+	pos, epos, sentVer := 0, 0, 0
 	for {
 		j.mu.Lock()
-		for pos >= j.base+len(j.log) && !j.done && ctx.Err() == nil {
+		for pos >= j.base+len(j.log) && epos >= len(j.events) && sentVer == j.progVer && !j.done && ctx.Err() == nil {
 			j.cond.Wait()
 		}
 		pos = max(pos, j.base)
+		evs := j.events[epos:] // entries are never modified, only appended to
+		prog, ver := j.prog, j.progVer
 		chunk := append([]byte(nil), j.log[pos-j.base:]...)
 		done := j.done
 		j.mu.Unlock()
+		sent := false
+		for _, e := range evs {
+			if err := sio.Out(e); err != nil {
+				return err
+			}
+			sent = true
+		}
+		epos += len(evs)
+		if ver != sentVer {
+			if b, err := json.Marshal(prog); err == nil {
+				if err := sio.Out(append(append([]byte(aptMark), b...), '\n')); err != nil {
+					return err
+				}
+			}
+			sentVer = ver
+			sent = true
+		}
 		if len(chunk) > 0 {
 			if err := sio.Out(chunk); err != nil {
 				return err
 			}
 			pos += len(chunk)
+			sent = true
+		}
+		if sent {
 			continue
 		}
 		if done || ctx.Err() != nil {
@@ -152,7 +181,8 @@ func aptBusy() bool {
 }
 
 // aptStream runs update / upgrade / security-only upgrade and streams the output. When an operation
-// is already running, the stream attaches to it and replays its log instead of starting another one.
+// is already running, the stream attaches to it and replays its events and log instead of starting
+// another one.
 func aptStream(ctx context.Context, raw json.RawMessage, sio *StreamIO, onDone func()) error {
 	var p struct{ Mode string }
 	_ = json.Unmarshal(raw, &p)
@@ -163,11 +193,13 @@ func aptStream(ctx context.Context, raw json.RawMessage, sio *StreamIO, onDone f
 		// wait up to two minutes for a lock held by another package manager (unattended-upgrades)
 		common := []string{"-y", "-q", "-o", "DPkg::Lock::Timeout=120", "-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold", "-o", "Dpkg::Progress-Fancy=0"}
 		var args []string
+		var queue []AptPackage // packages the browser should list as "queued"
 		switch p.Mode {
 		case "update":
 			args = []string{"update", "-q"}
 		case "upgrade":
 			args = append([]string{"upgrade", "--with-new-pkgs"}, common...)
+			queue, _ = aptSimulate(ctx) // without it the list is built from what apt reports
 		case "security":
 			pk, err := aptSimulate(ctx)
 			if err != nil {
@@ -178,6 +210,7 @@ func aptStream(ctx context.Context, raw json.RawMessage, sio *StreamIO, onDone f
 			for _, x := range pk {
 				if x.Security {
 					names = append(names, x.Name)
+					queue = append(queue, x)
 				}
 			}
 			if len(names) == 0 {
@@ -191,15 +224,56 @@ func aptStream(ctx context.Context, raw json.RawMessage, sio *StreamIO, onDone f
 		}
 		job = &aptJob{}
 		job.cond = sync.NewCond(&job.mu)
+		tr := newAptTracker(job)
+		tr.add(queue)
+
+		// apt reports the state of every package on this descriptor (fd 3 of the child)
+		rd, wr, perr := os.Pipe()
+		if perr == nil {
+			args = append([]string{"-o", "APT::Status-Fd=3"}, args...)
+		}
 		cmd := aptCommand(args...)
 		cmd.Stdout, cmd.Stderr = job, job
+		if perr == nil {
+			cmd.ExtraFiles = []*os.File{wr}
+		}
 		if err := cmd.Start(); err != nil {
+			if perr == nil {
+				_ = rd.Close()
+				_ = wr.Close()
+			}
 			aptMu.Unlock()
 			return err
 		}
+		readDone := make(chan struct{})
+		if perr == nil {
+			_ = wr.Close() // the child keeps its own copy
+			go func() {
+				defer close(readDone)
+				sc := bufio.NewScanner(rd)
+				sc.Buffer(make([]byte, 0, 64*1024), 1<<20)
+				for sc.Scan() {
+					tr.line(sc.Text())
+				}
+			}()
+		} else {
+			close(readDone)
+		}
 		aptCur = job
 		go func() {
-			_ = cmd.Wait()
+			werr := cmd.Wait()
+			select {
+			case <-readDone:
+			case <-time.After(2 * time.Second): // a daemon started by a package may still hold the pipe
+				if perr == nil {
+					_ = rd.Close()
+				}
+				<-readDone
+			}
+			if perr == nil {
+				_ = rd.Close()
+			}
+			tr.finish(werr != nil)
 			aptMu.Lock()
 			aptCur = nil
 			aptMu.Unlock()

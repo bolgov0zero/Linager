@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.35
+
+- Updates: installing packages now shows the state of every package (queued, updating, done, error; "not updated" for packages apt never reached after a failure) and an overall progress bar (download, then install). "Check" opens a progress dialog that closes by itself three seconds after a successful check. The apt console output is hidden by default behind a "Show console output" button. The statuses come from `APT::Status-Fd` on the agent, so they survive closing the tab: the browser attaches to the running operation and gets all events and the log. Needs agent 0.1.35.
+
 ## 0.1.34
 
 - Terminal: the shell now gets HOME, USER, LOGNAME and SHELL (the agent service had no HOME, so `cd` said "HOME not set" and bash did not save its history). Commands are appended to the history right after they run, and a closed session gets three seconds to exit by itself before it is killed. Needs agent 0.1.34; open terminal sessions pick it up after the agent restarts.

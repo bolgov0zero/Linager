@@ -90,7 +90,7 @@ export interface ServiceUnit {
 }
 export type ServiceAction = 'start' | 'stop' | 'restart' | 'enable' | 'disable';
 export interface AptPackage { name: string; current: string; candidate: string; security: boolean; reboot: boolean }
-export interface AptList { packages: AptPackage[]; reboot_required: boolean; last_check: number }
+export interface AptList { packages: AptPackage[]; reboot_required: boolean; last_check: number; busy?: boolean }
 export interface ProcessInfo { pid: number; user: string; cpu: number; mem_pct: number; rss: number; state: string; cmd: string }
 export interface ProcessList { processes: ProcessInfo[]; total: number }
 export type StreamKind = 'terminal' | 'logs' | 'apt' | 'docker-logs' | 'docker-pull';

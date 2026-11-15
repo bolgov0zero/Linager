@@ -202,7 +202,7 @@ Done when: on clean Debian 12/13 and Ubuntu 22.04/24.04/26.04, a single wizard r
 - Agent: modules are enabled in `/etc/linager/agent.yaml` (`modules:`); the agent reports the list of enabled modules on connection; tabs of disabled modules respond "module disabled". Rebooting is always available.
 - Terminal: PTY (`creack/pty`) running `bash -l` as root, up to 5 sessions per agent and 3 per server in the admin panel; opening and closing a session are recorded in the audit log (data volume, duration); keystrokes are not recorded.
 - Services: `systemctl` (not D-Bus: fewer dependencies, the same result); unit names are validated; `stop/restart/disable` for `ssh`, `sshd`, and `linager-agent` require confirmation.
-- apt: the list of updates comes from the simulation `apt-get -s upgrade --with-new-pkgs` (security by source); installation and checking are streamed with a live log; one apt operation at a time.
+- apt: the list of updates comes from the simulation `apt-get -s upgrade --with-new-pkgs` (security by source); installation and checking are streamed with a live log; one apt operation at a time. Besides the text, the stream carries events: lines of `\x1e` + JSON (`queue`, `pkg`, `progress`). The agent runs apt with `-o APT::Status-Fd=3`, reads `pmstatus`/`pmerror`/`dlstatus` from that descriptor and keeps the package states itself; events are stored in the job apart from the log (the 1 MiB log limit does not trim them) and replayed on every attach. The browser cuts the event lines out of the console text.
 - Processes: top by CPU or memory from `/proc`; process termination (SIGTERM/SIGKILL) with confirmation; PID 1 and the agent itself are protected.
 - Logs: `journalctl -f` streamed with filters by unit, kernel, and priority.
 - Admin panel CSP: `style-src 'self' 'unsafe-inline'` (xterm.js inserts styles at runtime); scripts remain `'self'` only.
@@ -229,7 +229,7 @@ Done when: on clean Debian 12/13 and Ubuntu 22.04/24.04/26.04, a single wizard r
   the agent re-reads the certificate before every connection. The reconnect pause is reset after a session longer than 30 seconds.
 - The backup rollback of network and firewall changes (section 4.3, item 3) is implemented: the one-shot timer `linager-agent-change-rollback`
   runs `linager agent rollback-change` after 35 seconds and takes over the journal if the agent did not cope itself.
-- apt operations are not tied to the stream: a lost connection does not stop `apt-get`, and a new stream attaches to the running operation.
+- apt operations are not tied to the stream: a lost connection does not stop `apt-get`, and a new stream attaches to the running operation and receives all events and the log from the start.
 - The SSH lock-out warning is computed from the ports reported by `sshd -T` (the agent returns them in `firewall.state`).
 - Server update: the verified binary is copied into a root-only directory (`/var/lib/linager-updater`) and its checksum is compared
   before installation; after a failure past the migrations the database is restored from the pre-update backup; downgrades are
