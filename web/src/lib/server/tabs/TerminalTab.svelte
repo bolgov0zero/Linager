@@ -3,6 +3,7 @@
   import { tr } from '../../../i18n';
   import TermSession, { type TermPhase } from '../../terminal/TermSession.svelte';
   import KeyIcon from '../../terminal/KeyIcon.svelte';
+  import TermIcon from '../../terminal/TermIcon.svelte';
   import { openTermWindow } from '../../terminal/windows';
 
   let { server }: { server: ServerDetail } = $props();
@@ -39,10 +40,10 @@
     {#if server.online && phase !== 'closed'}
       <div class="actions">
         <button class="btn" class:ink={keys} type="button" title={$tr('term.keys')} aria-label={$tr('term.keys')} aria-pressed={keys} onclick={() => (keys = !keys)}><KeyIcon /></button>
-        <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.copy()}>{$tr('term.copy')}</button>
-        <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.paste()}>{$tr('term.paste')}</button>
-        <button class="btn" type="button" title={$tr('termwin.openWindow')} onclick={popOut}>{$tr('termwin.openWindow')}</button>
-        <button class="btn" type="button" onclick={() => session?.close()}>{$tr('term.close')}</button>
+        <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.copy()}><span class="ic"><TermIcon name="copy" /></span><span class="tx">{$tr('term.copy')}</span></button>
+        <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.paste()}><span class="ic"><TermIcon name="paste" /></span><span class="tx">{$tr('term.paste')}</span></button>
+        <button class="btn" type="button" title={$tr('termwin.openWindow')} onclick={popOut}><span class="ic"><TermIcon name="window" /></span><span class="tx">{$tr('termwin.openWindow')}</span></button>
+        <button class="btn" type="button" title={$tr('term.close')} onclick={() => session?.close()}><span class="ic"><TermIcon name="close" /></span><span class="tx">{$tr('term.close')}</span></button>
       </div>
     {/if}
   </div>
@@ -57,6 +58,32 @@
 </div>
 
 <style>
+  /* Phones: the buttons are icons, the words stay for screen readers. */
+  .ic {
+    display: none;
+  }
+
+  @media (max-width: 600px) {
+    .actions .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 12px;
+    }
+
+    .ic {
+      display: inline-flex;
+    }
+
+    .tx {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+  }
+
   .actions {
     display: flex;
     gap: 8px;

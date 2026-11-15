@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.32
+
+- Phones: the terminal buttons (keys, copy, paste, in a window, close session) are pixel icons instead of text; the floating terminal window shows copy and paste as icons.
+
 ## 0.1.31
 
 - Terminal key panel redone: no scrolling, a thin strip of five modes (Main, Ctrl+, Nav, F1-12, Symbols) and the arrows on the right like on a real keyboard (up above down), with Esc and Tab beside them. Ctrl and Alt still latch until the next key.

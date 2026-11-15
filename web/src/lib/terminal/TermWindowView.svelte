@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tr } from '../../i18n';
   import KeyIcon from './KeyIcon.svelte';
+  import TermIcon from './TermIcon.svelte';
   import TermSession, { type TermPhase } from './TermSession.svelte';
   import WindowFrame from './WindowFrame.svelte';
   import { closeTermWindow, type TermWindow } from './windows';
@@ -30,9 +31,30 @@
   {#snippet tools()}
     <button class="btn sm icon" class:ink={keys} type="button" title={$tr('term.keys')} aria-label={$tr('term.keys')} aria-pressed={keys} onclick={() => (keys = !keys)}><KeyIcon /></button>
     {#if phase === 'open'}
-      <button class="btn sm" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.copy()}>{$tr('term.copy')}</button>
-      <button class="btn sm" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.paste()}>{$tr('term.paste')}</button>
+      <button class="btn sm" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.copy()}><span class="ic"><TermIcon name="copy" /></span><span class="tx">{$tr('term.copy')}</span></button>
+      <button class="btn sm" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.paste()}><span class="ic"><TermIcon name="paste" /></span><span class="tx">{$tr('term.paste')}</span></button>
     {/if}
   {/snippet}
   <TermSession {serverId} bind:phase bind:keys bind:this={session} onlimit={() => closeTermWindow(key)} />
 </WindowFrame>
+
+<style>
+  /* Phones (full-screen windows): copy and paste are icons, the words stay for screen readers. */
+  .ic {
+    display: none;
+  }
+
+  @media (max-width: 600px) {
+    .ic {
+      display: inline-flex;
+    }
+
+    .tx {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+  }
+</style>
