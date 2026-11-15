@@ -29,6 +29,28 @@
   let saving = $state(false);
   let focusEditor: (() => void) | undefined;
 
+  // Line wrapping is remembered for all editor windows; phones start with it on (no sideways scrolling).
+  const WRAP_KEY = 'linager.editor.wrap';
+  function readWrap(): boolean {
+    try {
+      const v = localStorage.getItem(WRAP_KEY);
+      if (v === '1' || v === '0') return v === '1';
+    } catch {
+      // storage unavailable: use the default
+    }
+    return window.matchMedia('(pointer: coarse)').matches;
+  }
+  let wrap = $state(readWrap());
+  function toggleWrap(): void {
+    wrap = !wrap;
+    try {
+      localStorage.setItem(WRAP_KEY, wrap ? '1' : '0');
+    } catch {
+      // storage unavailable: the choice is not remembered
+    }
+    focusEditor?.();
+  }
+
   const dirty = $derived(text !== saved);
 
   function close(): void {
@@ -75,6 +97,18 @@
     <span class="muted status">· {win.serverName} · {path}</span>
   {/snippet}
   {#snippet tools()}
+    <button class="btn sm" class:ink={wrap} type="button" title={$tr('files.editor.wrap')} aria-label={$tr('files.editor.wrap')} aria-pressed={wrap} onclick={toggleWrap}>
+      <span class="wrapic" aria-hidden="true">
+        <svg viewBox="0 0 16 16" width="14" height="14" shape-rendering="crispEdges" fill="currentColor">
+          <rect x="1" y="3" width="14" height="2" />
+          <rect x="1" y="7" width="10" height="2" />
+          <rect x="11" y="7" width="2" height="5" />
+          <rect x="5" y="11" width="8" height="2" />
+          <rect x="3" y="10" width="2" height="4" />
+        </svg>
+      </span>
+      <span class="wraptx">{$tr('files.editor.wrap')}</span>
+    </button>
     <button class="btn sm" type="button" disabled={!dirty || saving} onclick={save}>
       {saving ? $tr('files.editor.saving') : $tr('files.editor.save')}
     </button>
@@ -100,13 +134,32 @@
     {/if}
     <!-- The editor (CodeMirror) is loaded when the first file is opened, not with the page. -->
     {#await import('../editor/CodeEditor.svelte') then { default: CodeEditor }}
-      <CodeEditor bind:value={text} {path} label={win.name} onsave={() => void save()} onready={(f) => (focusEditor = f)} />
+      <CodeEditor bind:value={text} {path} label={win.name} {wrap} onsave={() => void save()} onready={(f) => (focusEditor = f)} />
     {/await}
     <span class="small muted">{dirty ? $tr('files.editor.dirty') : $tr('files.editor.clean')}</span>
   </div>
 </WindowFrame>
 
 <style>
+  /* The wrap switch shows its icon on phones and its words on wider screens. */
+  .wrapic {
+    display: none;
+  }
+
+  @media (max-width: 600px) {
+    .wrapic {
+      display: inline-flex;
+    }
+
+    .wraptx {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+  }
+
   .ed {
     display: flex;
     flex-direction: column;

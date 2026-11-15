@@ -23,12 +23,15 @@
     value = $bindable(),
     path,
     label,
+    wrap = false,
     onsave,
     onready,
   }: {
     value: string;
     path: string;
     label: string;
+    /** Wrap long lines instead of scrolling sideways. */
+    wrap?: boolean;
     onsave?: () => void;
     /** Receives a function that moves the focus into the editor. */
     onready?: (focus: () => void) => void;
@@ -37,6 +40,7 @@
   let host = $state<HTMLDivElement | undefined>(undefined);
   let view: EditorView | undefined;
   const language = new Compartment();
+  const wrapping = new Compartment();
 
   const theme = EditorView.theme({
     '&': { height: '100%', color: 'var(--ink)', backgroundColor: 'var(--surface)', fontSize: '13px' },
@@ -90,6 +94,7 @@
           syntaxHighlighting(highlight),
           theme,
           language.of([]),
+          wrapping.of(wrap ? EditorView.lineWrapping : []),
           EditorView.contentAttributes.of({ 'aria-label': label, spellcheck: 'false', autocapitalize: 'off' }),
           keymap.of([
             { key: 'Mod-s', preventDefault: true, run: () => (onsave?.(), true) },
@@ -118,6 +123,12 @@
       // the language chunk could not be loaded: the file stays plain text
     }
   }
+
+  // The wrap switch changes while the editor is open.
+  $effect(() => {
+    const on = wrap;
+    view?.dispatch({ effects: wrapping.reconfigure(on ? EditorView.lineWrapping : []) });
+  });
 
   // The text is replaced from outside (reload after a conflict): put it into the editor.
   $effect(() => {

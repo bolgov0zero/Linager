@@ -180,5 +180,6 @@
   "files.props.extraSpecial": " (включая особые биты setuid, setgid или sticky)",
   "files.props.confirm": "Подтвердить",
   "files.props.cancel": "Отмена",
-  "files.props.close": "Закрыть"
+  "files.props.close": "Закрыть",
+  "files.editor.wrap": "Перенос строк"
 }

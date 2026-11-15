@@ -180,5 +180,6 @@
   "files.props.extraSpecial": " (including the special bits setuid, setgid or sticky)",
   "files.props.confirm": "Confirm",
   "files.props.cancel": "Cancel",
-  "files.props.close": "Close"
+  "files.props.close": "Close",
+  "files.editor.wrap": "Wrap lines"
 }

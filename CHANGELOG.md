@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.33
+
+- File editor: a "Wrap lines" switch in the window header wraps long lines instead of scrolling sideways. The choice is remembered; it is on by default on touch screens.
+
 ## 0.1.32
 
 - Phones: the terminal buttons (keys, copy, paste, in a window, close session) are pixel icons instead of text; the floating terminal window shows copy and paste as icons.
