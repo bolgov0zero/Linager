@@ -256,6 +256,9 @@ func (a *Admin) auth(next func(http.ResponseWriter, *http.Request, *store.User))
 
 // ---- auth endpoints ----
 
+// ErrTOTPRequired is the error code of the sign-in answer that asks for the 2FA code (second stage).
+const ErrTOTPRequired = "totp_required"
+
 type loginReq struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
@@ -287,6 +290,12 @@ func (a *Admin) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ok := VerifyPassword(req.Password, u.PasswordHash)
+	if ok && u.TOTPEnabled && strings.TrimSpace(req.TOTP) == "" {
+		// first stage of a two-step sign-in: the password is right, the browser must ask for the 2FA
+		// code and repeat the request with it. This is not a failed attempt and creates no session.
+		jsonErr(w, http.StatusUnauthorized, ErrTOTPRequired)
+		return
+	}
 	if ok && u.TOTPEnabled {
 		step, err := MatchTOTP(u.TOTPSecret, req.TOTP, time.Now())
 		if err != nil {

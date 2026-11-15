@@ -248,7 +248,7 @@
   </div>
 </header>
 
-<main>
+<main class:center={phase === 'login'}>
   {#if phase === 'loading'}
     <p class="muted">{$tr('common.loading')}</p>
   {:else if phase === 'login'}
@@ -483,6 +483,20 @@
 
   main {
     padding: 24px 16px;
+  }
+
+  /* The sign-in card sits in the middle of the free space under the top bar. */
+  main.center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100dvh - 62px); /* the top bar is 62 px high (50 px on phones) */
+  }
+
+  @media (max-width: 720px) {
+    main.center {
+      min-height: calc(100dvh - 50px);
+    }
   }
   .badge {
     background: var(--warn);

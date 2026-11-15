@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.39
+
+- Sign-in page: the card is centered under the top bar. Two-step sign-in: login and password first, then the 2FA code on a second step (only for users with 2FA; no more "I have 2FA" checkbox). The right password without a code creates no session and is not counted as a failed attempt. The code signs you in by itself when the sixth digit is typed or filled in. The fields are marked for password managers (`username`, `current-password`, `one-time-code`). Needs the server only; agents need no update.
+
 ## 0.1.38
 
 - Metrics: a "Synchronize" checkbox next to the period chips shows the hover highlight (crosshair, dots and tooltip) on all four charts at once; the choice is remembered in the browser, off by default.

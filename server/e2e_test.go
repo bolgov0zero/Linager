@@ -652,6 +652,34 @@ func TestSecurityHeadersAndTOTPGate(t *testing.T) {
 		t.Fatalf("after enabling 2FA the API must open, got %d", c)
 	}
 
+	// two-step sign-in: the password alone only asks for the code (no session, not a failed attempt),
+	// a wrong code is refused, a fresh right one opens the session
+	jar2, _ := cookiejar.New(nil)
+	api2 := &apiClient{t: t, base: api.base, hc: &http.Client{Jar: jar2}}
+	var first struct {
+		Error string `json:"error"`
+	}
+	if c := api2.do("POST", "/api/login", map[string]string{"login": "admin", "password": "a-long-test-password"}, &first); c != http.StatusUnauthorized || first.Error != server.ErrTOTPRequired {
+		t.Fatalf("password without a code must answer %q, got %d %+v", server.ErrTOTPRequired, c, first)
+	}
+	if c := api2.do("GET", "/api/servers", nil, nil); c != http.StatusUnauthorized {
+		t.Fatalf("the first stage must not create a session, got %d", c)
+	}
+	var bad struct {
+		Error string `json:"error"`
+	}
+	if c := api2.do("POST", "/api/login", map[string]string{"login": "admin", "password": "a-long-test-password", "totp": "000000"}, &bad); c != http.StatusUnauthorized || bad.Error == server.ErrTOTPRequired {
+		t.Fatalf("a wrong code must be refused as invalid credentials, got %d %+v", c, bad)
+	}
+	next, _ := totp.GenerateCode(setup.Secret, time.Now().Add(30*time.Second)) // a step newer than the one used to enable
+	var ok struct{ CSRF string }
+	if c := api2.do("POST", "/api/login", map[string]string{"login": "admin", "password": "a-long-test-password", "totp": next}, &ok); c != 200 || ok.CSRF == "" {
+		t.Fatalf("password and a fresh code must sign in: %d", c)
+	}
+	if c := api2.do("GET", "/api/servers", nil, nil); c != 200 {
+		t.Fatalf("second stage session must work, got %d", c)
+	}
+
 	// security headers on every response
 	resp, err := api.hc.Get(api.base + "/")
 	if err != nil {
