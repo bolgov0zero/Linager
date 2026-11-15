@@ -2,6 +2,7 @@
   import { untrack } from 'svelte';
   import { api, ApiError, type FwListener, type FwPorts, type FwSet } from '../../../api';
   import { tr as trs } from '../../../i18n';
+  import SourceInput from './SourceInput.svelte';
   import { buildRule, type ListRef } from './fw-rule';
 
   let {
@@ -194,20 +195,15 @@
         {#if plan.mode === 'restrict'}
           <label class="field">
             <span class="label">{$trs('fw.ports.source')}</span>
-            <input
-              class="input mono"
-              type="text"
-              autocomplete="off"
-              spellcheck="false"
-              list="fw-ports-lists"
+            <SourceInput
+              cls="input mono"
+              lists={lists}
               placeholder="10.20.0.0/24"
+              ariaLabel={$trs('fw.ports.source')}
               bind:value={source}
               oninput={() => (planError = null)}
             />
           </label>
-          <datalist id="fw-ports-lists">
-            {#each lists as s (s.name)}<option value={'@' + s.name}></option>{/each}
-          </datalist>
         {/if}
         <p class="small muted">{$trs('fw.ports.planNote')}</p>
         {#if planError}<p class="error small" role="alert">{planError}</p>{/if}
@@ -373,7 +369,7 @@
     background: color-mix(in srgb, var(--accent) 7%, transparent);
   }
 
-  .plan .input {
+  .plan :global(.input) {
     height: 36px;
     padding-block: 0;
   }

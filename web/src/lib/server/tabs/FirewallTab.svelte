@@ -18,6 +18,7 @@
   import { applyFirewall } from './fw-api';
   import FwPorts from './FwPorts.svelte';
   import FwSetsModal from './FwSetsModal.svelte';
+  import SourceInput from './SourceInput.svelte';
   import { buildRule, normalizeRule, type ListRef, type RuleAction, type RuleProto } from './fw-rule';
 
   type ChainName = FwChain['name'];
@@ -673,13 +674,11 @@
             bind:value={addPort}
             oninput={() => (formError = null)}
           />
-          <input
-            class="ctl w mono"
-            type="text"
-            autocomplete="off"
-            spellcheck="false"
+          <SourceInput
+            cls="ctl w mono"
+            lists={shownSets}
             placeholder={$trs('fw.add.source')}
-            aria-label={$trs('fw.add.source')}
+            ariaLabel={$trs('fw.add.source')}
             bind:value={addSource}
             oninput={() => (formError = null)}
           />
@@ -1007,7 +1006,7 @@
     cursor: not-allowed;
   }
 
-  .ctl {
+  .fw :global(.ctl) {
     background: var(--bg);
     color: var(--ink);
     border: 2px solid var(--line);
@@ -1018,20 +1017,19 @@
     font-size: 13px;
   }
 
-  .ctl::placeholder {
+  .fw :global(.ctl)::placeholder {
     color: var(--muted);
   }
 
-
-  .ctl.w {
+  .fw :global(.ctl.w) {
     width: 170px;
   }
 
-  .ctl.grow {
+  .fw :global(.ctl.grow) {
     flex: 1 1 180px;
   }
 
-  .ctl:focus-visible,
+  .fw :global(.ctl):focus-visible,
   .link:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
@@ -1045,7 +1043,7 @@
   }
 
   /* One height for every control of the row: the button is the tallest. */
-  .inl .ctl,
+  .inl :global(.ctl),
   .inl :global(.sel),
   .inl :global(.btn) {
     box-sizing: border-box;

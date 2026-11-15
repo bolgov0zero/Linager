@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.46
+
+- Firewall: the Source field of a rule (and of the "Restrict" form for a port) offers the address lists in a drop-down when it gets the focus: it narrows as you type, a click or the arrow keys and Enter put `@name` into the field. Server only, agents need no update.
+
 ## 0.1.45
 
 - Disk tab (new agent module `disk`, right after Files): every partition as a pie chart with the free and the used space, the growth per day and a forecast "fills up in ~N days" (the agent records the used space every half hour); a measurement on request shows what takes the space (system, Docker, logs, databases, cache, home directories) and the biggest directories with drill-down; cleanup: journald, apt cache, unused Docker images, Docker build cache, old kernels, each with a confirmation and an audit entry. The pie charts share one look: a sector lifts on hover, a tooltip shows the size and the legend row is highlighted.
