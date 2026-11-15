@@ -50,6 +50,10 @@ type Admin struct {
 
 	termMu sync.Mutex
 	terms  map[string]int
+
+	// passkey ceremonies in progress (the challenge must survive between begin and finish)
+	cerMu sync.Mutex
+	cers  map[string]*ceremony
 }
 
 // NewAdmin builds the admin handler set.
@@ -58,7 +62,7 @@ func NewAdmin(db *store.Store, keys *Keys, hub *Hub, live *Live, metrics *Metric
 	if err != nil {
 		return nil, err
 	}
-	return &Admin{DB: db, Keys: keys, Hub: hub, Live: live, Metrics: metrics, Updates: updates, Log: log, Cfg: cfg, Trust: trust, Static: static, loginL: newLimiter(10, time.Minute), terms: map[string]int{}}, nil
+	return &Admin{DB: db, Keys: keys, Hub: hub, Live: live, Metrics: metrics, Updates: updates, Log: log, Cfg: cfg, Trust: trust, Static: static, loginL: newLimiter(max(cfg.Admin.LoginRate, 10), time.Minute), terms: map[string]int{}, cers: map[string]*ceremony{}}, nil
 }
 
 // Handler returns the full admin handler including the base path and security headers.
@@ -70,6 +74,25 @@ func (a *Admin) Handler() http.Handler {
 	mux.HandleFunc("POST /api/me/totp/setup", a.auth(a.totpSetup))
 	mux.HandleFunc("POST /api/me/totp/enable", a.auth(a.totpEnable))
 	mux.HandleFunc("POST /api/me/totp/disable", a.auth(a.totpDisable))
+	mux.HandleFunc("POST /api/me/password", a.auth(a.changeOwnPassword))
+	mux.HandleFunc("POST /api/me/recovery-codes", a.auth(a.recoveryRegenerate))
+	mux.HandleFunc("GET /api/me/passkeys", a.auth(a.passkeyList))
+	mux.HandleFunc("POST /api/me/passkeys/begin", a.auth(a.passkeyRegisterBegin))
+	mux.HandleFunc("POST /api/me/passkeys/finish", a.auth(a.passkeyRegisterFinish))
+	mux.HandleFunc("DELETE /api/me/passkeys/{id}", a.auth(a.passkeyDelete))
+	mux.HandleFunc("POST /api/login/passkey/begin", a.passkeyLoginBegin)
+	mux.HandleFunc("POST /api/login/passkey/finish", a.passkeyLoginFinish)
+	mux.HandleFunc("GET /api/users", a.auth(a.usersList))
+	mux.HandleFunc("POST /api/users", a.auth(a.userCreate))
+	mux.HandleFunc("DELETE /api/users/{id}", a.auth(a.userDelete))
+	mux.HandleFunc("POST /api/users/{id}/password", a.auth(a.userSetPassword))
+	mux.HandleFunc("POST /api/users/{id}/2fa/reset", a.auth(a.userReset2FA))
+	mux.HandleFunc("GET /api/snippets", a.auth(a.snippetsList))
+	mux.HandleFunc("POST /api/snippets", a.auth(a.snippetCreate))
+	mux.HandleFunc("PUT /api/snippets/order", a.auth(a.snippetsOrder))
+	mux.HandleFunc("PUT /api/snippets/{id}", a.auth(a.snippetUpdate))
+	mux.HandleFunc("DELETE /api/snippets/{id}", a.auth(a.snippetDelete))
+	mux.HandleFunc("POST /api/snippets/{id}/ran", a.auth(a.snippetRan))
 	mux.HandleFunc("GET /api/enrollments", a.auth(a.listEnrollments))
 	mux.HandleFunc("POST /api/enrollments/{id}/approve", a.auth(a.approve))
 	mux.HandleFunc("POST /api/enrollments/{id}/reject", a.auth(a.reject))
@@ -290,6 +313,7 @@ func (a *Admin) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ok := VerifyPassword(req.Password, u.PasswordHash)
+	method := "password"
 	if ok && u.TOTPEnabled && strings.TrimSpace(req.TOTP) == "" {
 		// first stage of a two-step sign-in: the password is right, the browser must ask for the 2FA
 		// code and repeat the request with it. This is not a failed attempt and creates no session.
@@ -297,11 +321,18 @@ func (a *Admin) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if ok && u.TOTPEnabled {
-		step, err := MatchTOTP(u.TOTPSecret, req.TOTP, time.Now())
-		if err != nil {
-			ok = false
-		} else if fresh, err := a.DB.AdvanceTOTPStep(r.Context(), u.ID, step); err != nil || !fresh {
-			ok = false // code already used
+		if isTOTPCode(req.TOTP) {
+			step, err := MatchTOTP(u.TOTPSecret, req.TOTP, time.Now())
+			if err != nil {
+				ok = false
+			} else if fresh, err := a.DB.AdvanceTOTPStep(r.Context(), u.ID, step); err != nil || !fresh {
+				ok = false // code already used
+			}
+			method = "password+totp"
+		} else {
+			used, err := a.DB.UseRecoveryCode(r.Context(), u.ID, HashRecoveryCode(req.TOTP))
+			ok = err == nil && used
+			method = "password+recovery"
 		}
 	}
 	if !ok {
@@ -310,19 +341,31 @@ func (a *Admin) login(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
+	a.finishLogin(w, r, u, method)
+}
+
+// finishLogin clears the failure counter, opens the session and answers with the session data.
+func (a *Admin) finishLogin(w http.ResponseWriter, r *http.Request, u *store.User, method string) {
 	_ = a.DB.RecordLoginSuccess(r.Context(), u.ID)
 	token, hash := NewToken()
 	csrf := NewCSRF()
-	if err := a.DB.CreateSession(r.Context(), hash, u.ID, csrf, ip, r.UserAgent(), sessionTTL); err != nil {
+	if err := a.DB.CreateSession(r.Context(), hash, u.ID, csrf, a.Trust.ClientIP(r), r.UserAgent(), sessionTTL); err != nil {
 		jsonErr(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: token, //nolint:gosec // Secure follows cookie_secure/forwarded proto: plain-HTTP LANs are supported
 		Path: "/", HttpOnly: true, Secure: a.secureCookie(r),
 		SameSite: http.SameSiteStrictMode, MaxAge: int(sessionTTL.Seconds())})
-	a.audit(r, u, "auth.login", "user", "", login, "ok", nil)
-	writeJSON(w, http.StatusOK, map[string]any{"csrf": csrf, "login": u.Login, "totp_enabled": u.TOTPEnabled,
-		"totp_required": a.Cfg.Admin.RequireTOTP && !u.TOTPEnabled})
+	a.audit(r, u, "auth.login", "user", "", u.Login, "ok", map[string]any{"method": method})
+	writeJSON(w, http.StatusOK, a.sessionBody(r, u, csrf))
+}
+
+// sessionBody is the answer of login and me.
+func (a *Admin) sessionBody(r *http.Request, u *store.User, csrf string) map[string]any {
+	n, _ := a.DB.PasskeyCount(r.Context(), u.ID)
+	left, _ := a.DB.RecoveryRemaining(r.Context(), u.ID)
+	return map[string]any{"csrf": csrf, "login": u.Login, "id": u.ID, "totp_enabled": u.TOTPEnabled, "passkeys": n, "recovery_left": left,
+		"totp_required": a.Cfg.Admin.RequireTOTP && !u.TOTPEnabled}
 }
 
 func (a *Admin) logout(w http.ResponseWriter, r *http.Request, u *store.User) {
@@ -336,8 +379,7 @@ func (a *Admin) logout(w http.ResponseWriter, r *http.Request, u *store.User) {
 
 func (a *Admin) me(w http.ResponseWriter, r *http.Request, u *store.User) {
 	se := r.Context().Value(keySession).(*store.Session)
-	writeJSON(w, http.StatusOK, map[string]any{"login": u.Login, "totp_enabled": u.TOTPEnabled, "csrf": se.CSRF,
-		"totp_required": a.Cfg.Admin.RequireTOTP && !u.TOTPEnabled})
+	writeJSON(w, http.StatusOK, a.sessionBody(r, u, se.CSRF))
 }
 
 // connectInfo returns what a client needs to connect to this server: the agent port, the fingerprint of the agent-port
@@ -396,8 +438,14 @@ func (a *Admin) totpEnable(w http.ResponseWriter, r *http.Request, u *store.User
 		return
 	}
 	_, _ = a.DB.AdvanceTOTPStep(r.Context(), u.ID, step)
+	// the recovery codes are shown once, right now
+	codes, hashes := NewRecoveryCodes()
+	if err := a.DB.ReplaceRecoveryCodes(r.Context(), u.ID, hashes); err != nil {
+		jsonErr(w, http.StatusInternalServerError, "internal error")
+		return
+	}
 	a.audit(r, u, "auth.totp.enable", "user", "", u.Login, "ok", nil)
-	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "recovery_codes": codes})
 }
 
 func (a *Admin) totpDisable(w http.ResponseWriter, r *http.Request, u *store.User) {
@@ -414,6 +462,7 @@ func (a *Admin) totpDisable(w http.ResponseWriter, r *http.Request, u *store.Use
 		jsonErr(w, http.StatusInternalServerError, "internal error")
 		return
 	}
+	_ = a.DB.ReplaceRecoveryCodes(r.Context(), u.ID, nil)
 	a.audit(r, u, "auth.totp.disable", "user", "", u.Login, "ok", nil)
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }

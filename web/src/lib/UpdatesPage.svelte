@@ -10,7 +10,7 @@
   import HistoryPanel from './updates/HistoryPanel.svelte';
   import { errorText, fmtBytes } from './updates/format';
 
-  let { onBack, onchanged }: { onBack: () => void; onchanged?: () => void } = $props();
+  let { onBack, onchanged, embedded = false }: { onBack?: () => void; onchanged?: () => void; embedded?: boolean } = $props();
 
   const FAST_MS = 2000;
   const SLOW_MS = 15000;
@@ -194,7 +194,9 @@
 <div class="upd-page">
   <header class="upd-head">
     <div class="upd-ttl">
-      <button class="btn sm" type="button" onclick={onBack}>{$trans('upd.back')}</button>
+      {#if !embedded && onBack}
+        <button class="btn sm" type="button" onclick={onBack}>{$trans('upd.back')}</button>
+      {/if}
       <h2 class="upd-title">{$trans('upd.title')}</h2>
     </div>
     {#if info}

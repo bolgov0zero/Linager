@@ -97,5 +97,20 @@
   "audit.action.files.zip": "Files: zip download",
   "audit.action.update.cache.prune": "Updates: clean the cache",
   "audit.action.files.chmod": "Files: permissions",
-  "audit.action.files.chown": "Files: owner"
+  "audit.action.files.chown": "Files: owner",
+  "audit.group.users": "Users",
+  "audit.group.snippets": "Snippets",
+  "audit.action.auth.passkey.add": "Passkey added",
+  "audit.action.auth.passkey.delete": "Passkey removed",
+  "audit.action.auth.recovery.regenerate": "New recovery codes",
+  "audit.action.user.create": "User created",
+  "audit.action.user.delete": "User deleted",
+  "audit.action.user.password.change": "Password changed",
+  "audit.action.user.password.reset": "User password reset",
+  "audit.action.user.2fa.reset": "User 2FA reset",
+  "audit.action.snippet.create": "Snippet created",
+  "audit.action.snippet.update": "Snippet changed",
+  "audit.action.snippet.delete": "Snippet deleted",
+  "audit.action.snippet.order": "Snippets reordered",
+  "audit.action.snippet.run": "Snippet run"
 }

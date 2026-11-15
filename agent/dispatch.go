@@ -166,6 +166,7 @@ func NewRegistry(cfg *config.Agent, col Collector, log *slog.Logger, dataDir str
 		r.cmds["docker.imageRemove"] = dockerImageRemove
 		r.streams["docker.logs"] = dockerLogs
 		r.streams["docker.pull"] = dockerPull
+		r.streams["docker.update"] = dockerUpdate
 	} else {
 		r.modules = without(r.modules, "docker")
 	}

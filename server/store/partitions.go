@@ -3,7 +3,6 @@ package store
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 )
 
@@ -76,12 +75,10 @@ func (tr Tier) PartitionName(t time.Time) string {
 	return tr.Table + "_" + s.Format(layouts[tr.Gran])
 }
 
-var ensured sync.Map // partition name -> struct{}
-
 // EnsurePartition creates the partition for t if it does not exist yet.
 func (s *Store) EnsurePartition(ctx context.Context, tr Tier, t time.Time) error {
 	name := tr.PartitionName(t)
-	if _, ok := ensured.Load(name); ok {
+	if _, ok := s.ensured.Load(name); ok {
 		return nil
 	}
 	start, end := tr.Gran.Bounds(t)
@@ -94,7 +91,7 @@ func (s *Store) EnsurePartition(ctx context.Context, tr Tier, t time.Time) error
 			return err
 		}
 	}
-	ensured.Store(name, struct{}{})
+	s.ensured.Store(name, struct{}{})
 	return nil
 }
 
@@ -142,7 +139,7 @@ func (s *Store) DropExpired(ctx context.Context, tr Tier, retention time.Duratio
 			if _, err := s.Pool.Exec(ctx, "DROP TABLE IF EXISTS "+n); err != nil {
 				return dropped, err
 			}
-			ensured.Delete(n)
+			s.ensured.Delete(n)
 			dropped++
 		}
 	}

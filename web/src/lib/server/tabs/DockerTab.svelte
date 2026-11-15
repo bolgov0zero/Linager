@@ -30,7 +30,7 @@
   type LoadState = 'loading' | 'ready' | 'offline' | 'disabled' | 'error';
 
   interface StreamView {
-    kind: 'logs' | 'pull';
+    kind: 'logs' | 'pull' | 'update';
     title: string;
     lines: StreamLine[];
     state: StreamState;
@@ -61,6 +61,8 @@
   let stream = $state<StreamView | null>(null);
   let autoscroll = $state(true);
   let logBox = $state<HTMLDivElement | undefined>(undefined);
+  /** The "update the container" dialog: image is only used for a plain container (compose has it in its file). */
+  let updateFor = $state<{ c: DockerContainer; image: string } | null>(null);
   let pullInput = $state('');
   let pullError = $state('');
 
@@ -126,7 +128,7 @@
     const kind = stream?.kind;
     stopStream();
     stream = null;
-    if (kind === 'pull') void refresh();
+    if (kind === 'pull' || kind === 'update') void refresh();
   }
 
   /** Attaches a live stream to a view; the view object must be the reactive proxy from `stream`. */
@@ -144,7 +146,7 @@
       end: (failed) => {
         batch.flushNow();
         view.state = failed ? 'failed' : 'ended';
-        if (view.kind === 'pull') void refresh();
+        if (view.kind !== 'logs') void refresh();
       },
     });
   }
@@ -165,6 +167,23 @@
     stopStream();
     stream = { kind: 'pull', title: T('docker.pull.title', { image }), lines: [], state: 'connecting' };
     connect(stream, openStream(serverId, 'docker-pull', { image }));
+  }
+
+  function requestUpdate(c: DockerContainer): void {
+    updateFor = { c, image: c.image };
+  }
+
+  /** Pulls the image again and recreates the container (through compose for a compose project). */
+  function startUpdate(): void {
+    const target = updateFor;
+    if (!target) return;
+    updateFor = null;
+    const { c, image } = target;
+    const params: Record<string, string> = { container: c.id };
+    if (!c.compose && image.trim() && image.trim() !== c.image) params.image = image.trim();
+    stopStream();
+    stream = { kind: 'update', title: T('docker.update.streamTitle', { name: c.name }), lines: [], state: 'connecting' };
+    connect(stream, openStream(serverId, 'docker-update', params));
   }
 
   $effect(() => {
@@ -199,6 +218,7 @@
         ? { key: 'stop', label: $tStore('docker.act.stop'), disabled: busy, onselect: () => void containerAction(c, 'stop') }
         : { key: 'start', label: $tStore('docker.act.start'), disabled: busy, onselect: () => void containerAction(c, 'start') },
       { key: 'restart', label: $tStore('docker.act.restart'), disabled: busy || !running, onselect: () => void containerAction(c, 'restart') },
+      { key: 'update', label: $tStore('docker.act.update'), disabled: busy, onselect: () => requestUpdate(c) },
       { key: 'remove', label: $tStore('docker.act.remove'), disabled: busy, onselect: () => requestRemove(c) },
     ];
   }
@@ -418,6 +438,25 @@
       </div>
     </Modal>
   </div>
+{/if}
+
+{#if updateFor}
+  {@const u = updateFor}
+  <Modal title={T('docker.update.title', { name: u.c.name })} labelId="docker-update-title" onclose={() => (updateFor = null)}>
+    <p>{$tStore('docker.update.text')}</p>
+    {#if u.c.compose}
+      <p class="muted">{$tStore('docker.update.compose')}</p>
+    {:else}
+      <label class="field">
+        <span class="label">{$tStore('docker.update.image')}</span>
+        <input class="input mono" type="text" spellcheck="false" bind:value={updateFor.image} />
+      </label>
+    {/if}
+    <div class="row end">
+      <button class="btn" type="button" onclick={() => (updateFor = null)}>{$tStore('common.cancel')}</button>
+      <button class="btn primary" type="button" onclick={startUpdate}>{$tStore('docker.update.submit')}</button>
+    </div>
+  </Modal>
 {/if}
 
 {#if ask}

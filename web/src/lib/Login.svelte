@@ -1,11 +1,9 @@
 <script lang="ts">
-  import { api, ApiError, type Session } from '../api';
+  import { api, ApiError, isTotpRequired, type Session } from '../api';
   import { t, tr } from '../i18n';
+  import { getPasskey, passkeyCancelled, passkeysSupported } from './webauthn';
 
   let { onlogin }: { onlogin: (session: Session) => void } = $props();
-
-  /** The server answers 401 with this code when the password is right and the 2FA code is missing. */
-  const TOTP_REQUIRED = 'totp_required';
 
   // One form for both steps, so password managers see the same login form the whole time: the
   // login and password fields only get hidden on the second step, they are not removed.
@@ -15,8 +13,10 @@
   let login = $state('');
   let password = $state('');
   let totp = $state('');
+  let useRecovery = $state(false);
   let busy = $state(false);
   let error = $state<string | null>(null);
+  const passkeyOk = passkeysSupported();
   let formEl = $state<HTMLFormElement | undefined>(undefined);
   let totpEl = $state<HTMLInputElement | undefined>(undefined);
 
@@ -43,9 +43,10 @@
       const session = await api.login(login.trim(), password, step === 'totp' ? totp.trim() : undefined);
       onlogin(session);
     } catch (e) {
-      if (step === 'password' && e instanceof ApiError && e.status === 401 && e.serverMessage === TOTP_REQUIRED) {
+      if (step === 'password' && isTotpRequired(e)) {
         step = 'totp';
         totp = '';
+        useRecovery = false;
       } else {
         error = describeFailure(e);
         if (step === 'totp') totp = '';
@@ -59,12 +60,39 @@
     step = 'password';
     totp = '';
     error = null;
+    useRecovery = false;
+  }
+
+  function toggleRecovery(): void {
+    useRecovery = !useRecovery;
+    totp = '';
+    error = null;
+    totpEl?.focus();
   }
 
   // Sign in as soon as the sixth digit is typed or filled in by a password manager.
   function onTotpInput(): void {
+    if (useRecovery) return;
     totp = totp.replace(/\D/g, '');
     if (totp.length === 6 && !busy) formEl?.requestSubmit();
+  }
+
+  /** Sign in with a passkey: no login and no password, the browser shows the passkeys of this site. */
+  async function passkeyLogin(): Promise<void> {
+    if (busy) return;
+    busy = true;
+    error = null;
+    try {
+      const begin = await api.passkeyLoginBegin();
+      const response = await getPasskey(begin.options.publicKey);
+      onlogin(await api.passkeyLoginFinish(begin.id, response));
+    } catch (e) {
+      if (!passkeyCancelled(e)) {
+        error = e instanceof ApiError && e.status === 429 ? (e.serverMessage ?? t('common.genericError')) : t('login.passkeyFailed');
+      }
+    } finally {
+      busy = false;
+    }
   }
 </script>
 
@@ -105,31 +133,46 @@
     {#if step === 'totp'}
       <p class="muted who">{$tr('login.totpFor', { login: login.trim() })}</p>
       <label class="field">
-        <span class="label">{$tr('login.totp')}</span>
+        <span class="label">{useRecovery ? $tr('login.recovery') : $tr('login.totp')}</span>
         <input
           class="input mono code"
           id="otp"
           name="otp"
           type="text"
-          inputmode="numeric"
-          pattern="[0-9]*"
+          inputmode={useRecovery ? 'text' : 'numeric'}
+          pattern={useRecovery ? undefined : '[0-9]*'}
           autocomplete="one-time-code"
-          maxlength="6"
+          autocapitalize="characters"
+          spellcheck="false"
+          maxlength={useRecovery ? 16 : 6}
           required
           bind:this={totpEl}
           bind:value={totp}
           oninput={onTotpInput}
         />
       </label>
+      <button class="linkbtn" type="button" onclick={toggleRecovery}>
+        {useRecovery ? $tr('login.useTotp') : $tr('login.useRecovery')}
+      </button>
     {/if}
 
     {#if error}
       <p class="error" role="alert">{error}</p>
     {/if}
 
-    <div class="row end">
+    <div class="row end buttons">
       {#if step === 'totp'}
         <button class="btn" type="button" disabled={busy} onclick={back}>{$tr('login.back')}</button>
+      {:else}
+        <button
+          class="btn"
+          type="button"
+          disabled={busy || !passkeyOk}
+          title={passkeyOk ? undefined : $tr('login.passkeyUnavailable')}
+          onclick={() => void passkeyLogin()}
+        >
+          {$tr('login.passkey')}
+        </button>
       {/if}
       <button class="btn primary" type="submit" disabled={busy}>
         {busy ? $tr('login.submitting') : step === 'totp' ? $tr('login.totpSubmit') : $tr('login.submit')}
@@ -155,6 +198,22 @@
 
   .who {
     margin: 0;
+  }
+
+  .linkbtn {
+    align-self: flex-start;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    font-size: 13px;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .buttons {
+    flex-wrap: wrap;
   }
 
   .code {

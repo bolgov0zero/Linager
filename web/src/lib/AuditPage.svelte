@@ -6,7 +6,7 @@
   import AuditTable from './audit/AuditTable.svelte';
   import { ACTION_GROUPS, RESULT_OPTIONS } from './audit/actions';
 
-  let { onBack }: { onBack: () => void } = $props();
+  let { onBack, embedded = false }: { onBack?: () => void; embedded?: boolean } = $props();
 
   const PAGE_SIZE = 100;
   const REFRESH_MS = 15_000;
@@ -88,8 +88,10 @@
 
 <div class="audit stack">
   <div class="head row">
-    <button class="btn" type="button" onclick={onBack}>{$tr('audit.back')}</button>
-    <h1>{$tr('audit.title')}</h1>
+    {#if !embedded && onBack}
+      <button class="btn" type="button" onclick={onBack}>{$tr('audit.back')}</button>
+    {/if}
+    {#if embedded}<h3 class="emb">{$tr('audit.title')}</h3>{:else}<h1>{$tr('audit.title')}</h1>{/if}
   </div>
 
   <section class="card stack">
@@ -213,5 +215,8 @@
 
   .muted {
     color: var(--muted);
+  }
+  .emb {
+    margin: 0;
   }
 </style>

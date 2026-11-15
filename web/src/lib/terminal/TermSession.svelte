@@ -47,6 +47,7 @@
     focus: () => void;
     send: (data: string) => void;
     appCursor: () => boolean;
+    insert: (text: string, run: boolean) => void;
   } | null = null;
 
   // Ctrl and Alt from the key panel stay latched until the next key (from the panel or a real keyboard).
@@ -72,6 +73,8 @@
   export const copy = () => current?.copy();
   export const paste = () => current?.paste();
   export const close = () => current?.close();
+  /** Types text into the terminal as a paste; with run it is executed (Enter) right after. */
+  export const insert = (text: string, run: boolean) => current?.insert(text, run);
 
   /** Copies text with the async Clipboard API (secure contexts) or the legacy execCommand fallback (plain HTTP). */
   async function copyText(text: string): Promise<boolean> {
@@ -225,6 +228,11 @@
         close: () => socket.close(),
         send,
         appCursor: () => term.modes.applicationCursorKeysMode,
+        insert: (text, run) => {
+          term.focus();
+          term.paste(text); // a paste, so multi-line text stays one block where the shell knows bracketed paste
+          if (run) send('\r');
+        },
         copy: () => void copySelection(),
         paste: async () => {
           term.focus();

@@ -19,7 +19,8 @@ import (
 	"time"
 )
 
-const dockerSocket = "/var/run/docker.sock"
+// dockerSocket is a variable so tests can point it at a fake daemon.
+var dockerSocket = "/var/run/docker.sock"
 
 var (
 	containerRe = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$`)
@@ -68,13 +69,14 @@ func dockerJSON(ctx context.Context, method, path string, out any) error {
 }
 
 type dContainer struct {
-	ID      string   `json:"Id"`
-	Names   []string `json:"Names"`
-	Image   string   `json:"Image"`
-	ImageID string   `json:"ImageID"`
-	State   string   `json:"State"`
-	Status  string   `json:"Status"`
-	Created int64    `json:"Created"`
+	ID      string            `json:"Id"`
+	Names   []string          `json:"Names"`
+	Image   string            `json:"Image"`
+	ImageID string            `json:"ImageID"`
+	State   string            `json:"State"`
+	Status  string            `json:"Status"`
+	Created int64             `json:"Created"`
+	Labels  map[string]string `json:"Labels"`
 	Ports   []struct {
 		IP          string `json:"IP"`
 		PrivatePort int    `json:"PrivatePort"`
@@ -154,6 +156,7 @@ func dockerState(ctx context.Context, _ json.RawMessage, _ bool) (any, error) {
 	type row struct {
 		ID, Name, Image, State, Status string
 		Ports                          []string
+		Compose                        bool
 		Created                        int64
 		CPU                            float64
 		MemUsed, MemLimit              uint64
@@ -164,7 +167,7 @@ func dockerState(ctx context.Context, _ json.RawMessage, _ bool) (any, error) {
 	for i, c := range cs {
 		used[c.ImageID] = true
 		name := strings.TrimPrefix(first(c.Names), "/")
-		rows[i] = &row{ID: c.ID[:12], Name: name, Image: c.Image, State: c.State, Status: c.Status, Ports: portStrings(c), Created: c.Created}
+		rows[i] = &row{ID: c.ID[:12], Name: name, Image: c.Image, State: c.State, Status: c.Status, Ports: portStrings(c), Created: c.Created, Compose: c.Labels[composeProject] != ""}
 		if c.State != "running" {
 			continue
 		}
@@ -187,7 +190,7 @@ func dockerState(ctx context.Context, _ json.RawMessage, _ bool) (any, error) {
 	cont := make([]map[string]any, 0, len(rows))
 	for _, r := range rows {
 		cont = append(cont, map[string]any{"id": r.ID, "name": r.Name, "image": r.Image, "state": r.State, "status": r.Status, "ports": r.Ports,
-			"created": r.Created, "cpu": r.CPU, "mem_used": r.MemUsed, "mem_limit": r.MemLimit})
+			"created": r.Created, "compose": r.Compose, "cpu": r.CPU, "mem_used": r.MemUsed, "mem_limit": r.MemLimit})
 	}
 	sort.Slice(cont, func(i, j int) bool { return cont[i]["name"].(string) < cont[j]["name"].(string) })
 	imgs := make([]map[string]any, 0, len(ims))
@@ -310,9 +313,14 @@ func dockerPull(ctx context.Context, raw json.RawMessage, sio *StreamIO) error {
 	if err := json.Unmarshal(raw, &p); err != nil || !imageRe.MatchString(p.Image) {
 		return errors.New("invalid image name")
 	}
-	repo, tag := p.Image, "latest"
-	if i := strings.LastIndex(p.Image, ":"); i > strings.LastIndex(p.Image, "/") && !strings.Contains(p.Image[i:], "@") {
-		repo, tag = p.Image[:i], p.Image[i+1:]
+	return pullImage(ctx, p.Image, func(line string) error { return sio.Out([]byte(line + "\n")) })
+}
+
+// pullImage pulls an image and reports the progress lines to out.
+func pullImage(ctx context.Context, image string, out func(string) error) error {
+	repo, tag := image, "latest"
+	if i := strings.LastIndex(image, ":"); i > strings.LastIndex(image, "/") && !strings.Contains(image[i:], "@") {
+		repo, tag = image[:i], image[i+1:]
 	}
 	q := url.Values{"fromImage": {repo}, "tag": {tag}}
 	resp, err := dockerDo(ctx, dockerClient(0), http.MethodPost, "/images/create?"+q.Encode())
@@ -320,6 +328,14 @@ func dockerPull(ctx context.Context, raw json.RawMessage, sio *StreamIO) error {
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		var m struct{ Message string }
+		if json.Unmarshal(b, &m) == nil && m.Message != "" {
+			return errors.New(m.Message)
+		}
+		return fmt.Errorf("docker: %s", resp.Status)
+	}
 	dec := json.NewDecoder(resp.Body)
 	for {
 		var m struct{ Status, ID, Progress, Error string }
@@ -329,8 +345,7 @@ func dockerPull(ctx context.Context, raw json.RawMessage, sio *StreamIO) error {
 		if m.Error != "" {
 			return errors.New(m.Error)
 		}
-		line := strings.TrimSpace(m.ID + " " + m.Status + " " + m.Progress)
-		if err := sio.Out([]byte(line + "\n")); err != nil {
+		if err := out(strings.TrimSpace(m.ID + " " + m.Status + " " + m.Progress)); err != nil {
 			return err
 		}
 	}

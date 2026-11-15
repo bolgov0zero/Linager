@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.40
+
+- Settings: a "Settings" button in the top bar opens a large window with a side panel: Profile, Users, Updates, Audit log, Snippets. The old pages #updates and #audit moved into it (the old links still work); the 2FA button is now part of the profile.
+- Sign-in: a "Passkey" button next to "Sign in" signs in without a login and a password (WebAuthn, needs HTTPS or localhost). Passkeys are added in the profile. "Sign in" goes to the 2FA step as before; the code field also takes a recovery code.
+- Recovery codes: enabling 2FA shows 10 one-time codes (copy or download, shown once); the profile shows how many are left and can generate new ones (password required).
+- Users: add users, change your own password (the other sessions end), reset the password or the 2FA of another user, delete users (not yourself). All actions go to the audit log. New `admin.login_rate` in server.yaml (sign-in attempts per minute per address, default 10).
+- Snippets: commands shared by all users, managed in Settings. In the terminal (tab and floating window) a "Snippets" drop-down: a click pastes and runs the command, the small button at the right only pastes it.
+- Docker: "Update image" in the container menu pulls the image again and recreates the container with the same settings, with a rollback to the old container if the new one does not start; a docker compose container is updated with `docker compose pull` and `up -d --no-deps`. Needs agent 0.1.40.
+
 ## 0.1.39
 
 - Sign-in page: the card is centered under the top bar. Two-step sign-in: login and password first, then the 2FA code on a second step (only for users with 2FA; no more "I have 2FA" checkbox). The right password without a code creates no session and is not counted as a failed attempt. The code signs you in by itself when the sixth digit is typed or filled in. The fields are marked for password managers (`username`, `current-password`, `one-time-code`). Needs the server only; agents need no update.

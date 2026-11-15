@@ -1,7 +1,10 @@
 export interface Session {
   csrf: string;
   login: string;
+  id?: number;
   totp_enabled: boolean;
+  passkeys?: number;
+  recovery_left?: number;
   /** The server requires 2FA (admin.require_totp) and it is not enabled yet: the API stays closed until it is. */
   totp_required?: boolean;
 }
@@ -91,9 +94,19 @@ export interface ServiceUnit {
 export type ServiceAction = 'start' | 'stop' | 'restart' | 'enable' | 'disable';
 export interface AptPackage { name: string; current: string; candidate: string; security: boolean; reboot: boolean }
 export interface AptList { packages: AptPackage[]; reboot_required: boolean; last_check: number; busy?: boolean }
+// ---- users, passkeys, snippets ----
+export interface UserRow {
+  id: number; login: string; role: string; totp_enabled: boolean; passkeys: number; recovery_left: number;
+  created_at: string; current: boolean;
+}
+export interface PasskeyRow { id: string; name: string; created_at: string; last_used_at: string | null }
+export interface Snippet { id: number; name: string; command: string; position: number }
+/** The answer of "begin": the challenge id and the options for navigator.credentials. */
+export interface PasskeyBegin { id: string; options: { publicKey: Record<string, unknown> } }
+
 export interface ProcessInfo { pid: number; user: string; cpu: number; mem_pct: number; rss: number; state: string; cmd: string }
 export interface ProcessList { processes: ProcessInfo[]; total: number }
-export type StreamKind = 'terminal' | 'logs' | 'apt' | 'docker-logs' | 'docker-pull';
+export type StreamKind = 'terminal' | 'logs' | 'apt' | 'docker-logs' | 'docker-pull' | 'docker-update';
 
 // ---- files (stage 5) ----
 export interface FileEntry {
@@ -151,6 +164,8 @@ export interface FirewallInfo {
 export interface DockerContainer {
   id: string; name: string; image: string; state: string; status: string; ports: string[];
   created: number; cpu: number; mem_used: number; mem_limit: number;
+  /** The container belongs to a docker compose project (it is updated through compose). */
+  compose?: boolean;
 }
 export interface DockerImage { id: string; repo_tags: string[]; size: number; created: number; used: boolean }
 export interface DockerInfo { available: boolean; containers: DockerContainer[]; images: DockerImage[] }
@@ -240,6 +255,11 @@ export class ApiError extends Error {
   }
 }
 
+/** The server asked for the 2FA code after a right password (the second step of the sign-in). */
+export function isTotpRequired(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401 && error.serverMessage === 'totp_required';
+}
+
 export function isUnauthorized(error: unknown): boolean {
   return error instanceof ApiError && error.status === 401;
 }
@@ -316,9 +336,41 @@ export const api = {
 
   totpSetup: () => request<TotpSetup>('POST', 'api/me/totp/setup'),
 
-  totpEnable: (code: string) => request<void>('POST', 'api/me/totp/enable', { code }),
+  /** Returns the recovery codes: they are shown once. */
+  totpEnable: (code: string) => request<{ ok: boolean; recovery_codes: string[] }>('POST', 'api/me/totp/enable', { code }),
 
   totpDisable: (password: string) => request<void>('POST', 'api/me/totp/disable', { password }),
+
+  changePassword: (current: string, password: string) => request<{ ok: boolean }>('POST', 'api/me/password', { current, password }),
+  recoveryRegenerate: (password: string) =>
+    request<{ ok: boolean; recovery_codes: string[] }>('POST', 'api/me/recovery-codes', { password }),
+
+  passkeys: () => request<{ passkeys: PasskeyRow[] }>('GET', 'api/me/passkeys'),
+  passkeyBegin: () => request<PasskeyBegin>('POST', 'api/me/passkeys/begin', {}),
+  passkeyFinish: (id: string, name: string, response: unknown) =>
+    request<{ ok: boolean }>('POST', 'api/me/passkeys/finish', { id, name, response }),
+  passkeyDelete: (id: string, password: string) => request<{ ok: boolean }>('DELETE', `api/me/passkeys/${enc(id)}`, { password }),
+  /** Sign in with a passkey: no login and no password. */
+  passkeyLoginBegin: () => request<PasskeyBegin>('POST', 'api/login/passkey/begin', {}),
+  async passkeyLoginFinish(id: string, response: unknown): Promise<Session> {
+    const session = await request<Session>('POST', 'api/login/passkey/finish', { id, response });
+    csrfToken = session.csrf;
+    return session;
+  },
+
+  users: () => request<{ users: UserRow[] }>('GET', 'api/users'),
+  userCreate: (login: string, password: string) => request<{ ok: boolean; id: number }>('POST', 'api/users', { login, password }),
+  userDelete: (id: number) => request<{ ok: boolean }>('DELETE', `api/users/${id}`, { confirm: true }),
+  userSetPassword: (id: number, password: string) =>
+    request<{ ok: boolean }>('POST', `api/users/${id}/password`, { password, confirm: true }),
+  userReset2fa: (id: number) => request<{ ok: boolean }>('POST', `api/users/${id}/2fa/reset`, { confirm: true }),
+
+  snippets: () => request<{ snippets: Snippet[] }>('GET', 'api/snippets'),
+  snippetCreate: (name: string, command: string) => request<Snippet>('POST', 'api/snippets', { name, command }),
+  snippetUpdate: (id: number, name: string, command: string) => request<{ ok: boolean }>('PUT', `api/snippets/${id}`, { name, command }),
+  snippetDelete: (id: number) => request<{ ok: boolean }>('DELETE', `api/snippets/${id}`),
+  snippetsOrder: (ids: number[]) => request<{ ok: boolean }>('PUT', 'api/snippets/order', { ids }),
+  snippetRan: (id: number, serverId: string) => request<{ ok: boolean }>('POST', `api/snippets/${id}/ran`, { server_id: serverId }),
 
   dashboard: () => request<{ items: ServerCard[] }>('GET', 'api/dashboard'),
   groups: () => request<Group[]>('GET', 'api/groups'),

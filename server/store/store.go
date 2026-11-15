@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,7 +20,12 @@ import (
 var ErrNotFound = errors.New("not found")
 
 // Store wraps a connection pool.
-type Store struct{ Pool *pgxpool.Pool }
+type Store struct {
+	Pool *pgxpool.Pool
+	// ensured remembers the partitions already created through this store (per database: a wiped test
+	// database must not be mistaken for one that still has them).
+	ensured sync.Map
+}
 
 // Open connects to PostgreSQL and applies all pending migrations (forward only).
 func Open(ctx context.Context, dsn string) (*Store, error) {

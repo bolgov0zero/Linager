@@ -3,6 +3,8 @@
   import { tr } from '../../../i18n';
   import TermSession, { type TermPhase } from '../../terminal/TermSession.svelte';
   import KeyIcon from '../../terminal/KeyIcon.svelte';
+  import SnippetMenu from '../../terminal/SnippetMenu.svelte';
+  import { requestSettings } from '../../settings/request';
   import TermIcon from '../../terminal/TermIcon.svelte';
   import { openTermWindow } from '../../terminal/windows';
 
@@ -23,6 +25,10 @@
     setTimeout(() => openTermWindow(serverId, server.name), 150);
   }
 
+  function openSnippetSettings(): void {
+    requestSettings('snippets');
+  }
+
   const statusText = $derived(
     phase === 'connecting' ? $tr('term.connecting') : phase === 'open' ? $tr('term.open') : $tr('term.closed'),
   );
@@ -39,6 +45,7 @@
     </p>
     {#if server.online && phase !== 'closed'}
       <div class="actions">
+        <SnippetMenu serverId={server.id} oninsert={(text, run) => session?.insert(text, run)} onmanage={openSnippetSettings} />
         <button class="btn" class:ink={keys} type="button" title={$tr('term.keys')} aria-label={$tr('term.keys')} aria-pressed={keys} onclick={() => (keys = !keys)}><KeyIcon /></button>
         <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.copy()}><span class="ic"><TermIcon name="copy" /></span><span class="tx">{$tr('term.copy')}</span></button>
         <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.paste()}><span class="ic"><TermIcon name="paste" /></span><span class="tx">{$tr('term.paste')}</span></button>

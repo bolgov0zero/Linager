@@ -1,0 +1,250 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { api, ApiError, isUnauthorized, type UserRow } from '../../api';
+  import { locale, t, tr } from '../../i18n';
+  import { showToast } from '../toast';
+  import { formatDateTime } from '../server/format';
+
+  let { onauthlost }: { onauthlost: () => void } = $props();
+
+  type Action = { kind: 'delete' | 'reset2fa' | 'password'; user: UserRow };
+
+  let users = $state<UserRow[]>([]);
+  let loaded = $state(false);
+  let failed = $state(false);
+
+  let adding = $state(false);
+  let newLogin = $state('');
+  let newPassword = $state('');
+  let addError = $state<string | null>(null);
+
+  let action = $state<Action | null>(null);
+  let resetPw = $state('');
+  let actionError = $state<string | null>(null);
+  let busy = $state(false);
+
+  async function load(): Promise<void> {
+    try {
+      users = (await api.users()).users;
+      failed = false;
+    } catch (e) {
+      if (isUnauthorized(e)) onauthlost();
+      else failed = true;
+    } finally {
+      loaded = true;
+    }
+  }
+  onMount(() => void load());
+
+  function errText(e: unknown, fallback: string): string {
+    if (e instanceof ApiError) {
+      if (e.status === 0) return t('common.networkError');
+      if (e.status === 409) return e.serverMessage === 'this login is taken' ? t('users.loginTaken') : (e.serverMessage ?? fallback);
+      if (e.status === 422) return e.serverMessage ?? fallback;
+    }
+    return fallback;
+  }
+
+  async function create(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    if (busy) return;
+    busy = true;
+    addError = null;
+    try {
+      await api.userCreate(newLogin.trim(), newPassword);
+      newLogin = newPassword = '';
+      adding = false;
+      showToast(t('users.createdToast'));
+      await load();
+    } catch (e) {
+      if (isUnauthorized(e)) onauthlost();
+      else addError = errText(e, t('common.genericError'));
+    } finally {
+      busy = false;
+    }
+  }
+
+  function ask(kind: Action['kind'], user: UserRow): void {
+    action = { kind, user };
+    resetPw = '';
+    actionError = null;
+  }
+
+  async function confirm(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    const a = action;
+    if (!a || busy) return;
+    busy = true;
+    actionError = null;
+    try {
+      if (a.kind === 'delete') {
+        await api.userDelete(a.user.id);
+        showToast(t('users.deleted', undefined, { login: a.user.login }));
+      } else if (a.kind === 'reset2fa') {
+        await api.userReset2fa(a.user.id);
+        showToast(t('users.reset2faDone'));
+      } else {
+        await api.userSetPassword(a.user.id, resetPw);
+        showToast(t('users.passwordSet'));
+      }
+      action = null;
+      await load();
+    } catch (e) {
+      if (isUnauthorized(e)) onauthlost();
+      else actionError = errText(e, t('common.genericError'));
+    } finally {
+      busy = false;
+    }
+  }
+</script>
+
+<div class="users">
+  <header class="head">
+    <h3>{$tr('users.title')}</h3>
+    <button class="btn primary" type="button" onclick={() => (adding = !adding)}>{$tr('users.add')}</button>
+  </header>
+  <p class="muted">{$tr('users.hint')}</p>
+
+  {#if adding}
+    <form class="card stack" onsubmit={create}>
+      <label class="field">
+        <span class="label">{$tr('users.login')}</span>
+        <input class="input" type="text" name="new-login" autocomplete="off" autocapitalize="none" spellcheck="false" required bind:value={newLogin} />
+      </label>
+      <label class="field">
+        <span class="label">{$tr('users.password')}</span>
+        <input class="input" type="password" name="new-password" autocomplete="new-password" required bind:value={newPassword} />
+      </label>
+      {#if addError}<p class="error" role="alert">{addError}</p>{/if}
+      <div class="row end">
+        <button class="btn" type="button" onclick={() => (adding = false)}>{$tr('common.cancel')}</button>
+        <button class="btn primary" type="submit" disabled={busy}>{$tr('users.create')}</button>
+      </div>
+    </form>
+  {/if}
+
+  {#if failed}
+    <p class="error" role="alert">{$tr('users.loadFailed')}</p>
+  {:else if !loaded}
+    <p class="muted">{$tr('common.loading')}</p>
+  {:else}
+    <ul class="list">
+      {#each users as u (u.id)}
+        <li class="user">
+          <div class="info">
+            <strong>{u.login}</strong>
+            {#if u.current}<span class="badge you">{$tr('users.you')}</span>{/if}
+            <span class="badge">{$tr('users.role.admin')}</span>
+            <span class="badge" class:good={u.totp_enabled}>{u.totp_enabled ? $tr('users.2fa.on') : $tr('users.2fa.off')}</span>
+            {#if u.passkeys > 0}<span class="badge good">{$tr('users.passkeys', { n: u.passkeys })}</span>{/if}
+            <span class="muted small">{$tr('users.created', { date: formatDateTime(u.created_at, $locale) })}</span>
+          </div>
+          {#if !u.current}
+            <div class="row acts">
+              <button class="btn sm" type="button" onclick={() => ask('password', u)}>{$tr('users.reset')}</button>
+              <button class="btn sm" type="button" disabled={!u.totp_enabled && u.passkeys === 0} onclick={() => ask('reset2fa', u)}>{$tr('users.reset2fa')}</button>
+              <button class="btn sm danger" type="button" onclick={() => ask('delete', u)}>{$tr('users.delete')}</button>
+            </div>
+          {/if}
+          {#if action && action.user.id === u.id}
+            <form class="confirm stack" onsubmit={confirm}>
+              {#if action.kind === 'delete'}
+                <p>{$tr('users.confirmDelete', { login: u.login })}</p>
+              {:else if action.kind === 'reset2fa'}
+                <p>{$tr('users.confirmReset2fa', { login: u.login })}</p>
+              {:else}
+                <label class="field">
+                  <span class="label">{$tr('users.newPassword', { login: u.login })}</span>
+                  <input class="input" type="password" autocomplete="new-password" required bind:value={resetPw} />
+                </label>
+                <p class="muted small">{$tr('users.confirmPassword')}</p>
+              {/if}
+              {#if actionError}<p class="error" role="alert">{actionError}</p>{/if}
+              <div class="row end">
+                <button class="btn" type="button" onclick={() => (action = null)}>{$tr('common.cancel')}</button>
+                <button class="btn" class:danger={action.kind !== 'password'} class:primary={action.kind === 'password'} type="submit" disabled={busy || (action.kind === 'password' && !resetPw)}>
+                  {action.kind === 'delete' ? $tr('users.delete') : action.kind === 'reset2fa' ? $tr('users.reset2fa') : $tr('users.reset')}
+                </button>
+              </div>
+            </form>
+          {/if}
+        </li>
+      {/each}
+    </ul>
+  {/if}
+</div>
+
+<style>
+  .users {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  h3,
+  p {
+    margin: 0;
+  }
+
+  .list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .user {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--seg-off);
+  }
+
+  .info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    min-width: 0;
+  }
+
+  .badge {
+    padding: 1px 6px;
+    border: 2px solid var(--muted);
+    color: var(--muted);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .badge.good {
+    border-color: var(--good);
+    color: var(--good);
+  }
+
+  .badge.you {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .acts {
+    gap: 6px;
+  }
+
+  .confirm {
+    flex: 1 0 100%;
+    padding: 12px;
+    border: 2px solid var(--line);
+  }
+</style>

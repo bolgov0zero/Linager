@@ -97,5 +97,20 @@
   "audit.action.files.zip": "Файлы: скачивание zip",
   "audit.action.update.cache.prune": "Обновления: очистка кеша",
   "audit.action.files.chmod": "Файлы: права доступа",
-  "audit.action.files.chown": "Файлы: владелец"
+  "audit.action.files.chown": "Файлы: владелец",
+  "audit.group.users": "Пользователи",
+  "audit.group.snippets": "Сниппеты",
+  "audit.action.auth.passkey.add": "Добавлен passkey",
+  "audit.action.auth.passkey.delete": "Удалён passkey",
+  "audit.action.auth.recovery.regenerate": "Новые коды восстановления",
+  "audit.action.user.create": "Создан пользователь",
+  "audit.action.user.delete": "Удалён пользователь",
+  "audit.action.user.password.change": "Смена пароля",
+  "audit.action.user.password.reset": "Сброс пароля пользователя",
+  "audit.action.user.2fa.reset": "Сброс 2FA пользователя",
+  "audit.action.snippet.create": "Сниппет создан",
+  "audit.action.snippet.update": "Сниппет изменён",
+  "audit.action.snippet.delete": "Сниппет удалён",
+  "audit.action.snippet.order": "Порядок сниппетов",
+  "audit.action.snippet.run": "Запуск сниппета"
 }

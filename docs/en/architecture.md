@@ -224,6 +224,13 @@ Done when: on clean Debian 12/13 and Ubuntu 22.04/24.04/26.04, a single wizard r
 - Backups: `linager backup` (pg_dump + configuration + keys, permissions 600, rotation), a daily timer, and a pre-update backup.
 - Notifications (Telegram, email) are not implemented, by the owner's decision.
 
+## 12f. Users, passkeys, snippets, container updates (0.1.40)
+- Migration `00007`: `recovery_codes` (SHA-256 hashes of one-time codes), `webauthn_credentials` (passkeys, a serialized `webauthn.Credential`), `users.webauthn_handle` (a random user id for the authenticator), `snippets` (shared by all).
+- Sign-in: `POST /api/login` takes either the app code (6 digits) or a recovery code in the `totp` field; a right password without a code answers `401 totp_required` when 2FA is on. Passkey sign-in: `POST /api/login/passkey/begin|finish` (discoverable credentials, user verification required, a single-use challenge kept in memory for 5 minutes, the origin must match `Host`); the `go-webauthn` library.
+- Users and account: `/api/users` (list, create, delete, reset password and 2FA), `/api/me/password`, `/api/me/recovery-codes`, `/api/me/passkeys`. You cannot delete yourself; a password change ends the other sessions; everything is audited. The sign-in rate is set by `admin.login_rate`.
+- Snippets: `/api/snippets` (CRUD, order, `POST /{id}/ran` audits a run).
+- Agent: the stream `docker.update` (`kind=docker-update`): recreates the container through the Docker API with a rollback, or runs `docker compose pull` and `up -d --no-deps` for a compose project; `docker.state` reports a `compose` flag.
+
 ## 12e. Changes after the 0.1 review
 - The agent certificate is renewed over the channel (`cert.renew` / `cert.renewed`) when less than a third of its lifetime is left;
   the agent re-reads the certificate before every connection. The reconnect pause is reset after a session longer than 30 seconds.

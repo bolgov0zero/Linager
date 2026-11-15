@@ -1,6 +1,8 @@
 <script lang="ts">
   import { tr } from '../../i18n';
   import KeyIcon from './KeyIcon.svelte';
+  import SnippetMenu from './SnippetMenu.svelte';
+  import { requestSettings } from '../settings/request';
   import TermIcon from './TermIcon.svelte';
   import TermSession, { type TermPhase } from './TermSession.svelte';
   import WindowFrame from './WindowFrame.svelte';
@@ -29,6 +31,7 @@
     <span class="muted status">· {statusText}</span>
   {/snippet}
   {#snippet tools()}
+    <SnippetMenu serverId={serverId} oninsert={(text, run) => session?.insert(text, run)} onmanage={() => requestSettings('snippets')} />
     <button class="btn sm icon" class:ink={keys} type="button" title={$tr('term.keys')} aria-label={$tr('term.keys')} aria-pressed={keys} onclick={() => (keys = !keys)}><KeyIcon /></button>
     {#if phase === 'open'}
       <button class="btn sm" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.copy()}><span class="ic"><TermIcon name="copy" /></span><span class="tx">{$tr('term.copy')}</span></button>

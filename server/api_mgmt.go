@@ -297,6 +297,14 @@ func (a *Admin) streamParams(r *http.Request) (module string, params map[string]
 		if img := q.Get("image"); img != "" && len(img) <= 256 {
 			return "docker.pull", map[string]any{"image": img}, true
 		}
+	case "docker-update":
+		if c := q.Get("container"); c != "" && len(c) <= 128 && len(q.Get("image")) <= 256 {
+			p := map[string]any{"container": c}
+			if img := q.Get("image"); img != "" {
+				p["image"] = img
+			}
+			return "docker.update", p, true
+		}
 	case "apt":
 		switch m := q.Get("mode"); m {
 		case "update", "upgrade", "security":

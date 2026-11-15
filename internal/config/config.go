@@ -24,6 +24,7 @@ type Server struct {
 		TrustedProxies []string `yaml:"trusted_proxies"` // CIDRs; default: any
 		CookieSecure   string   `yaml:"cookie_secure"`   // auto|always|never
 		RequireTOTP    bool     `yaml:"require_totp"`    // force the administrator to enable 2FA before using the panel
+		LoginRate      int      `yaml:"login_rate"`      // sign-in attempts per minute per address (default 10)
 	} `yaml:"admin"`
 	Update struct {
 		Source  string `yaml:"source"`  // "" = GitHub releases of bolgov0zero/linager, "owner/repo", or a mirror URL
@@ -69,6 +70,9 @@ func (c *Server) applyDefaults() {
 	}
 	if len(c.Admin.TrustedProxies) == 0 {
 		c.Admin.TrustedProxies = []string{"0.0.0.0/0", "::/0"}
+	}
+	if c.Admin.LoginRate <= 0 {
+		c.Admin.LoginRate = 10
 	}
 	if c.Admin.CookieSecure == "" {
 		c.Admin.CookieSecure = "auto"

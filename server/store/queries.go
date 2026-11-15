@@ -18,13 +18,15 @@ type User struct {
 	TOTPLastStep   int64
 	FailedAttempts int
 	LockedUntil    *time.Time
+	// WebAuthnHandle is the opaque user handle for passkeys (nil until the first registration).
+	WebAuthnHandle []byte
 }
 
-const userCols = `id, login, password_hash, coalesce(totp_secret,''), totp_enabled, totp_last_step, failed_attempts, locked_until`
+const userCols = `id, login, password_hash, coalesce(totp_secret,''), totp_enabled, totp_last_step, failed_attempts, locked_until, webauthn_handle`
 
 func scanUser(r pgx.Row) (*User, error) {
 	var u User
-	err := r.Scan(&u.ID, &u.Login, &u.PasswordHash, &u.TOTPSecret, &u.TOTPEnabled, &u.TOTPLastStep, &u.FailedAttempts, &u.LockedUntil)
+	err := r.Scan(&u.ID, &u.Login, &u.PasswordHash, &u.TOTPSecret, &u.TOTPEnabled, &u.TOTPLastStep, &u.FailedAttempts, &u.LockedUntil, &u.WebAuthnHandle)
 	if err != nil {
 		return nil, notFound(err)
 	}

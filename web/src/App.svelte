@@ -6,14 +6,14 @@
   import Dashboard from './lib/Dashboard.svelte';
   import EnrollModal from './lib/EnrollModal.svelte';
   import Login from './lib/Login.svelte';
-  import SecurityModal from './lib/SecurityModal.svelte';
+  import SettingsModal from './lib/settings/SettingsModal.svelte';
+  import type { SettingsSection } from './lib/settings/sections';
+  import { settingsRequest } from './lib/settings/request';
   import Toast from './lib/Toast.svelte';
   import { showToast } from './lib/toast';
   import AddServerModal from './lib/dashboard/AddServerModal.svelte';
   import { fmtClock } from './lib/dashboard/format';
   import ServerPage from './lib/server/ServerPage.svelte';
-  import UpdatesPage from './lib/UpdatesPage.svelte';
-  import AuditPage from './lib/AuditPage.svelte';
   import TermWindows from './lib/terminal/TermWindows.svelte';
   import { closeAllTermWindows } from './lib/terminal/windows';
 
@@ -54,7 +54,8 @@
   let theme = $state<Theme>(initialTheme());
   let phase = $state<Phase>('loading');
   let session = $state<Session | null>(null);
-  let securityOpen = $state(false);
+  let settingsOpen = $state(false);
+  let settingsSection = $state<SettingsSection>('profile');
   let editing = $state(false);
   let addOpen = $state(false);
   let enrollOpen = $state(false);
@@ -67,11 +68,27 @@
 
   const serverRoute = $derived(parseServerHash(hash));
   const serverName = $derived(serverRoute?.name ?? null);
-  const page = $derived<'updates' | 'audit' | null>(hash === '#updates' ? 'updates' : hash === '#audit' ? 'audit' : null);
   let updatesCount = $state(0);
   const clock = $derived(lastLive ? fmtClock(lastLive) : '--:--:--');
 
+  /** The old pages #updates and #audit are sections of the settings now; links to them keep working. */
+  function openLegacyHash(): boolean {
+    const name = location.hash.slice(1);
+    if (name !== 'updates' && name !== 'audit') return false;
+    history.replaceState(history.state, '', `${location.pathname}${location.search}`);
+    hash = '';
+    if (session) openSettings(name);
+    return true;
+  }
+
+  function openSettings(section: SettingsSection = settingsSection): void {
+    settingsSection = section;
+    settingsOpen = true;
+    menuOpen = false;
+  }
+
   function onHashChange(): void {
+    if (openLegacyHash()) return;
     hash = location.hash;
     menuOpen = false;
     if (!hash.startsWith(SRV_PREFIX)) openedFromApp = false;
@@ -120,7 +137,7 @@
   function startSession(next: Session): void {
     session = next;
     phase = 'app';
-    if (next.totp_required) securityOpen = true; // force the 2FA setup dialog
+    if (next.totp_required) openSettings('profile'); // 2FA is required: the profile has its setup
     void refreshUpdatesCount();
     if (!unsubscribeLive) {
       unsubscribeLive = subscribeLive(() => {
@@ -131,7 +148,7 @@
 
   function endSession(): void {
     session = null;
-    securityOpen = false;
+    settingsOpen = false;
     editing = false;
     addOpen = false;
     enrollOpen = false;
@@ -155,8 +172,13 @@
     endSession();
   }
 
-  function setTotpEnabled(enabled: boolean): void {
-    if (session) session = { ...session, totp_enabled: enabled };
+  /** Reloads the session data after the profile changed it (2FA, passkeys, recovery codes). */
+  async function refreshSession(): Promise<void> {
+    try {
+      session = await api.me();
+    } catch {
+      endSession();
+    }
   }
 
   async function restoreSession(): Promise<void> {
@@ -167,9 +189,19 @@
     }
   }
 
+  // other components ask for a settings section ("Manage" in the snippets list of the terminal)
+  let handledRequest = 0;
+  $effect(() => {
+    const req = $settingsRequest;
+    if (req && req.seq !== handledRequest && session) {
+      handledRequest = req.seq;
+      openSettings(req.section);
+    }
+  });
+
   onMount(() => {
     window.addEventListener('hashchange', onHashChange);
-    void restoreSession();
+    void restoreSession().then(() => openLegacyHash());
     const counter = setInterval(() => session && void refreshUpdatesCount(), 60_000);
     return () => {
       clearInterval(counter);
@@ -216,17 +248,17 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="controls" class:open={menuOpen} onclick={() => (menuOpen = false)}>
       {#if phase === 'app'}
-        <a class="btn" href="#updates">{$tr('app.updates')}{#if updatesCount > 0} <span class="badge">{updatesCount}</span>{/if}</a>
-        <a class="btn" href="#audit">{$tr('app.audit')}</a>
+        <button class="btn" type="button" onclick={() => openSettings()}>
+          {$tr('app.settings')}{#if updatesCount > 0} <span class="badge">{updatesCount}</span>{/if}
+        </button>
       {/if}
-      {#if phase === 'app' && serverName === null && page === null}
+      {#if phase === 'app' && serverName === null}
         <button class="btn" class:ink={editing} type="button" onclick={toggleEdit}>
           {editing ? $tr('dash.done') : $tr('dash.edit')}
         </button>
         <button class="btn primary" type="button" onclick={() => (addOpen = true)}>{$tr('servers.add')}</button>
       {/if}
       {#if phase === 'app'}
-        <button class="btn" type="button" onclick={() => (securityOpen = true)}>{$tr('app.security')}</button>
         <button class="btn" type="button" onclick={() => void logout()}>{$tr('app.logout')}</button>
       {/if}
       <button class="btn" type="button" onclick={toggleTheme}>
@@ -254,11 +286,7 @@
   {:else if phase === 'login'}
     <Login onlogin={startSession} />
   {:else if session}
-    {#if page === 'updates'}
-      <UpdatesPage onBack={() => (location.hash = '')} onchanged={refreshUpdatesCount} />
-    {:else if page === 'audit'}
-      <AuditPage onBack={() => (location.hash = '')} />
-    {:else if serverName !== null}
+    {#if serverName !== null}
       {#key serverName}
         <ServerPage
           name={serverName}
@@ -297,12 +325,16 @@
   />
 {/if}
 
-{#if securityOpen && session}
-  <SecurityModal
-    totpEnabled={session.totp_enabled}
-    onchange={setTotpEnabled}
-    onclose={() => (securityOpen = false)}
+{#if settingsOpen && session}
+  <SettingsModal
+    section={settingsSection}
+    {session}
+    {updatesCount}
+    onsection={(next) => (settingsSection = next)}
+    onclose={() => (settingsOpen = false)}
     onauthlost={endSession}
+    onrefresh={refreshSession}
+    onupdateschanged={refreshUpdatesCount}
   />
 {/if}
 
@@ -357,14 +389,6 @@
     align-items: center;
     margin: 0 6px 0 0;
     color: var(--muted);
-  }
-
-  /* Header links styled as buttons: no underline. */
-  a.btn {
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
   }
 
   .dot {
