@@ -135,6 +135,7 @@ func NewRegistry(cfg *config.Agent, col Collector, log *slog.Logger, dataDir str
 		pend.Register("firewall", fm.kind())
 		r.cmds["firewall.state"] = fm.state
 		r.cmds["firewall.ports"] = fm.ports
+		r.cmds["firewall.log"] = fm.logCmd
 		r.cmds["firewall.validate"] = fm.validate
 		r.cmds["firewall.apply"] = fm.apply
 	}

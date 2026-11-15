@@ -168,6 +168,7 @@ func (a *Admin) Handler() http.Handler {
 	mux.HandleFunc("GET /api/servers/{id}/firewall", a.auth(a.firewallState))
 	mux.HandleFunc("POST /api/servers/{id}/firewall/validate", a.auth(a.firewallValidate))
 	mux.HandleFunc("GET /api/servers/{id}/firewall/ports", a.auth(a.firewallPorts))
+	mux.HandleFunc("GET /api/servers/{id}/firewall/log", a.auth(a.firewallLog))
 	mux.HandleFunc("PUT /api/servers/{id}/firewall/draft", a.auth(a.firewallSaveDraft))
 	mux.HandleFunc("DELETE /api/servers/{id}/firewall/draft", a.auth(a.resetDraft("firewall")))
 	mux.HandleFunc("POST /api/servers/{id}/firewall/apply", a.auth(a.firewallApply))

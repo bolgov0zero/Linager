@@ -242,6 +242,10 @@ TLS на порту агентов, mTLS и подписанные сообще�
 - Файрвол: `firewall.ports` (`ss -H -tulnp`, `ss -H -tn state established`, классификация по цепочке input) и `GET .../firewall/ports`. Черновик получил поле `sets` (адресные листы: имя, семейство, элементы); `renderTable` пишет `set` в `table inet filter` перед цепочками и проверяет имена и адреса, `firewall.state` отдаёт `sets`, разобранные из `nft list table inet filter`.
 - Docker: `docker.check` (сравнение digest через `/distribution/<образ>/json` и `RepoDigests`, результат в памяти агента и в `docker.state` как `upd`, `upd_local`, `upd_remote`, `upd_error`, `checked_at`), `POST .../docker/check`; `docker.state` отдаёт метки compose (`project`, `service`, `workdir`, `config_file`); потоки `docker.update` с `containers` (по очереди) и `project` (весь проект), `docker.composeLogs` (`kind=docker-project-logs`).
 
+## 12i. Журнал файрвола (0.1.48)
+- Метка правила: `log prefix "lg:<input|forward|output>:<id>:<A|D|R> "` с `limit rate 5/second`; `id` (первые 4 hex FNV-1a от текста правила без части журнала, счётчика и пробелов) считает панель (`fw-view.ts`), поэтому правило можно найти по метке, пока его текст не менялся. Агент метку не создаёт и правила не меняет: это обычный текст правила в черновике.
+- Агент: `firewall.log` читает `journalctl -k -o short-unix --since "7 days ago"`, берёт строки с `lg:` (`parseFwLogLine`), отбрасывает старше 7 дней, отдаёт до 6000 новейших и `total`; кэш 15 секунд. Сервер: `GET /api/servers/{id}/firewall/log` (прокси). Фильтры, группировка и экспорт работают в браузере.
+
 ## 12e. Доработки после проверки 0.1
 - Сертификат агента продлевается по каналу (`cert.renew` / `cert.renewed`), когда остаётся меньше трети срока;
   агент перечитывает сертификат перед каждым подключением. Пауза переподключения сбрасывается после сессии дольше 30 секунд.

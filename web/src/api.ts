@@ -198,6 +198,12 @@ export interface FwChain { name: 'input' | 'forward' | 'output'; policy: 'accept
 /** A named list of addresses (nftables set) that rules use as `ip saddr @name`. */
 export interface FwSet { name: string; family: 'ipv4' | 'ipv6'; elements: string[] }
 export interface FirewallDraft { sets?: FwSet[]; chains: { name: FwChain['name']; policy: FwChain['policy']; rules: { text: string }[] }[] }
+/** A packet that a rule marked for logging matched (from the kernel journal). */
+export interface FwLogEvent {
+  time: number; chain: 'input' | 'forward' | 'output'; rule: string; action: 'accept' | 'drop' | 'reject';
+  iface: string; src: string; dst: string; proto: string; sport?: number; dport?: number; len?: number; flags?: string;
+}
+export interface FwLog { available: boolean; events: FwLogEvent[]; total: number; truncated?: boolean }
 /** One listening port with what the firewall says about it. */
 export interface FwListener {
   proto: 'tcp' | 'udp'; port: number; addrs: string[]; process: string; pid: number; conns: number;
@@ -548,6 +554,7 @@ export const api = {
 
   // firewall
   firewall: (id: string) => request<FirewallInfo>('GET', `api/servers/${enc(id)}/firewall`),
+  firewallLog: (id: string) => request<FwLog>('GET', `api/servers/${enc(id)}/firewall/log`),
   firewallPorts: (id: string) => request<FwPorts>('GET', `api/servers/${enc(id)}/firewall/ports`),
   firewallValidate: (id: string, draft: FirewallDraft) =>
     request<{ ok: boolean; error?: string }>('POST', `api/servers/${enc(id)}/firewall/validate`, draft),

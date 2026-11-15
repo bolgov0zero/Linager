@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.48
+
+- Firewall: a "Journal" button next to "Address lists" opens the journal of rule matches. A rule is marked for the journal with a switch in the table of rules (or "Switch on for all drop rules" in the window): the rule gets `limit rate 5/second log prefix "lg:..."` and the kernel writes the matched packets to its journal, which the agent reads (7 days). The window shows the matches over time and a table (time, chain, action, protocol, source, port, rule, packets) with filters by chain, action and protocol in any combination, by port (`22`, `80, 443`, `1000-2000`) and by source (an address, a network or `@list`), identical events can be grouped, a row expands to the details, and the whole list can be exported to CSV. From a row: add the source to an address list, block the address (a rule first in input, in the draft) or open the rule. Needs agent 0.1.48 and `journalctl`.
+
 ## 0.1.47
 
 - Firewall: the rule `ct state established,related accept` is now written by the agent first in every chain (input, forward, output) and cannot be removed or disabled, so the replies of the connections that already exist (the agent link, an open SSH session, the replies to what the host opened itself) are never cut by a drop policy or a drop rule. The rule is not shown in the list (a note under the table says so) and is skipped when it comes from an older draft or from the nft syntax form. The warning before applying no longer asks for it, but still catches a rule that drops all TCP before the SSH port.

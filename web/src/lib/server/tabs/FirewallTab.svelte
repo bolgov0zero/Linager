@@ -19,7 +19,8 @@
   import FwPorts from './FwPorts.svelte';
   import FwSetsModal from './FwSetsModal.svelte';
   import SourceInput from './SourceInput.svelte';
-  import { isSystemRule, parseRule, type RuleView } from './fw-view';
+  import FwLogModal from './FwLogModal.svelte';
+  import { canLog, isSystemRule, parseRule, setLogged, type RuleView } from './fw-view';
   import { buildRule, normalizeRule, type ListRef, type RuleAction, type RuleProto } from './fw-rule';
 
   type ChainName = FwChain['name'];
@@ -71,6 +72,9 @@
   /** Rules as nft text, not as columns. */
   let asNft = $state(false);
   let setsOpen = $state(false);
+  let logOpen = $state(false);
+  /** Packets the marked rules blocked in the last hour (null: not loaded or no rule is marked). */
+  let logBadge = $state<number | null>(null);
 
   let now = $state(Date.now() / 1000);
   let pendingBusy = $state(false);
@@ -389,6 +393,71 @@
     return null;
   }
 
+  // ---- the firewall journal ----
+
+  /** Marks a rule for the journal or unmarks it (the rule is rewritten with a log prefix). */
+  function toggleLog(chain: ChainName, index: number, on: boolean): void {
+    commit(mapChain(base(), chain, (c) => ({ ...c, rules: c.rules.map((r, i) => (i === index ? { text: setLogged(r.text, chain, on) } : r)) })));
+  }
+
+  function logDrops(): void {
+    let next = base();
+    for (const c of next.chains) {
+      c.rules.forEach((r, i) => {
+        if (/\b(drop|reject)\b/.test(r.text) && canLog(r.text)) next = mapChain(next, c.name, (x) => ({ ...x, rules: x.rules.map((y, j) => (j === i ? { text: setLogged(y.text, c.name, true) } : y)) }));
+      });
+    }
+    commit(next);
+  }
+
+  function addToList(list: string, ip: string): string | null {
+    const set = shownSets.find((x) => x.name === list);
+    if (!set) return tx('fw.log.noList');
+    if ((ip.includes(':') ? 'ipv6' : 'ipv4') !== set.family) return tx('fw.log.wrongFamily', { list });
+    if (!set.elements.includes(ip)) changeSets(shownSets.map((x) => (x.name === list ? { ...x, elements: [...x.elements, ip] } : x)));
+    return null;
+  }
+
+  /** A rule that drops the address goes first in input (the draft is applied as usual). */
+  async function blockAddress(ip: string): Promise<string | null> {
+    const built = buildRule({ proto: 'any', port: '', source: ip, action: 'drop', comment: '' }, listRefs);
+    if (!built.ok) return tx(built.error);
+    const next = mapChain(base(), 'input', (c) => ({ ...c, rules: [{ text: built.text }, ...c.rules] }));
+    try {
+      const res = await api.firewallValidate(serverId, next);
+      if (!res.ok) return res.error || tx('fw.add.invalid');
+    } catch (e) {
+      return errorText(e);
+    }
+    commit(next);
+    return null;
+  }
+
+  const loggedCount = $derived((shown?.chains ?? []).reduce((n, c) => n + c.rules.filter((r) => parseRule(r.text).logged).length, 0));
+  const knownRules = $derived((shown?.chains ?? []).flatMap((c) => c.rules.map((r, index) => ({ chain: c.name, index, text: r.text }))));
+
+  async function loadBadge(sid: string): Promise<void> {
+    try {
+      const res = await api.firewallLog(sid);
+      if (sid !== serverId) return;
+      const from = Date.now() / 1000 - 3600;
+      logBadge = res.events.filter((e) => e.time >= from && e.action !== 'accept').length;
+    } catch {
+      /* the badge is optional */
+    }
+  }
+
+  $effect(() => {
+    const sid = serverId;
+    if (loggedCount === 0 || logOpen) {
+      if (loggedCount === 0) logBadge = null;
+      return;
+    }
+    void loadBadge(sid);
+    const timer = setInterval(() => void loadBadge(sid), 60_000);
+    return () => clearInterval(timer);
+  });
+
   async function addRaw(): Promise<void> {
     const text = normalizeRule(rawText);
     if (!text || addBusy) return;
@@ -578,6 +647,9 @@
           <button class="btn" type="button" onclick={() => (setsOpen = true)}>
             {$trs('fw.sets.open')} <span class="count">{shownSets.length}</span>
           </button>
+          <button class="btn" type="button" onclick={() => (logOpen = true)}>
+            {$trs('fw.log.open')}{#if logBadge !== null && logBadge > 0} <span class="badge crit cnt">{logBadge}</span>{/if}
+          </button>
         </div>
       </div>
 
@@ -596,6 +668,7 @@
                   <th>{$trs('fw.col.source')}</th>
                   <th>{$trs('fw.col.note')}</th>
                 {/if}
+                <th>{$trs('fw.col.log')}</th>
                 <th class="r">{$trs('fw.col.packets')}</th>
                 <th class="r">{$trs('fw.col.bytes')}</th>
                 <th class="r"></th>
@@ -629,6 +702,17 @@
                       </div>
                     </td>
                   {/if}
+                  <td>
+                    <button
+                      class="sw"
+                      type="button"
+                      aria-pressed={v.logged}
+                      disabled={!canLog(row.text)}
+                      aria-label={$trs('fw.log.toggle')}
+                      title={$trs('fw.log.toggle')}
+                      onclick={() => toggleLog(row.chain, row.index, !v.logged)}
+                    ></button>
+                  </td>
                   <td class="r num">{counters.packets}</td>
                   <td class="r num">{counters.bytes}</td>
                   <td class="r acts">
@@ -639,7 +723,7 @@
                   </td>
                 </tr>
               {:else}
-                <tr><td class="empty" colspan="9">{$trs('fw.chain.empty')}</td></tr>
+                <tr><td class="empty" colspan="10">{$trs('fw.chain.empty')}</td></tr>
               {/each}
             </tbody>
           </table>
@@ -802,6 +886,24 @@
 
 {#if setsOpen}
   <FwSetsModal sets={shownSets} rules={allRuleTexts} onchange={changeSets} onclose={() => (setsOpen = false)} />
+{/if}
+
+{#if logOpen}
+  <FwLogModal
+    {serverId}
+    rules={knownRules}
+    sets={shownSets}
+    onToggle={toggleLog}
+    onToggleDrops={logDrops}
+    onAddToList={addToList}
+    onBlock={blockAddress}
+    onOpenRule={(chain) => {
+      logOpen = false;
+      activeChain = chain;
+      addChain = chain;
+    }}
+    onclose={() => (logOpen = false)}
+  />
 {/if}
 
 {#if warnOpen}
@@ -1004,6 +1106,46 @@
 
   .num {
     font-variant-numeric: tabular-nums;
+  }
+
+  .sw {
+    position: relative;
+    width: 38px;
+    height: 22px;
+    padding: 0;
+    border: 2px solid var(--line);
+    background: var(--seg-off);
+    cursor: pointer;
+  }
+
+  .sw::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    background: var(--ink);
+    transition: transform 0.15s;
+  }
+
+  .sw[aria-pressed='true'] {
+    background: var(--good);
+  }
+
+  .sw[aria-pressed='true']::after {
+    transform: translateX(16px);
+    background: var(--surface);
+  }
+
+  .sw:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .tabsrow .cnt {
+    margin-left: 4px;
+    line-height: 1.1;
   }
 
   .act {

@@ -747,6 +747,11 @@ func (a *Admin) firewallPorts(w http.ResponseWriter, r *http.Request, _ *store.U
 	_, _ = w.Write(data)
 }
 
+// firewallLog returns what the rules marked for logging matched (read from the kernel journal by the agent).
+func (a *Admin) firewallLog(w http.ResponseWriter, r *http.Request, _ *store.User) {
+	a.proxyCall(w, r, "firewall", "log", nil, 40*time.Second)
+}
+
 func (a *Admin) firewallValidate(w http.ResponseWriter, r *http.Request, _ *store.User) {
 	s := a.serverOr404(w, r)
 	if s == nil {
