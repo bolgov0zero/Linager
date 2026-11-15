@@ -159,9 +159,8 @@ func netWarnings(changes []NetChange, ifaces []netIfaceInfo, text func(ru, en st
 }
 
 var (
-	dportRe      = regexp.MustCompile(`(?i)\b(udp\s+)?dport\s+(\{[^}]*\}|[\w-]+)`)
-	verdictRe    = regexp.MustCompile(`(?i)\b(accept|drop|reject)\b`)
-	establishedR = regexp.MustCompile(`(?i)\bct\s+state\b[^#]*\bestablished\b[^#]*\baccept\b|\baccept\b[^#]*\bct\s+state\b[^#]*\bestablished\b`)
+	dportRe   = regexp.MustCompile(`(?i)\b(udp\s+)?dport\s+(\{[^}]*\}|[\w-]+)`)
+	verdictRe = regexp.MustCompile(`(?i)\b(accept|drop|reject)\b`)
 )
 
 // ruleVerdictFor reports whether a rule matches TCP destination port `port` and with which verdict
@@ -212,7 +211,28 @@ type FwDraftChain struct {
 	} `json:"rules"`
 }
 
-// fwWarnings lists the risks of applying the firewall draft. sshPorts are the ports sshd really
+var (
+	commentRe  = regexp.MustCompile(`(?i)comment\s+"[^"]*"`)
+	allTCPDrop = regexp.MustCompile(`(?i)^\s*(?:(?:meta\s+l4proto|ip6?\s+protocol)\s+tcp\s+)?(?:counter\s+)?(drop|reject)(?:\s+with\s+\S+(?:\s+\S+)?)?\s*$`)
+)
+
+// blocksAllTCP reports whether a rule drops every TCP packet (or everything): no address, port, interface
+// or connection-state condition, only the protocol, a counter and the verdict.
+func blocksAllTCP(rule string) bool {
+	if i := strings.IndexByte(rule, '#'); i >= 0 {
+		rule = rule[:i]
+	}
+	rule = commentRe.ReplaceAllString(rule, "")
+	rule = strings.TrimSpace(strings.Join(strings.Fields(rule), " "))
+	if rule == "" || strings.Contains(strings.ToLower(rule), "ct ") {
+		return false
+	}
+	return allTCPDrop.MatchString(rule)
+}
+
+// fwWarnings lists the risks of applying the firewall draft. The agent writes the rule for established,related
+// connections first in every chain, so the replies to the connections of the host (the agent's among them) are
+// never cut and no warning is needed for them. sshPorts are the ports sshd really
 // listens on (reported by the agent); an empty list means the default port 22.
 func fwWarnings(chains []FwDraftChain, sshPorts []int, text func(ru, en string) string) []Warning {
 	if len(sshPorts) == 0 {
@@ -225,6 +245,10 @@ func fwWarnings(chains []FwDraftChain, sshPorts []int, text func(ru, en string) 
 			for _, port := range sshPorts {
 				open := c.Policy == "accept"
 				for _, r := range c.Rules { // the first rule with a verdict for the port decides
+					if blocksAllTCP(r.Text) {
+						open = false
+						break
+					}
 					if hit, v := ruleVerdictFor(r.Text, port); hit && v != "" {
 						open = v == "accept"
 						break
@@ -238,15 +262,6 @@ func fwWarnings(chains []FwDraftChain, sshPorts []int, text func(ru, en string) 
 					w = append(w, Warning{"ssh_port", text("Правила закрывают порт "+p+" (SSH): доступ по SSH может пропасть", "The rules close port "+p+" (SSH): SSH access may be lost")})
 				} else {
 					w = append(w, Warning{"ssh_port", text("Правила блокируют порт "+p+" (SSH)", "A rule blocks port "+p+" (SSH)")})
-				}
-			}
-			if c.Policy == "drop" {
-				est := false
-				for _, r := range c.Rules {
-					est = est || establishedR.MatchString(r.Text)
-				}
-				if !est {
-					w = append(w, Warning{"agent_link", text("Нет правила для established,related: ответы на исходящие соединения будут отброшены, агент потеряет связь", "No established,related rule: replies to outgoing connections are dropped and the agent loses its link")})
 				}
 			}
 		case "output":

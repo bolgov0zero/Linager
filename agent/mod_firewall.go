@@ -211,6 +211,17 @@ type fwDraft struct {
 	} `json:"chains"`
 }
 
+// establishedRule is written first in every chain: the replies to what the host opened itself (the agent link,
+// an open SSH session) must never be cut by the rules or the policy of the administrator.
+const establishedRule = "ct state established,related accept"
+
+var establishedOnlyRe = regexp.MustCompile(`^ct state (?:\{\s*)?established,\s*related(?:\s*\})?(?: counter(?: packets \d+ bytes \d+)?)? accept$`)
+
+// isEstablishedRule reports whether a rule is the plain rule for established,related connections.
+func isEstablishedRule(text string) bool {
+	return establishedOnlyRe.MatchString(strings.Join(strings.Fields(text), " "))
+}
+
 // renderTable renders table inet filter for the draft.
 func renderTable(d fwDraft) (string, error) {
 	var b strings.Builder
@@ -245,7 +256,11 @@ func renderTable(d fwDraft) (string, error) {
 			return "", fmt.Errorf("chain %s: policy must be accept or drop", c.Name)
 		}
 		fmt.Fprintf(&b, "\tchain %s {\n\t\ttype filter hook %s priority filter; policy %s;\n", c.Name, c.Name, c.Policy)
+		fmt.Fprintf(&b, "\t\t%s\n", establishedRule)
 		for i, r := range c.Rules {
+			if isEstablishedRule(r.Text) {
+				continue // the rule above stays the only one
+			}
 			if err := validateRule(r.Text); err != nil {
 				return "", fmt.Errorf("chain %s rule %d: %w", c.Name, i+1, err)
 			}

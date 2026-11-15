@@ -147,3 +147,48 @@ func TestParseConnections(t *testing.T) {
 		t.Fatalf("remotes: %+v", rem)
 	}
 }
+
+func TestRenderTableAlwaysAllowsEstablished(t *testing.T) {
+	var d fwDraft
+	for _, name := range []string{"input", "forward", "output"} {
+		c := struct {
+			Name   string `json:"name"`
+			Policy string `json:"policy"`
+			Rules  []struct {
+				Text string `json:"text"`
+			} `json:"rules"`
+		}{Name: name, Policy: "drop"}
+		c.Rules = append(c.Rules, struct {
+			Text string `json:"text"`
+		}{"tcp dport 22 accept"}, struct {
+			Text string `json:"text"`
+		}{"ct state established,related counter accept"})
+		d.Chains = append(d.Chains, c)
+	}
+	out, err := renderTable(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.Count(out, "ct state established,related accept"); n != 3 {
+		t.Fatalf("one rule per chain, a copy from the draft is dropped: %d\n%s", n, out)
+	}
+	if strings.Contains(out, "counter accept") {
+		t.Fatalf("the copy with a counter must not be written twice:\n%s", out)
+	}
+	for _, chunk := range strings.Split(out, "chain ")[1:] {
+		lines := strings.Split(chunk, "\n")
+		if !strings.Contains(lines[2], "ct state established,related accept") {
+			t.Fatalf("the rule must come first in the chain: %q", lines[2])
+		}
+	}
+	for _, text := range []string{"ct state established,related accept", "ct state { established, related } accept", "ct state established,related counter packets 4 bytes 60 accept"} {
+		if !isEstablishedRule(text) {
+			t.Errorf("%q is the system rule", text)
+		}
+	}
+	for _, text := range []string{"ct state new accept", "ct state established drop", "ip saddr 10.0.0.1 ct state established,related accept"} {
+		if isEstablishedRule(text) {
+			t.Errorf("%q is not the system rule", text)
+		}
+	}
+}

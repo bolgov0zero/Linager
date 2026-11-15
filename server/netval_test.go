@@ -82,10 +82,18 @@ func TestFirewallWarnings(t *testing.T) {
 		{"safe", chain("input", "drop", "ct state established,related accept", "tcp dport 22 accept"), ""},
 		{"set syntax", chain("input", "drop", "ct state established accept", "tcp dport { 22, 443 } accept"), ""},
 		{"ssh closed", chain("input", "drop", "ct state established,related accept", "tcp dport 80 accept"), "ssh_port,"},
-		{"no established", chain("input", "drop", "tcp dport 22 accept"), "agent_link,"},
+		{"established is implicit", chain("input", "drop", "tcp dport 22 accept"), ""},
 		{"blocked on accept policy", chain("input", "accept", "tcp dport 22 drop"), "ssh_port,"},
 		{"open policy", chain("input", "accept"), ""},
 		{"output drop", chain("output", "drop"), "agent_link,"},
+		// dropping all TCP cuts new SSH connections, the established ones (the agent's link too) stay
+		{"all tcp dropped, accept policy", chain("input", "accept", "meta l4proto tcp counter drop"), "ssh_port,"},
+		{"all tcp dropped after established", chain("input", "accept", "ct state established,related accept", "meta l4proto tcp counter drop"), "ssh_port,"},
+		{"drop of all tcp keeps the replies", chain("input", "accept", "meta l4proto tcp counter drop", "ct state established,related accept"), "ssh_port,"},
+		{"everything dropped", chain("input", "accept", "counter drop comment \"all\""), "ssh_port,"},
+		{"drop of one network is fine", chain("input", "accept", "ip saddr 203.0.113.0/24 counter drop"), ""},
+		{"drop of a port is fine", chain("input", "accept", "tcp dport 8080 counter drop"), ""},
+		{"drop only new connections", chain("input", "accept", "ct state new meta l4proto tcp counter drop"), ""},
 	}
 	for _, c := range cases {
 		if got := codes(fwWarnings([]FwDraftChain{c.chain}, nil, en)); got != c.want {

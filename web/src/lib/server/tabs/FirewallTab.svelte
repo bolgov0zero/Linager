@@ -19,11 +19,13 @@
   import FwPorts from './FwPorts.svelte';
   import FwSetsModal from './FwSetsModal.svelte';
   import SourceInput from './SourceInput.svelte';
+  import { isSystemRule, parseRule, type RuleView } from './fw-view';
   import { buildRule, normalizeRule, type ListRef, type RuleAction, type RuleProto } from './fw-rule';
 
   type ChainName = FwChain['name'];
   type Policy = FwChain['policy'];
   type Change = { key: string; vars: Record<string, string> };
+  type RuleRow = { chain: ChainName; index: number; text: string; last: number };
 
   const CHAIN_NAMES: ChainName[] = ['input', 'forward', 'output'];
   const POLL_MS = 3000;
@@ -65,7 +67,9 @@
   let addBusy = $state(false);
 
   let showRuleset = $state(false);
-  let activeChain = $state<ChainName>('input');
+  let activeChain = $state<ChainName | 'all'>('input');
+  /** Rules as nft text, not as columns. */
+  let asNft = $state(false);
   let setsOpen = $state(false);
 
   let now = $state(Date.now() / 1000);
@@ -84,6 +88,9 @@
   const shown = $derived<FirewallDraft | null>(info ? (draft ?? fromInfo(info.chains, info.sets)) : null);
   const shownSets = $derived<FwSet[]>(shown?.sets ?? []);
   const listRefs = $derived<ListRef[]>(shownSets.map((x) => ({ name: x.name, family: x.family })));
+  const allRows = $derived<RuleRow[]>(
+    (shown?.chains ?? []).flatMap((c) => c.rules.map((r, index) => ({ chain: c.name, index, text: r.text, last: c.rules.length - 1 }))),
+  );
   const allRuleTexts = $derived((shown?.chains ?? []).flatMap((c) => c.rules.map((r) => r.text)));
 
   const changes = $derived.by<Change[]>(() => {
@@ -97,7 +104,7 @@
       if (beforePolicy !== after.policy) {
         out.push({ key: 'fw.change.policy', vars: { chain: name, from: beforePolicy, to: after.policy } });
       }
-      const was = before?.rules.map((r) => r.text) ?? [];
+      const was = visible(before?.rules ?? []).map((r) => r.text);
       const nextTexts = after.rules.map((r) => r.text);
       const added = nextTexts.filter((x) => !was.includes(x));
       const removed = was.filter((x) => !nextTexts.includes(x));
@@ -129,6 +136,9 @@
     return (sets ?? []).map((x) => ({ name: x.name, family: x.family, elements: [...x.elements] }));
   }
 
+  /** The rule for established,related connections is written by the agent itself and never shown or edited. */
+  const visible = <T extends { text: string }>(rules: T[]): T[] => rules.filter((r) => !isSystemRule(r.text));
+
   function fromInfo(chains: FwChain[], sets: FwSet[] | undefined): FirewallDraft {
     return {
       sets: copySets(sets),
@@ -137,7 +147,7 @@
         return {
           name,
           policy: chain?.policy ?? 'accept',
-          rules: (chain?.rules ?? []).map((r) => ({ text: r.text })),
+          rules: visible(chain?.rules ?? []).map((r) => ({ text: r.text })),
         };
       }),
     };
@@ -150,7 +160,7 @@
       chains: source.chains.map((c) => ({
         name: c.name,
         policy: c.policy,
-        rules: c.rules.map((r) => ({ text: r.text })),
+        rules: visible(c.rules).map((r) => ({ text: r.text })),
       })),
     };
   }
@@ -327,6 +337,7 @@
 
   // Validates the rule against the server draft and appends it to the chain. Returns an error text, or null on success.
   async function appendRule(name: ChainName, text: string): Promise<string | null> {
+    if (isSystemRule(text)) return tx('fw.add.systemRule');
     const sid = serverId;
     const next = mapChain(base(), name, (c) => ({ ...c, rules: [...c.rules, { text }] }));
     addBusy = true;
@@ -544,6 +555,9 @@
     {:else}
       <div class="tabsrow">
         <div class="row" role="group" aria-label={$trs('fw.chains.tabs')}>
+          <button class="chip" type="button" aria-pressed={activeChain === 'all'} onclick={() => (activeChain = 'all')}>
+            {$trs('fw.chains.all')} <span class="count">{allRows.length}</span>
+          </button>
           {#each CHAIN_NAMES as name (name)}
             {@const count = shown?.chains.find((c) => c.name === name)?.rules.length ?? 0}
             <button
@@ -557,87 +571,125 @@
             >
           {/each}
         </div>
-        <button class="btn" type="button" onclick={() => (setsOpen = true)}>
-          {$trs('fw.sets.open')} <span class="count">{shownSets.length}</span>
-        </button>
+        <div class="row">
+          <button class="btn" type="button" aria-pressed={asNft} onclick={() => (asNft = !asNft)}>
+            {asNft ? $trs('fw.view.columns') : $trs('fw.view.nft')}
+          </button>
+          <button class="btn" type="button" onclick={() => (setsOpen = true)}>
+            {$trs('fw.sets.open')} <span class="count">{shownSets.length}</span>
+          </button>
+        </div>
       </div>
 
-      {#each CHAIN_NAMES.filter((n) => n === activeChain) as name (name)}
-        {@const chain = shown?.chains.find((c) => c.name === name)}
-        {#if chain}
-          <section class="chain">
-            <div class="chain-head">
-              <div class="chain-title">
-                <span class="chain-name">chain {name}</span>
-                <span class="hook mono">{$trs('fw.chain.hook', { chain: name })}</span>
-              </div>
-              <Select
-                size="sm"
-                width="200px"
-                ariaLabel={$trs('fw.chain.policyLabel')}
-                value={chain.policy}
-                onchange={(v) => setPolicy(name, v)}
-                options={[
-                  { value: 'accept' as Policy, label: 'accept' },
-                  { value: 'drop' as Policy, label: 'drop' },
-                ]}
-              />
-            </div>
-
-            <div class="tw">
-              <table class="tbl">
-                <thead>
-                  <tr>
-                    <th>{$trs('fw.col.rule')}</th>
-                    <th class="r">{$trs('fw.col.packets')}</th>
-                    <th class="r">{$trs('fw.col.bytes')}</th>
-                    <th class="r"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {#if chain.rules.length === 0}
-                    <tr>
-                      <td class="empty" colspan="4">{$trs('fw.chain.empty')}</td>
-                    </tr>
+      {#snippet rulesTable(rows: RuleRow[], showChain: boolean)}
+        <div class="tw">
+          <table class="tbl">
+            <thead>
+              <tr>
+                {#if asNft}
+                  <th>{$trs('fw.col.rule')}</th>
+                {:else}
+                  {#if showChain}<th>{$trs('fw.col.chain')}</th>{/if}
+                  <th>{$trs('fw.col.action')}</th>
+                  <th>{$trs('fw.col.proto')}</th>
+                  <th>{$trs('fw.col.port')}</th>
+                  <th>{$trs('fw.col.source')}</th>
+                  <th>{$trs('fw.col.note')}</th>
+                {/if}
+                <th class="r">{$trs('fw.col.packets')}</th>
+                <th class="r">{$trs('fw.col.bytes')}</th>
+                <th class="r"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each rows as row (row.chain + ':' + row.index + ':' + row.text)}
+                {@const counters = countersText(row.chain, row.text)}
+                {@const v = parseRule(row.text)}
+                <tr title={row.text}>
+                  {#if asNft}
+                    <td class="rule mono">{showChain ? row.chain + ': ' : ''}{row.text}</td>
                   {:else}
-                    {#each chain.rules as rule, index (index + ':' + rule.text)}
-                      {@const counters = countersText(name, rule.text)}
-                      <tr>
-                        <td class="rule mono">{rule.text}</td>
-                        <td class="r num">{counters.packets}</td>
-                        <td class="r num">{counters.bytes}</td>
-                        <td class="r acts">
-                          <button
-                            class="ib"
-                            type="button"
-                            aria-label={$trs('fw.rule.up')}
-                            title={$trs('fw.rule.up')}
-                            disabled={index === 0}
-                            onclick={() => moveRule(name, index, -1)}>▲</button
-                          ><button
-                            class="ib"
-                            type="button"
-                            aria-label={$trs('fw.rule.down')}
-                            title={$trs('fw.rule.down')}
-                            disabled={index === chain.rules.length - 1}
-                            onclick={() => moveRule(name, index, 1)}>▼</button
-                          ><button
-                            class="ib del"
-                            type="button"
-                            aria-label={$trs('fw.rule.delete')}
-                            title={$trs('fw.rule.delete')}
-                            onclick={() => removeRule(name, index)}>×</button
-                          >
-                        </td>
-                      </tr>
-                    {/each}
+                    {#if showChain}<td class="mono">{row.chain}</td>{/if}
+                    <td><span class="act {v.action}">{$trs(`fw.act.${v.action}`)}</span></td>
+                    <td class="mono">{v.proto ? (v.proto === 'ICMPV6' ? 'ICMPv6' : v.proto) : $trs('fw.any')}</td>
+                    <td class="mono port">{v.port || '—'}</td>
+                    <td class="mono src">
+                      {#if v.source}
+                        {v.source}
+                      {:else if v.iface}
+                        <span class="muted">{$trs('fw.iface', { name: v.iface })}</span>
+                      {:else}
+                        <span class="muted">{$trs('fw.any')}</span>
+                      {/if}
+                    </td>
+                    <td class="small note">
+                      <div class="notebox">
+                        {#if v.comment}<span>{v.comment}</span>{/if}
+                        {#if v.extra}<span class="muted mono">{v.extra}</span>{/if}
+                      </div>
+                    </td>
                   {/if}
-                </tbody>
-              </table>
+                  <td class="r num">{counters.packets}</td>
+                  <td class="r num">{counters.bytes}</td>
+                  <td class="r acts">
+                    <button class="ib" type="button" aria-label={$trs('fw.rule.up')} title={$trs('fw.rule.up')} disabled={row.index === 0} onclick={() => moveRule(row.chain, row.index, -1)}>▲</button
+                    ><button class="ib" type="button" aria-label={$trs('fw.rule.down')} title={$trs('fw.rule.down')} disabled={row.index === row.last} onclick={() => moveRule(row.chain, row.index, 1)}>▼</button
+                    ><button class="ib del" type="button" aria-label={$trs('fw.rule.delete')} title={$trs('fw.rule.delete')} onclick={() => removeRule(row.chain, row.index)}>×</button
+                    >
+                  </td>
+                </tr>
+              {:else}
+                <tr><td class="empty" colspan="9">{$trs('fw.chain.empty')}</td></tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {/snippet}
+
+      {#if activeChain === 'all'}
+        <section class="chain">
+          <div class="chain-head">
+            <div class="chain-title">
+              <span class="chain-name">{$trs('fw.chains.all')}</span>
+              <span class="hook mono">
+                {(shown?.chains ?? []).map((c) => `${c.name}: ${c.policy}`).join(' · ')}
+              </span>
             </div>
-          </section>
-        {/if}
-      {/each}
+          </div>
+          {@render rulesTable(allRows, true)}
+          <p class="small muted lock">{$trs('fw.chain.established')}</p>
+        </section>
+      {:else}
+        {#each CHAIN_NAMES.filter((n) => n === activeChain) as name (name)}
+          {@const chain = shown?.chains.find((c) => c.name === name)}
+          {#if chain}
+            <section class="chain">
+              <div class="chain-head">
+                <div class="chain-title">
+                  <span class="chain-name">chain {name}</span>
+                  <span class="hook mono">{$trs('fw.chain.hook', { chain: name })}</span>
+                </div>
+                <Select
+                  size="sm"
+                  width="200px"
+                  ariaLabel={$trs('fw.chain.policyLabel')}
+                  value={chain.policy}
+                  onchange={(v) => setPolicy(name, v)}
+                  options={[
+                    { value: 'accept' as Policy, label: 'accept' },
+                    { value: 'drop' as Policy, label: 'drop' },
+                  ]}
+                />
+              </div>
+              {@render rulesTable(
+                chain.rules.map((r, index) => ({ chain: name, index, text: r.text, last: chain.rules.length - 1 })),
+                false,
+              )}
+              <p class="small muted lock">{$trs('fw.chain.established')}</p>
+            </section>
+          {/if}
+        {/each}
+      {/if}
 
       <section class="add-block">
         <h3 class="sect">{$trs('fw.add.title')}</h3>
@@ -952,6 +1004,52 @@
 
   .num {
     font-variant-numeric: tabular-nums;
+  }
+
+  .act {
+    display: inline-block;
+    padding: 1px 8px;
+    border: 2px solid var(--muted);
+    color: var(--muted);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .act.accept {
+    border-color: var(--good);
+    color: var(--good);
+  }
+
+  .act.drop {
+    border-color: var(--crit);
+    color: var(--crit);
+  }
+
+  .act.reject {
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+
+  .port,
+  .src {
+    overflow-wrap: anywhere;
+  }
+
+  .notebox {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .lock {
+    margin: 4px 0 0;
+  }
+
+  .tabsrow .btn[aria-pressed='true'] {
+    background: var(--ink);
+    color: var(--surface);
   }
 
   .rule {

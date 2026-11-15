@@ -132,5 +132,22 @@
   "fw.ports.top": "Top remote addresses",
   "fw.ports.noRemotes": "There are no incoming connections right now.",
   "fw.ports.howTitle": "How to read this",
-  "fw.ports.how": "\"Allowed by a rule\" means the input chain has an explicit rule for the port. \"No rule\" means the process listens on all interfaces and the firewall lets the traffic through by the chain policy. 127.0.0.1 is not visible from outside. Ports published by Docker go through the forward chain and are not controlled by input rules."
+  "fw.ports.how": "\"Allowed by a rule\" means the input chain has an explicit rule for the port. \"No rule\" means the process listens on all interfaces and the firewall lets the traffic through by the chain policy. 127.0.0.1 is not visible from outside. Ports published by Docker go through the forward chain and are not controlled by input rules.",
+  "fw.chains.all": "All",
+  "fw.view.nft": "As nft",
+  "fw.view.columns": "As a table",
+  "fw.col.chain": "Chain",
+  "fw.col.action": "Action",
+  "fw.col.proto": "Protocol",
+  "fw.col.port": "Port",
+  "fw.col.source": "Source",
+  "fw.col.note": "Comment",
+  "fw.act.accept": "Allow",
+  "fw.act.drop": "Drop",
+  "fw.act.reject": "Reject",
+  "fw.act.other": "—",
+  "fw.any": "any",
+  "fw.iface": "interface {name}",
+  "fw.chain.established": "Replies of connections that already exist (established,related) are always allowed: the rule is added automatically first in every chain and is not shown in the list.",
+  "fw.add.systemRule": "This rule is added to every chain automatically, there is no need to add it."
 }

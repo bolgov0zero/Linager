@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.47
+
+- Firewall: the rule `ct state established,related accept` is now written by the agent first in every chain (input, forward, output) and cannot be removed or disabled, so the replies of the connections that already exist (the agent link, an open SSH session, the replies to what the host opened itself) are never cut by a drop policy or a drop rule. The rule is not shown in the list (a note under the table says so) and is skipped when it comes from an older draft or from the nft syntax form. The warning before applying no longer asks for it, but still catches a rule that drops all TCP before the SSH port.
+- Firewall: the rules are shown as a table with the columns Action (Allow, Drop, Reject), Protocol, Port, Source (an address, a network, `@list` or an interface) and Comment (with the conditions that have no column, such as the connection state or a rate limit); the new "All" tab shows the rules of all chains with a Chain column and the "As nft" button switches to the raw rule text. The automatic rule needs agent 0.1.47; with an older agent the list is already shown as a table.
+
 ## 0.1.46
 
 - Firewall: the Source field of a rule (and of the "Restrict" form for a port) offers the address lists in a drop-down when it gets the focus: it narrows as you type, a click or the arrow keys and Enter put `@name` into the field. Server only, agents need no update.
