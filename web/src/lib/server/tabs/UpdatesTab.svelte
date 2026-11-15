@@ -198,7 +198,12 @@
           <span class="muted small">{$tStore('apt.run.counts', { done: doneCount + errCount, total: installRun.pkgs.length })}</span>
         {/if}
       </div>
-      <Segments value={installRun.progress?.pct ?? 0} plain busy={installRun.active && !installRun.progress} />
+      <!-- apt's last percentage stays below 100 even when everything is done -->
+      <Segments
+        value={!installRun.active && installRun.ok && errCount === 0 ? 100 : (installRun.progress?.pct ?? 0)}
+        plain
+        busy={installRun.active && !installRun.progress}
+      />
       {#if installRun.pkgs.length > 0}
         <div class="table-wrap run-wrap" bind:this={wrapEl}>
           <table class="tbl">

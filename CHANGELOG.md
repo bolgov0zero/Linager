@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.37
+
+- Updates: after a successful install the progress bar is filled completely (apt's last reported percentage stays below 100, so the last segment stayed empty). Server only, agents need no update.
+
 ## 0.1.36
 
 - Dashboard: the number of updates on a server card (and the security count) is now counted the same way as on the Updates tab. Before, the dashboard missed packages that need a new package to be installed, such as kernel updates, so a server could show 2 on the card and 4 on the tab. Needs agent 0.1.36; the card refreshes within an hour or after an apt run from the panel.
