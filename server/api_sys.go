@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -161,6 +162,82 @@ func (a *Admin) fileDownload(w http.ResponseWriter, r *http.Request, u *store.Us
 		case <-r.Context().Done():
 			return
 		}
+	}
+}
+
+// fileStat returns the properties of one entry (type, size, times, permissions, owner).
+func (a *Admin) fileStat(w http.ResponseWriter, r *http.Request, _ *store.User) {
+	p, ok := queryPath(w, r)
+	if !ok {
+		return
+	}
+	a.proxyCall(w, r, "files", "stat", map[string]string{"path": p}, 30*time.Second)
+}
+
+// fileDu adds up the size of a folder.
+func (a *Admin) fileDu(w http.ResponseWriter, r *http.Request, _ *store.User) {
+	p, ok := queryPath(w, r)
+	if !ok {
+		return
+	}
+	a.proxyCall(w, r, "files", "du", map[string]string{"path": p}, 40*time.Second)
+}
+
+// fileChmod and fileChown change permissions and owner. The setuid, setgid and sticky bits, recursion and every
+// owner change need an explicit confirmation.
+func (a *Admin) filePerm(action string) func(http.ResponseWriter, *http.Request, *store.User) {
+	return func(w http.ResponseWriter, r *http.Request, u *store.User) {
+		s := a.serverOr404(w, r)
+		if s == nil {
+			return
+		}
+		var req struct {
+			Path      string `json:"path"`
+			Mode      string `json:"mode"`
+			Owner     string `json:"owner"`
+			Group     string `json:"group"`
+			Recursive bool   `json:"recursive"`
+			Confirm   bool   `json:"confirm"`
+		}
+		if !decode(w, r, &req) {
+			return
+		}
+		if !strings.HasPrefix(req.Path, "/") || len(req.Path) > 4096 || len(req.Owner) > 64 || len(req.Group) > 64 {
+			jsonErr(w, http.StatusBadRequest, "invalid path")
+			return
+		}
+		params := map[string]any{"path": req.Path, "recursive": req.Recursive}
+		danger := true
+		details := map[string]any{"path": req.Path, "recursive": req.Recursive}
+		if action == "chmod" {
+			v, err := strconv.ParseUint(strings.TrimSpace(req.Mode), 8, 32)
+			if err != nil || v > 0o7777 {
+				jsonErr(w, http.StatusBadRequest, "invalid mode")
+				return
+			}
+			params["mode"] = req.Mode
+			details["mode"] = req.Mode
+			danger = req.Recursive || v&0o7000 != 0
+		} else {
+			params["owner"], params["group"] = req.Owner, req.Group
+			details["owner"], details["group"] = req.Owner, req.Group
+		}
+		if danger && !req.Confirm {
+			needConfirm(w)
+			return
+		}
+		data, err := a.Hub.Call(r.Context(), s.ID, "files", action, params, danger, 300*time.Second)
+		res := "ok"
+		if err != nil {
+			res = "failed"
+		}
+		a.audit(r, u, "files."+action, "server", s.ID, s.Name, res, details)
+		if err != nil {
+			callErr(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(data)
 	}
 }
 

@@ -112,6 +112,10 @@ func NewRegistry(cfg *config.Agent, col Collector, log *slog.Logger, dataDir str
 		r.cmds["files.create"] = filesCreate
 		r.cmds["files.delete"] = filesDelete
 		r.cmds["files.rename"] = filesRename
+		r.cmds["files.stat"] = filesStat
+		r.cmds["files.du"] = filesDu
+		r.cmds["files.chmod"] = filesChmod
+		r.cmds["files.chown"] = filesChown
 		r.cmds["files.copy"] = transfer(false)
 		r.cmds["files.move"] = transfer(true)
 		r.streams["files.zip"] = filesZip

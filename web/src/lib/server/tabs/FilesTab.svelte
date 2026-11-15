@@ -9,6 +9,7 @@
   import { clip } from './files-clip';
   import { showToast } from '../../toast';
   import { formatBytes, formatDateTime } from '../format';
+  import FilePropsModal from './FilePropsModal.svelte';
   import FileTree from './FileTree.svelte';
   import {
     crumbs,
@@ -53,6 +54,8 @@
   let anchor = $state<string | null>(null);
   let menu = $state<{ x: number; y: number; items: MenuItem[] } | null>(null);
   let pasting = $state(false);
+  /** Full path of the entry whose properties are shown. */
+  let propsPath = $state<string | null>(null);
   let conflict = $state<{ name: string; remaining: number; all: boolean; resolve: (r: { mode: FileConflictMode | null; all: boolean }) => void } | null>(null);
   let noEdit = $state<{ name: string; href: string; text: string } | null>(null);
   let treeOpen = $state(false);
@@ -375,6 +378,7 @@
       }
     }
     if (one) items.push({ key: 'rename', label: T('files.menu.rename'), disabled: lock, separated: true, onselect: () => requestRename(one) });
+    if (one) items.push({ key: 'props', label: T('files.menu.props'), onselect: () => (propsPath = joinPath(path, one.name)) });
     if (entries.length > 0) {
       items.push({
         key: 'delete',
@@ -389,6 +393,7 @@
       items.push({ key: 'mkdir', label: T('files.newFolder'), disabled: lock, separated: true, onselect: () => (prompt = { kind: 'dir', name: '', error: '', busy: false }) });
       items.push({ key: 'mkfile', label: T('files.newFile'), disabled: lock, onselect: () => (prompt = { kind: 'file', name: '', error: '', busy: false }) });
       items.push({ key: 'refresh', label: T('files.refresh'), onselect: () => void go(path) });
+      items.push({ key: 'props', label: T('files.menu.props'), separated: true, onselect: () => (propsPath = path) });
     }
     return items;
   }
@@ -760,6 +765,16 @@
       <a class="btn primary" href={n.href} download={n.name} onclick={() => (noEdit = null)}>{$tStore('files.download')}</a>
     </div>
   </Modal>
+{/if}
+
+{#if propsPath}
+  <FilePropsModal
+    {serverId}
+    path={propsPath}
+    {offline}
+    onclose={() => (propsPath = null)}
+    onchanged={() => void go(path)}
+    onauthlost={() => (propsPath = null)} />
 {/if}
 
 {#if menu}

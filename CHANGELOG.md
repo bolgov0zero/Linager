@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.30
+
+- File manager: "Properties" in the context menu (also for the current folder): path, type, size (folder content size on demand), creation, modification, change and access times, links and inode, link target; permissions (rwx checkboxes, setuid, setgid, sticky and the octal number) and owner and group can be changed, with a confirmation for recursion, special bits and owner changes. Needs agent 0.1.30.
+- Terminal: a key panel for phones behind the keyboard button (Ctrl and Alt latch, Esc, Tab, arrows, Home, End, PgUp, PgDn, Ins, Del, F1-F12, symbols and common Ctrl shortcuts).
+
 ## 0.1.29
 
 - Metrics: the "Events for the period" list scrolls inside its block (up to 320 px) instead of stretching it.

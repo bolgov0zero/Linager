@@ -64,5 +64,6 @@
   "termwin.close": "Close terminal",
   "termwin.dock": "Open windows",
   "edwin.limit": "Too many editors are open (8 at most)",
-  "termwin.openWindow": "In a window"
+  "termwin.openWindow": "In a window",
+  "term.keys": "Keys"
 }

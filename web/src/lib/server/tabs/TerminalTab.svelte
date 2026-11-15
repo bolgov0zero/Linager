@@ -2,11 +2,13 @@
   import type { ServerDetail } from '../../../api';
   import { tr } from '../../../i18n';
   import TermSession, { type TermPhase } from '../../terminal/TermSession.svelte';
+  import KeyIcon from '../../terminal/KeyIcon.svelte';
   import { openTermWindow } from '../../terminal/windows';
 
   let { server }: { server: ServerDetail } = $props();
 
   let phase = $state<TermPhase>('connecting');
+  let keys = $state(false);
   let session = $state<TermSession | null>(null);
 
   // Derived primitives: the parent replaces the `server` object on every live metrics event; passing
@@ -36,6 +38,7 @@
     </p>
     {#if server.online && phase !== 'closed'}
       <div class="actions">
+        <button class="btn" class:ink={keys} type="button" title={$tr('term.keys')} aria-label={$tr('term.keys')} aria-pressed={keys} onclick={() => (keys = !keys)}><KeyIcon /></button>
         <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.copy()}>{$tr('term.copy')}</button>
         <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.paste()}>{$tr('term.paste')}</button>
         <button class="btn" type="button" title={$tr('termwin.openWindow')} onclick={popOut}>{$tr('termwin.openWindow')}</button>
@@ -48,7 +51,7 @@
     <p class="note">{$tr('term.offline')}</p>
   {:else}
     <div class="box">
-      <TermSession {serverId} bind:phase bind:this={session} />
+      <TermSession {serverId} bind:phase bind:keys bind:this={session} />
     </div>
   {/if}
 </div>

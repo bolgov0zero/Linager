@@ -9,15 +9,20 @@
   import { openStream } from '../../api';
   import { tr, t } from '../../i18n';
   import { showToast } from '../toast';
+  import KeyPanel from './KeyPanel.svelte';
+  import { ctrlChar, sequenceFor } from './keys';
 
   // The xterm screen and its socket, shared by the server-page tab and the floating windows.
   let {
     serverId,
     phase = $bindable('connecting'),
+    keys = $bindable(false),
     onlimit,
   }: {
     serverId: string;
     phase?: TermPhase;
+    /** Show the on-screen key panel above the screen. */
+    keys?: boolean;
     /** Called when the server refused the session because of the terminal limit. */
     onlimit?: () => void;
   } = $props();
@@ -35,7 +40,33 @@
   let attempt = $state(0);
 
   // Non-reactive handle to the live session, used by the exported actions.
-  let current: { close: () => void; copy: () => void; paste: () => void; focus: () => void } | null = null;
+  let current: {
+    close: () => void;
+    copy: () => void;
+    paste: () => void;
+    focus: () => void;
+    send: (data: string) => void;
+    appCursor: () => boolean;
+  } | null = null;
+
+  // Ctrl and Alt from the key panel stay latched until the next key (from the panel or a real keyboard).
+  let ctrl = $state(false);
+  let alt = $state(false);
+
+  function panelKey(name: string): void {
+    if (!current) return;
+    // "ctrl:c" is a ready shortcut and ignores the latch.
+    const seq = name.startsWith('ctrl:') ? (ctrlChar(name.slice(5)) ?? '') : sequenceFor(name, { ctrl, alt }, current.appCursor());
+    ctrl = false;
+    alt = false;
+    if (seq) current.send(seq);
+    current.focus();
+  }
+
+  function toggleMod(mod: 'ctrl' | 'alt'): void {
+    if (mod === 'ctrl') ctrl = !ctrl;
+    else alt = !alt;
+  }
 
   export const focus = () => current?.focus();
   export const copy = () => current?.copy();
@@ -163,8 +194,20 @@
         }
       };
 
-      const onData = term.onData((data) => {
+      const send = (data: string) => {
         if (active && socket.readyState === WebSocket.OPEN) socket.send(encoder.encode(data));
+      };
+      const onData = term.onData((data) => {
+        // A latched Ctrl or Alt from the key panel applies to the next character typed on the real keyboard.
+        if ((ctrl || alt) && data.length === 1) {
+          let out = ctrl ? (ctrlChar(data) ?? data) : data;
+          if (alt) out = `\x1b${out}`;
+          ctrl = false;
+          alt = false;
+          send(out);
+          return;
+        }
+        send(data);
       });
       const onResize = term.onResize(({ cols, rows }) => {
         if (active) sendResize(cols, rows);
@@ -180,6 +223,8 @@
       current = {
         focus: () => term.focus(),
         close: () => socket.close(),
+        send,
+        appCursor: () => term.modes.applicationCursorKeysMode,
         copy: () => void copySelection(),
         paste: async () => {
           term.focus();
@@ -214,6 +259,9 @@
 </script>
 
 <div class="session">
+  {#if keys}
+    <KeyPanel {ctrl} {alt} onkey={panelKey} ontoggle={toggleMod} />
+  {/if}
   <!-- Clicking anywhere in the terminal panel (also outside the character grid) focuses the terminal. -->
   <div class="screen" role="presentation" bind:this={host} onpointerdown={() => current?.focus()}></div>
   {#if phase === 'closed'}
@@ -228,7 +276,7 @@
   .session {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     min-width: 0;
     height: 100%;
   }

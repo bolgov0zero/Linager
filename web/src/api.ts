@@ -74,6 +74,12 @@ export interface ServerCard {
 export interface Group { id: number; name: string }
 /** What a client needs to connect: agent port, agent-port certificate fingerprint, names/IPs of that certificate. */
 export interface ConnectInfo { port: string; fingerprint: string; hosts: string[] }
+export interface FileStat {
+  name: string; path: string; type: 'file' | 'dir' | 'link' | 'other'; size: number;
+  mode: string; mode_str: string; owner: string; group: string; uid: number; gid: number;
+  mtime: number; atime: number; ctime: number; btime: number; links: number; inode: number;
+  link_target?: string; mime?: string; protected: boolean;
+}
 export type FileConflictMode = 'fail' | 'overwrite' | 'keep';
 export interface AvailableServer { id: string; name: string; address: string; os: string }
 export interface ServiceUnit {
@@ -356,6 +362,14 @@ export const api = {
     request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/files/delete`, { path, confirm: true }),
   /** Relative URL for a download link. */
   fileDownloadUrl: (id: string, path: string) => `api/servers/${enc(id)}/files/download?path=${enc(path)}`,
+  fileStat: (id: string, path: string) => request<FileStat>('GET', `api/servers/${enc(id)}/files/stat?path=${enc(path)}`),
+  fileDu: (id: string, path: string) =>
+    request<{ size: number; files: number; dirs: number; truncated: boolean }>('GET', `api/servers/${enc(id)}/files/du?path=${enc(path)}`),
+  /** mode is octal ("0644"); recursion and the setuid, setgid and sticky bits need confirm. */
+  fileChmod: (id: string, path: string, mode: string, recursive: boolean, confirm: boolean) =>
+    request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/files/chmod`, { path, mode, recursive, confirm }),
+  fileChown: (id: string, path: string, owner: string, group: string, recursive: boolean) =>
+    request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/files/chown`, { path, owner, group, recursive, confirm: true }),
   fileRename: (id: string, path: string, name: string) =>
     request<{ ok: boolean; name: string }>('POST', `api/servers/${enc(id)}/files/rename`, { path, name }),
   /** Copies or moves one entry into dir; mode: fail (default), overwrite or keep (both stay, the new one gets a free name). */

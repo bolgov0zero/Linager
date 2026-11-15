@@ -100,3 +100,58 @@ func TestFileCopyMoveRenameZip(t *testing.T) {
 		t.Fatalf("zip entries = %v", names)
 	}
 }
+
+func TestFileStatChmodDu(t *testing.T) {
+	root := t.TempDir()
+	sub := filepath.Join(root, "d")
+	if err := os.MkdirAll(sub, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	f := filepath.Join(sub, "a.txt")
+	if err := os.WriteFile(f, []byte("hello"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := json.Marshal(map[string]string{"path": f})
+	res, err := filesStat(context.Background(), raw, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st := res.(FileStat)
+	if st.Mode != "0600" || st.Size != 5 || st.Type != "file" || st.MTime == 0 || st.Links != 1 {
+		t.Fatalf("stat: %+v", st)
+	}
+	// permissions: plain change works, setuid and recursive need the dangerous flag
+	if _, err := call(t, filesChmod, false, map[string]any{"path": f, "mode": "0644"}); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	if info, _ := os.Stat(f); info.Mode().Perm() != 0o644 {
+		t.Fatalf("mode = %v", info.Mode())
+	}
+	if _, err := call(t, filesChmod, false, map[string]any{"path": f, "mode": "4755"}); err == nil {
+		t.Fatal("the setuid bit must need confirmation")
+	}
+	if _, err := call(t, filesChmod, false, map[string]any{"path": sub, "mode": "0750", "recursive": true}); err == nil {
+		t.Fatal("a recursive change must need confirmation")
+	}
+	if _, err := call(t, filesChmod, true, map[string]any{"path": sub, "mode": "0750", "recursive": true}); err != nil {
+		t.Fatalf("recursive chmod: %v", err)
+	}
+	if info, _ := os.Stat(f); info.Mode().Perm() != 0o750 {
+		t.Fatalf("recursive mode = %v", info.Mode())
+	}
+	if _, err := call(t, filesChmod, true, map[string]any{"path": "/etc", "mode": "0777"}); err == nil {
+		t.Fatal("a system directory must be refused")
+	}
+	if _, err := call(t, filesChown, false, map[string]any{"path": f, "owner": "0"}); err == nil {
+		t.Fatal("chown must need confirmation")
+	}
+	du, err := filesDu(context.Background(), mustJSON(map[string]string{"path": root}), false)
+	if err != nil || du.(map[string]any)["size"].(int64) != 5 || du.(map[string]any)["files"].(int64) != 1 {
+		t.Fatalf("du: %v %v", du, err)
+	}
+}
+
+func mustJSON(v any) json.RawMessage {
+	b, _ := json.Marshal(v)
+	return b
+}

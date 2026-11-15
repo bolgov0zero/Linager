@@ -4,7 +4,7 @@ export const KNOWN_ACTIONS: ReadonlySet<string> = new Set([
   'enroll.approve', 'enroll.reject', 'server.delete', 'server.reboot',
   'service.start', 'service.stop', 'service.restart', 'service.enable', 'service.disable', 'service.ignore', 'service.unignore',
   'process.kill',
-  'files.write', 'files.mkdir', 'files.create', 'files.delete', 'files.upload', 'files.download', 'files.rename', 'files.copy', 'files.move', 'files.zip',
+  'files.write', 'files.mkdir', 'files.create', 'files.delete', 'files.upload', 'files.download', 'files.rename', 'files.chmod', 'files.chown', 'files.copy', 'files.move', 'files.zip',
   'network.apply', 'network.config.apply', 'network.confirm', 'network.rollback', 'network.draft.save', 'network.draft.reset',
   'firewall.apply', 'firewall.confirm', 'firewall.rollback', 'firewall.draft.save', 'firewall.draft.reset',
   'docker.container.start', 'docker.container.stop', 'docker.container.restart', 'docker.container.remove',
