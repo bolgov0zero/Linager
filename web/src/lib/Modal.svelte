@@ -76,7 +76,7 @@
   }
 
   .dialog.wide {
-    max-width: min(1120px, 100%);
+    max-width: min(1360px, 100%);
   }
 
   .dialog-head {

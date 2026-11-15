@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.41
+
+- Settings: the window is wider (up to 1360 px). Server only, agents need no update.
+
 ## 0.1.40
 
 - Settings: a "Settings" button in the top bar opens a large window with a side panel: Profile, Users, Updates, Audit log, Snippets. The old pages #updates and #audit moved into it (the old links still work); the 2FA button is now part of the profile.
