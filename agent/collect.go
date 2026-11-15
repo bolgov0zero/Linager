@@ -136,14 +136,12 @@ func virtualIface(name string) bool {
 	return false
 }
 
-// countAptInst counts upgradable packages from `apt-get -s upgrade` output.
-func countAptInst(out string) (total, security int) {
-	for _, line := range strings.Split(out, "\n") {
-		if strings.HasPrefix(line, "Inst ") {
-			total++
-			if strings.Contains(line, "-security") {
-				security++
-			}
+// countApt counts the upgradable packages and how many of them are security updates.
+func countApt(pk []AptPackage) (total, security int) {
+	for _, p := range pk {
+		total++
+		if p.Security {
+			security++
 		}
 	}
 	return
@@ -233,13 +231,12 @@ func (c *linuxCollector) updateFailed(ctx context.Context) {
 func (c *linuxCollector) updateAptCount(ctx context.Context) {
 	cctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
-	cmd := exec.CommandContext(cctx, "apt-get", "-s", "-o", "Debug::NoLocking=1", "upgrade") //nolint:gosec // fixed command
-	cmd.Env = append(os.Environ(), "LC_ALL=C")
-	out, err := cmd.Output()
+	// the same simulation as the Updates tab, so the dashboard and the tab always agree
+	pk, err := aptSimulate(cctx)
 	if err != nil {
 		return
 	}
-	t, s := countAptInst(string(out))
+	t, s := countApt(pk)
 	c.slow.Lock()
 	c.slow.updates, c.slow.security = t, s
 	c.slow.Unlock()

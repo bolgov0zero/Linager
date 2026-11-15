@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.36
+
+- Dashboard: the number of updates on a server card (and the security count) is now counted the same way as on the Updates tab. Before, the dashboard missed packages that need a new package to be installed, such as kernel updates, so a server could show 2 on the card and 4 on the tab. Needs agent 0.1.36; the card refreshes within an hour or after an apt run from the panel.
+
 ## 0.1.35
 
 - Updates: installing packages now shows the state of every package (queued, updating, done, error; "not updated" for packages apt never reached after a failure) and an overall progress bar (download, then install). "Check" opens a progress dialog that closes by itself three seconds after a successful check. The apt console output is hidden by default behind a "Show console output" button. The statuses come from `APT::Status-Fd` on the agent, so they survive closing the tab: the browser attaches to the running operation and gets all events and the log. Needs agent 0.1.35.

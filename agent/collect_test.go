@@ -46,9 +46,13 @@ func TestVirtualIface(t *testing.T) {
 	}
 }
 
-func TestCountAptInst(t *testing.T) {
-	out := "Inst libc6 [1] (2 Debian:13/stable-security [amd64])\nInst vim [1] (2 Debian:13/stable [amd64])\nConf vim\n"
-	if tot, sec := countAptInst(out); tot != 2 || sec != 1 {
+func TestCountApt(t *testing.T) {
+	// a kernel update brings a new package (no installed version) and a meta package that needs it:
+	// both must be counted, the dashboard and the Updates tab show the same number
+	out := "Inst linux-image-6.12.117+deb13-amd64 (6.12.117-1 Debian-Security:13/stable-security [amd64])\n" +
+		"Inst linux-image-amd64 [6.12.116-1] (6.12.117-1 Debian-Security:13/stable-security [amd64])\n" +
+		"Inst vim [1] (2 Debian:13/stable [amd64])\nConf vim\n"
+	if tot, sec := countApt(parseAptInst(out)); tot != 3 || sec != 2 {
 		t.Fatalf("tot=%d sec=%d", tot, sec)
 	}
 }
