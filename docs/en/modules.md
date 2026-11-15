@@ -1,6 +1,6 @@
 # Agent modules and configuration
 
-Agent configuration: `/etc/linager/agent.yaml` (created by the installer, permissions 600). Each module can be disabled; after a change run `sudo systemctl restart linager-agent`. The admin panel shows tabs only for enabled modules.
+Agent configuration: `/etc/linager/agent.yaml` (created by the installer, permissions 600). Each module can be disabled; after a change run `sudo systemctl restart linager-agent`. A module that is not in the file is enabled. Every time the agent starts it appends the modules the file does not list yet (as `true`) to the `modules:` block and leaves the rest of the file as it is. The admin panel shows tabs only for enabled modules.
 
 ```yaml
 modules:

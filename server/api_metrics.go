@@ -72,6 +72,16 @@ func (a *Admin) dashboard(w http.ResponseWriter, r *http.Request, u *store.User)
 		jsonErr(w, http.StatusInternalServerError, "no dashboard")
 		return
 	}
+	// the dashboard of an operator or an auditor always shows exactly the servers they may see
+	if visible, err := a.visibleServers(r, u); err != nil {
+		jsonErr(w, http.StatusInternalServerError, "internal error")
+		return
+	} else if visible != nil {
+		if err := a.DB.DashboardSync(r.Context(), did, visible); err != nil {
+			jsonErr(w, http.StatusInternalServerError, "internal error")
+			return
+		}
+	}
 	list, err := a.DB.DashboardServers(r.Context(), did)
 	if err != nil {
 		jsonErr(w, http.StatusInternalServerError, "internal error")

@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { api, ApiError, isUnauthorized, type UserRow } from '../../api';
+  import { api, ApiError, isUnauthorized, type Role, type UserAccess, type UserRow } from '../../api';
   import { locale, t, tr } from '../../i18n';
   import { showToast } from '../toast';
   import { formatDateTime } from '../server/format';
+  import AccessEditor from './AccessEditor.svelte';
 
   let { onauthlost }: { onauthlost: () => void } = $props();
 
@@ -16,6 +17,11 @@
   let adding = $state(false);
   let newLogin = $state('');
   let newPassword = $state('');
+  let newRole = $state<Role>('admin');
+  let newAccess = $state<UserAccess>({ servers: [], groups: [], modules: [] });
+
+  /** Changing the role and the access of an existing user. */
+  let editing = $state<{ user: UserRow; role: Role; access: UserAccess } | null>(null);
   let addError = $state<string | null>(null);
 
   let action = $state<Action | null>(null);
@@ -51,8 +57,10 @@
     busy = true;
     addError = null;
     try {
-      await api.userCreate(newLogin.trim(), newPassword);
+      await api.userCreate(newLogin.trim(), newPassword, newRole, newAccess);
       newLogin = newPassword = '';
+      newRole = 'admin';
+      newAccess = { servers: [], groups: [], modules: [] };
       adding = false;
       showToast(t('users.createdToast'));
       await load();
@@ -64,7 +72,40 @@
     }
   }
 
+  function startEdit(user: UserRow): void {
+    action = null;
+    editing = { user, role: (user.role as Role) ?? 'admin', access: user.access ? { servers: [...user.access.servers], groups: [...user.access.groups], modules: [...user.access.modules] } : { servers: [], groups: [], modules: [] } };
+    actionError = null;
+  }
+
+  async function saveEdit(): Promise<void> {
+    const e = editing;
+    if (!e || busy) return;
+    busy = true;
+    actionError = null;
+    try {
+      await api.userAccess(e.user.id, e.role, e.access);
+      showToast(t('users.accessSaved'));
+      editing = null;
+      await load();
+    } catch (err) {
+      if (isUnauthorized(err)) onauthlost();
+      else actionError = errText(err, t('common.genericError'));
+    } finally {
+      busy = false;
+    }
+  }
+
+  function summary(u: UserRow): string {
+    if (!u.access) return '';
+    const n = u.access.servers.length + u.access.groups.length;
+    return u.role === 'operator'
+      ? t('users.accessSummaryOp', undefined, { n, m: u.access.modules.length })
+      : t('users.accessSummaryAud', undefined, { n });
+  }
+
   function ask(kind: Action['kind'], user: UserRow): void {
+    editing = null;
     action = { kind, user };
     resetPw = '';
     actionError = null;
@@ -115,6 +156,7 @@
         <span class="label">{$tr('users.password')}</span>
         <input class="input" type="password" name="new-password" autocomplete="new-password" required bind:value={newPassword} />
       </label>
+      <AccessEditor bind:role={newRole} bind:access={newAccess} />
       {#if addError}<p class="error" role="alert">{addError}</p>{/if}
       <div class="row end">
         <button class="btn" type="button" onclick={() => (adding = false)}>{$tr('common.cancel')}</button>
@@ -134,16 +176,28 @@
           <div class="info">
             <strong>{u.login}</strong>
             {#if u.current}<span class="badge you">{$tr('users.you')}</span>{/if}
-            <span class="badge">{$tr('users.role.admin')}</span>
+            <span class="badge" class:accent={u.role !== 'admin'}>{$tr(`users.role.${u.role}`)}</span>
+            {#if u.access}<span class="muted small">{summary(u)}</span>{/if}
             <span class="badge" class:good={u.totp_enabled}>{u.totp_enabled ? $tr('users.2fa.on') : $tr('users.2fa.off')}</span>
             {#if u.passkeys > 0}<span class="badge good">{$tr('users.passkeys', { n: u.passkeys })}</span>{/if}
             <span class="muted small">{$tr('users.created', { date: formatDateTime(u.created_at, $locale) })}</span>
           </div>
           {#if !u.current}
             <div class="row acts">
+              <button class="btn sm" type="button" onclick={() => startEdit(u)}>{$tr('users.access')}</button>
               <button class="btn sm" type="button" onclick={() => ask('password', u)}>{$tr('users.reset')}</button>
               <button class="btn sm" type="button" disabled={!u.totp_enabled && u.passkeys === 0} onclick={() => ask('reset2fa', u)}>{$tr('users.reset2fa')}</button>
               <button class="btn sm danger" type="button" onclick={() => ask('delete', u)}>{$tr('users.delete')}</button>
+            </div>
+          {/if}
+          {#if editing && editing.user.id === u.id}
+            <div class="confirm stack">
+              <AccessEditor bind:role={editing.role} bind:access={editing.access} />
+              {#if actionError}<p class="error" role="alert">{actionError}</p>{/if}
+              <div class="row end">
+                <button class="btn" type="button" onclick={() => (editing = null)}>{$tr('common.cancel')}</button>
+                <button class="btn primary" type="button" disabled={busy} onclick={() => void saveEdit()}>{$tr('acc.apply')}</button>
+              </div>
             </div>
           {/if}
           {#if action && action.user.id === u.id}
@@ -231,6 +285,11 @@
   .badge.good {
     border-color: var(--good);
     color: var(--good);
+  }
+
+  .badge.accent {
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
   .badge.you {

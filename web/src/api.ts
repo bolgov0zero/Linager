@@ -1,5 +1,12 @@
+export type Role = 'admin' | 'operator' | 'auditor';
+/** What an operator or an auditor may reach: single servers, whole groups and agent modules. */
+export interface UserAccess { servers: string[]; groups: number[]; modules: string[] }
+
 export interface Session {
   csrf: string;
+  /** The role of the user and, for an operator, the modules that were given (an administrator has all). */
+  role?: Role;
+  modules?: string[];
   login: string;
   id?: number;
   totp_enabled: boolean;
@@ -18,6 +25,8 @@ export interface Server {
   agent_version: string;
   online: boolean;
   last_seen_at: string | null;
+  /** The group of the server (the list of servers only). */
+  group_id?: number | null;
 }
 
 export interface Enrollment {
@@ -98,6 +107,8 @@ export interface AptList { packages: AptPackage[]; reboot_required: boolean; las
 export interface UserRow {
   id: number; login: string; role: string; totp_enabled: boolean; passkeys: number; recovery_left: number;
   created_at: string; current: boolean;
+  /** Only for an operator or an auditor. */
+  access?: UserAccess;
 }
 export interface PasskeyRow { id: string; name: string; created_at: string; last_used_at: string | null }
 export interface Snippet { id: number; name: string; command: string; position: number }
@@ -426,7 +437,9 @@ export const api = {
   },
 
   users: () => request<{ users: UserRow[] }>('GET', 'api/users'),
-  userCreate: (login: string, password: string) => request<{ ok: boolean; id: number }>('POST', 'api/users', { login, password }),
+  userCreate: (login: string, password: string, role: Role = 'admin', access?: UserAccess) =>
+    request<{ ok: boolean; id: number }>('POST', 'api/users', { login, password, role, ...(access ?? {}) }),
+  userAccess: (id: number, role: Role, access: UserAccess) => request<{ ok: boolean }>('PUT', `api/users/${id}/access`, { role, ...access }),
   userDelete: (id: number) => request<{ ok: boolean }>('DELETE', `api/users/${id}`, { confirm: true }),
   userSetPassword: (id: number, password: string) =>
     request<{ ok: boolean }>('POST', `api/users/${id}/password`, { password, confirm: true }),

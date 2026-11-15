@@ -22,6 +22,8 @@ type userView struct {
 	RecoveryLeft int       `json:"recovery_left"`
 	CreatedAt    time.Time `json:"created_at"`
 	Current      bool      `json:"current"`
+	// Access is what an operator or an auditor may reach (nil for an administrator).
+	Access *store.Access `json:"access,omitempty"`
 }
 
 func (a *Admin) usersList(w http.ResponseWriter, r *http.Request, u *store.User) {
@@ -32,8 +34,14 @@ func (a *Admin) usersList(w http.ResponseWriter, r *http.Request, u *store.User)
 	}
 	out := make([]userView, 0, len(rows))
 	for _, x := range rows {
-		out = append(out, userView{ID: x.ID, Login: x.Login, Role: "admin", TOTPEnabled: x.TOTPEnabled, Passkeys: x.Passkeys,
-			RecoveryLeft: x.RecoveryLeft, CreatedAt: x.CreatedAt, Current: x.ID == u.ID})
+		v := userView{ID: x.ID, Login: x.Login, Role: x.Role, TOTPEnabled: x.TOTPEnabled, Passkeys: x.Passkeys,
+			RecoveryLeft: x.RecoveryLeft, CreatedAt: x.CreatedAt, Current: x.ID == u.ID}
+		if x.Role != store.RoleAdmin {
+			if acc, err := a.DB.UserAccess(r.Context(), x.ID); err == nil {
+				v.Access = &acc
+			}
+		}
+		out = append(out, v)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"users": out})
 }
@@ -43,6 +51,42 @@ type userReq struct {
 	Password string `json:"password"`
 	Current  string `json:"current"`
 	Confirm  bool   `json:"confirm"`
+	// Role is admin (the default), operator or auditor; the rest is what a non-administrator may reach.
+	Role    string   `json:"role"`
+	Servers []string `json:"servers"`
+	Groups  []int64  `json:"groups"`
+	Modules []string `json:"modules"`
+}
+
+// accessOf checks a role with its access and returns what is to be stored: an administrator has no list,
+// an auditor has no modules, and a module that cannot be given is refused.
+func accessOf(role string, servers []string, groups []int64, modules []string) (store.Access, string) {
+	acc := store.Access{Servers: []string{}, Groups: []int64{}, Modules: []string{}}
+	switch role {
+	case store.RoleAdmin:
+		return acc, ""
+	case store.RoleOperator, store.RoleAuditor:
+	default:
+		return acc, "role: admin, operator or auditor"
+	}
+	if len(servers) > 5000 || len(groups) > 1000 {
+		return acc, "too many servers or groups"
+	}
+	acc.Servers = append(acc.Servers, servers...)
+	acc.Groups = append(acc.Groups, groups...)
+	if role == store.RoleOperator {
+		seen := map[string]bool{}
+		for _, m := range modules {
+			if !validModule(m) {
+				return acc, "unknown module " + m
+			}
+			if !seen[m] {
+				seen[m] = true
+				acc.Modules = append(acc.Modules, m)
+			}
+		}
+	}
+	return acc, ""
 }
 
 func (a *Admin) userCreate(w http.ResponseWriter, r *http.Request, u *store.User) {
@@ -60,14 +104,79 @@ func (a *Admin) userCreate(w http.ResponseWriter, r *http.Request, u *store.User
 		jsonErr(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
-	nu, err := a.DB.CreateAdmin(r.Context(), login, hash)
+	role := req.Role
+	if role == "" {
+		role = store.RoleAdmin
+	}
+	acc, msg := accessOf(role, req.Servers, req.Groups, req.Modules)
+	if msg != "" {
+		jsonErr(w, http.StatusUnprocessableEntity, msg)
+		return
+	}
+	nu, err := a.DB.CreateUser(r.Context(), login, hash, role)
 	if err != nil {
 		a.audit(r, u, "user.create", "user", "", login, "failed", nil)
 		jsonErr(w, http.StatusConflict, "this login is taken")
 		return
 	}
-	a.audit(r, u, "user.create", "user", strconv.FormatInt(nu.ID, 10), login, "ok", nil)
+	if role != store.RoleAdmin {
+		if err := a.DB.SetUserAccess(r.Context(), nu.ID, role, acc); err != nil {
+			_ = a.DB.DeleteUser(r.Context(), nu.ID)
+			a.audit(r, u, "user.create", "user", "", login, "failed", nil)
+			jsonErr(w, http.StatusUnprocessableEntity, "unknown server or group")
+			return
+		}
+	}
+	a.audit(r, u, "user.create", "user", strconv.FormatInt(nu.ID, 10), login, "ok", accessDetails(role, acc))
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "id": nu.ID})
+}
+
+func accessDetails(role string, acc store.Access) map[string]any {
+	return map[string]any{"role": role, "servers": len(acc.Servers), "groups": len(acc.Groups), "modules": acc.Modules}
+}
+
+// userAccess changes the role and the access of another user. The rights are read from the database at every
+// request, so the change works at once, without a new sign-in. An administrator cannot change their own role,
+// and the last administrator cannot be demoted.
+func (a *Admin) userAccess(w http.ResponseWriter, r *http.Request, u *store.User) {
+	t := a.targetUser(w, r)
+	if t == nil {
+		return
+	}
+	var req userReq
+	if !decode(w, r, &req) {
+		return
+	}
+	if t.ID == u.ID {
+		jsonErr(w, http.StatusConflict, "you cannot change your own role")
+		return
+	}
+	acc, msg := accessOf(req.Role, req.Servers, req.Groups, req.Modules)
+	if msg != "" {
+		jsonErr(w, http.StatusUnprocessableEntity, msg)
+		return
+	}
+	cur, err := a.DB.RoleOf(r.Context(), t.ID)
+	if err != nil {
+		jsonErr(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	if cur == store.RoleAdmin && req.Role != store.RoleAdmin {
+		if n, err := a.DB.AdminCount(r.Context()); err != nil || n <= 1 {
+			jsonErr(w, http.StatusConflict, "this is the last administrator")
+			return
+		}
+	}
+	if err := a.DB.SetUserAccess(r.Context(), t.ID, req.Role, acc); err != nil {
+		a.audit(r, u, "user.access", "user", strconv.FormatInt(t.ID, 10), t.Login, "failed", nil)
+		jsonErr(w, http.StatusUnprocessableEntity, "unknown server or group")
+		return
+	}
+	d := accessDetails(req.Role, acc)
+	d["was"] = cur
+	a.audit(r, u, "user.access", "user", strconv.FormatInt(t.ID, 10), t.Login, "ok", d)
+	a.Live.Publish("dashboard", map[string]any{})
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
 func (a *Admin) targetUser(w http.ResponseWriter, r *http.Request) *store.User {

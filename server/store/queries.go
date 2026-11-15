@@ -20,6 +20,8 @@ type User struct {
 	LockedUntil    *time.Time
 	// WebAuthnHandle is the opaque user handle for passkeys (nil until the first registration).
 	WebAuthnHandle []byte
+	// Role is filled by the session check (admin, operator or auditor); other queries leave it empty.
+	Role string
 }
 
 const userCols = `id, login, password_hash, coalesce(totp_secret,''), totp_enabled, totp_last_step, failed_attempts, locked_until, webauthn_handle`

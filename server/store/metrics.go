@@ -241,6 +241,29 @@ func (s *Store) DashboardServers(ctx context.Context, dashID int64) ([]*Server, 
 	return collectServers(rows)
 }
 
+// DashboardSync makes a dashboard hold exactly the given servers: the missing ones are appended (by name), the
+// others removed. It is used for the roles that cannot edit their dashboard.
+func (s *Store) DashboardSync(ctx context.Context, dashID int64, ids map[string]bool) error {
+	list := make([]string, 0, len(ids))
+	for id := range ids {
+		list = append(list, id)
+	}
+	tx, err := s.Pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, `DELETE FROM dashboard_items WHERE dashboard_id=$1 AND NOT (server_id::text = ANY($2))`, dashID, list); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO dashboard_items (dashboard_id, server_id, position)
+		SELECT $1, s.id, coalesce((SELECT max(position) FROM dashboard_items WHERE dashboard_id=$1), -1) + row_number() OVER (ORDER BY s.name)
+		FROM servers s WHERE s.id::text = ANY($2) AND NOT EXISTS (SELECT 1 FROM dashboard_items i WHERE i.dashboard_id=$1 AND i.server_id=s.id)`, dashID, list); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
 // AvailableServers lists servers that are not on the dashboard.
 func (s *Store) AvailableServers(ctx context.Context, dashID int64) ([]*Server, error) {
 	rows, err := s.Pool.Query(ctx, `SELECT `+srvColsQ("s")+` FROM servers s WHERE NOT EXISTS

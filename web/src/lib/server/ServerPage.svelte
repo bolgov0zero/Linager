@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api, isUnauthorized, type ServerDetail, type Sample } from '../../api';
+  import { api, isUnauthorized, type Role, type ServerDetail, type Sample } from '../../api';
   import { locale, tr } from '../../i18n';
   import { subscribeLive } from '../../live';
   import DeleteServerModal from '../DeleteServerModal.svelte';
@@ -28,6 +28,8 @@
     ontab,
     onBack,
     onagentchanged,
+    role = 'admin',
+    userModules = [],
   }: {
     name: string;
     /** Tab from the URL hash; unknown or hidden tabs fall back to the overview. */
@@ -36,6 +38,9 @@
     onBack: () => void;
     /** Called when an agent update of this server finished (refreshes the header counter). */
     onagentchanged?: () => void;
+    /** An operator only gets the tabs of the modules that were given, an auditor none. */
+    role?: Role;
+    userModules?: string[];
   } = $props();
 
   let detail = $state<ServerDetail | null>(null);
@@ -47,7 +52,8 @@
   const serverId = $derived(detail?.id ?? null);
   const sample = $derived<Sample | null>(detail?.sample ?? null);
   const online = $derived(detail?.online ?? false);
-  const tabs = $derived(visibleTabs(detail?.modules ?? []));
+  const isAdmin = $derived(role === 'admin');
+  const tabs = $derived(visibleTabs(detail?.modules ?? [], isAdmin ? null : role === 'operator' ? userModules : []));
   const tab = $derived<TabId>(tabs.find((x) => x.id === requestedTab)?.id ?? 'overview');
 
   // Resolve the server by name, then load its detail. Reruns on name change or retry.
@@ -124,8 +130,10 @@
       </div>
       {#if detail}
         <div class="row actions">
-          <RebootButton server={detail} />
-          <button class="btn danger" type="button" onclick={() => (deleteOpen = true)}>{$tr('srv.delete')}</button>
+          {#if isAdmin}
+            <RebootButton server={detail} />
+            <button class="btn danger" type="button" onclick={() => (deleteOpen = true)}>{$tr('srv.delete')}</button>
+          {/if}
         </div>
       {/if}
     </div>
@@ -155,7 +163,7 @@
       </div>
     </div>
   {:else}
-    <AgentUpdateBanner server={detail} onchanged={onagentchanged} />
+    {#if isAdmin}<AgentUpdateBanner server={detail} onchanged={onagentchanged} />{/if}
 
     {#if sample?.reboot_required}
       <p class="banner" role="status">{$tr('srv.rebootRequired')}</p>

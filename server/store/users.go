@@ -14,13 +14,15 @@ type UserRow struct {
 	Passkeys     int
 	RecoveryLeft int
 	CreatedAt    time.Time
+	Role         string
 }
 
 // ListUsers returns all users with the state of their second factors.
 func (s *Store) ListUsers(ctx context.Context) ([]UserRow, error) {
 	rows, err := s.Pool.Query(ctx, `SELECT u.id, u.login, u.totp_enabled, u.created_at,
 		(SELECT count(*) FROM webauthn_credentials w WHERE w.user_id=u.id),
-		(SELECT count(*) FROM recovery_codes c WHERE c.user_id=u.id AND c.used_at IS NULL)
+		(SELECT count(*) FROM recovery_codes c WHERE c.user_id=u.id AND c.used_at IS NULL),
+		coalesce((SELECT r.name FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=u.id ORDER BY r.id LIMIT 1), 'admin')
 		FROM users u ORDER BY u.login`)
 	if err != nil {
 		return nil, err
@@ -29,7 +31,7 @@ func (s *Store) ListUsers(ctx context.Context) ([]UserRow, error) {
 	out := []UserRow{}
 	for rows.Next() {
 		var r UserRow
-		if err := rows.Scan(&r.ID, &r.Login, &r.TOTPEnabled, &r.CreatedAt, &r.Passkeys, &r.RecoveryLeft); err != nil {
+		if err := rows.Scan(&r.ID, &r.Login, &r.TOTPEnabled, &r.CreatedAt, &r.Passkeys, &r.RecoveryLeft, &r.Role); err != nil {
 			return nil, err
 		}
 		out = append(out, r)

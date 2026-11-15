@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.50
+
+- Roles: besides the administrator there are now an Operator and an Auditor. When the administrator creates a user (or changes one in "Settings → Users → Role and access") they pick the role and, with two buttons, the servers and the modules. In the "Servers" window the servers are grouped; the switch of a group gives access to all its servers (they turn on and grey out) and to the servers that join the group later. The "Modules" window has a switch per module; Terminal, Files, Network, Firewall, Security and Docker are marked "root access", because they let a user do almost anything on the host.
+- An operator works only on the servers and with the modules that were given, on every server of theirs; a closed module is closed as a whole. An operator cannot change the settings of the panel (users, updates, audit log, snippets, groups), add or delete agents, reboot servers or edit the dashboard. An auditor only sees the dashboard, the overview and the metrics of the chosen servers and changes nothing. Both get a "Profile" button instead of "Settings" (password, 2FA, passkey).
+- The server checks every request: each route has an access rule (a test makes sure none is missing), a server the user may not see answers as if it did not exist, and the live events are filtered the same way. A change of rights works at once. The administrator cannot change their own role or demote the last administrator; creating a user and changing the access are written to the audit log. Existing users stay administrators. Server only, agents need no update.
+
+## 0.1.49
+
+- Agent: `/etc/linager/agent.yaml` is completed when the agent starts (so after every update): the modules a newer agent knows and the file does not list are appended to the `modules:` block as `true`, the rest of the file (comments, your `false` values) stays as it is. A module missing from the file was enabled before too, so nothing changes in behaviour; the file now lists everything. Needs agent 0.1.49.
+
 ## 0.1.48
 
 - Firewall: a "Journal" button next to "Address lists" opens the journal of rule matches. A rule is marked for the journal with a switch in the table of rules (or "Switch on for all drop rules" in the window): the rule gets `limit rate 5/second log prefix "lg:..."` and the kernel writes the matched packets to its journal, which the agent reads (7 days). The window shows the matches over time and a table (time, chain, action, protocol, source, port, rule, packets) with filters by chain, action and protocol in any combination, by port (`22`, `80, 443`, `1000-2000`) and by source (an address, a network or `@list`), identical events can be grouped, a row expands to the details, and the whole list can be exported to CSV. From a row: add the source to an address list, block the address (a rule first in input, in the draft) or open the rule. Needs agent 0.1.48 and `journalctl`.

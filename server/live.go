@@ -13,19 +13,28 @@ import (
 // Live fans server-sent events out to connected browsers.
 type Live struct {
 	mu   sync.Mutex
-	subs map[chan []byte]struct{}
+	subs map[chan liveMsg]struct{}
+}
+
+// liveMsg is one event; server is the server it is about ("" for events that concern nobody in particular).
+type liveMsg struct {
+	server string
+	b      []byte
 }
 
 // NewLive creates an empty fan-out.
-func NewLive() *Live { return &Live{subs: map[chan []byte]struct{}{}} }
+func NewLive() *Live { return &Live{subs: map[chan liveMsg]struct{}{}} }
 
 // Publish sends one named event to every subscriber; slow subscribers drop events.
-func (l *Live) Publish(event string, data any) {
+func (l *Live) Publish(event string, data any) { l.PublishServer("", event, data) }
+
+// PublishServer sends an event about one server; a subscriber that may not see that server does not get it.
+func (l *Live) PublishServer(serverID, event string, data any) {
 	b, err := json.Marshal(data)
 	if err != nil {
 		return
 	}
-	msg := []byte(fmt.Sprintf("event: %s\ndata: %s\n\n", event, b))
+	msg := liveMsg{server: serverID, b: []byte(fmt.Sprintf("event: %s\ndata: %s\n\n", event, b))}
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	for ch := range l.subs {
@@ -36,8 +45,8 @@ func (l *Live) Publish(event string, data any) {
 	}
 }
 
-func (l *Live) subscribe() (chan []byte, func()) {
-	ch := make(chan []byte, 256)
+func (l *Live) subscribe() (chan liveMsg, func()) {
+	ch := make(chan liveMsg, 256)
 	l.mu.Lock()
 	l.subs[ch] = struct{}{}
 	l.mu.Unlock()
@@ -49,7 +58,7 @@ func (l *Live) subscribe() (chan []byte, func()) {
 }
 
 // handler streams events to one authenticated browser.
-func (a *Admin) liveHandler(w http.ResponseWriter, r *http.Request, _ *store.User) {
+func (a *Admin) liveHandler(w http.ResponseWriter, r *http.Request, u *store.User) {
 	fl, ok := w.(http.Flusher)
 	if !ok {
 		jsonErr(w, http.StatusInternalServerError, "streaming unsupported")
@@ -61,6 +70,22 @@ func (a *Admin) liveHandler(w http.ResponseWriter, r *http.Request, _ *store.Use
 	h.Set("X-Accel-Buffering", "no") // nginx: do not buffer the stream
 	ch, unsub := a.Live.subscribe()
 	defer unsub()
+	// an operator or an auditor only gets the events of the servers they may see (the list is refreshed now and then)
+	var visible map[string]bool
+	var loaded time.Time
+	allow := func(id string) bool {
+		if u.Role == store.RoleAdmin {
+			return true
+		}
+		if visible == nil || time.Since(loaded) > 20*time.Second {
+			v, err := a.DB.AllowedServerIDs(r.Context(), u.ID)
+			if err != nil {
+				return false
+			}
+			visible, loaded = v, time.Now()
+		}
+		return visible[id]
+	}
 	_, _ = w.Write([]byte("retry: 3000\n\n"))
 	fl.Flush()
 	tick := time.NewTicker(15 * time.Second)
@@ -70,7 +95,10 @@ func (a *Admin) liveHandler(w http.ResponseWriter, r *http.Request, _ *store.Use
 		case <-r.Context().Done():
 			return
 		case m := <-ch:
-			if _, err := w.Write(m); err != nil {
+			if m.server != "" && !allow(m.server) {
+				continue
+			}
+			if _, err := w.Write(m.b); err != nil {
 				return
 			}
 			fl.Flush()

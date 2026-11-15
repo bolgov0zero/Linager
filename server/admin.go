@@ -35,6 +35,7 @@ const (
 
 // Admin serves the web admin panel and its JSON API.
 type Admin struct {
+	routes  []routeInfo
 	DB      *store.Store
 	Keys    *Keys
 	Hub     *Hub
@@ -69,115 +70,116 @@ func NewAdmin(db *store.Store, keys *Keys, hub *Hub, live *Live, metrics *Metric
 func (a *Admin) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/login", a.login)
-	mux.HandleFunc("POST /api/logout", a.auth(a.logout))
-	mux.HandleFunc("GET /api/me", a.auth(a.me))
-	mux.HandleFunc("POST /api/me/totp/setup", a.auth(a.totpSetup))
-	mux.HandleFunc("POST /api/me/totp/enable", a.auth(a.totpEnable))
-	mux.HandleFunc("POST /api/me/totp/disable", a.auth(a.totpDisable))
-	mux.HandleFunc("POST /api/me/password", a.auth(a.changeOwnPassword))
-	mux.HandleFunc("POST /api/me/recovery-codes", a.auth(a.recoveryRegenerate))
-	mux.HandleFunc("GET /api/me/passkeys", a.auth(a.passkeyList))
-	mux.HandleFunc("POST /api/me/passkeys/begin", a.auth(a.passkeyRegisterBegin))
-	mux.HandleFunc("POST /api/me/passkeys/finish", a.auth(a.passkeyRegisterFinish))
-	mux.HandleFunc("DELETE /api/me/passkeys/{id}", a.auth(a.passkeyDelete))
+	a.route(mux, "POST /api/logout", "any", a.logout)
+	a.route(mux, "GET /api/me", "any", a.me)
+	a.route(mux, "POST /api/me/totp/setup", "any", a.totpSetup)
+	a.route(mux, "POST /api/me/totp/enable", "any", a.totpEnable)
+	a.route(mux, "POST /api/me/totp/disable", "any", a.totpDisable)
+	a.route(mux, "POST /api/me/password", "any", a.changeOwnPassword)
+	a.route(mux, "POST /api/me/recovery-codes", "any", a.recoveryRegenerate)
+	a.route(mux, "GET /api/me/passkeys", "any", a.passkeyList)
+	a.route(mux, "POST /api/me/passkeys/begin", "any", a.passkeyRegisterBegin)
+	a.route(mux, "POST /api/me/passkeys/finish", "any", a.passkeyRegisterFinish)
+	a.route(mux, "DELETE /api/me/passkeys/{id}", "any", a.passkeyDelete)
 	mux.HandleFunc("POST /api/login/passkey/begin", a.passkeyLoginBegin)
 	mux.HandleFunc("POST /api/login/passkey/finish", a.passkeyLoginFinish)
-	mux.HandleFunc("GET /api/users", a.auth(a.usersList))
-	mux.HandleFunc("POST /api/users", a.auth(a.userCreate))
-	mux.HandleFunc("DELETE /api/users/{id}", a.auth(a.userDelete))
-	mux.HandleFunc("POST /api/users/{id}/password", a.auth(a.userSetPassword))
-	mux.HandleFunc("POST /api/users/{id}/2fa/reset", a.auth(a.userReset2FA))
-	mux.HandleFunc("GET /api/snippets", a.auth(a.snippetsList))
-	mux.HandleFunc("POST /api/snippets", a.auth(a.snippetCreate))
-	mux.HandleFunc("PUT /api/snippets/order", a.auth(a.snippetsOrder))
-	mux.HandleFunc("PUT /api/snippets/{id}", a.auth(a.snippetUpdate))
-	mux.HandleFunc("DELETE /api/snippets/{id}", a.auth(a.snippetDelete))
-	mux.HandleFunc("POST /api/snippets/{id}/ran", a.auth(a.snippetRan))
-	mux.HandleFunc("GET /api/enrollments", a.auth(a.listEnrollments))
-	mux.HandleFunc("POST /api/enrollments/{id}/approve", a.auth(a.approve))
-	mux.HandleFunc("POST /api/enrollments/{id}/reject", a.auth(a.reject))
-	mux.HandleFunc("GET /api/servers", a.auth(a.listServers))
-	mux.HandleFunc("DELETE /api/servers/{id}", a.auth(a.deleteServer))
-	mux.HandleFunc("GET /api/servers/{id}", a.auth(a.serverDetail))
-	mux.HandleFunc("GET /api/servers/{id}/metrics", a.auth(a.history))
-	mux.HandleFunc("GET /api/servers/{id}/metrics.csv", a.auth(a.historyCSV))
-	mux.HandleFunc("GET /api/connect", a.auth(a.connectInfo))
-	mux.HandleFunc("GET /api/groups", a.auth(a.groupsList))
-	mux.HandleFunc("POST /api/groups", a.auth(a.groupCreate))
-	mux.HandleFunc("PUT /api/groups/{id}", a.auth(a.groupRename))
-	mux.HandleFunc("DELETE /api/groups/{id}", a.auth(a.groupDelete))
-	mux.HandleFunc("PUT /api/servers/{id}/group", a.auth(a.serverSetGroup))
-	mux.HandleFunc("GET /api/dashboard", a.auth(a.dashboard))
-	mux.HandleFunc("GET /api/dashboard/available", a.auth(a.dashboardAvailable))
-	mux.HandleFunc("POST /api/dashboard/items", a.auth(a.dashboardAdd))
-	mux.HandleFunc("DELETE /api/dashboard/items/{id}", a.auth(a.dashboardRemove))
-	mux.HandleFunc("PUT /api/dashboard/order", a.auth(a.dashboardOrder))
-	mux.HandleFunc("GET /api/live", a.auth(a.liveHandler))
-	mux.HandleFunc("GET /api/updates", a.auth(a.updatesGet))
-	mux.HandleFunc("GET /api/updates/summary", a.auth(a.updatesSummary))
-	mux.HandleFunc("POST /api/updates/check", a.auth(a.updatesCheck))
-	mux.HandleFunc("PUT /api/updates/channel", a.auth(a.updatesChannel))
-	mux.HandleFunc("POST /api/updates/cache", a.auth(a.updatesCache))
-	mux.HandleFunc("POST /api/updates/cache/prune", a.auth(a.updatesCachePrune))
-	mux.HandleFunc("POST /api/updates/server", a.auth(a.updatesServer))
-	mux.HandleFunc("POST /api/updates/agents", a.auth(a.updatesAgents))
-	mux.HandleFunc("GET /api/audit", a.auth(a.auditList))
-	mux.HandleFunc("GET /api/servers/{id}/services", a.auth(a.servicesList))
-	mux.HandleFunc("GET /api/servers/{id}/services-ignored", a.auth(a.servicesIgnored))
-	mux.HandleFunc("PUT /api/servers/{id}/services-ignored", a.auth(a.servicesIgnore))
-	mux.HandleFunc("POST /api/servers/{id}/services/{unit}/{action}", a.auth(a.serviceAction))
-	mux.HandleFunc("GET /api/servers/{id}/apt", a.auth(a.aptList))
-	mux.HandleFunc("POST /api/servers/{id}/reboot", a.auth(a.reboot))
-	mux.HandleFunc("GET /api/servers/{id}/disk", a.auth(a.diskState))
-	mux.HandleFunc("POST /api/servers/{id}/disk/scan", a.auth(a.diskScan))
-	mux.HandleFunc("POST /api/servers/{id}/disk/clean", a.auth(a.diskClean))
-	mux.HandleFunc("GET /api/servers/{id}/security", a.auth(a.securityState))
-	mux.HandleFunc("POST /api/servers/{id}/security/terminate", a.auth(a.securityTerminate))
-	mux.HandleFunc("POST /api/servers/{id}/security/ban", a.auth(a.securityBan))
-	mux.HandleFunc("POST /api/servers/{id}/security/unban", a.auth(a.securityUnban))
-	mux.HandleFunc("PUT /api/servers/{id}/security/fail2ban", a.auth(a.securityF2bSettings))
-	mux.HandleFunc("GET /api/servers/{id}/security/bans", a.auth(a.securityBanHistory))
-	mux.HandleFunc("POST /api/servers/{id}/security/keys/remove", a.auth(a.securityKeyRemove))
-	mux.HandleFunc("GET /api/servers/{id}/processes", a.auth(a.processesList))
-	mux.HandleFunc("POST /api/servers/{id}/processes/{pid}/kill", a.auth(a.killProcess))
-	mux.HandleFunc("GET /api/servers/{id}/stream", a.auth(a.streamWS))
-	mux.HandleFunc("GET /api/servers/{id}/files", a.auth(a.filesList))
-	mux.HandleFunc("GET /api/servers/{id}/files/content", a.auth(a.filesContent))
-	mux.HandleFunc("PUT /api/servers/{id}/files/content", a.auth(a.simpleFileOp("write", "files.write", false)))
-	mux.HandleFunc("POST /api/servers/{id}/files/mkdir", a.auth(a.simpleFileOp("mkdir", "files.mkdir", false)))
-	mux.HandleFunc("POST /api/servers/{id}/files/create", a.auth(a.simpleFileOp("create", "files.create", false)))
-	mux.HandleFunc("POST /api/servers/{id}/files/rename", a.auth(a.fileRename))
-	mux.HandleFunc("GET /api/servers/{id}/files/stat", a.auth(a.fileStat))
-	mux.HandleFunc("GET /api/servers/{id}/files/du", a.auth(a.fileDu))
-	mux.HandleFunc("POST /api/servers/{id}/files/chmod", a.auth(a.filePerm("chmod")))
-	mux.HandleFunc("POST /api/servers/{id}/files/chown", a.auth(a.filePerm("chown")))
-	mux.HandleFunc("POST /api/servers/{id}/files/copy", a.auth(a.fileTransfer("copy")))
-	mux.HandleFunc("POST /api/servers/{id}/files/move", a.auth(a.fileTransfer("move")))
-	mux.HandleFunc("GET /api/servers/{id}/files/zip", a.auth(a.fileZip))
-	mux.HandleFunc("POST /api/servers/{id}/files/delete", a.auth(a.simpleFileOp("delete", "files.delete", true)))
-	mux.HandleFunc("GET /api/servers/{id}/files/download", a.auth(a.fileDownload))
-	mux.HandleFunc("POST /api/servers/{id}/files/upload", a.auth(a.fileUpload))
-	mux.HandleFunc("GET /api/servers/{id}/network", a.auth(a.networkState))
-	mux.HandleFunc("POST /api/servers/{id}/network/validate", a.auth(a.networkValidate))
-	mux.HandleFunc("PUT /api/servers/{id}/network/draft", a.auth(a.networkSaveDraft))
-	mux.HandleFunc("DELETE /api/servers/{id}/network/draft", a.auth(a.resetDraft("network")))
-	mux.HandleFunc("POST /api/servers/{id}/network/apply", a.auth(a.networkApply))
-	mux.HandleFunc("POST /api/servers/{id}/network/config", a.auth(a.networkApplyConfig))
-	mux.HandleFunc("POST /api/servers/{id}/network/confirm", a.auth(a.confirmOrRollback("network", "confirm")))
-	mux.HandleFunc("POST /api/servers/{id}/network/rollback", a.auth(a.confirmOrRollback("network", "rollback")))
-	mux.HandleFunc("GET /api/servers/{id}/firewall", a.auth(a.firewallState))
-	mux.HandleFunc("POST /api/servers/{id}/firewall/validate", a.auth(a.firewallValidate))
-	mux.HandleFunc("GET /api/servers/{id}/firewall/ports", a.auth(a.firewallPorts))
-	mux.HandleFunc("GET /api/servers/{id}/firewall/log", a.auth(a.firewallLog))
-	mux.HandleFunc("PUT /api/servers/{id}/firewall/draft", a.auth(a.firewallSaveDraft))
-	mux.HandleFunc("DELETE /api/servers/{id}/firewall/draft", a.auth(a.resetDraft("firewall")))
-	mux.HandleFunc("POST /api/servers/{id}/firewall/apply", a.auth(a.firewallApply))
-	mux.HandleFunc("POST /api/servers/{id}/firewall/confirm", a.auth(a.confirmOrRollback("firewall", "confirm")))
-	mux.HandleFunc("POST /api/servers/{id}/firewall/rollback", a.auth(a.confirmOrRollback("firewall", "rollback")))
-	mux.HandleFunc("GET /api/servers/{id}/docker", a.auth(a.dockerState))
-	mux.HandleFunc("POST /api/servers/{id}/docker/containers/{cid}/{action}", a.auth(a.dockerContainerAction))
-	mux.HandleFunc("DELETE /api/servers/{id}/docker/images/{iid}", a.auth(a.dockerRemoveImage))
-	mux.HandleFunc("POST /api/servers/{id}/docker/check", a.auth(a.dockerCheck))
+	a.route(mux, "GET /api/users", "admin", a.usersList)
+	a.route(mux, "POST /api/users", "admin", a.userCreate)
+	a.route(mux, "DELETE /api/users/{id}", "admin", a.userDelete)
+	a.route(mux, "PUT /api/users/{id}/access", "admin", a.userAccess)
+	a.route(mux, "POST /api/users/{id}/password", "admin", a.userSetPassword)
+	a.route(mux, "POST /api/users/{id}/2fa/reset", "admin", a.userReset2FA)
+	a.route(mux, "GET /api/snippets", "mod:terminal", a.snippetsList)
+	a.route(mux, "POST /api/snippets", "admin", a.snippetCreate)
+	a.route(mux, "PUT /api/snippets/order", "admin", a.snippetsOrder)
+	a.route(mux, "PUT /api/snippets/{id}", "admin", a.snippetUpdate)
+	a.route(mux, "DELETE /api/snippets/{id}", "admin", a.snippetDelete)
+	a.route(mux, "POST /api/snippets/{id}/ran", "mod:terminal", a.snippetRan)
+	a.route(mux, "GET /api/enrollments", "admin", a.listEnrollments)
+	a.route(mux, "POST /api/enrollments/{id}/approve", "admin", a.approve)
+	a.route(mux, "POST /api/enrollments/{id}/reject", "admin", a.reject)
+	a.route(mux, "GET /api/servers", "any", a.listServers)
+	a.route(mux, "DELETE /api/servers/{id}", "srv:admin", a.deleteServer)
+	a.route(mux, "GET /api/servers/{id}", "srv", a.serverDetail)
+	a.route(mux, "GET /api/servers/{id}/metrics", "srv", a.history)
+	a.route(mux, "GET /api/servers/{id}/metrics.csv", "srv", a.historyCSV)
+	a.route(mux, "GET /api/connect", "admin", a.connectInfo)
+	a.route(mux, "GET /api/groups", "any", a.groupsList)
+	a.route(mux, "POST /api/groups", "admin", a.groupCreate)
+	a.route(mux, "PUT /api/groups/{id}", "admin", a.groupRename)
+	a.route(mux, "DELETE /api/groups/{id}", "admin", a.groupDelete)
+	a.route(mux, "PUT /api/servers/{id}/group", "srv:admin", a.serverSetGroup)
+	a.route(mux, "GET /api/dashboard", "any", a.dashboard)
+	a.route(mux, "GET /api/dashboard/available", "admin", a.dashboardAvailable)
+	a.route(mux, "POST /api/dashboard/items", "admin", a.dashboardAdd)
+	a.route(mux, "DELETE /api/dashboard/items/{id}", "admin", a.dashboardRemove)
+	a.route(mux, "PUT /api/dashboard/order", "any", a.dashboardOrder)
+	a.route(mux, "GET /api/live", "any", a.liveHandler)
+	a.route(mux, "GET /api/updates", "admin", a.updatesGet)
+	a.route(mux, "GET /api/updates/summary", "admin", a.updatesSummary)
+	a.route(mux, "POST /api/updates/check", "admin", a.updatesCheck)
+	a.route(mux, "PUT /api/updates/channel", "admin", a.updatesChannel)
+	a.route(mux, "POST /api/updates/cache", "admin", a.updatesCache)
+	a.route(mux, "POST /api/updates/cache/prune", "admin", a.updatesCachePrune)
+	a.route(mux, "POST /api/updates/server", "admin", a.updatesServer)
+	a.route(mux, "POST /api/updates/agents", "admin", a.updatesAgents)
+	a.route(mux, "GET /api/audit", "admin", a.auditList)
+	a.route(mux, "GET /api/servers/{id}/services", "srv:services", a.servicesList)
+	a.route(mux, "GET /api/servers/{id}/services-ignored", "srv:services", a.servicesIgnored)
+	a.route(mux, "PUT /api/servers/{id}/services-ignored", "srv:services", a.servicesIgnore)
+	a.route(mux, "POST /api/servers/{id}/services/{unit}/{action}", "srv:services", a.serviceAction)
+	a.route(mux, "GET /api/servers/{id}/apt", "srv:apt", a.aptList)
+	a.route(mux, "POST /api/servers/{id}/reboot", "srv:admin", a.reboot)
+	a.route(mux, "GET /api/servers/{id}/disk", "srv:disk", a.diskState)
+	a.route(mux, "POST /api/servers/{id}/disk/scan", "srv:disk", a.diskScan)
+	a.route(mux, "POST /api/servers/{id}/disk/clean", "srv:disk", a.diskClean)
+	a.route(mux, "GET /api/servers/{id}/security", "srv:security", a.securityState)
+	a.route(mux, "POST /api/servers/{id}/security/terminate", "srv:security", a.securityTerminate)
+	a.route(mux, "POST /api/servers/{id}/security/ban", "srv:security", a.securityBan)
+	a.route(mux, "POST /api/servers/{id}/security/unban", "srv:security", a.securityUnban)
+	a.route(mux, "PUT /api/servers/{id}/security/fail2ban", "srv:security", a.securityF2bSettings)
+	a.route(mux, "GET /api/servers/{id}/security/bans", "srv:security", a.securityBanHistory)
+	a.route(mux, "POST /api/servers/{id}/security/keys/remove", "srv:security", a.securityKeyRemove)
+	a.route(mux, "GET /api/servers/{id}/processes", "srv:processes", a.processesList)
+	a.route(mux, "POST /api/servers/{id}/processes/{pid}/kill", "srv:processes", a.killProcess)
+	a.route(mux, "GET /api/servers/{id}/stream", "srv", a.streamWS)
+	a.route(mux, "GET /api/servers/{id}/files", "srv:files", a.filesList)
+	a.route(mux, "GET /api/servers/{id}/files/content", "srv:files", a.filesContent)
+	a.route(mux, "PUT /api/servers/{id}/files/content", "srv:files", a.simpleFileOp("write", "files.write", false))
+	a.route(mux, "POST /api/servers/{id}/files/mkdir", "srv:files", a.simpleFileOp("mkdir", "files.mkdir", false))
+	a.route(mux, "POST /api/servers/{id}/files/create", "srv:files", a.simpleFileOp("create", "files.create", false))
+	a.route(mux, "POST /api/servers/{id}/files/rename", "srv:files", a.fileRename)
+	a.route(mux, "GET /api/servers/{id}/files/stat", "srv:files", a.fileStat)
+	a.route(mux, "GET /api/servers/{id}/files/du", "srv:files", a.fileDu)
+	a.route(mux, "POST /api/servers/{id}/files/chmod", "srv:files", a.filePerm("chmod"))
+	a.route(mux, "POST /api/servers/{id}/files/chown", "srv:files", a.filePerm("chown"))
+	a.route(mux, "POST /api/servers/{id}/files/copy", "srv:files", a.fileTransfer("copy"))
+	a.route(mux, "POST /api/servers/{id}/files/move", "srv:files", a.fileTransfer("move"))
+	a.route(mux, "GET /api/servers/{id}/files/zip", "srv:files", a.fileZip)
+	a.route(mux, "POST /api/servers/{id}/files/delete", "srv:files", a.simpleFileOp("delete", "files.delete", true))
+	a.route(mux, "GET /api/servers/{id}/files/download", "srv:files", a.fileDownload)
+	a.route(mux, "POST /api/servers/{id}/files/upload", "srv:files", a.fileUpload)
+	a.route(mux, "GET /api/servers/{id}/network", "srv:network", a.networkState)
+	a.route(mux, "POST /api/servers/{id}/network/validate", "srv:network", a.networkValidate)
+	a.route(mux, "PUT /api/servers/{id}/network/draft", "srv:network", a.networkSaveDraft)
+	a.route(mux, "DELETE /api/servers/{id}/network/draft", "srv:network", a.resetDraft("network"))
+	a.route(mux, "POST /api/servers/{id}/network/apply", "srv:network", a.networkApply)
+	a.route(mux, "POST /api/servers/{id}/network/config", "srv:network", a.networkApplyConfig)
+	a.route(mux, "POST /api/servers/{id}/network/confirm", "srv:network", a.confirmOrRollback("network", "confirm"))
+	a.route(mux, "POST /api/servers/{id}/network/rollback", "srv:network", a.confirmOrRollback("network", "rollback"))
+	a.route(mux, "GET /api/servers/{id}/firewall", "srv:firewall", a.firewallState)
+	a.route(mux, "POST /api/servers/{id}/firewall/validate", "srv:firewall", a.firewallValidate)
+	a.route(mux, "GET /api/servers/{id}/firewall/ports", "srv:firewall", a.firewallPorts)
+	a.route(mux, "GET /api/servers/{id}/firewall/log", "srv:firewall", a.firewallLog)
+	a.route(mux, "PUT /api/servers/{id}/firewall/draft", "srv:firewall", a.firewallSaveDraft)
+	a.route(mux, "DELETE /api/servers/{id}/firewall/draft", "srv:firewall", a.resetDraft("firewall"))
+	a.route(mux, "POST /api/servers/{id}/firewall/apply", "srv:firewall", a.firewallApply)
+	a.route(mux, "POST /api/servers/{id}/firewall/confirm", "srv:firewall", a.confirmOrRollback("firewall", "confirm"))
+	a.route(mux, "POST /api/servers/{id}/firewall/rollback", "srv:firewall", a.confirmOrRollback("firewall", "rollback"))
+	a.route(mux, "GET /api/servers/{id}/docker", "srv:docker", a.dockerState)
+	a.route(mux, "POST /api/servers/{id}/docker/containers/{cid}/{action}", "srv:docker", a.dockerContainerAction)
+	a.route(mux, "DELETE /api/servers/{id}/docker/images/{iid}", "srv:docker", a.dockerRemoveImage)
+	a.route(mux, "POST /api/servers/{id}/docker/check", "srv:docker", a.dockerCheck)
 	if a.Static != nil {
 		mux.Handle("/", a.static())
 	}
@@ -282,6 +284,10 @@ func (a *Admin) auth(next func(http.ResponseWriter, *http.Request, *store.User))
 			jsonErr(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
+		if u.Role, err = a.DB.RoleOf(r.Context(), u.ID); err != nil {
+			jsonErr(w, http.StatusInternalServerError, "internal error")
+			return
+		}
 		if a.Cfg.Admin.RequireTOTP && !u.TOTPEnabled && !totpSetupPath(r.URL.Path) {
 			jsonErr(w, http.StatusForbidden, "2fa_required")
 			return
@@ -377,8 +383,20 @@ func (a *Admin) finishLogin(w http.ResponseWriter, r *http.Request, u *store.Use
 func (a *Admin) sessionBody(r *http.Request, u *store.User, csrf string) map[string]any {
 	n, _ := a.DB.PasskeyCount(r.Context(), u.ID)
 	left, _ := a.DB.RecoveryRemaining(r.Context(), u.ID)
+	if u.Role == "" {
+		u.Role, _ = a.DB.RoleOf(r.Context(), u.ID)
+	}
+	modules := []string{}
+	switch u.Role {
+	case store.RoleAdmin:
+		modules = append(modules, OperatorModules...)
+	case store.RoleOperator:
+		if acc, err := a.DB.UserAccess(r.Context(), u.ID); err == nil {
+			modules = acc.Modules
+		}
+	}
 	return map[string]any{"csrf": csrf, "login": u.Login, "id": u.ID, "totp_enabled": u.TOTPEnabled, "passkeys": n, "recovery_left": left,
-		"totp_required": a.Cfg.Admin.RequireTOTP && !u.TOTPEnabled}
+		"totp_required": a.Cfg.Admin.RequireTOTP && !u.TOTPEnabled, "role": u.Role, "modules": modules}
 }
 
 func (a *Admin) logout(w http.ResponseWriter, r *http.Request, u *store.User) {
@@ -565,18 +583,32 @@ func (a *Admin) reject(w http.ResponseWriter, r *http.Request, u *store.User) {
 
 type serverView struct {
 	*store.Server
-	Online bool `json:"online"`
+	Online  bool   `json:"online"`
+	GroupID *int64 `json:"group_id"`
 }
 
-func (a *Admin) listServers(w http.ResponseWriter, r *http.Request, _ *store.User) {
+func (a *Admin) listServers(w http.ResponseWriter, r *http.Request, u *store.User) {
 	list, err := a.DB.Servers(r.Context())
 	if err != nil {
 		jsonErr(w, http.StatusInternalServerError, "internal error")
 		return
 	}
+	visible, err := a.visibleServers(r, u)
+	if err != nil {
+		jsonErr(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	groups, _ := a.DB.ServerGroups(r.Context())
 	out := make([]serverView, 0, len(list))
 	for _, s := range list {
-		out = append(out, serverView{Server: s, Online: a.Hub.Online(s.ID)})
+		if visible != nil && !visible[s.ID] {
+			continue
+		}
+		v := serverView{Server: s, Online: a.Hub.Online(s.ID)}
+		if g, ok := groups[s.ID]; ok {
+			v.GroupID = &g
+		}
+		out = append(out, v)
 	}
 	writeJSON(w, http.StatusOK, out)
 }

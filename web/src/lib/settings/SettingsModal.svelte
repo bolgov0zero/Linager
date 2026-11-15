@@ -29,10 +29,14 @@
     onrefresh: () => Promise<void>;
     onupdateschanged: () => void;
   } = $props();
+
+  /** An operator and an auditor only have their profile. */
+  const isAdmin = $derived((session.role ?? 'admin') === 'admin');
 </script>
 
-<Modal title={$tr('settings.title')} labelId="settings-title" {onclose} wide>
-  <div class="settings">
+<Modal title={isAdmin ? $tr('settings.title') : $tr('app.profile')} labelId="settings-title" {onclose} wide={isAdmin}>
+  <div class="settings" class:single={!isAdmin}>
+    {#if isAdmin}
     <nav class="side" aria-label={$tr('settings.nav')}>
       {#each SETTINGS_SECTIONS as s (s)}
         <button class="nav" class:active={section === s} type="button" aria-current={section === s ? 'page' : undefined} onclick={() => onsection(s)}>
@@ -41,6 +45,7 @@
         </button>
       {/each}
     </nav>
+    {/if}
     <div class="content">
       {#if section === 'profile'}
         <ProfileSection {session} {onrefresh} {onauthlost} />
@@ -63,6 +68,11 @@
     grid-template-columns: 190px minmax(0, 1fr);
     gap: 20px;
     min-height: min(640px, calc(100dvh - 180px));
+  }
+
+  .settings.single {
+    display: block;
+    min-height: 0;
   }
 
   .side {

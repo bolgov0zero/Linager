@@ -59,10 +59,12 @@ const TAB_MODULE: Partial<Record<TabId, string>> = {
  * Tabs to show for the reported agent modules. An empty list means the agent did not report
  * its modules (old agent): all tabs stay except Docker, Security and Disk, which need the module to be reported.
  */
-export function visibleTabs(modules: readonly string[]): (typeof TABS)[number][] {
+export function visibleTabs(modules: readonly string[], allowed: readonly string[] | null = null): (typeof TABS)[number][] {
   return TABS.filter((tab) => {
     const module = TAB_MODULE[tab.id];
     if (!module) return true;
+    // an operator only gets the modules that were given (an administrator: null), an auditor none
+    if (allowed !== null && !allowed.includes(module)) return false;
     if (modules.length === 0) return module !== 'docker' && module !== 'security' && module !== 'disk';
     return modules.includes(module);
   });

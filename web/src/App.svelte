@@ -69,6 +69,8 @@
   const serverRoute = $derived(parseServerHash(hash));
   const serverName = $derived(serverRoute?.name ?? null);
   let updatesCount = $state(0);
+  /** Only an administrator changes the settings, adds and removes servers and agents, and edits the dashboard. */
+  const isAdmin = $derived((session?.role ?? 'admin') === 'admin');
   const clock = $derived(lastLive ? fmtClock(lastLive) : '--:--:--');
 
   /** The old pages #updates and #audit are sections of the settings now; links to them keep working. */
@@ -82,7 +84,7 @@
   }
 
   function openSettings(section: SettingsSection = settingsSection): void {
-    settingsSection = section;
+    settingsSection = isAdmin ? section : 'profile'; // the others only have their profile
     settingsOpen = true;
     menuOpen = false;
   }
@@ -113,6 +115,7 @@
   }
 
   async function refreshUpdatesCount(): Promise<void> {
+    if (!isAdmin) return;
     try {
       updatesCount = (await api.updatesSummary()).count;
     } catch {
@@ -249,10 +252,10 @@
     <div class="controls" class:open={menuOpen} onclick={() => (menuOpen = false)}>
       {#if phase === 'app'}
         <button class="btn" type="button" onclick={() => openSettings()}>
-          {$tr('app.settings')}{#if updatesCount > 0} <span class="badge">{updatesCount}</span>{/if}
+          {isAdmin ? $tr('app.settings') : $tr('app.profile')}{#if isAdmin && updatesCount > 0} <span class="badge">{updatesCount}</span>{/if}
         </button>
       {/if}
-      {#if phase === 'app' && serverName === null}
+      {#if phase === 'app' && serverName === null && isAdmin}
         <button class="btn" class:ink={editing} type="button" onclick={toggleEdit}>
           {editing ? $tr('dash.done') : $tr('dash.edit')}
         </button>
@@ -293,6 +296,8 @@
           tab={serverRoute?.tab ?? null}
           ontab={(next) => setServerTab(serverName, next)}
           onBack={backToDashboard}
+          role={session.role ?? 'admin'}
+          userModules={session.modules ?? []}
           onagentchanged={refreshUpdatesCount} />
       {/key}
     {:else}

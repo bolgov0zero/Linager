@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -56,4 +57,70 @@ func (a *Agent) List() []string {
 		}
 	}
 	return out
+}
+
+// CompleteAgent adds the modules a newer agent knows to an existing agent.yaml (as enabled, which is what an
+// unlisted module is anyway), so the file always lists everything. The rest of the file is left as it is: only
+// lines are appended at the end of the block-style `modules:` mapping. A missing file, a flow-style mapping or a
+// file without `modules:` stay untouched. It returns the names that were added.
+func CompleteAgent(path string) ([]string, error) {
+	b, err := os.ReadFile(path) //nolint:gosec // operator-supplied path
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var in Agent
+	if err := yaml.Unmarshal(b, &in); err != nil {
+		return nil, err
+	}
+	var missing []string
+	for _, n := range AgentModules {
+		if _, ok := in.Modules[n]; !ok {
+			missing = append(missing, n)
+		}
+	}
+	if len(missing) == 0 {
+		return nil, nil
+	}
+	lines := strings.Split(string(b), "\n")
+	start := -1
+	for i, l := range lines {
+		if strings.TrimRight(l, " \t\r") == "modules:" {
+			start = i
+			break
+		}
+	}
+	if start < 0 {
+		return nil, nil
+	}
+	last := start // the last indented line of the block
+	for i := start + 1; i < len(lines); i++ {
+		l := strings.TrimRight(lines[i], " \t\r")
+		if l == "" || strings.HasPrefix(strings.TrimLeft(l, " \t"), "#") {
+			continue
+		}
+		if l[0] != ' ' && l[0] != '\t' {
+			break
+		}
+		last = i
+	}
+	add := make([]string, 0, len(missing))
+	for _, n := range missing {
+		add = append(add, "  "+n+": true")
+	}
+	out := append(append(append([]string{}, lines[:last+1]...), add...), lines[last+1:]...)
+	st, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	tmp := path + ".linager-new"
+	if err := os.WriteFile(tmp, []byte(strings.Join(out, "\n")), st.Mode().Perm()); err != nil { //nolint:gosec // the mode mirrors the existing file
+		return nil, err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return nil, err
+	}
+	return missing, nil
 }

@@ -645,6 +645,10 @@ func (a *Admin) streamWS(w http.ResponseWriter, r *http.Request, u *store.User) 
 		jsonErr(w, http.StatusBadRequest, "invalid stream parameters")
 		return
 	}
+	if mod := streamModule(r.URL.Query().Get("kind")); mod != "" && u.Role != store.RoleAdmin && !a.moduleOpen(r, u, mod) {
+		jsonErr(w, http.StatusForbidden, "forbidden")
+		return
+	}
 	if !a.Hub.Online(s.ID) {
 		jsonErr(w, http.StatusServiceUnavailable, "agent is offline")
 		return

@@ -239,7 +239,7 @@ func (m *Metrics) Ingest(ctx context.Context, serverID string, b *protocol.Metri
 		_ = m.DB.SaveLastState(ctx, serverID, lastJSON, sysJSON)
 	}
 	if newest != nil {
-		m.Live.Publish("metrics", map[string]any{"server_id": serverID, "sample": newest})
+		m.Live.PublishServer(serverID, "metrics", map[string]any{"server_id": serverID, "sample": newest})
 	}
 }
 
@@ -262,7 +262,7 @@ func (m *Metrics) Status(ctx context.Context, serverID string, online bool) {
 		kind, msg = "online", "agent connected"
 	}
 	_ = m.DB.AddEvent(context.WithoutCancel(ctx), serverID, time.Now(), kind, msg)
-	m.Live.Publish("status", map[string]any{"server_id": serverID, "online": online, "last_seen_at": time.Now().UTC().Format(time.RFC3339)})
+	m.Live.PublishServer(serverID, "status", map[string]any{"server_id": serverID, "online": online, "last_seen_at": time.Now().UTC().Format(time.RFC3339)})
 }
 
 func itoa(n int) string { return itoa64(int64(n)) }
