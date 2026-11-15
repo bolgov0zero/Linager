@@ -66,7 +66,7 @@ func startFakeDocker(t *testing.T, f *fakeDocker) {
 	if f.configImage == "" {
 		f.configImage = "nginx:latest"
 	}
-	srv := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := &http.Server{ReadHeaderTimeout: 10 * time.Second, Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
 		f.calls = append(f.calls, r.Method+" "+r.URL.RequestURI())
 		f.mu.Unlock()

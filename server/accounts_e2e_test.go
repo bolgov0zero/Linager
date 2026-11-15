@@ -180,10 +180,10 @@ func TestUsersPasswordRecoveryAndSnippets(t *testing.T) {
 	}
 
 	// --- reset by an administrator ends the sessions of that user ---
-	if c := admin.do("POST", fmt.Sprintf("/api/users/%d/password", secondID), map[string]any{"password": "reset-by-admin-pass"}, nil); c != http.StatusConflict {
+	if c := admin.do("POST", fmt.Sprintf("/api/users/%d/password", secondID), map[string]any{"password": "reset-by-admin-pass"}, nil); c != http.StatusConflict { //nolint:gosec // test password
 		t.Fatalf("reset needs a confirmation: %d", c)
 	}
-	if c := admin.do("POST", fmt.Sprintf("/api/users/%d/password", secondID), map[string]any{"password": "reset-by-admin-pass", "confirm": true}, nil); c != 200 {
+	if c := admin.do("POST", fmt.Sprintf("/api/users/%d/password", secondID), map[string]any{"password": "reset-by-admin-pass", "confirm": true}, nil); c != 200 { //nolint:gosec // test password
 		t.Fatalf("reset: %d", c)
 	}
 	if c := second.do("GET", "/api/me", nil, nil); c != http.StatusUnauthorized {
@@ -228,13 +228,13 @@ func TestUsersPasswordRecoveryAndSnippets(t *testing.T) {
 		t.Fatalf("an unknown recovery code must be refused: %d", code)
 	}
 	// regenerate: needs the password, replaces all codes
-	if c := second.do("POST", "/api/me/recovery-codes", map[string]string{"password": "nope-nope-nope"}, nil); c != http.StatusForbidden {
+	if c := second.do("POST", "/api/me/recovery-codes", map[string]string{"password": "nope-nope-nope"}, nil); c != http.StatusForbidden { //nolint:gosec // test password
 		t.Fatalf("regenerate needs the password: %d", c)
 	}
 	var re struct {
 		Codes []string `json:"recovery_codes"`
 	}
-	if c := second.do("POST", "/api/me/recovery-codes", map[string]string{"password": "reset-by-admin-pass"}, &re); c != 200 || len(re.Codes) != 10 {
+	if c := second.do("POST", "/api/me/recovery-codes", map[string]string{"password": "reset-by-admin-pass"}, &re); c != 200 || len(re.Codes) != 10 { //nolint:gosec // test password
 		t.Fatalf("regenerate: %d", c)
 	}
 	if code, _ := newClient(t, base).login("second", "reset-by-admin-pass", map[string]string{"totp": en.Codes[1]}); code != http.StatusUnauthorized {
@@ -313,11 +313,11 @@ func b64(b []byte) string { return base64.RawURLEncoding.EncodeToString(b) }
 func cborHead(major byte, n int) []byte {
 	switch {
 	case n < 24:
-		return []byte{major<<5 | byte(n)}
+		return []byte{major<<5 | byte(n)} //nolint:gosec // n < 24
 	case n < 256:
 		return []byte{major<<5 | 24, byte(n)}
 	default:
-		return []byte{major<<5 | 25, byte(n >> 8), byte(n)}
+		return []byte{major<<5 | 25, byte(n >> 8), byte(n)} //nolint:gosec // the helper only builds small structures
 	}
 }
 func cborInt(n int) []byte {
@@ -345,10 +345,11 @@ func (k *softKey) authData(rpID string, flags byte, withCred bool) []byte {
 	binary.BigEndian.PutUint32(cnt, k.signs)
 	out = append(out, cnt...)
 	if withCred {
-		out = append(out, make([]byte, 16)...) // aaguid
-		out = append(out, byte(len(k.credID)>>8), byte(len(k.credID)))
+		out = append(out, make([]byte, 16)...)                         // aaguid
+		out = append(out, byte(len(k.credID)>>8), byte(len(k.credID))) //nolint:gosec // the id is 24 bytes
 		out = append(out, k.credID...)
-		x, y := k.priv.PublicKey.X.FillBytes(make([]byte, 32)), k.priv.PublicKey.Y.FillBytes(make([]byte, 32))
+		pub, _ := k.priv.PublicKey.Bytes() // 0x04 | X | Y
+		x, y := pub[1:33], pub[33:65]
 		out = append(out, cborMap(cborInt(1), cborInt(2), cborInt(3), cborInt(-7), cborInt(-1), cborInt(1), cborInt(-2), cborBytes(x), cborInt(-3), cborBytes(y))...)
 	}
 	return out
