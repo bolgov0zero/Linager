@@ -4,7 +4,49 @@
 
 **EN.** Open-source server management for Debian and Ubuntu: a server with a web admin panel and lightweight agents on managed hosts. Live metrics and history up to 360 days, web terminal, services, apt updates, files, network and firewall with automatic rollback, Docker, signed self-updates.
 
-![Dashboard](docs/design/screenshots/01-dashboard-cards.png)
+![Linager: dashboard](docs/screenshots/dashboard.png)
+
+## Возможности / Features
+
+| | RU | EN |
+|---|---|---|
+| **Дашборд / Dashboard** | Карточки или карта серверов, группы, фильтры и поиск по имени или IP. На карточке: CPU, RAM, диск, сеть, uptime, число обновлений apt (так же, как на вкладке сервера), нужна ли перезагрузка, упавшие службы. | Cards or a map of servers, groups, filters and search by name or IP. A card shows CPU, RAM, disk, network, uptime, the number of apt updates (counted the same way as on the server tab), whether a reboot is needed, failed services. |
+| **Метрики / Metrics** | Реальное время и история до 360 дней (точность от 5 секунд до часа), графики CPU, RAM, диска и сети, события и перезагрузки на графике, экспорт CSV. Флажок «Синхронизировать» показывает выделение и подсказку сразу на всех графиках. | Live values and history up to 360 days (resolution from 5 seconds to an hour), CPU, RAM, disk and network charts, events and reboots on the chart, CSV export. The "Synchronize" checkbox shows the hover highlight and tooltip on all charts at once. |
+| **Терминал / Terminal** | Веб-терминал на сервере через агента. Плавающие окна (несколько сразу, можно свернуть), панель клавиш для телефона (Esc, Tab, Ctrl, стрелки, F1-F12 и другие). | A web terminal on the server through the agent. Floating windows (several at once, minimizable), a key panel for phones (Esc, Tab, Ctrl, arrows, F1-F12 and more). |
+| **Файлы / Files** | Проводник: дерево папок, контекстное меню, выбор нескольких файлов, копирование, перенос, zip, свойства с chmod и chown. Редактор (CodeMirror 6) с подсветкой синтаксиса в плавающих окнах. | An explorer: folder tree, context menu, multiple selection, copy, move, zip, properties with chmod and chown. An editor (CodeMirror 6) with syntax highlighting in floating windows. |
+| **Обновления apt / apt updates** | Проверка и установка всего или только обновлений безопасности. У каждого пакета свой статус (в очереди, обновление, завершено, ошибка), общий прогресс, вывод консоли по кнопке. Закрытая вкладка не прерывает установку, статусы вернутся при открытии. | Check and install everything or security updates only. Every package has its own status (queued, updating, done, error), an overall progress bar, console output on demand. A closed tab does not interrupt the installation, the statuses come back when you reopen it. |
+| **Службы, процессы, журналы / Services, processes, logs** | Службы systemd (запуск, остановка, автозапуск, игнорирование упавших), топ процессов, журнал в реальном времени. | systemd services (start, stop, autostart, ignoring failed ones), top processes, a live journal. |
+| **Сеть и файрвол / Network and firewall** | Интерфейсы, DNS, маршруты, правка конфигурации (ifupdown и netplan), nftables. Правки копятся в черновике и применяются с подтверждением в течение 30 секунд, иначе агент откатывает их сам. | Interfaces, DNS, routes, configuration editing (ifupdown and netplan), nftables. Changes pile up in a draft and are applied with a 30-second confirmation, otherwise the agent rolls them back itself. |
+| **Docker** | Контейнеры и образы, логи, запуск, остановка, перезапуск, удаление. | Containers and images, logs, start, stop, restart, remove. |
+| **Обновления Linager / Linager updates** | Подписанные релизы (minisign), копия базы перед обновлением, откат, поэтапная раскатка по агентам. | Signed releases (minisign), a database backup before the update, rollback, staged rollout to agents. |
+| **Безопасность / Security** | mTLS между сервером и агентами, подтверждение опасных действий, журнал аудита всех действий администратора, двухфакторный вход (TOTP). | mTLS between the server and agents, confirmation of dangerous actions, an audit log of all administrator actions, two-factor login (TOTP). |
+| **Интерфейс / Interface** | Русский и английский, светлая и тёмная темы, телефоны (значок на домашнем экране, таблицы блоками). | Russian and English, light and dark themes, phones (a home screen icon, tables as blocks). |
+
+Подробности по модулям: [docs/ru/modules.md](docs/ru/modules.md) · [docs/en/modules.md](docs/en/modules.md). История изменений: [CHANGELOG.md](CHANGELOG.md).
+
+## Скриншоты / Screenshots
+
+Скриншоты сняты на демонстрационных данных (вымышленные серверы и адреса). / The screenshots use demo data (fictional servers and addresses).
+
+**Страница сервера / Server page**
+
+![Server overview](docs/screenshots/server-overview.png)
+
+**Метрики с синхронизацией графиков / Metrics with synchronized charts**
+
+![Metrics with synchronized hover](docs/screenshots/metrics-sync.png)
+
+**Установка обновлений: статус каждого пакета и общий прогресс / Installing updates: a status for every package and overall progress**
+
+![apt updates progress](docs/screenshots/apt-progress.png)
+
+**Проверка обновлений / Checking for updates**
+
+![Checking for updates](docs/screenshots/apt-check.png)
+
+**Плавающий терминал с панелью клавиш / A floating terminal with the key panel**
+
+![Floating terminal](docs/screenshots/terminal.png)
 
 ## Установка / Install
 
