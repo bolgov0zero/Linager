@@ -67,6 +67,7 @@
   "srv.period.360d": "360 d",
   "srv.metrics.precision": "Data resolution: {step}",
   "srv.metrics.csv": "Export CSV",
+  "srv.metrics.sync": "Synchronize",
   "srv.metrics.failed": "Failed to load history",
   "srv.metrics.cpu": "CPU, %",
   "srv.metrics.ram": "RAM, %",

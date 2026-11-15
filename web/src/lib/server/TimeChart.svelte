@@ -30,6 +30,8 @@
     tickLabel,
     fullLabel,
     label,
+    syncTs = null,
+    onhover,
   }: {
     series: Series[];
     from: number;
@@ -46,6 +48,10 @@
     tickLabel: (ts: number) => string;
     fullLabel: (ts: number) => string;
     label: string;
+    /** Hover of another chart (bucket time): drawn here too. Null when charts are not synchronized. */
+    syncTs?: number | null;
+    /** Reports the bucket under the pointer (null: none), so the owner can sync the other charts. */
+    onhover?: (ts: number | null) => void;
   } = $props();
 
   const H = 180;
@@ -145,7 +151,11 @@
       .map((e) => ({ x: x(e.ts), kind: e.kind, ts: e.ts })),
   );
 
-  const hoverTs = $derived(hover !== null ? times[hover] : null);
+  // The own pointer wins; otherwise the synchronized one, if this chart has that bucket.
+  const hoverTs = $derived.by(() => {
+    if (hover !== null) return times[hover];
+    return syncTs !== null && times.includes(syncTs) ? syncTs : null;
+  });
   const hoverRows = $derived(
     hoverTs === null ? [] : series.map((s) => ({ s, p: s.points.find((p) => p.ts === hoverTs) })),
   );
@@ -159,6 +169,7 @@
     const px = ((event.clientX - rect.left) / rect.width) * width;
     if (times.length === 0 || px < X0 - 4 || px > X1 + 4) {
       hover = null;
+      onhover?.(null);
       return;
     }
     // Nearest bucket by x, but only within a few buckets: no tooltip over an empty stretch.
@@ -173,6 +184,12 @@
     }
     const slotPx = ((X1 - X0) * stepSec) / span;
     hover = dist <= Math.max(12, slotPx * 1.5) ? best : null;
+    onhover?.(hover === null ? null : times[hover]);
+  }
+
+  function onLeave(): void {
+    hover = null;
+    onhover?.(null);
   }
 </script>
 
@@ -196,7 +213,7 @@
       role="img"
       aria-label={label}
       onpointermove={onMove}
-      onpointerleave={() => (hover = null)}
+      onpointerleave={onLeave}
     >
       {#each scale.ticks as tv (tv)}
         <line class="grid" class:zero={tv === 0} x1={X0} x2={X1} y1={y(tv)} y2={y(tv)} />

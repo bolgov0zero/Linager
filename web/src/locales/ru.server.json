@@ -67,6 +67,7 @@
   "srv.period.360d": "360 дн",
   "srv.metrics.precision": "Точность данных: {step}",
   "srv.metrics.csv": "Экспорт CSV",
+  "srv.metrics.sync": "Синхронизировать",
   "srv.metrics.failed": "Не удалось загрузить историю",
   "srv.metrics.cpu": "CPU, %",
   "srv.metrics.ram": "RAM, %",

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.38
+
+- Metrics: a "Synchronize" checkbox next to the period chips shows the hover highlight (crosshair, dots and tooltip) on all four charts at once; the choice is remembered in the browser, off by default.
+- Terminal: the keyboard icon in the key panel button is centered.
+
 ## 0.1.37
 
 - Updates: after a successful install the progress bar is filled completely (apt's last reported percentage stays below 100, so the last segment stayed empty). Server only, agents need no update.

@@ -13,7 +13,30 @@
   type AvgKey = 'cpu_avg' | 'mem_avg' | 'disk_avg' | 'rx_avg' | 'tx_avg';
   type PeakKey = 'cpu_max' | 'mem_max' | 'disk_max' | 'rx_max' | 'tx_max';
 
+  const SYNC_KEY = 'linager.metrics.sync';
+
+  function readSync(): boolean {
+    try {
+      return localStorage.getItem(SYNC_KEY) === '1';
+    } catch {
+      return false; // storage unavailable: the default
+    }
+  }
+
+  function setSync(on: boolean): void {
+    sync = on;
+    syncTs = null;
+    try {
+      localStorage.setItem(SYNC_KEY, on ? '1' : '0');
+    } catch {
+      // storage unavailable: the choice is not remembered
+    }
+  }
+
   let period = $state<Period>('24h');
+  /** Hover of one chart is shown on all of them. */
+  let sync = $state(readSync());
+  let syncTs = $state<number | null>(null);
   let data = $state<History | null>(null);
   let failed = $state(false);
   let attempt = $state(0);
@@ -26,6 +49,7 @@
     let active = true;
     data = null;
     failed = false;
+    syncTs = null;
     api
       .history(id, p)
       .then((h) => {
@@ -68,6 +92,10 @@
           {$tr(`srv.period.${p}`)}
         </button>
       {/each}
+      <label class="check sync">
+        <input type="checkbox" checked={sync} onchange={(e) => setSync(e.currentTarget.checked)} />
+        <span>{$tr('srv.metrics.sync')}</span>
+      </label>
     </div>
     <div class="row end">
       {#if data}
@@ -95,6 +123,8 @@
           to={h.to}
           step={h.step_seconds}
           events={h.events}
+          syncTs={sync ? syncTs : null}
+          onhover={sync ? (ts) => (syncTs = ts) : undefined}
           tickLabel={(ts) => formatTick(ts, period, $locale)}
           fullLabel={(ts) => formatDateTime(ts, $locale)}
           format={formatPct}
@@ -112,6 +142,8 @@
           to={h.to}
           step={h.step_seconds}
           events={h.events}
+          syncTs={sync ? syncTs : null}
+          onhover={sync ? (ts) => (syncTs = ts) : undefined}
           tickLabel={(ts) => formatTick(ts, period, $locale)}
           fullLabel={(ts) => formatDateTime(ts, $locale)}
           format={formatPct}
@@ -129,6 +161,8 @@
           to={h.to}
           step={h.step_seconds}
           events={h.events}
+          syncTs={sync ? syncTs : null}
+          onhover={sync ? (ts) => (syncTs = ts) : undefined}
           tickLabel={(ts) => formatTick(ts, period, $locale)}
           fullLabel={(ts) => formatDateTime(ts, $locale)}
           format={formatPct}
@@ -149,6 +183,8 @@
           to={h.to}
           step={h.step_seconds}
           events={h.events}
+          syncTs={sync ? syncTs : null}
+          onhover={sync ? (ts) => (syncTs = ts) : undefined}
           tickLabel={(ts) => formatTick(ts, period, $locale)}
           fullLabel={(ts) => formatDateTime(ts, $locale)}
           format={formatRate}
@@ -184,6 +220,10 @@
 
   .toolbar .row {
     gap: 6px;
+  }
+
+  .sync {
+    margin-left: 8px;
   }
 
   .charts {

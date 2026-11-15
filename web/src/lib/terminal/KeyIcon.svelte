@@ -12,3 +12,10 @@
   <rect x="10" y="6" width="2" height="2" />
   <rect x="5" y="9" width="6" height="1" />
 </svg>
+
+<style>
+  /* An inline svg sits on the text baseline and ends up above the middle of the button. */
+  svg {
+    display: block;
+  }
+</style>
