@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.34
+
+- Terminal: the shell now gets HOME, USER, LOGNAME and SHELL (the agent service had no HOME, so `cd` said "HOME not set" and bash did not save its history). Commands are appended to the history right after they run, and a closed session gets three seconds to exit by itself before it is killed. Needs agent 0.1.34; open terminal sessions pick it up after the agent restarts.
+
 ## 0.1.33
 
 - File editor: a "Wrap lines" switch in the window header wraps long lines instead of scrolling sideways. The choice is remembered; it is on by default on touch screens.

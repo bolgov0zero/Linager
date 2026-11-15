@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"os/user"
 	"syscall"
+	"time"
 
 	"github.com/creack/pty"
 )
@@ -24,6 +25,44 @@ func clampSize(v, def int) int {
 	return v
 }
 
+// termGrace is how long a shell may take to exit after the hangup before it is killed.
+const termGrace = 3 * time.Second
+
+// termEnv builds the environment of a terminal shell. The agent runs as a service whose environment has no HOME,
+// so the shell would not find its history file or dotfiles and "cd" would fail with "HOME not set". The values come
+// from the user the agent runs as; PROMPT_COMMAND appends every command to the history at once, so it survives a
+// session that is cut off.
+func termEnv(shell string, base []string) []string {
+	env := append([]string{}, base...)
+	set := func(k, v string) { env = append(env, k+"="+v) }
+	has := func(k string) bool {
+		for _, e := range base {
+			if len(e) > len(k) && e[:len(k)+1] == k+"=" {
+				return true
+			}
+		}
+		return false
+	}
+	if u, err := user.Current(); err == nil {
+		if !has("HOME") && u.HomeDir != "" {
+			set("HOME", u.HomeDir)
+		}
+		if !has("USER") {
+			set("USER", u.Username)
+		}
+		if !has("LOGNAME") {
+			set("LOGNAME", u.Username)
+		}
+	}
+	set("SHELL", shell)
+	if !has("PROMPT_COMMAND") {
+		set("PROMPT_COMMAND", "history -a")
+	}
+	set("TERM", "xterm-256color")
+	set("LANG", "C.UTF-8")
+	return env
+}
+
 // termStream runs a login shell in a PTY and bridges it to the stream.
 func termStream(ctx context.Context, raw json.RawMessage, sio *StreamIO) error {
 	var p termParams
@@ -33,7 +72,7 @@ func termStream(ctx context.Context, raw json.RawMessage, sio *StreamIO) error {
 		shell = "/bin/sh"
 	}
 	cmd := exec.Command(shell, "-l") //nolint:gosec // the terminal is a root shell by design; gated by the terminal module and audit
-	cmd.Env = append(os.Environ(), "TERM=xterm-256color", "LANG=C.UTF-8")
+	cmd.Env = termEnv(shell, os.Environ())
 	cmd.Dir = homeDir()
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: uint16(clampSize(p.Cols, 80)), Rows: uint16(clampSize(p.Rows, 24))}) //nolint:gosec // bounded by clampSize
 	if err != nil {
@@ -41,11 +80,25 @@ func termStream(ctx context.Context, raw json.RawMessage, sio *StreamIO) error {
 	}
 	defer func() {
 		_ = ptmx.Close()
-		if cmd.Process != nil {
-			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGHUP) // process group, set by pty.Start (Setsid)
-			_ = cmd.Process.Kill()
+		if cmd.Process == nil {
+			_ = cmd.Wait()
+			return
 		}
-		_ = cmd.Wait()
+		// Hang up the shell and give it a moment to exit by itself: bash writes its history only on exit.
+		// A shell that ignores the hangup is killed after the grace period.
+		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGHUP) // process group, set by pty.Start (Setsid)
+		exited := make(chan struct{})
+		go func() {
+			_ = cmd.Wait()
+			close(exited)
+		}()
+		select {
+		case <-exited:
+		case <-time.After(termGrace):
+			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+			_ = cmd.Process.Kill()
+			<-exited
+		}
 	}()
 
 	done := make(chan error, 1)
