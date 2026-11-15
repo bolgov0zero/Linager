@@ -233,6 +233,7 @@ TLS на порту агентов, mTLS и подписанные сообще�
 
 ## 12g. Вкладка «Безопасность» (0.1.42)
 - Агент: модуль `security`, команда `security.state` без параметров (читает только фиксированные источники, внешнего ввода нет). Источники: `sshd -T` или `sshd_config`, `journalctl -t sshd -t sshd-session --since "7 days ago" -o short-unix` (потоковый разбор, не более 2 млн строк), запасной `/var/log/auth.log`, `fail2ban-client`, `/etc/apt/apt.conf.d`, `/etc/passwd` и `authorized_keys` (отпечатки считаются в Go), `loginctl`. Результат кэшируется на минуту.
+- Завершение сессий: `POST /api/servers/{id}/security/terminate` (`session` или `user`, `confirm: true`), команда агента `security.terminate` требует флага подтверждения, берёт цели только из собственного списка удалённых сессий `loginctl` и пишет `security.session.terminate` в аудит.
 - Сервер: `GET /api/servers/{id}/security`, прокси к агенту (таймаут 40 секунд). Вкладка скрыта, если агент не сообщил модуль `security`.
 
 ## 12e. Доработки после проверки 0.1

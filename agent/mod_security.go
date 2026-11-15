@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -159,6 +161,7 @@ type secJournal struct {
 }
 
 type secSession struct {
+	ID    string `json:"id"`
 	User  string `json:"user"`
 	IP    string `json:"ip"`
 	Since int64  `json:"since"`
@@ -567,7 +570,7 @@ func (m *secModule) sessions(ctx context.Context, now time.Time) []secSession {
 		if kv["Remote"] != "yes" {
 			continue
 		}
-		s := secSession{User: kv["Name"], IP: kv["RemoteHost"]}
+		s := secSession{ID: id, User: kv["Name"], IP: kv["RemoteHost"]}
 		if t := sessionTimeRe.FindString(kv["Timestamp"]); t != "" {
 			if tt, err := time.ParseInLocation("2006-01-02 15:04:05", t, now.Location()); err == nil {
 				s.Since = tt.Unix()
@@ -579,3 +582,68 @@ func (m *secModule) sessions(ctx context.Context, now time.Time) []secSession {
 }
 
 var sessionIDRe = regexp.MustCompile(`^[a-zA-Z0-9]{1,16}$`)
+
+// userNameRe is the shape of a login name; it is checked before a name reaches a command.
+var userNameRe = regexp.MustCompile(`^[a-zA-Z0-9._][a-zA-Z0-9._-]{0,63}$`)
+
+type secTerminated struct {
+	ID   string `json:"id"`
+	User string `json:"user"`
+	IP   string `json:"ip"`
+}
+
+// terminate ends remote (SSH) sessions through systemd-logind: one session by id, or all remote sessions of
+// a user. Only sessions that are in the agent's own fresh list can be ended, so a name or an id coming from
+// the browser never selects anything else (local console sessions are never touched). The processes of the
+// session are stopped with it, so the command needs the confirmation of the administrator.
+func (m *secModule) terminate(ctx context.Context, raw json.RawMessage, dangerous bool) (any, error) {
+	if !dangerous {
+		return nil, errDangerous
+	}
+	var p struct {
+		Session string `json:"session"`
+		User    string `json:"user"`
+	}
+	if err := json.Unmarshal(raw, &p); err != nil || (p.Session == "") == (p.User == "") {
+		return nil, errors.New("give either a session or a user")
+	}
+	if p.Session != "" && !sessionIDRe.MatchString(p.Session) {
+		return nil, errors.New("invalid session")
+	}
+	if p.User != "" && !userNameRe.MatchString(p.User) {
+		return nil, errors.New("invalid user")
+	}
+	if _, err := m.lookPath("loginctl"); err != nil {
+		return nil, errors.New("systemd-logind is not available on this host")
+	}
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+
+	var targets []secSession
+	for _, s := range m.sessions(ctx, m.now()) {
+		if (p.Session != "" && s.ID == p.Session) || (p.User != "" && s.User == p.User) {
+			targets = append(targets, s)
+		}
+	}
+	if len(targets) == 0 {
+		return nil, errors.New("no such remote session")
+	}
+	done := []secTerminated{}
+	var firstErr error
+	for _, s := range targets {
+		if _, err := m.run(ctx, "loginctl", "terminate-session", s.ID); err != nil {
+			if firstErr == nil {
+				firstErr = fmt.Errorf("session %s: %w", s.ID, err)
+			}
+			continue
+		}
+		done = append(done, secTerminated{ID: s.ID, User: s.User, IP: s.IP})
+	}
+	m.mu.Lock()
+	m.cache = nil // the next answer must not show the ended sessions
+	m.mu.Unlock()
+	if len(done) == 0 {
+		return nil, firstErr
+	}
+	return map[string]any{"ok": true, "terminated": done}, nil
+}

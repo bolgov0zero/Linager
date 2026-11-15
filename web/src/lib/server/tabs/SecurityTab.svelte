@@ -1,7 +1,8 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { api, type SecState, type ServerDetail } from '../../../api';
-  import { locale, tr as T } from '../../../i18n';
+  import { api, ApiError, type SecState, type ServerDetail } from '../../../api';
+  import { locale, t, tr as T } from '../../../i18n';
+  import { showToast } from '../../toast';
   import { formatDateTime } from '../format';
   import { barHeights, keyLabel, postureChecks, worstTone } from './sec-util';
   import { unavailableKind } from './svc';
@@ -43,6 +44,41 @@
     const timer = setInterval(() => void load(id), POLL_MS);
     return () => clearInterval(timer);
   });
+
+  // ---- ending sessions ----
+  type Ending = { kind: 'session'; id: string; user: string; ip: string } | { kind: 'user'; user: string; count: number };
+  let ending = $state<Ending | null>(null);
+  let endBusy = $state(false);
+  let endError = $state<string | null>(null);
+
+  /** Users with more than one remote session get a button for all of them. */
+  const multiUsers = $derived.by(() => {
+    const counts = new Map<string, number>();
+    for (const s of sec?.sessions ?? []) counts.set(s.user, (counts.get(s.user) ?? 0) + 1);
+    return [...counts].filter(([, n]) => n > 1).map(([user, count]) => ({ user, count }));
+  });
+
+  async function confirmEnd(): Promise<void> {
+    const e = ending;
+    if (!e || endBusy) return;
+    endBusy = true;
+    endError = null;
+    try {
+      const res = await api.securityTerminate(server.id, e.kind === 'session' ? { session: e.id } : { user: e.user });
+      ending = null;
+      showToast(res.terminated.length > 1 ? t('sec.end.doneN', undefined, { n: res.terminated.length }) : t('sec.end.done'));
+      await load(server.id);
+    } catch (err) {
+      if (err instanceof ApiError && err.serverMessage === 'no such remote session') {
+        endError = t('sec.end.gone');
+        await load(server.id); // the list was out of date
+      } else {
+        endError = t('sec.end.failed');
+      }
+    } finally {
+      endBusy = false;
+    }
+  }
 
   const checks = $derived(sec ? postureChecks(sec, server.sample) : []);
   const tone = $derived(worstTone(checks));
@@ -233,13 +269,38 @@
           <p class="muted">{$T('sec.sessions.none')}</p>
         {:else}
           <ul class="plain">
-            {#each sec.sessions as s, i (i)}
-              <li>
-                <span class="mono">{s.user}</span> · <span class="mono">{s.ip || '—'}</span>
-                {#if s.since}<span class="muted small"> · {$T('sec.since', { time: formatDateTime(s.since, $locale) })}</span>{/if}
+            {#each sec.sessions as s (s.id)}
+              <li class="sess">
+                <span>
+                  <span class="mono">{s.user}</span> · <span class="mono">{s.ip || '—'}</span>
+                  {#if s.since}<span class="muted small"> · {$T('sec.since', { time: formatDateTime(s.since, $locale) })}</span>{/if}
+                </span>
+                <button class="btn small-btn" type="button" disabled={unreachable} onclick={() => { ending = { kind: 'session', id: s.id, user: s.user, ip: s.ip }; endError = null; }}>
+                  {$T('sec.end')}
+                </button>
               </li>
             {/each}
           </ul>
+          {#each multiUsers as m (m.user)}
+            <button class="btn small-btn all" type="button" disabled={unreachable} onclick={() => { ending = { kind: 'user', user: m.user, count: m.count }; endError = null; }}>
+              {$T('sec.endAll', { user: m.user, n: m.count })}
+            </button>
+          {/each}
+          {#if ending}
+            <div class="confirm stack" role="alertdialog" aria-label={$T('sec.end')}>
+              <p>
+                {ending.kind === 'session'
+                  ? $T('sec.end.confirm', { user: ending.user, ip: ending.ip || '—' })
+                  : $T('sec.end.confirmUser', { user: ending.user, n: ending.count })}
+              </p>
+              <p class="muted small">{$T('sec.end.hint')}</p>
+              {#if endError}<p class="error" role="alert">{endError}</p>{/if}
+              <div class="row end">
+                <button class="btn" type="button" disabled={endBusy} onclick={() => (ending = null)}>{$T('common.cancel')}</button>
+                <button class="btn danger" type="button" disabled={endBusy} onclick={() => void confirmEnd()}>{$T('sec.end')}</button>
+              </div>
+            </div>
+          {/if}
         {/if}
       </section>
 
@@ -514,6 +575,32 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+  }
+
+  .sess {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 12px;
+  }
+
+  .small-btn {
+    padding: 2px 8px;
+    font-size: 13px;
+  }
+
+  .all {
+    align-self: flex-start;
+  }
+
+  .confirm {
+    padding: 12px;
+    border: 2px solid var(--crit);
+  }
+
+  .confirm p {
+    margin: 0;
   }
 
   .jail p {

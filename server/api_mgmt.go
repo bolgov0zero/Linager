@@ -148,6 +148,68 @@ func (a *Admin) securityState(w http.ResponseWriter, r *http.Request, _ *store.U
 	a.proxyCall(w, r, "security", "state", nil, 40*time.Second)
 }
 
+var (
+	termSessionRe = regexp.MustCompile(`^[a-zA-Z0-9]{1,16}$`)
+	termUserRe    = regexp.MustCompile(`^[a-zA-Z0-9._][a-zA-Z0-9._-]{0,63}$`)
+)
+
+type terminateReq struct {
+	Session string `json:"session"`
+	User    string `json:"user"`
+	Confirm bool   `json:"confirm"`
+}
+
+// securityTerminate ends remote (SSH) sessions: one by id or all of a user. The processes of the session
+// stop with it, so it needs the confirmation of the administrator; the agent only ends sessions from its own
+// list of remote sessions. The result of every ended session goes to the audit log.
+func (a *Admin) securityTerminate(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s := a.serverOr404(w, r)
+	if s == nil {
+		return
+	}
+	var req terminateReq
+	if !decode(w, r, &req) {
+		return
+	}
+	if (req.Session == "") == (req.User == "") ||
+		(req.Session != "" && !termSessionRe.MatchString(req.Session)) ||
+		(req.User != "" && !termUserRe.MatchString(req.User)) {
+		jsonErr(w, http.StatusBadRequest, "give either a session or a user")
+		return
+	}
+	if !req.Confirm {
+		needConfirm(w)
+		return
+	}
+	params := map[string]string{}
+	if req.Session != "" {
+		params["session"] = req.Session
+	} else {
+		params["user"] = req.User
+	}
+	data, err := a.Hub.Call(r.Context(), s.ID, "security", "terminate", params, true, 30*time.Second)
+	details := map[string]any{"session": req.Session, "user": req.User}
+	if err == nil {
+		var res struct {
+			Terminated []map[string]any `json:"terminated"`
+		}
+		if json.Unmarshal(data, &res) == nil {
+			details["terminated"] = res.Terminated
+		}
+	}
+	result := "ok"
+	if err != nil {
+		result = "failed"
+	}
+	a.audit(r, u, "security.session.terminate", "server", s.ID, s.Name, result, details)
+	if err != nil {
+		callErr(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(data)
+}
+
 type confirmReq struct {
 	Confirm bool   `json:"confirm"`
 	Signal  string `json:"signal"`

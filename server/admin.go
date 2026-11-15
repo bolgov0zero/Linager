@@ -129,6 +129,7 @@ func (a *Admin) Handler() http.Handler {
 	mux.HandleFunc("GET /api/servers/{id}/apt", a.auth(a.aptList))
 	mux.HandleFunc("POST /api/servers/{id}/reboot", a.auth(a.reboot))
 	mux.HandleFunc("GET /api/servers/{id}/security", a.auth(a.securityState))
+	mux.HandleFunc("POST /api/servers/{id}/security/terminate", a.auth(a.securityTerminate))
 	mux.HandleFunc("GET /api/servers/{id}/processes", a.auth(a.processesList))
 	mux.HandleFunc("POST /api/servers/{id}/processes/{pid}/kill", a.auth(a.killProcess))
 	mux.HandleFunc("GET /api/servers/{id}/stream", a.auth(a.streamWS))

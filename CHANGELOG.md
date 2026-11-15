@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.43
+
+- Security: remote SSH sessions can be ended from the "Logged in now" block: the "End" button of a session and "End all sessions" for a user with several. A confirmation warns that the processes of the session stop too (tmux, screen, long operations) and that this is not a block. The agent ends only sessions from its own list of remote sessions (`loginctl terminate-session`), local console sessions are never touched, and every action goes to the audit log. Needs agent 0.1.43 and systemd-logind.
+
 ## 0.1.42
 
 - Security tab (new agent module `security`, read-only): the SSH state (port, root login, password and key login, empty passwords, user restrictions), failed sign-in attempts of the last 7 days (total, by day, top addresses and logins, probes of users that do not exist), SSH logins (a login from an address that guessed passwords earlier is flagged), fail2ban jails and banned addresses, automatic security updates, the keys of every `authorized_keys` (fingerprints only, weak RSA/DSA marked) and the remote sessions now. Data comes from the systemd journal (`sshd` and `sshd-session`, so Debian 13 works), with `/var/log/auth.log` as a fallback. Needs agent 0.1.42; the tab is hidden for older agents.

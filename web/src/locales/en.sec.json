@@ -81,5 +81,14 @@
   "sec.f2b.total": "{n} bans in total",
   "sec.keys": "Login keys",
   "sec.keys.hint": "The authorized_keys of every user with a shell. Only fingerprints are shown, the keys themselves are not sent.",
-  "sec.keys.none": "No keys found."
+  "sec.keys.none": "No keys found.",
+  "sec.end": "End",
+  "sec.endAll": "End all sessions of {user} ({n})",
+  "sec.end.confirm": "End the session of {user} from {ip}? All its processes will be stopped, including those the user started (tmux, screen, long operations).",
+  "sec.end.confirmUser": "End all SSH sessions of {user} ({n})? Their processes will be stopped, including those the user started (tmux, screen, long operations).",
+  "sec.end.hint": "This is not a block: the user can sign in again if they have a password or a key. To close the access, change the password or remove the key.",
+  "sec.end.done": "Session ended",
+  "sec.end.doneN": "Sessions ended: {n}",
+  "sec.end.gone": "The session has already ended",
+  "sec.end.failed": "Could not end the session"
 }

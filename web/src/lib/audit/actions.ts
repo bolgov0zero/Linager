@@ -2,6 +2,7 @@
 export const KNOWN_ACTIONS: ReadonlySet<string> = new Set([
   'auth.login', 'auth.logout', 'auth.totp.enable', 'auth.totp.disable', 'auth.passkey.add', 'auth.passkey.delete', 'auth.recovery.regenerate',
   'user.create', 'user.delete', 'user.password.change', 'user.password.reset', 'user.2fa.reset',
+  'security.session.terminate',
   'snippet.create', 'snippet.update', 'snippet.delete', 'snippet.order', 'snippet.run',
   'enroll.approve', 'enroll.reject', 'server.delete', 'server.reboot',
   'service.start', 'service.stop', 'service.restart', 'service.enable', 'service.disable', 'service.ignore', 'service.unignore',
@@ -29,6 +30,7 @@ export const ACTION_GROUPS: Option[] = [
   { value: 'auth.', key: 'audit.group.auth' },
   { value: 'user.', key: 'audit.group.users' },
   { value: 'snippet.', key: 'audit.group.snippets' },
+  { value: 'security.', key: 'audit.group.security' },
   { value: 'enroll.,server.', key: 'audit.group.servers' },
   { value: 'network.', key: 'audit.group.network' },
   { value: 'firewall.', key: 'audit.group.firewall' },

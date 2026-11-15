@@ -188,6 +188,7 @@ type fakeSys struct {
 	oldest string   // first line of the full journal
 	absent map[string]bool
 	calls  int
+	ran    []string // every command that was run, as "name args"
 }
 
 func (f *fakeSys) module() *secModule {
@@ -195,6 +196,7 @@ func (f *fakeSys) module() *secModule {
 	m.now = func() time.Time { return time.Unix(secNow, 0).UTC() }
 	m.run = func(_ context.Context, name string, args ...string) ([]byte, error) {
 		f.calls++
+		f.ran = append(f.ran, name+" "+strings.Join(args, " "))
 		if out, ok := f.runs[name+" "+strings.Join(args, " ")]; ok {
 			return []byte(out), nil
 		}
@@ -387,5 +389,139 @@ func TestSecurityTruncatesHugeJournals(t *testing.T) {
 	st := decodeState(t, mustState(t, m), nil)
 	if !st.Journal.Truncated || read != secMaxLines+1 {
 		t.Fatalf("truncated=%v read=%d", st.Journal.Truncated, read)
+	}
+}
+
+// ---- ending sessions ----
+
+func sessionsFake() *fakeSys {
+	show := func(name, remote, host string) string {
+		return "Name=" + name + "\nRemote=" + remote + "\nRemoteHost=" + host + "\nTimestamp=Fri 2024-11-15 10:00:00 UTC\n"
+	}
+	return &fakeSys{
+		runs: map[string]string{
+			"loginctl list-sessions --no-legend":                                   "  3 1000 alice seat0 tty1\n  4 0 root - -\n  5 1000 alice - -\n  6 1000 alice - -\n",
+			"loginctl show-session 3 -p Name -p RemoteHost -p Remote -p Timestamp": show("alice", "no", ""),
+			"loginctl show-session 4 -p Name -p RemoteHost -p Remote -p Timestamp": show("root", "yes", "203.0.113.5"),
+			"loginctl show-session 5 -p Name -p RemoteHost -p Remote -p Timestamp": show("alice", "yes", "192.0.2.44"),
+			"loginctl show-session 6 -p Name -p RemoteHost -p Remote -p Timestamp": show("alice", "yes", "192.0.2.45"),
+			"loginctl terminate-session 4":                                         "", "loginctl terminate-session 5": "", "loginctl terminate-session 6": "",
+		},
+		files: map[string]string{}, globs: map[string][]string{},
+	}
+}
+
+func terminated(t *testing.T, v any) []secTerminated {
+	t.Helper()
+	b, _ := json.Marshal(v)
+	var out struct {
+		Terminated []secTerminated `json:"terminated"`
+	}
+	if err := json.Unmarshal(b, &out); err != nil {
+		t.Fatal(err)
+	}
+	return out.Terminated
+}
+
+func terminateCalls(f *fakeSys) []string {
+	var out []string
+	for _, c := range f.ran {
+		if strings.HasPrefix(c, "loginctl terminate-session") {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+func TestSecurityTerminateNeedsConfirmation(t *testing.T) {
+	f := sessionsFake()
+	if _, err := f.module().terminate(context.Background(), json.RawMessage(`{"session":"4"}`), false); !errors.Is(err, errDangerous) {
+		t.Fatalf("without the confirmation of the administrator it must be refused: %v", err)
+	}
+	if len(terminateCalls(f)) != 0 {
+		t.Fatalf("nothing may be run: %v", f.ran)
+	}
+}
+
+func TestSecurityTerminateOneSession(t *testing.T) {
+	f := sessionsFake()
+	m := f.module()
+	v, err := m.terminate(context.Background(), json.RawMessage(`{"session":"4"}`), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := terminated(t, v)
+	if len(got) != 1 || got[0].ID != "4" || got[0].User != "root" || got[0].IP != "203.0.113.5" {
+		t.Fatalf("result: %+v", got)
+	}
+	if c := terminateCalls(f); len(c) != 1 || c[0] != "loginctl terminate-session 4" {
+		t.Fatalf("only that session must be ended: %v", c)
+	}
+}
+
+func TestSecurityTerminateRefusesWhatIsNotARemoteSession(t *testing.T) {
+	for _, params := range []string{
+		`{"session":"3"}`,               // a local console session
+		`{"session":"99"}`,              // does not exist
+		`{"session":"4;ls"}`,            // not an id
+		`{"session":"../x"}`,            // not an id
+		`{"user":"nobody"}`,             // no remote session
+		`{"user":"a b"}`,                // not a login name
+		`{"session":"4","user":"root"}`, // both
+		`{}`, `not json`,
+	} {
+		f := sessionsFake()
+		if _, err := f.module().terminate(context.Background(), json.RawMessage(params), true); err == nil {
+			t.Errorf("%s must be refused", params)
+		}
+		if len(terminateCalls(f)) != 0 {
+			t.Errorf("%s: nothing may be ended: %v", params, f.ran)
+		}
+	}
+}
+
+func TestSecurityTerminateUserEndsOnlyHisRemoteSessions(t *testing.T) {
+	f := sessionsFake()
+	m := f.module()
+	if _, err := m.state(context.Background(), nil, false); err != nil { // fills the cache
+		t.Fatal(err)
+	}
+	v, err := m.terminate(context.Background(), json.RawMessage(`{"user":"alice"}`), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := terminated(t, v); len(got) != 2 || got[0].ID != "5" || got[1].ID != "6" {
+		t.Fatalf("result: %+v", got)
+	}
+	c := terminateCalls(f)
+	if len(c) != 2 || c[0] != "loginctl terminate-session 5" || c[1] != "loginctl terminate-session 6" {
+		t.Fatalf("the local session 3 of alice and the session 4 of root must stay: %v", c)
+	}
+	if m.cache != nil {
+		t.Fatal("the cached answer must be dropped, it still shows the ended sessions")
+	}
+}
+
+func TestSecurityTerminatePartialFailure(t *testing.T) {
+	f := sessionsFake()
+	delete(f.runs, "loginctl terminate-session 5") // this one fails
+	v, err := f.module().terminate(context.Background(), json.RawMessage(`{"user":"alice"}`), true)
+	if err != nil {
+		t.Fatalf("one ended session is a success: %v", err)
+	}
+	if got := terminated(t, v); len(got) != 1 || got[0].ID != "6" {
+		t.Fatalf("result: %+v", got)
+	}
+	delete(f.runs, "loginctl terminate-session 6")
+	if _, err := f.module().terminate(context.Background(), json.RawMessage(`{"user":"alice"}`), true); err == nil {
+		t.Fatal("when nothing could be ended it must be an error")
+	}
+}
+
+func TestSecurityTerminateWithoutLogind(t *testing.T) {
+	f := sessionsFake()
+	f.absent = map[string]bool{"loginctl": true}
+	if _, err := f.module().terminate(context.Background(), json.RawMessage(`{"session":"4"}`), true); err == nil || !strings.Contains(err.Error(), "logind") {
+		t.Fatalf("a host without logind: %v", err)
 	}
 }

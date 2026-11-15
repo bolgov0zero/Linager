@@ -123,7 +123,7 @@ export interface SecState {
     top_users: { user: string; count: number; invalid: boolean }[];
   };
   keys: { user: string; file: string; type: string; bits?: number; fingerprint: string; comment: string; restricted: boolean; weak: boolean; mtime: number }[];
-  sessions: { user: string; ip: string; since: number }[];
+  sessions: { id: string; user: string; ip: string; since: number }[];
   journal: { source: 'journal' | 'authlog' | 'none'; oldest: number; covers_period: boolean; truncated: boolean };
 }
 
@@ -421,6 +421,9 @@ export const api = {
     request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/services/${enc(unit)}/${action}`, { confirm }),
   apt: (id: string) => request<AptList>('GET', `api/servers/${enc(id)}/apt`),
   security: (id: string) => request<SecState>('GET', `api/servers/${enc(id)}/security`),
+  /** Ends one remote session, or all remote sessions of a user. The processes of the sessions stop with them. */
+  securityTerminate: (id: string, target: { session: string } | { user: string }) =>
+    request<{ ok: boolean; terminated: { id: string; user: string; ip: string }[] }>('POST', `api/servers/${enc(id)}/security/terminate`, { ...target, confirm: true }),
   reboot: (id: string) => request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/reboot`, { confirm: true }),
   processes: (id: string, sort: 'cpu' | 'mem', n = 10) =>
     request<ProcessList>('GET', `api/servers/${enc(id)}/processes?sort=${sort}&n=${n}`),

@@ -112,5 +112,7 @@
   "audit.action.snippet.update": "Сниппет изменён",
   "audit.action.snippet.delete": "Сниппет удалён",
   "audit.action.snippet.order": "Порядок сниппетов",
-  "audit.action.snippet.run": "Запуск сниппета"
+  "audit.action.snippet.run": "Запуск сниппета",
+  "audit.action.security.session.terminate": "Завершение SSH-сессии",
+  "audit.group.security": "Безопасность"
 }

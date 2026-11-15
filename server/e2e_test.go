@@ -386,6 +386,26 @@ func TestEndToEnd(t *testing.T) {
 	if code := api.do("GET", "/api/servers/"+id+"/processes?sort=cpu&n=5", nil, nil); code != http.StatusOK {
 		t.Fatalf("processes list: %d", code)
 	}
+	// ending SSH sessions: validated and confirmed on the server, decided by the agent, audited either way
+	endURL := "/api/servers/" + id + "/security/terminate"
+	if code := api.do("POST", endURL, map[string]any{"session": "3;x", "confirm": true}, nil); code != http.StatusBadRequest {
+		t.Fatalf("an invalid session id must be refused, got %d", code)
+	}
+	if code := api.do("POST", endURL, map[string]any{"session": "3", "user": "root", "confirm": true}, nil); code != http.StatusBadRequest {
+		t.Fatalf("a session and a user together must be refused, got %d", code)
+	}
+	if code := api.do("POST", endURL, map[string]any{"session": "3"}, nil); code != http.StatusConflict {
+		t.Fatalf("ending a session needs the confirmation, got %d", code)
+	}
+	// with the confirmation it reaches the agent; a test host has no such remote session, so the agent refuses
+	if code := api.do("POST", endURL, map[string]any{"session": "3", "confirm": true}, nil); code == http.StatusOK {
+		t.Fatalf("a session that does not exist cannot be ended, got %d", code)
+	}
+	var nTerm int
+	_ = db.Pool.QueryRow(ctx, `SELECT count(*) FROM audit_log WHERE action='security.session.terminate' AND result='failed'`).Scan(&nTerm)
+	if nTerm != 1 {
+		t.Fatalf("the refused attempt must be in the audit log, found %d", nTerm)
+	}
 	var detail struct {
 		Modules []string `json:"modules"`
 	}

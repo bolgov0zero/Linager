@@ -112,5 +112,7 @@
   "audit.action.snippet.update": "Snippet changed",
   "audit.action.snippet.delete": "Snippet deleted",
   "audit.action.snippet.order": "Snippets reordered",
-  "audit.action.snippet.run": "Snippet run"
+  "audit.action.snippet.run": "Snippet run",
+  "audit.action.security.session.terminate": "SSH session ended",
+  "audit.group.security": "Security"
 }

@@ -161,7 +161,9 @@ func NewRegistry(cfg *config.Agent, col Collector, log *slog.Logger, dataDir str
 		pend.Recover() // an unconfirmed change from a previous run is rolled back right away
 	}
 	if cfg.Enabled("security") {
-		r.cmds["security.state"] = newSecModule().state
+		sec := newSecModule()
+		r.cmds["security.state"] = sec.state
+		r.cmds["security.terminate"] = sec.terminate
 	}
 	if cfg.Enabled("docker") && dockerAvailable() {
 		r.cmds["docker.state"] = dockerState
