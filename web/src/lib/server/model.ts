@@ -31,6 +31,7 @@ export const TABS = [
   { id: 'processes', key: 'srv.tab.processes' },
   { id: 'network', key: 'srv.tab.network' },
   { id: 'firewall', key: 'srv.tab.firewall' },
+  { id: 'security', key: 'srv.tab.security' },
   { id: 'docker', key: 'srv.tab.docker' },
   { id: 'updates', key: 'srv.tab.updates' },
   { id: 'logs', key: 'srv.tab.logs' },
@@ -45,6 +46,7 @@ const TAB_MODULE: Partial<Record<TabId, string>> = {
   services: 'services',
   network: 'network',
   firewall: 'firewall',
+  security: 'security',
   docker: 'docker',
   updates: 'apt',
   processes: 'processes',
@@ -53,13 +55,13 @@ const TAB_MODULE: Partial<Record<TabId, string>> = {
 
 /**
  * Tabs to show for the reported agent modules. An empty list means the agent did not report
- * its modules (old agent): all tabs stay except Docker, which needs the module to be reported.
+ * its modules (old agent): all tabs stay except Docker and Security, which need the module to be reported.
  */
 export function visibleTabs(modules: readonly string[]): (typeof TABS)[number][] {
   return TABS.filter((tab) => {
     const module = TAB_MODULE[tab.id];
     if (!module) return true;
-    if (modules.length === 0) return module !== 'docker';
+    if (modules.length === 0) return module !== 'docker' && module !== 'security';
     return modules.includes(module);
   });
 }

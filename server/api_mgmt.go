@@ -142,6 +142,12 @@ func (a *Admin) processesList(w http.ResponseWriter, r *http.Request, _ *store.U
 	a.proxyCall(w, r, "processes", "list", map[string]any{"sort": sortBy, "n": n}, 20*time.Second)
 }
 
+// securityState is the read-only SSH overview: logins, failed attempts, fail2ban, keys. The agent collects
+// it from the journal and answers from a one minute cache.
+func (a *Admin) securityState(w http.ResponseWriter, r *http.Request, _ *store.User) {
+	a.proxyCall(w, r, "security", "state", nil, 40*time.Second)
+}
+
 type confirmReq struct {
 	Confirm bool   `json:"confirm"`
 	Signal  string `json:"signal"`

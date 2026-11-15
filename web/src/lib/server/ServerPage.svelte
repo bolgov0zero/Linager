@@ -15,6 +15,7 @@
   import FilesTab from './tabs/FilesTab.svelte';
   import NetworkTab from './tabs/NetworkTab.svelte';
   import FirewallTab from './tabs/FirewallTab.svelte';
+  import SecurityTab from './tabs/SecurityTab.svelte';
   import DockerTab from './tabs/DockerTab.svelte';
   import { formatDateTime } from './format';
   import AgentUpdateBanner from './AgentUpdateBanner.svelte';
@@ -194,6 +195,8 @@
         <UpdatesTab server={detail} />
       {:else if tab === 'processes'}
         <ProcessesTab server={detail} />
+      {:else if tab === 'security'}
+        <SecurityTab server={detail} />
       {:else if tab === 'logs'}
         <LogsTab server={detail} />
       {:else}

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.42
+
+- Security tab (new agent module `security`, read-only): the SSH state (port, root login, password and key login, empty passwords, user restrictions), failed sign-in attempts of the last 7 days (total, by day, top addresses and logins, probes of users that do not exist), SSH logins (a login from an address that guessed passwords earlier is flagged), fail2ban jails and banned addresses, automatic security updates, the keys of every `authorized_keys` (fingerprints only, weak RSA/DSA marked) and the remote sessions now. Data comes from the systemd journal (`sshd` and `sshd-session`, so Debian 13 works), with `/var/log/auth.log` as a fallback. Needs agent 0.1.42; the tab is hidden for older agents.
+
 ## 0.1.41
 
 - Settings: the window is wider (up to 1360 px). Server only, agents need no update.

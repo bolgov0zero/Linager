@@ -104,6 +104,29 @@ export interface Snippet { id: number; name: string; command: string; position: 
 /** The answer of "begin": the challenge id and the options for navigator.credentials. */
 export interface PasskeyBegin { id: string; options: { publicKey: Record<string, unknown> } }
 
+// ---- security (SSH overview) ----
+export interface SecJail {
+  name: string; currently_failed: number; total_failed: number; currently_banned: number; total_banned: number; banned_ips: string[];
+}
+export interface SecState {
+  generated_at: number; period_days: number;
+  ssh: {
+    installed: boolean; source: 'effective' | 'files' | ''; ports: string[]; permit_root_login: string; password_auth: string;
+    pubkey_auth: string; kbd_interactive: string; permit_empty_passwords: string; max_auth_tries: string; user_restrictions: boolean;
+  };
+  fail2ban: { installed: boolean; active: boolean; jails: SecJail[] };
+  auto_updates: boolean;
+  logins: { time: number; user: string; ip: string; method: string; prior_failures: number }[];
+  failures: {
+    total: number; invalid_user_attempts: number; addresses: number; by_day: number[];
+    top_ips: { ip: string; count: number; users: number; last: number }[];
+    top_users: { user: string; count: number; invalid: boolean }[];
+  };
+  keys: { user: string; file: string; type: string; bits?: number; fingerprint: string; comment: string; restricted: boolean; weak: boolean; mtime: number }[];
+  sessions: { user: string; ip: string; since: number }[];
+  journal: { source: 'journal' | 'authlog' | 'none'; oldest: number; covers_period: boolean; truncated: boolean };
+}
+
 export interface ProcessInfo { pid: number; user: string; cpu: number; mem_pct: number; rss: number; state: string; cmd: string }
 export interface ProcessList { processes: ProcessInfo[]; total: number }
 export type StreamKind = 'terminal' | 'logs' | 'apt' | 'docker-logs' | 'docker-pull' | 'docker-update';
@@ -397,6 +420,7 @@ export const api = {
   serviceAction: (id: string, unit: string, action: ServiceAction, confirm: boolean) =>
     request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/services/${enc(unit)}/${action}`, { confirm }),
   apt: (id: string) => request<AptList>('GET', `api/servers/${enc(id)}/apt`),
+  security: (id: string) => request<SecState>('GET', `api/servers/${enc(id)}/security`),
   reboot: (id: string) => request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/reboot`, { confirm: true }),
   processes: (id: string, sort: 'cpu' | 'mem', n = 10) =>
     request<ProcessList>('GET', `api/servers/${enc(id)}/processes?sort=${sort}&n=${n}`),

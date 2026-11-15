@@ -231,6 +231,10 @@ Done when: on clean Debian 12/13 and Ubuntu 22.04/24.04/26.04, a single wizard r
 - Snippets: `/api/snippets` (CRUD, order, `POST /{id}/ran` audits a run).
 - Agent: the stream `docker.update` (`kind=docker-update`): recreates the container through the Docker API with a rollback, or runs `docker compose pull` and `up -d --no-deps` for a compose project; `docker.state` reports a `compose` flag.
 
+## 12g. The Security tab (0.1.42)
+- Agent: the `security` module, the `security.state` command without parameters (it reads fixed sources only, no outside input). Sources: `sshd -T` or `sshd_config`, `journalctl -t sshd -t sshd-session --since "7 days ago" -o short-unix` (parsed as a stream, at most 2 million lines), `/var/log/auth.log` as a fallback, `fail2ban-client`, `/etc/apt/apt.conf.d`, `/etc/passwd` and `authorized_keys` (fingerprints are computed in Go), `loginctl`. The result is cached for a minute.
+- Server: `GET /api/servers/{id}/security`, a proxy to the agent (40 second timeout). The tab is hidden when the agent did not report the `security` module.
+
 ## 12e. Changes after the 0.1 review
 - The agent certificate is renewed over the channel (`cert.renew` / `cert.renewed`) when less than a third of its lifetime is left;
   the agent re-reads the certificate before every connection. The reconnect pause is reset after a session longer than 30 seconds.
