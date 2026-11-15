@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.44
+
+- Security tab: the "Logged in now" and fail2ban blocks moved right under the "State" block. Server only, agents need no update.
+
 ## 0.1.43
 
 - Security: remote SSH sessions can be ended from the "Logged in now" block: the "End" button of a session and "End all sessions" for a user with several. A confirmation warns that the processes of the session stop too (tmux, screen, long operations) and that this is not a block. The agent ends only sessions from its own list of remote sessions (`loginctl terminate-session`), local console sessions are never touched, and every action goes to the audit log. Needs agent 0.1.43 and systemd-logind.

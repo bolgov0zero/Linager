@@ -156,6 +156,74 @@
       </ul>
     </section>
 
+    <div class="two">
+      <section class="card stack" aria-labelledby="sec-sessions">
+        <h3 id="sec-sessions">{$T('sec.sessions')}</h3>
+        {#if sec.sessions.length === 0}
+          <p class="muted">{$T('sec.sessions.none')}</p>
+        {:else}
+          <ul class="plain">
+            {#each sec.sessions as s (s.id)}
+              <li class="sess">
+                <span>
+                  <span class="mono">{s.user}</span> · <span class="mono">{s.ip || '—'}</span>
+                  {#if s.since}<span class="muted small"> · {$T('sec.since', { time: formatDateTime(s.since, $locale) })}</span>{/if}
+                </span>
+                <button class="btn small-btn" type="button" disabled={unreachable} onclick={() => { ending = { kind: 'session', id: s.id, user: s.user, ip: s.ip }; endError = null; }}>
+                  {$T('sec.end')}
+                </button>
+              </li>
+            {/each}
+          </ul>
+          {#each multiUsers as m (m.user)}
+            <button class="btn small-btn all" type="button" disabled={unreachable} onclick={() => { ending = { kind: 'user', user: m.user, count: m.count }; endError = null; }}>
+              {$T('sec.endAll', { user: m.user, n: m.count })}
+            </button>
+          {/each}
+          {#if ending}
+            <div class="confirm stack" role="alertdialog" aria-label={$T('sec.end')}>
+              <p>
+                {ending.kind === 'session'
+                  ? $T('sec.end.confirm', { user: ending.user, ip: ending.ip || '—' })
+                  : $T('sec.end.confirmUser', { user: ending.user, n: ending.count })}
+              </p>
+              <p class="muted small">{$T('sec.end.hint')}</p>
+              {#if endError}<p class="error" role="alert">{endError}</p>{/if}
+              <div class="row end">
+                <button class="btn" type="button" disabled={endBusy} onclick={() => (ending = null)}>{$T('common.cancel')}</button>
+                <button class="btn danger" type="button" disabled={endBusy} onclick={() => void confirmEnd()}>{$T('sec.end')}</button>
+              </div>
+            </div>
+          {/if}
+        {/if}
+      </section>
+
+      <section class="card stack" aria-labelledby="sec-f2b">
+        <h3 id="sec-f2b">fail2ban</h3>
+        {#if !sec.fail2ban.installed}
+          <p class="muted">{$T('sec.f2b.none')}</p>
+        {:else if !sec.fail2ban.active}
+          <p class="muted">{$T('sec.f2b.stopped')}</p>
+        {:else if sec.fail2ban.jails.length === 0}
+          <p class="muted">{$T('sec.f2b.nojails')}</p>
+        {:else}
+          {#each sec.fail2ban.jails as j (j.name)}
+            <div class="jail">
+              <p>
+                <strong class="mono">{j.name}</strong>
+                <span class="muted small">
+                  · {$T('sec.f2b.banned', { n: j.currently_banned })} · {$T('sec.f2b.total', { n: j.total_banned })}
+                </span>
+              </p>
+              {#if j.banned_ips.length > 0}
+                <p class="ips">{#each j.banned_ips as ip (ip)}<span class="chip-ip mono">{ip}</span>{/each}</p>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </section>
+    </div>
+
     <section class="card stack" aria-labelledby="sec-fail">
       <h3 id="sec-fail">{$T('sec.failures')}</h3>
       <div class="fail-top">
@@ -261,74 +329,6 @@
         </div>
       {/if}
     </section>
-
-    <div class="two">
-      <section class="card stack" aria-labelledby="sec-sessions">
-        <h3 id="sec-sessions">{$T('sec.sessions')}</h3>
-        {#if sec.sessions.length === 0}
-          <p class="muted">{$T('sec.sessions.none')}</p>
-        {:else}
-          <ul class="plain">
-            {#each sec.sessions as s (s.id)}
-              <li class="sess">
-                <span>
-                  <span class="mono">{s.user}</span> · <span class="mono">{s.ip || '—'}</span>
-                  {#if s.since}<span class="muted small"> · {$T('sec.since', { time: formatDateTime(s.since, $locale) })}</span>{/if}
-                </span>
-                <button class="btn small-btn" type="button" disabled={unreachable} onclick={() => { ending = { kind: 'session', id: s.id, user: s.user, ip: s.ip }; endError = null; }}>
-                  {$T('sec.end')}
-                </button>
-              </li>
-            {/each}
-          </ul>
-          {#each multiUsers as m (m.user)}
-            <button class="btn small-btn all" type="button" disabled={unreachable} onclick={() => { ending = { kind: 'user', user: m.user, count: m.count }; endError = null; }}>
-              {$T('sec.endAll', { user: m.user, n: m.count })}
-            </button>
-          {/each}
-          {#if ending}
-            <div class="confirm stack" role="alertdialog" aria-label={$T('sec.end')}>
-              <p>
-                {ending.kind === 'session'
-                  ? $T('sec.end.confirm', { user: ending.user, ip: ending.ip || '—' })
-                  : $T('sec.end.confirmUser', { user: ending.user, n: ending.count })}
-              </p>
-              <p class="muted small">{$T('sec.end.hint')}</p>
-              {#if endError}<p class="error" role="alert">{endError}</p>{/if}
-              <div class="row end">
-                <button class="btn" type="button" disabled={endBusy} onclick={() => (ending = null)}>{$T('common.cancel')}</button>
-                <button class="btn danger" type="button" disabled={endBusy} onclick={() => void confirmEnd()}>{$T('sec.end')}</button>
-              </div>
-            </div>
-          {/if}
-        {/if}
-      </section>
-
-      <section class="card stack" aria-labelledby="sec-f2b">
-        <h3 id="sec-f2b">fail2ban</h3>
-        {#if !sec.fail2ban.installed}
-          <p class="muted">{$T('sec.f2b.none')}</p>
-        {:else if !sec.fail2ban.active}
-          <p class="muted">{$T('sec.f2b.stopped')}</p>
-        {:else if sec.fail2ban.jails.length === 0}
-          <p class="muted">{$T('sec.f2b.nojails')}</p>
-        {:else}
-          {#each sec.fail2ban.jails as j (j.name)}
-            <div class="jail">
-              <p>
-                <strong class="mono">{j.name}</strong>
-                <span class="muted small">
-                  · {$T('sec.f2b.banned', { n: j.currently_banned })} · {$T('sec.f2b.total', { n: j.total_banned })}
-                </span>
-              </p>
-              {#if j.banned_ips.length > 0}
-                <p class="ips">{#each j.banned_ips as ip (ip)}<span class="chip-ip mono">{ip}</span>{/each}</p>
-              {/if}
-            </div>
-          {/each}
-        {/if}
-      </section>
-    </div>
 
     <section class="card stack" aria-labelledby="sec-keys">
       <h3 id="sec-keys">{$T('sec.keys')}</h3>
