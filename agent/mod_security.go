@@ -43,6 +43,9 @@ type secModule struct {
 	lookPath func(name string) (string, error)
 	now      func() time.Time
 
+	writeConf    func(path string, data []byte) error
+	writeKeyFile func(path string, data []byte, ref string) error
+
 	passwdPath string
 	authLogs   []string // oldest first
 	aptConfDir string
@@ -68,11 +71,13 @@ func newSecModule() *secModule {
 			}
 			return 0
 		},
-		lookPath:   exec.LookPath,
-		now:        time.Now,
-		passwdPath: "/etc/passwd",
-		authLogs:   []string{"/var/log/auth.log.1", "/var/log/auth.log"},
-		aptConfDir: "/etc/apt/apt.conf.d",
+		lookPath:     exec.LookPath,
+		writeConf:    defaultWriteConf,
+		writeKeyFile: defaultWriteKeyFile,
+		now:          time.Now,
+		passwdPath:   "/etc/passwd",
+		authLogs:     []string{"/var/log/auth.log.1", "/var/log/auth.log"},
+		aptConfDir:   "/etc/apt/apt.conf.d",
 	}
 }
 
@@ -121,6 +126,11 @@ type secF2B struct {
 	Installed bool      `json:"installed"`
 	Active    bool      `json:"active"`
 	Jails     []f2bJail `json:"jails"`
+	// Bans are the banned addresses with their times; Settings are the parameters of the sshd jail.
+	Bans     []f2bBan     `json:"bans"`
+	Settings *f2bSettings `json:"settings,omitempty"`
+	// Managed is true when the settings file of the panel exists.
+	Managed bool `json:"managed"`
 }
 
 type secLogin struct {
@@ -178,6 +188,8 @@ type secState struct {
 	Keys        []authKey    `json:"keys"`
 	Sessions    []secSession `json:"sessions"`
 	Journal     secJournal   `json:"journal"`
+
+	attempts map[string]int // failed attempts per address, for the list of bans
 }
 
 // state answers "security.state"; the result is cached for a minute, so opening the tab twice is cheap.
@@ -202,9 +214,10 @@ func (m *secModule) collect(ctx context.Context) *secState {
 	now := m.now()
 	st := &secState{GeneratedAt: now.Unix(), PeriodDays: secDays, Logins: []secLogin{}, Keys: []authKey{}, Sessions: []secSession{}}
 	st.SSH = m.sshConfig(ctx)
-	st.Fail2ban = m.fail2ban(ctx)
 	st.AutoUpdates = m.autoUpdates()
 	m.analyzeLogs(ctx, now, st)
+	st.Fail2ban = m.fail2ban(ctx)
+	m.fillF2B(ctx, &st.Fail2ban, st.attempts)
 	st.Keys = m.authorizedKeys(st.SSH.Raw)
 	st.Sessions = m.sessions(ctx, now)
 	return st
@@ -268,7 +281,7 @@ func firstNonEmpty(a ...string) string {
 // ---- fail2ban ----
 
 func (m *secModule) fail2ban(ctx context.Context) secF2B {
-	f := secF2B{Jails: []f2bJail{}}
+	f := secF2B{Jails: []f2bJail{}, Bans: []f2bBan{}}
 	if _, err := m.lookPath("fail2ban-client"); err != nil {
 		return f
 	}
@@ -393,6 +406,10 @@ func (s *sshStats) fill(st *secState) {
 	st.Logins = make([]secLogin, 0, len(l))
 	for i := len(l) - 1; i >= 0; i-- {
 		st.Logins = append(st.Logins, l[i])
+	}
+	st.attempts = make(map[string]int, len(s.ips))
+	for ip, x := range s.ips {
+		st.attempts[ip] = x.count
 	}
 	f := secFailures{Total: s.total, InvalidUsers: s.invalidAll, Addresses: len(s.ips) + s.otherIPs, ByDay: s.byDay,
 		TopIPs: []secTopIP{}, TopUsers: []secTopUser{}}

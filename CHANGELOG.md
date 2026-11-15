@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.45
+
+- Disk tab (new agent module `disk`, right after Files): every partition as a pie chart with the free and the used space, the growth per day and a forecast "fills up in ~N days" (the agent records the used space every half hour); a measurement on request shows what takes the space (system, Docker, logs, databases, cache, home directories) and the biggest directories with drill-down; cleanup: journald, apt cache, unused Docker images, Docker build cache, old kernels, each with a confirmation and an audit entry. The pie charts share one look: a sector lifts on hover, a tooltip shows the size and the legend row is highlighted.
+- Security: fail2ban can be installed from the panel (three strictness modes, the address of the administrator is never blocked) and configured (threshold, ban time, repeat offenders, "Do not block" list); a block list with the history of bans, unban of one, selected or all addresses, manual blocking for a chosen time and a "Ban" button in the table of failed attempts. A key can be removed from `authorized_keys` (a copy of the file is saved first, a warning for the last key). Needs agent 0.1.45.
+- Firewall: the chains are tabs; a "Ports and connections" block with the listening ports, processes, connections and the state of each port in the firewall (with "Close the port" and "Restrict" that add a rule to the draft); "Address lists": named lists of addresses (nftables sets) that rules use as `@name`. Needs agent 0.1.45.
+- Docker: "Check images" compares the digest of the tag in the registry with the image on the host (no download) and marks containers with a newer image; "Update marked"; compose containers are grouped by project (collapsed by default) with "Update project", "Restart", "Start project" and "Project logs". Needs agent 0.1.45.
+- Heights of buttons, inputs and selects in a row are the same everywhere (the header "Settings" button with a counter, the dashboard search, the add-passkey row, the add-rule row of the firewall).
+
 ## 0.1.44
 
 - Security tab: the "Logged in now" and fail2ban blocks moved right under the "State" block. Server only, agents need no update.

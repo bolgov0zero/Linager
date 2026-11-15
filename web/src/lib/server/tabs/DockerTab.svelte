@@ -12,6 +12,7 @@
     createBatcher,
     cpuText,
     errorText,
+    groupContainers,
     imageTitle,
     isRunning,
     LINE_LIMIT,
@@ -19,6 +20,7 @@
     shortId,
     stateTone,
     unavailable,
+    type ContainerGroup,
     type StreamLine,
     type StreamState,
   } from './docker-util';
@@ -40,6 +42,8 @@
     title: string;
     text: string;
     label: string;
+    /** A destructive action gets a red button, an update a normal accent one. */
+    danger: boolean;
     run: () => Promise<void>;
   }
 
@@ -63,6 +67,9 @@
   let logBox = $state<HTMLDivElement | undefined>(undefined);
   /** The "update the container" dialog: image is only used for a plain container (compose has it in its file). */
   let updateFor = $state<{ c: DockerContainer; image: string } | null>(null);
+  /** Open groups by key; compose projects start collapsed, the containers without a project open. */
+  let openGroups = $state<Record<string, boolean>>({});
+  let checking = $state(false);
   let pullInput = $state('');
   let pullError = $state('');
 
@@ -73,6 +80,9 @@
   const containers = $derived<DockerContainer[]>(info?.containers ?? []);
   const images = $derived<DockerImage[]>(info?.images ?? []);
   const runningCount = $derived(containers.filter(isRunning).length);
+  const groups = $derived(groupContainers(containers));
+  const hasProjects = $derived(groups.some((g) => g.key !== ''));
+  const updatable = $derived(containers.filter((c) => c.upd === 'new'));
   const offline = $derived(loadState === 'offline' || !server.online);
   const readOnly = $derived(offline || loadState === 'disabled');
 
@@ -105,6 +115,7 @@
     const id = serverId;
     untrack(() => {
       info = null;
+      openGroups = {};
       loadState = 'loading';
       void refresh(id);
     });
@@ -186,6 +197,90 @@
     connect(stream, openStream(serverId, 'docker-update', params));
   }
 
+  function isOpen(g: ContainerGroup): boolean {
+    return openGroups[g.key] ?? g.key === '';
+  }
+
+  function toggleGroup(g: ContainerGroup): void {
+    openGroups[g.key] = !isOpen(g);
+  }
+
+  async function checkImages(): Promise<void> {
+    if (checking || readOnly) return;
+    const id = serverId;
+    checking = true;
+    try {
+      const res = await api.dockerCheck(id);
+      showToast(T('docker.check.done', { n: res.new }));
+      await refresh(id);
+    } catch (e) {
+      showToast(errorText(e, T));
+    } finally {
+      checking = false;
+    }
+  }
+
+  function requestUpdateMarked(): void {
+    const list = updatable;
+    if (list.length === 0) return;
+    ask = {
+      title: T('docker.marked.title'),
+      text: T('docker.marked.text', { names: list.map((c) => c.name).join(', ') }),
+      label: T('docker.update.go'),
+      danger: false,
+      run: async () => {
+        stopStream();
+        stream = { kind: 'update', title: T('docker.marked.title'), lines: [], state: 'connecting' };
+        connect(stream, openStream(serverId, 'docker-update', { containers: list.map((c) => c.id).join(',') }));
+      },
+    };
+  }
+
+  function requestUpdateProject(g: ContainerGroup): void {
+    ask = {
+      title: T('docker.grp.updateTitle', { name: g.key }),
+      text: T('docker.grp.updateText'),
+      label: T('docker.update.go'),
+      danger: false,
+      run: async () => {
+        stopStream();
+        stream = { kind: 'update', title: T('docker.grp.updateTitle', { name: g.key }), lines: [], state: 'connecting' };
+        connect(stream, openStream(serverId, 'docker-update', { container: g.items[0].id, project: 1 }));
+      },
+    };
+  }
+
+  function openProjectLogs(g: ContainerGroup): void {
+    stopStream();
+    stream = { kind: 'logs', title: T('docker.grp.logsTitle', { name: g.key }), lines: [], state: 'connecting' };
+    connect(stream, openStream(serverId, 'docker-project-logs', { container: g.items[0].id, lines: 200 }));
+  }
+
+  /** Start or restart every container of a project, one after the other. */
+  async function projectAction(g: ContainerGroup, action: 'start' | 'restart'): Promise<void> {
+    const id = serverId;
+    busy = `group:${g.key}`;
+    try {
+      for (const c of g.items) {
+        if (action === 'restart' && !isRunning(c)) continue;
+        if (action === 'start' && isRunning(c)) continue;
+        await api.dockerContainerAction(id, c.id, action);
+      }
+      showToast(T('docker.grp.done', { name: g.key, action: T(`docker.act.${action}`) }));
+      await refresh(id);
+    } catch (e) {
+      showToast(errorText(e, T));
+    } finally {
+      busy = null;
+    }
+  }
+
+  function checkedText(at: number | undefined): string {
+    if (!at) return T('docker.check.never');
+    const time = new Date(at * 1000).toLocaleTimeString($locale, { hour: '2-digit', minute: '2-digit' });
+    return T('docker.check.at', { time });
+  }
+
   $effect(() => {
     void stream?.lines.length;
     if (autoscroll && logBox) logBox.scrollTop = logBox.scrollHeight;
@@ -233,6 +328,7 @@
       title: T('docker.removeTitle'),
       text: T('docker.removeText', { name: c.name }),
       label: T('docker.act.remove'),
+      danger: true,
       run: () => containerAction(c, 'remove'),
     };
   }
@@ -243,6 +339,7 @@
       title: T('docker.removeImageTitle'),
       text: T('docker.removeImageText', { name: imageTitle(image) }),
       label: T('docker.act.remove'),
+      danger: true,
       run: async () => {
         try {
           await api.dockerRemoveImage(id, image.id);
@@ -279,7 +376,22 @@
       </button>
     </div>
     {#if info?.available}
-      <span class="small muted">{$tStore('docker.summary', { running: runningCount, total: containers.length })}</span>
+      <div class="row checkbar">
+        {#if section === 'containers'}
+          <span class="small muted" title={$tStore('docker.check.help')}>
+            {checkedText(info.checked_at)}{#if info.checked_at && updatable.length > 0}
+              · {$tStore('docker.check.avail', { n: updatable.length })}{/if}
+          </span>
+          <button class="btn" type="button" disabled={readOnly || checking} onclick={() => void checkImages()}>
+            {checking ? $tStore('docker.check.busy') : $tStore('docker.check.btn')}
+          </button>
+          <button class="btn primary" type="button" disabled={readOnly || updatable.length === 0} onclick={requestUpdateMarked}>
+            {$tStore('docker.updateMarked')}
+          </button>
+        {:else}
+          <span class="small muted">{$tStore('docker.summary', { running: runningCount, total: containers.length })}</span>
+        {/if}
+      </div>
     {/if}
   </div>
 
@@ -308,42 +420,44 @@
     {#if containers.length === 0}
       <p class="muted">{$tStore('docker.noContainers')}</p>
     {:else}
-      <div class="tablewrap">
-        <table class="grid">
-          <thead>
-            <tr>
-              <th>{$tStore('docker.col.container')}</th>
-              <th>{$tStore('docker.col.state')}</th>
-              <th class="hide-sm">{$tStore('docker.col.ports')}</th>
-              <th class="num">{$tStore('docker.col.cpu')}</th>
-              <th class="num hide-sm">{$tStore('docker.col.ram')}</th>
-              <th>{$tStore('docker.col.status')}</th>
-              <th class="acts-head"><span class="sr-only">{$tStore('docker.col.actions')}</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each containers as c (c.id)}
-              {@const running = isRunning(c)}
-              <tr>
-                <td class="name">
-                  <div>{c.name}</div>
-                  <div class="muted small mono">{c.image}</div>
-                </td>
-                <td>
-                  <span class="badge {stateTone(c.state)}">{c.state}</span>
-                </td>
-                <td class="hide-sm mono small">{c.ports.length ? c.ports.join(', ') : '—'}</td>
-                <td class="num mono small" data-label="CPU">{cpuText(c)}</td>
-                <td class="num mono small hide-sm">{ramText(c)}</td>
-                <td class="small">{c.status}</td>
-                <td class="acts">
-                  <ActionMenu label={$tStore('docker.menu')} items={containerMenu(c, running)} disabled={readOnly} />
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-      </div>
+      {#if hasProjects}
+        {#each groups as g (g.key)}
+          {@const open = isOpen(g)}
+          <section class="grp" class:closed={!open}>
+            <div class="grp-h">
+              <button class="grp-toggle" type="button" aria-expanded={open} aria-label={$tStore('docker.grp.toggle')} onclick={() => toggleGroup(g)}>
+                <span class="caret" aria-hidden="true"></span>
+                <h4>{g.key || $tStore('docker.grp.plain')}</h4>
+                {#if g.key}<span class="badge">compose</span>{/if}
+              </button>
+              <span class="small muted grp-sum">
+                {$tStore('docker.grp.count', { n: g.items.length })} ·
+                {g.running === g.items.length ? $tStore('docker.grp.allRunning') : $tStore('docker.grp.running', { running: g.running, total: g.items.length })}
+                {#if g.file}· <span class="mono">{g.file}</span>{/if}
+              </span>
+              <div class="grp-acts">
+                {#if g.updatable > 0}<span class="badge warn">{$tStore('docker.grp.updatable', { n: g.updatable })}</span>{/if}
+                {#if g.key}
+                  {@const gb = readOnly || busy === `group:${g.key}`}
+                  <button class="btn sm" type="button" disabled={readOnly} onclick={() => requestUpdateProject(g)}>{$tStore('docker.grp.update')}</button>
+                  {#if g.running > 0}
+                    <button class="btn sm" type="button" disabled={gb} onclick={() => void projectAction(g, 'restart')}>{$tStore('docker.grp.restart')}</button>
+                  {/if}
+                  {#if g.running < g.items.length}
+                    <button class="btn sm" type="button" disabled={gb} onclick={() => void projectAction(g, 'start')}>{$tStore('docker.grp.start')}</button>
+                  {/if}
+                  <button class="btn sm" type="button" disabled={readOnly} onclick={() => openProjectLogs(g)}>{$tStore('docker.grp.logs')}</button>
+                {/if}
+              </div>
+            </div>
+            {#if open}
+              {@render containerTable(g.items)}
+            {/if}
+          </section>
+        {/each}
+      {:else}
+        {@render containerTable(containers)}
+      {/if}
     {/if}
   {:else}
     {#if images.length === 0}
@@ -416,6 +530,58 @@
   {/if}
 </div>
 
+{#snippet containerTable(list: DockerContainer[])}
+  <div class="tablewrap">
+    <table class="grid">
+      <thead>
+        <tr>
+          <th>{$tStore('docker.col.container')}</th>
+          <th>{$tStore('docker.col.state')}</th>
+          <th class="hide-sm">{$tStore('docker.col.ports')}</th>
+          <th class="num">{$tStore('docker.col.cpu')}</th>
+          <th class="num hide-sm">{$tStore('docker.col.ram')}</th>
+          <th>{$tStore('docker.col.status')}</th>
+          <th>{$tStore('docker.col.registry')}</th>
+          <th class="acts-head"><span class="sr-only">{$tStore('docker.col.actions')}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {#each list as c (c.id)}
+          {@const running = isRunning(c)}
+          <tr class:hl={c.upd === 'new'}>
+            <td class="name">
+              <div>{c.name}</div>
+              <div class="muted small mono">{c.image}</div>
+            </td>
+            <td>
+              <span class="badge {stateTone(c.state)}">{c.state}</span>
+            </td>
+            <td class="hide-sm mono small">{c.ports.length ? c.ports.join(', ') : '—'}</td>
+            <td class="num mono small" data-label="CPU">{cpuText(c)}</td>
+            <td class="num mono small hide-sm">{ramText(c)}</td>
+            <td class="small">{c.status}</td>
+            <td class="reg small">
+              {#if c.upd === 'new'}
+                <span class="badge warn">{$tStore('docker.upd.new')}</span>
+                {#if c.upd_local && c.upd_remote}<span class="muted mono">{c.upd_local} → {c.upd_remote}</span>{/if}
+              {:else if c.upd === 'current'}
+                <span class="badge good">{$tStore('docker.upd.current')}</span>
+              {:else if c.upd === 'unknown'}
+                <span class="badge" title={c.upd_error || $tStore('docker.upd.unknownHint')}>{$tStore('docker.upd.unknown')}</span>
+              {:else}
+                <span class="muted">{$tStore('docker.upd.none')}</span>
+              {/if}
+            </td>
+            <td class="acts">
+              <ActionMenu label={$tStore('docker.menu')} items={containerMenu(c, running)} disabled={readOnly} />
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  </div>
+{/snippet}
+
 {#if stream}
   {@const s = stream}
   <div class="wide">
@@ -471,7 +637,7 @@
     <p>{a.text}</p>
     <div class="row end">
       <button class="btn" type="button" disabled={askBusy} onclick={() => (ask = null)}>{$tStore('common.cancel')}</button>
-      <button class="btn danger" type="button" disabled={askBusy} onclick={confirmAsk}>{a.label}</button>
+      <button class="btn {a.danger ? 'danger' : 'primary'}" type="button" disabled={askBusy} onclick={confirmAsk}>{a.label}</button>
     </div>
   </Modal>
 {/if}
@@ -584,6 +750,100 @@
   .badge.accent {
     border-color: var(--accent);
     color: var(--accent);
+  }
+
+  .checkbar {
+    gap: 8px;
+  }
+
+  .reg {
+    white-space: nowrap;
+  }
+
+  tr.hl td {
+    background: color-mix(in srgb, var(--accent) 9%, transparent);
+  }
+
+  .grp {
+    border: 2px solid var(--line);
+  }
+
+  .grp + .grp {
+    margin-top: 4px;
+  }
+
+  .grp-h {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 8px 12px;
+    background: var(--seg-off);
+  }
+
+  .grp-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .grp-toggle h4 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 16px;
+  }
+
+  .grp-toggle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .grp-sum {
+    flex: 1 1 200px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .grp-acts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .grp-acts :global(.btn) {
+    display: inline-flex;
+    align-items: center;
+    height: 30px;
+    padding-block: 0;
+    font-size: 13px;
+  }
+
+  .grp-acts .badge {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .caret {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid currentColor;
+    transition: transform 0.15s;
+  }
+
+  .grp.closed .caret {
+    transform: rotate(-90deg);
   }
 
   .pull {

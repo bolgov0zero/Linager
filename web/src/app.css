@@ -27,6 +27,13 @@
   /* Chart series pair (network receive / send), validated for colour-blind separation. */
   --series-1: #2b55d9;
   --series-2: #a3369a;
+  /* Categories of pie charts (the disk tab). */
+  --c1: #2b55d9;
+  --c2: #a3369a;
+  --c3: #b36f0e;
+  --c4: #1e8a4b;
+  --c5: #1f8aa0;
+  --c6: #6b7488;
   --font-display: "Medeo Pixel", "Medeo Mono", ui-monospace, Menlo, Consolas, monospace;
   --font-body: "Medeo Mono", ui-monospace, Menlo, Consolas, monospace;
   font-variation-settings: "ELSH" 1;
@@ -49,6 +56,12 @@
     --shade: #0a0c10;
     --series-1: #5b84f0;
     --series-2: #c95fc0;
+    --c1: #7d9cff;
+    --c2: #c95fc0;
+    --c3: #e6b04b;
+    --c4: #4fcf86;
+    --c5: #4fc3d9;
+    --c6: #9aa3b5;
     color-scheme: dark;
   }
 }
@@ -67,6 +80,12 @@
   --shade: #0a0c10;
   --series-1: #5b84f0;
   --series-2: #c95fc0;
+  --c1: #7d9cff;
+  --c2: #c95fc0;
+  --c3: #e6b04b;
+  --c4: #4fcf86;
+  --c5: #4fc3d9;
+  --c6: #9aa3b5;
   color-scheme: dark;
 }
 

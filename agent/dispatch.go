@@ -134,6 +134,7 @@ func NewRegistry(cfg *config.Agent, col Collector, log *slog.Logger, dataDir str
 		fm := newFwModule(pend, dataDir)
 		pend.Register("firewall", fm.kind())
 		r.cmds["firewall.state"] = fm.state
+		r.cmds["firewall.ports"] = fm.ports
 		r.cmds["firewall.validate"] = fm.validate
 		r.cmds["firewall.apply"] = fm.apply
 	}
@@ -164,16 +165,31 @@ func NewRegistry(cfg *config.Agent, col Collector, log *slog.Logger, dataDir str
 		sec := newSecModule()
 		r.cmds["security.state"] = sec.state
 		r.cmds["security.terminate"] = sec.terminate
+		r.cmds["security.ban"] = sec.f2bBanIP
+		r.cmds["security.unban"] = sec.f2bUnban
+		r.cmds["security.banHistory"] = sec.f2bBanHistory
+		r.cmds["security.f2bSettings"] = sec.f2bSaveSettings
+		r.cmds["security.keyRemove"] = sec.keyRemove
+		r.streams["security.f2bInstall"] = sec.f2bInstall
 	}
 	if cfg.Enabled("docker") && dockerAvailable() {
 		r.cmds["docker.state"] = dockerState
 		r.cmds["docker.container"] = dockerContainerAction
 		r.cmds["docker.imageRemove"] = dockerImageRemove
+		r.cmds["docker.check"] = dockerCheck
+		r.streams["docker.composeLogs"] = dockerComposeLogs
 		r.streams["docker.logs"] = dockerLogs
 		r.streams["docker.pull"] = dockerPull
 		r.streams["docker.update"] = dockerUpdate
 	} else {
 		r.modules = without(r.modules, "docker")
+	}
+	if cfg.Enabled("disk") {
+		dm := newDiskModule(dataDir)
+		dm.start()
+		r.cmds["disk.state"] = dm.stateCmd
+		r.cmds["disk.scan"] = dm.scanCmd
+		r.cmds["disk.clean"] = dm.cleanCmd
 	}
 	r.cmds["system.reboot"] = sysReboot // always available: rebooting is not a toggleable module
 	return r

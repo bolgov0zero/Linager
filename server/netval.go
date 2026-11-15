@@ -196,6 +196,13 @@ func ruleVerdictFor(rule string, port int) (matches bool, verdict string) {
 	return true, strings.ToLower(verdictRe.FindString(rule))
 }
 
+// FwDraftSet is a named list of addresses of a firewall draft; the agent validates the content.
+type FwDraftSet struct {
+	Name     string   `json:"name"`
+	Family   string   `json:"family"`
+	Elements []string `json:"elements"`
+}
+
 // FwDraftChain is one chain of a firewall draft.
 type FwDraftChain struct {
 	Name   string `json:"name"`

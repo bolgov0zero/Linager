@@ -108,13 +108,20 @@ export interface PasskeyBegin { id: string; options: { publicKey: Record<string,
 export interface SecJail {
   name: string; currently_failed: number; total_failed: number; currently_banned: number; total_banned: number; banned_ips: string[];
 }
+export interface F2bBan { ip: string; jail: string; banned_at: number; unban_at: number; attempts: number }
+/** Parameters of the sshd jail; times are in seconds, a ban time of -1 means forever. */
+export interface F2bSettings { maxretry: number; findtime: number; bantime: number; increment: boolean; recidive: boolean; ignore: string[] }
+export interface F2bEvent { time: number; event: 'ban' | 'unban'; ip: string; jail: string }
+export interface F2bHistory { events: F2bEvent[]; total: number; log: string; available: boolean }
 export interface SecState {
   generated_at: number; period_days: number;
+  /** The address the administrator is connected from (never blocked by the panel). */
+  self_ip?: string;
   ssh: {
     installed: boolean; source: 'effective' | 'files' | ''; ports: string[]; permit_root_login: string; password_auth: string;
     pubkey_auth: string; kbd_interactive: string; permit_empty_passwords: string; max_auth_tries: string; user_restrictions: boolean;
   };
-  fail2ban: { installed: boolean; active: boolean; jails: SecJail[] };
+  fail2ban: { installed: boolean; active: boolean; jails: SecJail[]; bans: F2bBan[]; settings?: F2bSettings; managed: boolean };
   auto_updates: boolean;
   logins: { time: number; user: string; ip: string; method: string; prior_failures: number }[];
   failures: {
@@ -127,9 +134,21 @@ export interface SecState {
   journal: { source: 'journal' | 'authlog' | 'none'; oldest: number; covers_period: boolean; truncated: boolean };
 }
 
+// ---- disk ----
+export interface DiskFS {
+  mount: string; device: string; fs: string; total: number; used: number; avail: number;
+  inodes_total: number; inodes_used: number; pct: number;
+  /** Growth in bytes per day and days until the free space is used up (0: unknown or not growing). */
+  per_day: number; days_left: number; history_days: number; trend: number[];
+}
+export interface DiskCleanItem { kind: 'journal' | 'apt' | 'docker-images' | 'docker-build' | 'kernels'; size: number; frees: number; count?: number; items?: string[]; keep?: string }
+export interface DiskState { filesystems: DiskFS[]; cleanup: DiskCleanItem[]; docker: boolean }
+export interface DiskNode { name: string; size: number; children?: DiskNode[] }
+export interface DiskScan { scanned_at: number; mount: string; partial: boolean; tree: DiskNode; categories: { id: string; size: number }[] }
+
 export interface ProcessInfo { pid: number; user: string; cpu: number; mem_pct: number; rss: number; state: string; cmd: string }
 export interface ProcessList { processes: ProcessInfo[]; total: number }
-export type StreamKind = 'terminal' | 'logs' | 'apt' | 'docker-logs' | 'docker-pull' | 'docker-update';
+export type StreamKind = 'terminal' | 'logs' | 'apt' | 'docker-logs' | 'docker-pull' | 'docker-update' | 'docker-project-logs' | 'f2b-install';
 
 // ---- files (stage 5) ----
 export interface FileEntry {
@@ -176,10 +195,23 @@ export interface ApplyWarning { code: 'primary_iface' | 'ssh_port' | 'agent_link
 // ---- firewall (stage 5) ----
 export interface FwRule { text: string; packets?: number; bytes?: number }
 export interface FwChain { name: 'input' | 'forward' | 'output'; policy: 'accept' | 'drop'; rules: FwRule[] }
-export interface FirewallDraft { chains: { name: FwChain['name']; policy: FwChain['policy']; rules: { text: string }[] }[] }
+/** A named list of addresses (nftables set) that rules use as `ip saddr @name`. */
+export interface FwSet { name: string; family: 'ipv4' | 'ipv6'; elements: string[] }
+export interface FirewallDraft { sets?: FwSet[]; chains: { name: FwChain['name']; policy: FwChain['policy']; rules: { text: string }[] }[] }
+/** One listening port with what the firewall says about it. */
+export interface FwListener {
+  proto: 'tcp' | 'udp'; port: number; addrs: string[]; process: string; pid: number; conns: number;
+  scope: 'all' | 'local' | 'addr' | 'docker';
+  firewall: 'allowed' | 'restricted' | 'blocked' | 'open' | 'policy' | 'local' | 'docker';
+  risky: boolean;
+}
+export interface FwPorts {
+  available: boolean; policy?: 'accept' | 'drop'; listeners: FwListener[];
+  remotes: { addr: string; port: number; conns: number }[]; exposed?: number;
+}
 export interface FirewallInfo {
   available: boolean; ufw_active: boolean;
-  chains: FwChain[]; ruleset: string; other_tables: string[];
+  chains: FwChain[]; sets?: FwSet[]; ruleset: string; other_tables: string[];
   pending: PendingChange | null; draft: FirewallDraft | null;
 }
 
@@ -189,9 +221,15 @@ export interface DockerContainer {
   created: number; cpu: number; mem_used: number; mem_limit: number;
   /** The container belongs to a docker compose project (it is updated through compose). */
   compose?: boolean;
+  /** Compose project, service, directory and file of the project (only for a compose container). */
+  project?: string; service?: string; workdir?: string; config_file?: string;
+  /** Result of the last image check: new (a newer image exists), current, unknown. Empty if not checked. */
+  upd?: 'new' | 'current' | 'unknown' | '';
+  upd_local?: string; upd_remote?: string; upd_error?: string;
 }
 export interface DockerImage { id: string; repo_tags: string[]; size: number; created: number; used: boolean }
-export interface DockerInfo { available: boolean; containers: DockerContainer[]; images: DockerImage[] }
+export interface DockerInfo { available: boolean; containers: DockerContainer[]; images: DockerImage[]; checked_at?: number }
+export interface DockerCheckResult { checked_at: number; new: number; current: number; unknown: number }
 
 // ---- updates and audit (stage 6) ----
 export interface UpdateStep { id: 'verify' | 'backup' | 'stop' | 'replace' | 'migrate' | 'start'; state: 'pending' | 'running' | 'done' | 'failed' }
@@ -422,6 +460,19 @@ export const api = {
   apt: (id: string) => request<AptList>('GET', `api/servers/${enc(id)}/apt`),
   security: (id: string) => request<SecState>('GET', `api/servers/${enc(id)}/security`),
   /** Ends one remote session, or all remote sessions of a user. The processes of the sessions stop with them. */
+  disk: (id: string) => request<DiskState>('GET', `api/servers/${enc(id)}/disk`),
+  diskScan: (id: string, mount: string, force: boolean) => request<DiskScan>('POST', `api/servers/${enc(id)}/disk/scan`, { mount, force }),
+  diskClean: (id: string, kind: DiskCleanItem['kind']) =>
+    request<{ ok: boolean; freed: number; output: string }>('POST', `api/servers/${enc(id)}/disk/clean`, { kind, confirm: true }),
+  securityBan: (id: string, ip: string, duration: number) =>
+    request<{ ok: boolean; timed: boolean }>('POST', `api/servers/${enc(id)}/security/ban`, { ip, duration, confirm: true }),
+  securityUnban: (id: string, target: { ips: string[] } | { all: true }) =>
+    request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/security/unban`, { ...target, confirm: true }),
+  securityF2bSettings: (id: string, settings: F2bSettings) =>
+    request<{ ok: boolean }>('PUT', `api/servers/${enc(id)}/security/fail2ban`, { ...settings, confirm: true }),
+  securityBans: (id: string, limit = 200) => request<F2bHistory>('GET', `api/servers/${enc(id)}/security/bans?limit=${limit}`),
+  securityKeyRemove: (id: string, key: { user: string; file: string; fingerprint: string }) =>
+    request<{ ok: boolean; removed: number; backup: string }>('POST', `api/servers/${enc(id)}/security/keys/remove`, { ...key, confirm: true }),
   securityTerminate: (id: string, target: { session: string } | { user: string }) =>
     request<{ ok: boolean; terminated: { id: string; user: string; ip: string }[] }>('POST', `api/servers/${enc(id)}/security/terminate`, { ...target, confirm: true }),
   reboot: (id: string) => request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/reboot`, { confirm: true }),
@@ -497,6 +548,7 @@ export const api = {
 
   // firewall
   firewall: (id: string) => request<FirewallInfo>('GET', `api/servers/${enc(id)}/firewall`),
+  firewallPorts: (id: string) => request<FwPorts>('GET', `api/servers/${enc(id)}/firewall/ports`),
   firewallValidate: (id: string, draft: FirewallDraft) =>
     request<{ ok: boolean; error?: string }>('POST', `api/servers/${enc(id)}/firewall/validate`, draft),
   firewallSaveDraft: (id: string, draft: FirewallDraft) =>
@@ -513,6 +565,7 @@ export const api = {
   docker: (id: string) => request<DockerInfo>('GET', `api/servers/${enc(id)}/docker`),
   dockerContainerAction: (id: string, cid: string, action: 'start' | 'stop' | 'restart' | 'remove') =>
     request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/docker/containers/${enc(cid)}/${action}`, { confirm: action === 'remove' }),
+  dockerCheck: (id: string) => request<DockerCheckResult>('POST', `api/servers/${enc(id)}/docker/check`, {}),
   dockerRemoveImage: (id: string, imageId: string) =>
     request<{ ok: boolean }>('DELETE', `api/servers/${enc(id)}/docker/images/${enc(imageId)}`),
   // updates (stage 6)

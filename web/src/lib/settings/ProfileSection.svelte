@@ -470,6 +470,13 @@
     gap: 8px;
   }
 
+  /* the field and the button of this row are the same height */
+  .add .input,
+  .add .btn {
+    height: 36px;
+    padding-block: 0;
+  }
+
   .grow {
     flex: 1;
     min-width: 0;

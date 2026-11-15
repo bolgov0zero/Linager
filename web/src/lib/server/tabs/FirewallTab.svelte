@@ -9,13 +9,16 @@
     type FirewallDraft,
     type FirewallInfo,
     type FwChain,
+    type FwSet,
     type ServerDetail,
   } from '../../../api';
   import { locale, t, tr as trs } from '../../../i18n';
   import Modal from '../../Modal.svelte';
   import { showToast } from '../../toast';
   import { applyFirewall } from './fw-api';
-  import { buildRule, normalizeRule, type RuleAction, type RuleProto } from './fw-rule';
+  import FwPorts from './FwPorts.svelte';
+  import FwSetsModal from './FwSetsModal.svelte';
+  import { buildRule, normalizeRule, type ListRef, type RuleAction, type RuleProto } from './fw-rule';
 
   type ChainName = FwChain['name'];
   type Policy = FwChain['policy'];
@@ -61,6 +64,8 @@
   let addBusy = $state(false);
 
   let showRuleset = $state(false);
+  let activeChain = $state<ChainName>('input');
+  let setsOpen = $state(false);
 
   let now = $state(Date.now() / 1000);
   let pendingBusy = $state(false);
@@ -75,7 +80,10 @@
   const remaining = $derived(pending ? Math.max(0, pending.deadline - now) : 0);
   const countdown = $derived(Math.ceil(remaining));
   const expired = $derived(pending !== null && remaining <= 0);
-  const shown = $derived<FirewallDraft | null>(info ? (draft ?? fromChains(info.chains)) : null);
+  const shown = $derived<FirewallDraft | null>(info ? (draft ?? fromInfo(info.chains, info.sets)) : null);
+  const shownSets = $derived<FwSet[]>(shown?.sets ?? []);
+  const listRefs = $derived<ListRef[]>(shownSets.map((x) => ({ name: x.name, family: x.family })));
+  const allRuleTexts = $derived((shown?.chains ?? []).flatMap((c) => c.rules.map((r) => r.text)));
 
   const changes = $derived.by<Change[]>(() => {
     if (!draft || !info) return [];
@@ -98,11 +106,31 @@
         out.push({ key: 'fw.change.order', vars: { chain: name } });
       }
     }
+    const wasSets = info.sets ?? [];
+    const nowSets = draft.sets ?? wasSets;
+    for (const set of nowSets) {
+      const before = wasSets.find((x) => x.name === set.name);
+      if (!before) {
+        out.push({ key: 'fw.change.setAdded', vars: { name: set.name } });
+        continue;
+      }
+      const added = set.elements.filter((e) => !before.elements.includes(e)).length;
+      const removed = before.elements.filter((e) => !set.elements.includes(e)).length;
+      if (added || removed) out.push({ key: 'fw.change.setChanged', vars: { name: set.name, added: String(added), removed: String(removed) } });
+    }
+    for (const set of wasSets) {
+      if (!nowSets.some((x) => x.name === set.name)) out.push({ key: 'fw.change.setRemoved', vars: { name: set.name } });
+    }
     return out;
   });
 
-  function fromChains(chains: FwChain[]): FirewallDraft {
+  function copySets(sets: FwSet[] | undefined): FwSet[] {
+    return (sets ?? []).map((x) => ({ name: x.name, family: x.family, elements: [...x.elements] }));
+  }
+
+  function fromInfo(chains: FwChain[], sets: FwSet[] | undefined): FirewallDraft {
     return {
+      sets: copySets(sets),
       chains: CHAIN_NAMES.map((name) => {
         const chain = chains.find((c) => c.name === name);
         return {
@@ -116,6 +144,8 @@
 
   function copyDraft(source: FirewallDraft): FirewallDraft {
     return {
+      // an older draft has no lists: keep the ones that exist on the host
+      sets: copySets(source.sets ?? info?.sets),
       chains: source.chains.map((c) => ({
         name: c.name,
         policy: c.policy,
@@ -125,11 +155,11 @@
   }
 
   function base(): FirewallDraft {
-    return draft ?? fromChains(info?.chains ?? []);
+    return draft ?? fromInfo(info?.chains ?? [], info?.sets);
   }
 
   function mapChain(d: FirewallDraft, name: ChainName, fn: (c: FirewallDraft['chains'][number]) => FirewallDraft['chains'][number]): FirewallDraft {
-    return { chains: d.chains.map((c) => (c.name === name ? fn(c) : c)) };
+    return { ...d, chains: d.chains.map((c) => (c.name === name ? fn(c) : c)) };
   }
 
   function tx(key: string, vars?: Record<string, string | number>): string {
@@ -320,7 +350,7 @@
       source: addSource,
       action: addAction,
       comment: addComment,
-    });
+    }, listRefs);
     if (!built.ok) {
       formError = tx(built.error);
       return;
@@ -331,6 +361,20 @@
       addSource = '';
       addComment = '';
     }
+  }
+
+  function changeSets(next: FwSet[]): void {
+    commit({ ...base(), sets: next });
+  }
+
+  /** Rules suggested by the ports table: appended to the input chain one after the other. */
+  async function addInputRules(texts: string[]): Promise<string | null> {
+    for (const text of texts) {
+      const err = await appendRule('input', text);
+      if (err) return err;
+    }
+    activeChain = 'input';
+    return null;
   }
 
   async function addRaw(): Promise<void> {
@@ -497,7 +541,27 @@
     {#if !info.available}
       <p class="card">{$trs('fw.notAvailable')}</p>
     {:else}
-      {#each CHAIN_NAMES as name (name)}
+      <div class="tabsrow">
+        <div class="row" role="group" aria-label={$trs('fw.chains.tabs')}>
+          {#each CHAIN_NAMES as name (name)}
+            {@const count = shown?.chains.find((c) => c.name === name)?.rules.length ?? 0}
+            <button
+              class="chip"
+              type="button"
+              aria-pressed={activeChain === name}
+              onclick={() => {
+                activeChain = name;
+                addChain = name;
+              }}>{name} <span class="count">{count}</span></button
+            >
+          {/each}
+        </div>
+        <button class="btn" type="button" onclick={() => (setsOpen = true)}>
+          {$trs('fw.sets.open')} <span class="count">{shownSets.length}</span>
+        </button>
+      </div>
+
+      {#each CHAIN_NAMES.filter((n) => n === activeChain) as name (name)}
         {@const chain = shown?.chains.find((c) => c.name === name)}
         {#if chain}
           <section class="chain">
@@ -664,6 +728,10 @@
       </section>
     {/if}
 
+    {#if info.available}
+      <FwPorts serverId={serverId} lists={shownSets} onrules={addInputRules} />
+    {/if}
+
     <section class="ruleset-block">
       <div class="ruleset-head">
         <h3 class="sect">{$trs('fw.ruleset.title')}</h3>
@@ -679,6 +747,10 @@
       {/if}
     </section>
   </div>
+{/if}
+
+{#if setsOpen}
+  <FwSetsModal sets={shownSets} rules={allRuleTexts} onchange={changeSets} onclose={() => (setsOpen = false)} />
 {/if}
 
 {#if warnOpen}
@@ -781,6 +853,27 @@
   .error {
     margin: 0;
     color: var(--crit);
+  }
+
+  .tabsrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .tabsrow .count {
+    margin-left: 4px;
+    color: var(--muted);
+  }
+
+  .tabsrow :global(.btn),
+  .tabsrow :global(.chip) {
+    display: inline-flex;
+    align-items: center;
+    height: 36px;
+    padding-block: 0;
   }
 
   .chain,
@@ -949,6 +1042,20 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
+  }
+
+  /* One height for every control of the row: the button is the tallest. */
+  .inl .ctl,
+  .inl :global(.sel),
+  .inl :global(.btn) {
+    box-sizing: border-box;
+    height: 36px;
+    padding-block: 0;
+  }
+
+  .inl :global(.btn) {
+    display: inline-flex;
+    align-items: center;
   }
 
   .errt {

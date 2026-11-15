@@ -157,6 +157,8 @@ func dockerState(ctx context.Context, _ json.RawMessage, _ bool) (any, error) {
 		ID, Name, Image, State, Status string
 		Ports                          []string
 		Compose                        bool
+		Project, Service, Dir, File    string
+		ImageID, FullID                string
 		Created                        int64
 		CPU                            float64
 		MemUsed, MemLimit              uint64
@@ -167,7 +169,9 @@ func dockerState(ctx context.Context, _ json.RawMessage, _ bool) (any, error) {
 	for i, c := range cs {
 		used[c.ImageID] = true
 		name := strings.TrimPrefix(first(c.Names), "/")
-		rows[i] = &row{ID: c.ID[:12], Name: name, Image: c.Image, State: c.State, Status: c.Status, Ports: portStrings(c), Created: c.Created, Compose: c.Labels[composeProject] != ""}
+		rows[i] = &row{ID: c.ID[:12], Name: name, Image: c.Image, State: c.State, Status: c.Status, Ports: portStrings(c), Created: c.Created, Compose: c.Labels[composeProject] != "",
+			Project: c.Labels[composeProject], Service: c.Labels["com.docker.compose.service"], Dir: c.Labels["com.docker.compose.project.working_dir"],
+			File: first(strings.Split(c.Labels["com.docker.compose.project.config_files"], ",")), ImageID: c.ImageID, FullID: c.ID}
 		if c.State != "running" {
 			continue
 		}
@@ -189,8 +193,15 @@ func dockerState(ctx context.Context, _ json.RawMessage, _ bool) (any, error) {
 	wg.Wait()
 	cont := make([]map[string]any, 0, len(rows))
 	for _, r := range rows {
-		cont = append(cont, map[string]any{"id": r.ID, "name": r.Name, "image": r.Image, "state": r.State, "status": r.Status, "ports": r.Ports,
-			"created": r.Created, "compose": r.Compose, "cpu": r.CPU, "mem_used": r.MemUsed, "mem_limit": r.MemLimit})
+		m := map[string]any{"id": r.ID, "name": r.Name, "image": r.Image, "state": r.State, "status": r.Status, "ports": r.Ports,
+			"created": r.Created, "compose": r.Compose, "cpu": r.CPU, "mem_used": r.MemUsed, "mem_limit": r.MemLimit}
+		if r.Compose {
+			m["project"], m["service"], m["workdir"], m["config_file"] = r.Project, r.Service, r.Dir, r.File
+		}
+		if e, ok := checkFor(r.FullID, r.ImageID); ok {
+			m["upd"], m["upd_local"], m["upd_remote"], m["upd_error"] = e.status, e.local, e.remote, e.err
+		}
+		cont = append(cont, m)
 	}
 	sort.Slice(cont, func(i, j int) bool { return cont[i]["name"].(string) < cont[j]["name"].(string) })
 	imgs := make([]map[string]any, 0, len(ims))
@@ -201,7 +212,7 @@ func dockerState(ctx context.Context, _ json.RawMessage, _ bool) (any, error) {
 		}
 		imgs = append(imgs, map[string]any{"id": strings.TrimPrefix(im.ID, "sha256:")[:12], "repo_tags": tags, "size": im.Size, "created": im.Created, "used": used[im.ID]})
 	}
-	return map[string]any{"available": true, "containers": cont, "images": imgs}, nil
+	return map[string]any{"available": true, "containers": cont, "images": imgs, "checked_at": checkedAt()}, nil
 }
 
 func first(s []string) string {

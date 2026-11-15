@@ -4,6 +4,7 @@
   import { locale, t, tr as T } from '../../../i18n';
   import { showToast } from '../../toast';
   import { formatDateTime } from '../format';
+  import F2bCard from './F2bCard.svelte';
   import { barHeights, keyLabel, postureChecks, worstTone } from './sec-util';
   import { unavailableKind } from './svc';
 
@@ -77,6 +78,57 @@
       }
     } finally {
       endBusy = false;
+    }
+  }
+
+  // ---- banning an address from the list of failed attempts ----
+  const bannedIps = $derived(new Set((sec?.fail2ban.bans ?? []).map((b) => b.ip)));
+  const canBan = $derived(!!sec && sec.fail2ban.installed && sec.fail2ban.active);
+  let banning = $state<string | null>(null);
+
+  async function banFromList(ip: string): Promise<void> {
+    if (banning) return;
+    banning = ip;
+    try {
+      await api.securityBan(server.id, ip, 0);
+      showToast(t('sec.f2b.banned.done', undefined, { ip }));
+      await load(server.id);
+    } catch (e) {
+      showToast(e instanceof ApiError && e.serverMessage ? e.serverMessage : t('common.genericError'));
+    } finally {
+      banning = null;
+    }
+  }
+
+  // ---- removing a key from authorized_keys ----
+  type SecKey = SecState['keys'][number];
+  let removing = $state<SecKey | null>(null);
+  let rmBusy = $state(false);
+  let rmError = $state<string | null>(null);
+
+  /** The warning for the key about to be deleted: it may be the only way in for the user. */
+  const rmWarn = $derived.by(() => {
+    const k = removing;
+    if (!k || !sec) return null;
+    const mine = sec.keys.filter((x) => x.user === k.user).length;
+    if (mine > 1) return null;
+    return sec.ssh.password_auth === 'no' ? 'sec.keys.warnLockout' : 'sec.keys.warnLast';
+  });
+
+  async function confirmRemove(): Promise<void> {
+    const k = removing;
+    if (!k || rmBusy) return;
+    rmBusy = true;
+    rmError = null;
+    try {
+      await api.securityKeyRemove(server.id, { user: k.user, file: k.file, fingerprint: k.fingerprint });
+      removing = null;
+      showToast(t('sec.keys.removed'));
+      await load(server.id);
+    } catch (e) {
+      rmError = e instanceof ApiError && e.serverMessage ? e.serverMessage : t('common.genericError');
+    } finally {
+      rmBusy = false;
     }
   }
 
@@ -156,73 +208,48 @@
       </ul>
     </section>
 
-    <div class="two">
-      <section class="card stack" aria-labelledby="sec-sessions">
-        <h3 id="sec-sessions">{$T('sec.sessions')}</h3>
-        {#if sec.sessions.length === 0}
-          <p class="muted">{$T('sec.sessions.none')}</p>
-        {:else}
-          <ul class="plain">
-            {#each sec.sessions as s (s.id)}
-              <li class="sess">
-                <span>
-                  <span class="mono">{s.user}</span> · <span class="mono">{s.ip || '—'}</span>
-                  {#if s.since}<span class="muted small"> · {$T('sec.since', { time: formatDateTime(s.since, $locale) })}</span>{/if}
-                </span>
-                <button class="btn small-btn" type="button" disabled={unreachable} onclick={() => { ending = { kind: 'session', id: s.id, user: s.user, ip: s.ip }; endError = null; }}>
-                  {$T('sec.end')}
-                </button>
-              </li>
-            {/each}
-          </ul>
-          {#each multiUsers as m (m.user)}
-            <button class="btn small-btn all" type="button" disabled={unreachable} onclick={() => { ending = { kind: 'user', user: m.user, count: m.count }; endError = null; }}>
-              {$T('sec.endAll', { user: m.user, n: m.count })}
-            </button>
+    <section class="card stack" aria-labelledby="sec-sessions">
+      <h3 id="sec-sessions">{$T('sec.sessions')}</h3>
+      {#if sec.sessions.length === 0}
+        <p class="muted">{$T('sec.sessions.none')}</p>
+      {:else}
+        <ul class="plain">
+          {#each sec.sessions as s (s.id)}
+            <li class="sess">
+              <span>
+                <span class="mono">{s.user}</span> · <span class="mono">{s.ip || '—'}</span>
+                {#if s.since}<span class="muted small"> · {$T('sec.since', { time: formatDateTime(s.since, $locale) })}</span>{/if}
+              </span>
+              <button class="btn small-btn" type="button" disabled={unreachable} onclick={() => { ending = { kind: 'session', id: s.id, user: s.user, ip: s.ip }; endError = null; }}>
+                {$T('sec.end')}
+              </button>
+            </li>
           {/each}
-          {#if ending}
-            <div class="confirm stack" role="alertdialog" aria-label={$T('sec.end')}>
-              <p>
-                {ending.kind === 'session'
-                  ? $T('sec.end.confirm', { user: ending.user, ip: ending.ip || '—' })
-                  : $T('sec.end.confirmUser', { user: ending.user, n: ending.count })}
-              </p>
-              <p class="muted small">{$T('sec.end.hint')}</p>
-              {#if endError}<p class="error" role="alert">{endError}</p>{/if}
-              <div class="row end">
-                <button class="btn" type="button" disabled={endBusy} onclick={() => (ending = null)}>{$T('common.cancel')}</button>
-                <button class="btn danger" type="button" disabled={endBusy} onclick={() => void confirmEnd()}>{$T('sec.end')}</button>
-              </div>
+        </ul>
+        {#each multiUsers as m (m.user)}
+          <button class="btn small-btn all" type="button" disabled={unreachable} onclick={() => { ending = { kind: 'user', user: m.user, count: m.count }; endError = null; }}>
+            {$T('sec.endAll', { user: m.user, n: m.count })}
+          </button>
+        {/each}
+        {#if ending}
+          <div class="confirm stack" role="alertdialog" aria-label={$T('sec.end')}>
+            <p>
+              {ending.kind === 'session'
+                ? $T('sec.end.confirm', { user: ending.user, ip: ending.ip || '—' })
+                : $T('sec.end.confirmUser', { user: ending.user, n: ending.count })}
+            </p>
+            <p class="muted small">{$T('sec.end.hint')}</p>
+            {#if endError}<p class="error" role="alert">{endError}</p>{/if}
+            <div class="row end">
+              <button class="btn" type="button" disabled={endBusy} onclick={() => (ending = null)}>{$T('common.cancel')}</button>
+              <button class="btn danger" type="button" disabled={endBusy} onclick={() => void confirmEnd()}>{$T('sec.end')}</button>
             </div>
-          {/if}
+          </div>
         {/if}
-      </section>
+      {/if}
+    </section>
 
-      <section class="card stack" aria-labelledby="sec-f2b">
-        <h3 id="sec-f2b">fail2ban</h3>
-        {#if !sec.fail2ban.installed}
-          <p class="muted">{$T('sec.f2b.none')}</p>
-        {:else if !sec.fail2ban.active}
-          <p class="muted">{$T('sec.f2b.stopped')}</p>
-        {:else if sec.fail2ban.jails.length === 0}
-          <p class="muted">{$T('sec.f2b.nojails')}</p>
-        {:else}
-          {#each sec.fail2ban.jails as j (j.name)}
-            <div class="jail">
-              <p>
-                <strong class="mono">{j.name}</strong>
-                <span class="muted small">
-                  · {$T('sec.f2b.banned', { n: j.currently_banned })} · {$T('sec.f2b.total', { n: j.total_banned })}
-                </span>
-              </p>
-              {#if j.banned_ips.length > 0}
-                <p class="ips">{#each j.banned_ips as ip (ip)}<span class="chip-ip mono">{ip}</span>{/each}</p>
-              {/if}
-            </div>
-          {/each}
-        {/if}
-      </section>
-    </div>
+    <F2bCard serverId={server.id} {sec} {unreachable} onchanged={() => load(server.id)} />
 
     <section class="card stack" aria-labelledby="sec-fail">
       <h3 id="sec-fail">{$T('sec.failures')}</h3>
@@ -256,6 +283,7 @@
                   <th scope="col" class="num">{$T('sec.col.attempts')}</th>
                   <th scope="col" class="num">{$T('sec.col.usersTried')}</th>
                   <th scope="col">{$T('sec.col.last')}</th>
+                  {#if canBan}<th scope="col" class="num"><span class="sr">{$T('sec.f2b.bans.actions')}</span></th>{/if}
                 </tr>
               </thead>
               <tbody>
@@ -265,6 +293,15 @@
                     <td class="num">{r.count.toLocaleString($locale)}</td>
                     <td class="num">{r.users}</td>
                     <td class="small muted">{formatDateTime(r.last, $locale)}</td>
+                    {#if canBan}
+                      <td class="num">
+                        {#if bannedIps.has(r.ip)}
+                          <span class="pill">{$T('sec.f2b.bannedPill')}</span>
+                        {:else if r.ip !== sec.self_ip}
+                          <button class="btn small-btn" type="button" disabled={unreachable || banning !== null} onclick={() => void banFromList(r.ip)}>{$T('sec.f2b.ban')}</button>
+                        {/if}
+                      </td>
+                    {/if}
                   </tr>
                 {/each}
               </tbody>
@@ -345,6 +382,7 @@
                 <th scope="col">{$T('sec.col.fingerprint')}</th>
                 <th scope="col">{$T('sec.col.comment')}</th>
                 <th scope="col">{$T('sec.col.fileChanged')}</th>
+                <th scope="col" class="num"><span class="sr">{$T('sec.f2b.bans.actions')}</span></th>
               </tr>
             </thead>
             <tbody>
@@ -359,11 +397,26 @@
                   <td class="mono small fp" title={k.file}>{k.fingerprint}</td>
                   <td class="small">{k.comment || '—'}</td>
                   <td class="small muted">{k.mtime ? formatDateTime(k.mtime, $locale) : '—'}</td>
+                  <td class="num">
+                    <button class="btn small-btn" type="button" disabled={unreachable} onclick={() => { removing = k; rmError = null; }}>{$T('sec.keys.remove')}</button>
+                  </td>
                 </tr>
               {/each}
             </tbody>
           </table>
         </div>
+        {#if removing}
+          <div class="confirm stack" role="alertdialog" aria-label={$T('sec.keys.remove')}>
+            <p>{$T('sec.keys.removeText', { user: removing.user, fp: removing.fingerprint })}</p>
+            {#if rmWarn}<p class="error">{$T(rmWarn, { user: removing.user })}</p>{/if}
+            <p class="muted small">{$T('sec.keys.removeNote')}</p>
+            {#if rmError}<p class="error" role="alert">{rmError}</p>{/if}
+            <div class="row end">
+              <button class="btn" type="button" disabled={rmBusy} onclick={() => (removing = null)}>{$T('common.cancel')}</button>
+              <button class="btn danger" type="button" disabled={rmBusy} onclick={() => void confirmRemove()}>{$T('sec.keys.removeGo')}</button>
+            </div>
+          </div>
+        {/if}
       {/if}
     </section>
   {/if}
@@ -586,7 +639,10 @@
   }
 
   .small-btn {
-    padding: 2px 8px;
+    display: inline-flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 8px;
     font-size: 13px;
   }
 
@@ -603,14 +659,30 @@
     margin: 0;
   }
 
-  .jail p {
-    margin: 0 0 6px;
-  }
 
   .ips {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 10px;
+    border: 2px solid var(--crit);
+    color: var(--crit);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
   }
 
   .chip-ip {

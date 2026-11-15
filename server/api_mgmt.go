@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -145,7 +146,26 @@ func (a *Admin) processesList(w http.ResponseWriter, r *http.Request, _ *store.U
 // securityState is the read-only SSH overview: logins, failed attempts, fail2ban, keys. The agent collects
 // it from the journal and answers from a one minute cache.
 func (a *Admin) securityState(w http.ResponseWriter, r *http.Request, _ *store.User) {
-	a.proxyCall(w, r, "security", "state", nil, 40*time.Second)
+	s := a.serverOr404(w, r)
+	if s == nil {
+		return
+	}
+	data, err := a.Hub.Call(r.Context(), s.ID, "security", "state", nil, false, 40*time.Second)
+	if err != nil {
+		callErr(w, err)
+		return
+	}
+	// the address the administrator comes from: the panel never offers to block it
+	var obj map[string]json.RawMessage
+	if json.Unmarshal(data, &obj) == nil {
+		self, _ := json.Marshal(a.Trust.ClientIP(r))
+		obj["self_ip"] = self
+		if merged, err := json.Marshal(obj); err == nil {
+			data = merged
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(data)
 }
 
 var (
@@ -208,6 +228,220 @@ func (a *Admin) securityTerminate(w http.ResponseWriter, r *http.Request, u *sto
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(data)
+}
+
+// secCall sends a confirmed security command to the agent and writes the answer, the audit entry included.
+func (a *Admin) secCall(w http.ResponseWriter, r *http.Request, u *store.User, s *store.Server, module, cmd, action string, params map[string]any, details map[string]any, timeout time.Duration) {
+	data, err := a.Hub.Call(r.Context(), s.ID, module, cmd, params, true, timeout)
+	result := "ok"
+	if err != nil {
+		result = "failed"
+	}
+	a.audit(r, u, action, "server", s.ID, s.Name, result, details)
+	if err != nil {
+		callErr(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(data) //nolint:gosec // the JSON answer of our own agent
+}
+
+type f2bBanReq struct {
+	IP       string `json:"ip"`
+	Duration int    `json:"duration"`
+	Confirm  bool   `json:"confirm"`
+}
+
+// securityBan blocks an address through fail2ban. The address of the administrator is sent along, so the
+// agent can refuse to block it.
+func (a *Admin) securityBan(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s := a.serverOr404(w, r)
+	if s == nil {
+		return
+	}
+	var req f2bBanReq
+	if !decode(w, r, &req) {
+		return
+	}
+	if net.ParseIP(req.IP) == nil {
+		jsonErr(w, http.StatusBadRequest, "invalid address")
+		return
+	}
+	if !req.Confirm {
+		needConfirm(w)
+		return
+	}
+	a.secCall(w, r, u, s, "security", "ban", "security.fail2ban.ban", map[string]any{"ip": req.IP, "duration": req.Duration, "self": a.Trust.ClientIP(r)},
+		map[string]any{"ip": req.IP, "duration": req.Duration}, 40*time.Second)
+}
+
+type f2bUnbanReq struct {
+	IPs     []string `json:"ips"`
+	All     bool     `json:"all"`
+	Confirm bool     `json:"confirm"`
+}
+
+func (a *Admin) securityUnban(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s := a.serverOr404(w, r)
+	if s == nil {
+		return
+	}
+	var req f2bUnbanReq
+	if !decode(w, r, &req) {
+		return
+	}
+	if len(req.IPs) > 500 || (!req.All && len(req.IPs) == 0) {
+		jsonErr(w, http.StatusBadRequest, "give the addresses to unblock")
+		return
+	}
+	for _, ip := range req.IPs {
+		if net.ParseIP(ip) == nil {
+			jsonErr(w, http.StatusBadRequest, "invalid address")
+			return
+		}
+	}
+	if !req.Confirm {
+		needConfirm(w)
+		return
+	}
+	details := map[string]any{"all": req.All, "count": len(req.IPs)}
+	if len(req.IPs) <= 20 {
+		details["ips"] = req.IPs
+	}
+	a.secCall(w, r, u, s, "security", "unban", "security.fail2ban.unban", map[string]any{"ips": req.IPs, "all": req.All}, details, 90*time.Second)
+}
+
+type f2bSettingsReq struct {
+	MaxRetry  int      `json:"maxretry"`
+	FindTime  int      `json:"findtime"`
+	BanTime   int      `json:"bantime"`
+	Increment bool     `json:"increment"`
+	Recidive  bool     `json:"recidive"`
+	Ignore    []string `json:"ignore"`
+	Confirm   bool     `json:"confirm"`
+}
+
+// securityF2bSettings saves the parameters of the sshd jail; the agent writes its own file and reloads fail2ban.
+func (a *Admin) securityF2bSettings(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s := a.serverOr404(w, r)
+	if s == nil {
+		return
+	}
+	var req f2bSettingsReq
+	if !decode(w, r, &req) {
+		return
+	}
+	if len(req.Ignore) > 200 {
+		jsonErr(w, http.StatusBadRequest, "too many addresses")
+		return
+	}
+	if !req.Confirm {
+		needConfirm(w)
+		return
+	}
+	params := map[string]any{"maxretry": req.MaxRetry, "findtime": req.FindTime, "bantime": req.BanTime, "increment": req.Increment,
+		"recidive": req.Recidive, "ignore": req.Ignore, "self": a.Trust.ClientIP(r)}
+	a.secCall(w, r, u, s, "security", "f2bSettings", "security.fail2ban.settings", params,
+		map[string]any{"maxretry": req.MaxRetry, "findtime": req.FindTime, "bantime": req.BanTime, "increment": req.Increment, "recidive": req.Recidive, "ignore": len(req.Ignore)}, 90*time.Second)
+}
+
+// securityBanHistory reads the ban and unban events from the log of fail2ban.
+func (a *Admin) securityBanHistory(w http.ResponseWriter, r *http.Request, _ *store.User) {
+	a.proxyCall(w, r, "security", "banHistory", map[string]any{"limit": atoiClamp(r.URL.Query().Get("limit"), 1, 1000, 200)}, 30*time.Second)
+}
+
+type keyRemoveReq struct {
+	User        string `json:"user"`
+	File        string `json:"file"`
+	Fingerprint string `json:"fingerprint"`
+	Confirm     bool   `json:"confirm"`
+}
+
+var fingerprintRe = regexp.MustCompile(`^SHA256:[A-Za-z0-9+/]{43}$`)
+
+// securityKeyRemove deletes a key from authorized_keys; the agent only accepts the files it lists itself.
+func (a *Admin) securityKeyRemove(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s := a.serverOr404(w, r)
+	if s == nil {
+		return
+	}
+	var req keyRemoveReq
+	if !decode(w, r, &req) {
+		return
+	}
+	if !termUserRe.MatchString(req.User) || !fingerprintRe.MatchString(req.Fingerprint) || req.File == "" || len(req.File) > 512 {
+		jsonErr(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+	if !req.Confirm {
+		needConfirm(w)
+		return
+	}
+	a.secCall(w, r, u, s, "security", "keyRemove", "security.key.remove", map[string]any{"user": req.User, "file": req.File, "fingerprint": req.Fingerprint},
+		map[string]any{"user": req.User, "file": req.File, "fingerprint": req.Fingerprint}, 30*time.Second)
+}
+
+// ---- disk ----
+
+func (a *Admin) diskState(w http.ResponseWriter, r *http.Request, _ *store.User) {
+	a.proxyCall(w, r, "disk", "state", nil, 40*time.Second)
+}
+
+// diskScan measures what takes the space on one filesystem; it can take a minute on a big one.
+func (a *Admin) diskScan(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s := a.serverOr404(w, r)
+	if s == nil {
+		return
+	}
+	var req struct {
+		Mount string `json:"mount"`
+		Force bool   `json:"force"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	if req.Mount == "" || len(req.Mount) > 512 || !strings.HasPrefix(req.Mount, "/") {
+		jsonErr(w, http.StatusBadRequest, "invalid mount")
+		return
+	}
+	data, err := a.Hub.Call(r.Context(), s.ID, "disk", "scan", map[string]any{"mount": req.Mount, "force": req.Force}, false, 125*time.Second)
+	result := "ok"
+	if err != nil {
+		result = "failed"
+	}
+	a.audit(r, u, "disk.scan", "server", s.ID, s.Name, result, map[string]any{"mount": req.Mount})
+	if err != nil {
+		callErr(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(data)
+}
+
+var diskCleanKinds = map[string]bool{"journal": true, "apt": true, "docker-images": true, "docker-build": true, "kernels": true}
+
+// diskClean frees space in one of a few fixed ways; the agent works out what to remove itself.
+func (a *Admin) diskClean(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s := a.serverOr404(w, r)
+	if s == nil {
+		return
+	}
+	var req struct {
+		Kind    string `json:"kind"`
+		Confirm bool   `json:"confirm"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	if !diskCleanKinds[req.Kind] {
+		jsonErr(w, http.StatusBadRequest, "unknown kind")
+		return
+	}
+	if !req.Confirm {
+		needConfirm(w)
+		return
+	}
+	a.secCall(w, r, u, s, "disk", "clean", "disk.clean", map[string]any{"kind": req.Kind}, map[string]any{"kind": req.Kind}, 120*time.Second)
 }
 
 type confirmReq struct {
@@ -366,12 +600,31 @@ func (a *Admin) streamParams(r *http.Request) (module string, params map[string]
 			return "docker.pull", map[string]any{"image": img}, true
 		}
 	case "docker-update":
+		if list := q.Get("containers"); list != "" {
+			ids := strings.Split(list, ",")
+			if len(ids) <= 100 && len(list) <= 4096 {
+				return "docker.update", map[string]any{"containers": ids}, true
+			}
+			return "", nil, false
+		}
 		if c := q.Get("container"); c != "" && len(c) <= 128 && len(q.Get("image")) <= 256 {
 			p := map[string]any{"container": c}
 			if img := q.Get("image"); img != "" {
 				p["image"] = img
 			}
+			if q.Get("project") == "1" {
+				p["project"] = true
+			}
 			return "docker.update", p, true
+		}
+	case "docker-project-logs":
+		if c := q.Get("container"); c != "" && len(c) <= 128 {
+			return "docker.composeLogs", map[string]any{"container": c, "lines": atoiClamp(q.Get("lines"), 0, 1000, 200)}, true
+		}
+	case "f2b-install":
+		preset := q.Get("preset")
+		if preset == "soft" || preset == "norm" || preset == "hard" {
+			return "security.f2bInstall", map[string]any{"preset": preset, "self": a.Trust.ClientIP(r)}, true
 		}
 	case "apt":
 		switch m := q.Get("mode"); m {

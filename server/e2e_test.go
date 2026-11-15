@@ -406,6 +406,23 @@ func TestEndToEnd(t *testing.T) {
 	if nTerm != 1 {
 		t.Fatalf("the refused attempt must be in the audit log, found %d", nTerm)
 	}
+	// fail2ban and authorized_keys: validated and confirmed on the server, decided by the agent
+	banURL := "/api/servers/" + id + "/security/ban"
+	if code := api.do("POST", banURL, map[string]any{"ip": "1.2.3.4; reboot", "confirm": true}, nil); code != http.StatusBadRequest {
+		t.Fatalf("an invalid address must be refused, got %d", code)
+	}
+	if code := api.do("POST", banURL, map[string]any{"ip": "203.0.113.9"}, nil); code != http.StatusConflict {
+		t.Fatalf("a ban needs the confirmation, got %d", code)
+	}
+	if code := api.do("POST", "/api/servers/"+id+"/security/unban", map[string]any{"confirm": true}, nil); code != http.StatusBadRequest {
+		t.Fatalf("an unban without addresses must be refused, got %d", code)
+	}
+	if code := api.do("POST", "/api/servers/"+id+"/security/keys/remove", map[string]any{"user": "root", "file": "/root/.ssh/authorized_keys", "fingerprint": "SHA256:x", "confirm": true}, nil); code != http.StatusBadRequest {
+		t.Fatalf("a malformed fingerprint must be refused, got %d", code)
+	}
+	if code := api.do("POST", "/api/servers/"+id+"/security/keys/remove", map[string]any{"user": "root", "file": "/root/.ssh/authorized_keys", "fingerprint": "SHA256:" + strings.Repeat("A", 43)}, nil); code != http.StatusConflict {
+		t.Fatalf("removing a key needs the confirmation, got %d", code)
+	}
 	var detail struct {
 		Modules []string `json:"modules"`
 	}

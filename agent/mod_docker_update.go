@@ -81,8 +81,19 @@ func dockerSend(ctx context.Context, method, path string, body, out any) error {
 
 // dockerUpdate is the stream "docker.update": params {container, image?}.
 func dockerUpdate(ctx context.Context, raw json.RawMessage, sio *StreamIO) error {
-	var p struct{ Container, Image string }
-	if err := json.Unmarshal(raw, &p); err != nil || !containerRe.MatchString(p.Container) {
+	var p struct {
+		Container  string
+		Image      string
+		Containers []string // update several containers one after the other
+		Project    bool     // update the whole compose project of Container
+	}
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return errors.New("invalid parameters")
+	}
+	if len(p.Containers) > 0 {
+		return updateMany(ctx, p.Containers, sio)
+	}
+	if !containerRe.MatchString(p.Container) {
 		return errors.New("invalid container")
 	}
 	if p.Image != "" && !imageRe.MatchString(p.Image) {
@@ -94,7 +105,13 @@ func dockerUpdate(ctx context.Context, raw json.RawMessage, sio *StreamIO) error
 		return err
 	}
 	if labels := stringMap(old.Config["Labels"]); labels[composeProject] != "" {
+		if p.Project {
+			return composeProjectUpdate(ctx, labels, sio)
+		}
 		return composeUpdate(ctx, labels, sio)
+	}
+	if p.Project {
+		return errors.New("the container does not belong to a compose project")
 	}
 	return plainUpdate(ctx, &old, p.Image, say)
 }
@@ -340,34 +357,26 @@ func composeUpdate(ctx context.Context, labels map[string]string, sio *StreamIO)
 	if service == "" || !containerRe.MatchString(service) {
 		return errors.New("the compose service of the container is unknown")
 	}
-	bin, err := dockerCLI()
-	if err != nil {
-		return err
-	}
+	steps := [][]string{{"pull", service}, {"up", "-d", "--no-deps", service}}
+	return composeRun(ctx, labels, sio, steps, true)
+}
+
+// dockerEnv is the environment for the docker command: the service runs without HOME, docker wants it for its config.
+func dockerEnv() []string {
 	env := os.Environ()
-	if os.Getenv("HOME") == "" { // the service runs without HOME, docker wants it for its config
+	if os.Getenv("HOME") == "" {
 		env = append(env, "HOME=/root")
 	}
+	return env
+}
+
+// workDir is the directory of a compose project if it exists on the host.
+func workDir(labels map[string]string) string {
 	dir := labels["com.docker.compose.project.working_dir"]
 	if st, err := os.Stat(dir); err != nil || !st.IsDir() {
-		dir = ""
+		return ""
 	}
-	run := func(args ...string) error {
-		_ = sio.Out([]byte("$ docker " + strings.Join(args, " ") + "\n"))
-		cmd := exec.CommandContext(ctx, bin, args...) //nolint:gosec // fixed binary, arguments are validated labels
-		cmd.Env, cmd.Dir = env, dir
-		w := outWriter{sio}
-		cmd.Stdout, cmd.Stderr = w, w
-		return cmd.Run() // a non-zero exit is an error: the update did not work
-	}
-	if err := run("compose", "version"); err != nil {
-		return errors.New("the docker compose plugin is not available on the host")
-	}
-	base := composeArgs(labels)
-	if err := run(append(append([]string{}, base...), "pull", service)...); err != nil {
-		return err
-	}
-	return run(append(append([]string{}, base...), "up", "-d", "--no-deps", service)...)
+	return dir
 }
 
 // outWriter sends what a command writes to the stream.

@@ -522,10 +522,18 @@
       min-height: calc(100dvh - 50px);
     }
   }
+  /* A counter inside a button must not make that button taller than its neighbours. */
+  .controls :global(.btn) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .badge {
     background: var(--warn);
     border-color: var(--warn);
     color: #fff;
+    line-height: 1.1;
     display: inline-block;
     min-width: 1.4em;
     padding: 0 4px;

@@ -713,6 +713,7 @@ func (a *Admin) networkApplyConfig(w http.ResponseWriter, r *http.Request, u *st
 // ---- firewall ----
 
 type fwDraftReq struct {
+	Sets   []FwDraftSet   `json:"sets"`
 	Chains []FwDraftChain `json:"chains"`
 }
 
@@ -729,6 +730,21 @@ func (a *Admin) firewallState(w http.ResponseWriter, r *http.Request, _ *store.U
 	st["draft"] = a.draftOf(r.Context(), s.ID, "firewall")
 	st["pending"] = a.pendingOf(r.Context(), s.ID, "firewall")
 	writeJSON(w, http.StatusOK, st)
+}
+
+// firewallPorts returns the listening ports with the state of the firewall for each of them.
+func (a *Admin) firewallPorts(w http.ResponseWriter, r *http.Request, _ *store.User) {
+	s := a.serverOr404(w, r)
+	if s == nil {
+		return
+	}
+	data, err := a.Hub.Call(r.Context(), s.ID, "firewall", "ports", nil, false, 30*time.Second)
+	if err != nil {
+		callErr(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(data)
 }
 
 func (a *Admin) firewallValidate(w http.ResponseWriter, r *http.Request, _ *store.User) {
@@ -756,6 +772,16 @@ func (a *Admin) firewallSaveDraft(w http.ResponseWriter, r *http.Request, u *sto
 	var d fwDraftReq
 	if !decode(w, r, &d) {
 		return
+	}
+	if len(d.Sets) > 100 {
+		jsonErr(w, http.StatusUnprocessableEntity, "invalid draft")
+		return
+	}
+	for _, set := range d.Sets {
+		if len(set.Elements) > 5000 {
+			jsonErr(w, http.StatusUnprocessableEntity, "invalid draft")
+			return
+		}
 	}
 	for _, c := range d.Chains {
 		if (c.Name != "input" && c.Name != "forward" && c.Name != "output") || (c.Policy != "accept" && c.Policy != "drop") || len(c.Rules) > 500 {
@@ -803,7 +829,7 @@ func (a *Admin) firewallApply(w http.ResponseWriter, r *http.Request, u *store.U
 		writeJSON(w, http.StatusConflict, map[string]any{"error": "confirmation required", "dangerous": true, "warnings": warns})
 		return
 	}
-	pv, ok := a.startChange(w, r, s, "firewall", "firewall", map[string]any{"chains": d.Chains}, len(warns) > 0)
+	pv, ok := a.startChange(w, r, s, "firewall", "firewall", map[string]any{"chains": d.Chains, "sets": d.Sets}, len(warns) > 0)
 	a.audit(r, u, "firewall.apply", "server", s.ID, s.Name, map[bool]string{true: "ok", false: "failed"}[ok], map[string]any{"warnings": len(warns)})
 	if !ok {
 		return
@@ -858,6 +884,26 @@ func (a *Admin) dockerContainerAction(w http.ResponseWriter, r *http.Request, u 
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// dockerCheck asks the agent to compare the images of the containers with the registries.
+func (a *Admin) dockerCheck(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s := a.serverOr404(w, r)
+	if s == nil {
+		return
+	}
+	data, err := a.Hub.Call(r.Context(), s.ID, "docker", "check", nil, false, 130*time.Second)
+	res := "ok"
+	if err != nil {
+		res = "failed"
+	}
+	a.audit(r, u, "docker.check", "server", s.ID, s.Name, res, nil)
+	if err != nil {
+		callErr(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(data)
 }
 
 func (a *Admin) dockerRemoveImage(w http.ResponseWriter, r *http.Request, u *store.User) {

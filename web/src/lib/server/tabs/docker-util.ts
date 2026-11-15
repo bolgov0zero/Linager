@@ -182,3 +182,32 @@ export function createBatcher(apply: (lines: StreamLine[]) => void) {
     },
   };
 }
+
+export interface ContainerGroup {
+  /** Compose project name, or '' for the containers that do not belong to a project. */
+  key: string;
+  items: DockerContainer[];
+  running: number;
+  /** Containers with a newer image. */
+  updatable: number;
+  /** Directory and file of the compose project. */
+  file: string;
+}
+
+/** Compose projects by name, the containers without a project last. */
+export function groupContainers(list: DockerContainer[]): ContainerGroup[] {
+  const map = new Map<string, ContainerGroup>();
+  for (const c of list) {
+    const key = c.compose ? (c.project ?? '') : '';
+    let g = map.get(key);
+    if (!g) {
+      g = { key, items: [], running: 0, updatable: 0, file: '' };
+      map.set(key, g);
+    }
+    g.items.push(c);
+    if (isRunning(c)) g.running++;
+    if (c.upd === 'new') g.updatable++;
+    if (!g.file && key) g.file = c.config_file || c.workdir || '';
+  }
+  return [...map.values()].sort((a, b) => (a.key === '' ? 1 : b.key === '' ? -1 : a.key.localeCompare(b.key)));
+}

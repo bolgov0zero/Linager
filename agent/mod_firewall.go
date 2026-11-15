@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/netip"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,6 +22,15 @@ type FwRule struct {
 	Packets uint64 `json:"packets,omitempty"`
 	Bytes   uint64 `json:"bytes,omitempty"`
 }
+
+// FwSet is a named list of addresses (an nftables set) that rules can use as "ip saddr @name".
+type FwSet struct {
+	Name     string   `json:"name"`
+	Family   string   `json:"family"` // ipv4 or ipv6
+	Elements []string `json:"elements"`
+}
+
+var setNameRe = regexp.MustCompile(`^[a-z][a-z0-9_]{0,30}$`)
 
 // FwChain is a base chain of table inet filter.
 type FwChain struct {
@@ -79,6 +89,89 @@ func parseFilterTable(out string) []FwChain {
 	return out2
 }
 
+var (
+	setStartRe = regexp.MustCompile(`^set\s+(\S+)\s*\{`)
+	setTypeRe  = regexp.MustCompile(`^type\s+(ipv4_addr|ipv6_addr)\b`)
+)
+
+// parseSets extracts the address sets from the output of `nft list table inet filter`.
+func parseSets(out string) []FwSet {
+	sets := []FwSet{}
+	var cur *FwSet
+	inElems := false
+	for _, raw := range strings.Split(out, "\n") {
+		line := strings.TrimSpace(raw)
+		if cur == nil {
+			if m := setStartRe.FindStringSubmatch(line); m != nil {
+				cur = &FwSet{Name: m[1], Family: "", Elements: []string{}}
+			}
+			continue
+		}
+		if inElems {
+			cur.Elements = append(cur.Elements, splitElements(line)...)
+			if strings.Contains(line, "}") {
+				inElems = false
+			}
+			continue
+		}
+		switch {
+		case line == "}":
+			if cur.Family != "" { // sets of other types (ports, interfaces) are not managed here
+				sets = append(sets, *cur)
+			}
+			cur = nil
+		case strings.HasPrefix(line, "elements"):
+			_, after, _ := strings.Cut(line, "{")
+			cur.Elements = append(cur.Elements, splitElements(after)...)
+			inElems = !strings.Contains(line, "}")
+		default:
+			if m := setTypeRe.FindStringSubmatch(line); m != nil {
+				cur.Family = map[string]string{"ipv4_addr": "ipv4", "ipv6_addr": "ipv6"}[m[1]]
+			}
+		}
+	}
+	return sets
+}
+
+// splitElements takes the addresses out of a piece of an "elements = { ... }" list.
+func splitElements(s string) []string {
+	s, _, _ = strings.Cut(s, "}")
+	var out []string
+	for _, part := range strings.Split(s, ",") {
+		if f := strings.Fields(part); len(f) > 0 {
+			out = append(out, f[0])
+		}
+	}
+	return out
+}
+
+// validateSet checks a set of the draft: a name, a family and addresses or networks of that family.
+func validateSet(s FwSet) error {
+	if !setNameRe.MatchString(s.Name) {
+		return fmt.Errorf("list %q: the name must be lowercase letters, digits and _, starting with a letter", s.Name)
+	}
+	if s.Family != "ipv4" && s.Family != "ipv6" {
+		return fmt.Errorf("list %s: unknown address family", s.Name)
+	}
+	if len(s.Elements) > 5000 {
+		return fmt.Errorf("list %s: too many addresses", s.Name)
+	}
+	for _, e := range s.Elements {
+		var a netip.Addr
+		if pfx, err := netip.ParsePrefix(e); err == nil {
+			a = pfx.Addr()
+		} else if ad, err := netip.ParseAddr(e); err == nil {
+			a = ad
+		} else {
+			return fmt.Errorf("list %s: %q is not an address or a network", s.Name, e)
+		}
+		if (s.Family == "ipv4") != a.Is4() {
+			return fmt.Errorf("list %s: %q does not match the family %s", s.Name, e, s.Family)
+		}
+	}
+	return nil
+}
+
 // validateRule rejects anything that could escape the chain block.
 func validateRule(text string) error {
 	t := strings.TrimSpace(text)
@@ -108,6 +201,7 @@ func validateRule(text string) error {
 
 // fwDraft is the desired state of the managed chains.
 type fwDraft struct {
+	Sets   []FwSet `json:"sets"`
 	Chains []struct {
 		Name   string `json:"name"`
 		Policy string `json:"policy"`
@@ -121,6 +215,22 @@ type fwDraft struct {
 func renderTable(d fwDraft) (string, error) {
 	var b strings.Builder
 	b.WriteString("table inet filter {\n")
+	names := map[string]bool{}
+	for _, set := range d.Sets {
+		if err := validateSet(set); err != nil {
+			return "", err
+		}
+		if names[set.Name] {
+			return "", fmt.Errorf("list %s is defined twice", set.Name)
+		}
+		names[set.Name] = true
+		typ := map[string]string{"ipv4": "ipv4_addr", "ipv6": "ipv6_addr"}[set.Family]
+		fmt.Fprintf(&b, "\tset %s {\n\t\ttype %s\n\t\tflags interval\n", set.Name, typ)
+		if len(set.Elements) > 0 {
+			fmt.Fprintf(&b, "\t\telements = { %s }\n", strings.Join(set.Elements, ", "))
+		}
+		b.WriteString("\t}\n")
+	}
 	seen := map[string]bool{}
 	for _, c := range d.Chains {
 		ok := false
@@ -215,7 +325,8 @@ func (m *fwModule) state(ctx context.Context, _ json.RawMessage, _ bool) (any, e
 	if _, err := exec.LookPath("nft"); err != nil {
 		return map[string]any{"available": false, "ufw_active": false, "chains": []FwChain{}, "ruleset": "", "other_tables": []string{}}, nil
 	}
-	chains := parseFilterTable(m.currentTable(ctx))
+	table := m.currentTable(ctx)
+	chains := parseFilterTable(table)
 	ruleset, _ := m.run(ctx, "nft", "list", "ruleset")
 	others := []string{}
 	if out, err := m.run(ctx, "nft", "list", "tables"); err == nil {
@@ -231,7 +342,7 @@ func (m *fwModule) state(ctx context.Context, _ json.RawMessage, _ bool) (any, e
 			ufw = true
 		}
 	}
-	return map[string]any{"available": true, "ufw_active": ufw, "chains": chains, "ruleset": string(ruleset), "other_tables": others,
+	return map[string]any{"available": true, "ufw_active": ufw, "chains": chains, "sets": parseSets(table), "ruleset": string(ruleset), "other_tables": others,
 		"ssh_ports": m.sshPorts(ctx)}, nil
 }
 

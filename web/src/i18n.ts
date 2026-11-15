@@ -18,16 +18,18 @@ import enUpd from './locales/en.upd.json';
 import ruAudit from './locales/ru.audit.json';
 import ruSettings from './locales/ru.settings.json';
 import ruSec from './locales/ru.sec.json';
+import ruDisk from './locales/ru.disk.json';
 import enAudit from './locales/en.audit.json';
 import enSettings from './locales/en.settings.json';
 import enSec from './locales/en.sec.json';
+import enDisk from './locales/en.disk.json';
 
 export type Locale = 'ru' | 'en';
 export type Vars = Record<string, string | number>;
 
 const dictionaries: Record<Locale, Record<string, string>> = {
-  ru: { ...ru, ...ruServer, ...ruTerm, ...ruMgmt, ...ruFiles, ...ruNet, ...ruFw, ...ruUpd, ...ruAudit, ...ruSettings, ...ruSec },
-  en: { ...en, ...enServer, ...enTerm, ...enMgmt, ...enFiles, ...enNet, ...enFw, ...enUpd, ...enAudit, ...enSettings, ...enSec },
+  ru: { ...ru, ...ruServer, ...ruTerm, ...ruMgmt, ...ruFiles, ...ruNet, ...ruFw, ...ruUpd, ...ruAudit, ...ruSettings, ...ruSec, ...ruDisk },
+  en: { ...en, ...enServer, ...enTerm, ...enMgmt, ...enFiles, ...enNet, ...enFw, ...enUpd, ...enAudit, ...enSettings, ...enSec, ...enDisk },
 };
 const STORAGE_KEY = 'linager.lang';
 const DEFAULT_LOCALE: Locale = 'ru';

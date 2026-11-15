@@ -13,6 +13,7 @@
   import UpdatesTab from './tabs/UpdatesTab.svelte';
   import RebootButton from './tabs/RebootButton.svelte';
   import FilesTab from './tabs/FilesTab.svelte';
+  import DiskTab from './tabs/DiskTab.svelte';
   import NetworkTab from './tabs/NetworkTab.svelte';
   import FirewallTab from './tabs/FirewallTab.svelte';
   import SecurityTab from './tabs/SecurityTab.svelte';
@@ -181,6 +182,8 @@
         <MetricsTab serverId={detail.id} />
       {:else if tab === 'files'}
         <FilesTab server={detail} />
+      {:else if tab === 'disk'}
+        <DiskTab server={detail} />
       {:else if tab === 'network'}
         <NetworkTab server={detail} />
       {:else if tab === 'firewall'}

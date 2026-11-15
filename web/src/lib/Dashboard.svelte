@@ -661,10 +661,12 @@
     margin-left: auto;
   }
 
+  /* as high as the buttons next to it */
   .search {
     width: 260px;
     max-width: 100%;
-    padding: 5px 10px;
+    height: 36px;
+    padding: 0 10px;
   }
 
   /* On wide screens the list scrolls inside; the padding keeps the cards' offset shadows from being clipped.
