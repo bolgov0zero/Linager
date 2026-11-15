@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.31
+
+- Terminal key panel redone: no scrolling, a thin strip of five modes (Main, Ctrl+, Nav, F1-12, Symbols) and the arrows on the right like on a real keyboard (up above down), with Esc and Tab beside them. Ctrl and Alt still latch until the next key.
+
 ## 0.1.30
 
 - File manager: "Properties" in the context menu (also for the current folder): path, type, size (folder content size on demand), creation, modification, change and access times, links and inode, link target; permissions (rwx checkboxes, setuid, setgid, sticky and the octal number) and owner and group can be changed, with a confirmation for recursion, special bits and owner changes. Needs agent 0.1.30.

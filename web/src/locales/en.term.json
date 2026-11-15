@@ -65,5 +65,10 @@
   "termwin.dock": "Open windows",
   "edwin.limit": "Too many editors are open (8 at most)",
   "termwin.openWindow": "In a window",
-  "term.keys": "Keys"
+  "term.keys": "Keys",
+  "term.keys.main": "Main",
+  "term.keys.ctrl": "Ctrl+",
+  "term.keys.nav": "Nav",
+  "term.keys.fn": "F1–12",
+  "term.keys.sym": "Symbols"
 }

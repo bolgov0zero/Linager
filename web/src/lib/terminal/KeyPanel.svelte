@@ -2,9 +2,10 @@
   import { tr } from '../../i18n';
 
   /**
-   * On-screen keys for phones: Esc, Tab, Ctrl and Alt (latched until the next key), arrows, navigation keys, F1-F12,
-   * a few symbols that are awkward on a touch keyboard and common Ctrl shortcuts.
-   * Pressing a key must not take the focus away from the terminal, so the soft keyboard stays where it is.
+   * On-screen keys for phones, five modes in a thin strip: main keys, Ctrl shortcuts, navigation, F1-F12 and symbols.
+   * The arrows always stand on the right like on a real keyboard (up above down, left and right beside it).
+   * Ctrl and Alt latch until the next key. Pressing a key must not take the focus away from the terminal, so the
+   * soft keyboard stays where it is.
    */
   let {
     ctrl,
@@ -14,46 +15,85 @@
   }: {
     ctrl: boolean;
     alt: boolean;
-    /** A key name (Esc, Up, F5 ...) or a single character. */
+    /** A key name (Esc, Up, F5 ...), a single character or "ctrl:<letter>" for a ready shortcut. */
     onkey: (name: string) => void;
     ontoggle: (mod: 'ctrl' | 'alt') => void;
   } = $props();
 
-  const NAV = [
-    ['Esc', 'Esc'], ['Tab', 'Tab'], ['Home', 'Home'], ['End', 'End'], ['PgUp', 'PgUp'], ['PgDn', 'PgDn'], ['Ins', 'Ins'], ['Del', 'Del'],
-  ] as const;
-  const ARROWS = [['Left', '←'], ['Down', '↓'], ['Up', '↑'], ['Right', '→']] as const;
-  const SYMBOLS = ['|', '~', '`', '\\', '/', '-', '_', '$', '&', '*', '#', '{', '}', '[', ']', '<', '>'];
-  const FKEYS = Array.from({ length: 12 }, (_, i) => `F${i + 1}`);
-  const CTRL = [['c', 'Ctrl+C'], ['d', 'Ctrl+D'], ['z', 'Ctrl+Z'], ['l', 'Ctrl+L'], ['r', 'Ctrl+R'], ['a', 'Ctrl+A'], ['e', 'Ctrl+E'], ['u', 'Ctrl+U'], ['w', 'Ctrl+W']] as const;
+  type Cell = { key: string; label: string; mod?: 'ctrl' | 'alt'; dim?: boolean } | null;
+
+  const key = (k: string, label = k, dim = false): Cell => ({ key: k, label, dim });
+  const chars = (s: string): Cell[] => [...s].map((c) => key(c));
+  const shortcut = (c: string): Cell => key(`ctrl:${c}`, `^${c.toUpperCase()}`);
+
+  const MODES: { id: string; tr: string; cells: Cell[] }[] = [
+    {
+      id: 'main',
+      tr: 'term.keys.main',
+      cells: [key('Esc'), key('Tab'), { key: 'Ctrl', label: 'Ctrl', mod: 'ctrl' }, { key: 'Alt', label: 'Alt', mod: 'alt' }, shortcut('c'), shortcut('d'), ...chars('|/-~`\\')],
+    },
+    { id: 'ctrl', tr: 'term.keys.ctrl', cells: ['c', 'd', 'z', 'l', 'r', 'a', 'e', 'u', 'w', 'k', 'x', 'o'].map(shortcut) },
+    {
+      id: 'nav',
+      tr: 'term.keys.nav',
+      cells: [key('Home'), key('End'), key('Ins', 'Ins', true), key('Del'), key('PgUp'), key('PgDn'), key('Esc'), key('Tab'), { key: 'Ctrl', label: 'Ctrl', mod: 'ctrl' }, { key: 'Alt', label: 'Alt', mod: 'alt' }, null, null],
+    },
+    { id: 'fn', tr: 'term.keys.fn', cells: Array.from({ length: 12 }, (_, i) => key(`F${i + 1}`, `F${i + 1}`, true)) },
+    { id: 'sym', tr: 'term.keys.sym', cells: chars('$&*#{}[]<>_:') },
+  ];
+
+  // The arrow cluster: the inverted T of a real keyboard; Esc and Tab stand where PgUp and PgDn do on a laptop.
+  const ARROWS: Cell[] = [key('Esc', 'Esc'), key('Up', '↑'), key('Tab', 'Tab'), key('Left', '←'), key('Down', '↓'), key('Right', '→')];
+  const ARROW_NAMES: Record<string, string> = { '↑': 'Up', '↓': 'Down', '←': 'Left', '→': 'Right' };
+
+  let mode = $state(0);
+  const cells = $derived(MODES[mode]?.cells ?? []);
+
+  /** Rows of the pad: six keys of the current mode, then three of the arrow cluster. */
+  const rows = $derived([0, 1].map((r) => [...cells.slice(r * 6, r * 6 + 6), ...ARROWS.slice(r * 3, r * 3 + 3)]));
 
   const keep = (e: PointerEvent) => e.preventDefault();
+
+  function press(cell: NonNullable<Cell>): void {
+    if (cell.mod) ontoggle(cell.mod);
+    else onkey(cell.key);
+  }
 </script>
 
 <div class="keys" role="group" aria-label={$tr('term.keys')}>
-  <div class="line">
-    <button class="k mod" class:on={ctrl} type="button" aria-pressed={ctrl} onpointerdown={keep} onclick={() => ontoggle('ctrl')}>Ctrl</button>
-    <button class="k mod" class:on={alt} type="button" aria-pressed={alt} onpointerdown={keep} onclick={() => ontoggle('alt')}>Alt</button>
-    {#each NAV as [name, label] (name)}
-      <button class="k" type="button" onpointerdown={keep} onclick={() => onkey(name)}>{label}</button>
-    {/each}
-    {#each ARROWS as [name, label] (name)}
-      <button class="k arrow" type="button" aria-label={name} onpointerdown={keep} onclick={() => onkey(name)}>{label}</button>
-    {/each}
-  </div>
-  <div class="line">
-    {#each FKEYS as f (f)}
-      <button class="k" type="button" onpointerdown={keep} onclick={() => onkey(f)}>{f}</button>
+  <div class="tabs" role="tablist">
+    {#each MODES as m, i (m.id)}
+      <button
+        class="k tab"
+        class:on={i === mode}
+        type="button"
+        role="tab"
+        aria-selected={i === mode}
+        onpointerdown={keep}
+        onclick={() => (mode = i)}>{$tr(m.tr)}</button>
     {/each}
   </div>
-  <div class="line">
-    {#each SYMBOLS as ch (ch)}
-      <button class="k sym" type="button" onpointerdown={keep} onclick={() => onkey(ch)}>{ch}</button>
-    {/each}
-  </div>
-  <div class="line">
-    {#each CTRL as [ch, label] (ch)}
-      <button class="k" type="button" onpointerdown={keep} onclick={() => onkey(`ctrl:${ch}`)}>{label}</button>
+  <div class="pad">
+    {#each rows as row, r (r)}
+      {#each row as cell, c (c)}
+        {#if cell}
+          {@const on = cell.mod === 'ctrl' ? ctrl : cell.mod === 'alt' ? alt : false}
+          <button
+            class="k"
+            class:mod={!!cell.mod}
+            class:on
+            class:dim={cell.dim}
+            class:arrow={!!ARROW_NAMES[cell.label]}
+            class:small={c >= 6 && (cell.key === 'Esc' || cell.key === 'Tab')}
+            type="button"
+            aria-label={ARROW_NAMES[cell.label] ?? undefined}
+            aria-pressed={cell.mod ? on : undefined}
+            onpointerdown={keep}
+            onclick={() => press(cell)}>{cell.label}</button>
+        {:else}
+          <span class="gap" aria-hidden="true"></span>
+        {/if}
+      {/each}
     {/each}
   </div>
 </div>
@@ -71,21 +111,22 @@
     touch-action: manipulation;
   }
 
-  .line {
-    display: flex;
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 4px;
-    overflow-x: auto;
-    scrollbar-width: none;
   }
 
-  .line::-webkit-scrollbar {
-    display: none;
+  .pad {
+    display: grid;
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+    gap: 4px;
   }
 
   .k {
-    flex: 0 0 auto;
-    min-width: 36px;
-    padding: 6px 8px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 2px;
     background: var(--surface);
     color: var(--ink);
     border: 2px solid var(--line);
@@ -102,14 +143,31 @@
     box-shadow: 1px 1px 0 var(--shade);
   }
 
-  .k.mod.on {
+  .k.tab {
+    min-height: 32px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .k.on {
     background: var(--ink);
     color: var(--surface);
   }
 
-  .k.arrow,
-  .k.sym {
-    min-width: 34px;
-    font-size: 15px;
+  .k.dim {
+    color: var(--muted);
+  }
+
+  .k.on.dim {
+    color: var(--surface);
+  }
+
+  .k.arrow {
+    font-size: 16px;
+  }
+
+  .k.small {
+    min-height: 44px;
+    font-size: 11px;
   }
 </style>
