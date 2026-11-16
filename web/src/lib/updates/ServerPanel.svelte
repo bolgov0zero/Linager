@@ -28,6 +28,7 @@
   } = $props();
 
   let confirmOpen = $state(false);
+  let notesOpen = $state(false);
 
   const srv = $derived(info.server);
   const run = $derived(srv.update_run);
@@ -41,6 +42,22 @@
 
   function stepState(id: UpdateStep['id']): UpdateStep['state'] {
     return run.steps?.find((step) => step.id === id)?.state ?? 'pending';
+  }
+
+  const notes = $derived(srv.notes ?? []);
+  const notesVersion = $derived(srv.notes_version ?? available ?? srv.current);
+
+  // After a check that found a newer release, its description opens by itself.
+  let wasChecking = false;
+  $effect(() => {
+    const now = checking;
+    if (wasChecking && !now && available && notes.length > 0) notesOpen = true;
+    wasChecking = now;
+  });
+
+  function updateFromNotes(): void {
+    notesOpen = false;
+    confirmOpen = true;
   }
 
   function confirmUpdate(): void {
@@ -90,17 +107,12 @@
     <p class="upd-err">{srv.check_error}</p>
   {/if}
 
-  {#if srv.notes?.length}
-    <ul class="upd-list">
-      {#each srv.notes as note, i (i)}
-        <li>{note}</li>
-      {/each}
-    </ul>
-  {/if}
-
   <div class="upd-acts">
     <button class="btn sm" type="button" disabled={busy || checking} onclick={oncheck}>
       {checking ? $trans('upd.srv.checking') : $trans('upd.srv.check')}
+    </button>
+    <button class="btn sm" type="button" disabled={notes.length === 0} onclick={() => (notesOpen = true)}>
+      {$trans('upd.notes.button')}
     </button>
     {#if canUpdate && !$isPhone}
       <button class="btn sm primary" type="button" disabled={busy} onclick={() => (confirmOpen = true)}>
@@ -147,6 +159,28 @@
     </div>
   {/if}
 </section>
+
+{#if notesOpen}
+  <Modal title={$trans('upd.notes.title', { version: notesVersion })} labelId="upd-notes-title" onclose={() => (notesOpen = false)}>
+    {#if notes.length > 0}
+      <ul class="upd-list">
+        {#each notes as note, i (i)}
+          <li>{note}</li>
+        {/each}
+      </ul>
+    {:else}
+      <p class="upd-modal-text">{$trans('upd.notes.empty')}</p>
+    {/if}
+    <div class="upd-acts upd-acts-end row end">
+      <button class="btn" type="button" onclick={() => (notesOpen = false)}>{$trans('upd.notes.close')}</button>
+      {#if canUpdate && available}
+        <button class="btn primary" type="button" disabled={busy} onclick={updateFromNotes}>
+          {$trans('upd.srv.update', { version: available })}
+        </button>
+      {/if}
+    </div>
+  </Modal>
+{/if}
 
 {#if confirmOpen && available}
   <Modal title={$trans('upd.confirm.title', { version: available })} labelId="upd-confirm-title" onclose={() => (confirmOpen = false)}>

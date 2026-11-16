@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.66
+
+- Updates, "Linager server": the notes of a release are shown in a dialog instead of a list inside the block. After a check that finds a newer release the dialog opens by itself (with a button to update right away), and the new button "Release notes" opens it any time. When the server is up to date the button shows the notes of the latest release. `GET /api/updates` now fills `server.notes` for the latest known release also when no update is available, and adds `server.notes_version`.
+
 ## 0.1.65
 
 - Updates: the blocks "Agents" and "Same from the terminal" are folded by default, like "Update history". The header of "Agents" tells what needs doing: "to update: N" (the agents that can be updated, including failed and rolled-back ones), "all up to date", or "update running" while a rollout is in progress.

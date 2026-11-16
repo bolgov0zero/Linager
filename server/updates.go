@@ -698,7 +698,7 @@ func (u *Updates) Overview(ctx context.Context) map[string]any {
 		pending = man.Migrations - applied
 	}
 	notes := []string{}
-	if haveLatest && avail != "" {
+	if haveLatest {
 		notes = update.NotesLines(latest.Notes)
 	}
 	var lastBackup int64
@@ -715,7 +715,7 @@ func (u *Updates) Overview(ctx context.Context) map[string]any {
 	}
 	server := map[string]any{
 		"current": version.Version, "available": nilIfEmpty(avail), "checked_at": checked.Unix(), "check_error": checkErr,
-		"notes": notes, "db_migrations": map[string]int{"applied": applied, "shipped": shipped, "pending": pending},
+		"notes": notes, "notes_version": nilIfEmpty(latest.Tag), "db_migrations": map[string]int{"applied": applied, "shipped": shipped, "pending": pending},
 		"last_backup": lastBackup, "source": srcName, "can_update": u.CanUpdateServer(),
 		"update_run": st,
 	}

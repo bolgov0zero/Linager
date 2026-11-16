@@ -285,7 +285,8 @@ export interface UpdatesInfo {
   channel: 'stable' | 'beta';
   server: {
     current: string; available: string | null; checked_at: number; check_error: string;
-    notes: string[]; db_migrations: { applied: number; shipped: number; pending: number };
+    /** Release notes of the latest known release (bullet lines) and its version. */
+    notes: string[]; notes_version?: string | null; db_migrations: { applied: number; shipped: number; pending: number };
     last_backup: number; source: string; can_update: boolean; update_run: ServerUpdateRun;
   };
   cache: { version: string; size: number; downloaded_at: number; verified: boolean; downloaded: boolean }[];
