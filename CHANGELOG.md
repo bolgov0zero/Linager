@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.57
+
+- Phone: while a layer is open (the terminal, a floating window, a dialog, a sheet) a finger move that cannot scroll anything inside it is cancelled, so the page no longer moves or bounces behind it, and the visual area does not pan while the keyboard is up. The content of a dialog and the list of a sheet still scroll.
+
 ## 0.1.56
 
 - Server page: a square icon button at the right end of the "Terminal" item of the side menu opens the terminal in a floating window (shown while the server is online and the terminal module is allowed).
