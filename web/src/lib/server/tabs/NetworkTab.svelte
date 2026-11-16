@@ -1267,7 +1267,8 @@
       position: sticky;
       bottom: calc(var(--bar-h) + var(--safe-b));
       z-index: 6;
-      margin: 0 -12px;
+      /* The negative bottom margin cancels the 16 px page padding: at the end of the scroll the bar still lies on the tab bar. */
+      margin: 0 -12px -16px;
       padding: 10px 12px;
       gap: 8px;
       border-width: 2px 0 0;

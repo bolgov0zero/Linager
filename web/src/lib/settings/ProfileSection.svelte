@@ -319,7 +319,7 @@
       {:else}
         <p>{$tr('recovery.hint')}</p>
         <p class:warn={recoveryLeft <= 2}>
-          {$tr('recovery.left', { n: recoveryLeft })}{#if recoveryLeft <= 2} · {$tr('recovery.low')}{/if}
+          {$tr('recovery.left', { n: recoveryLeft })}{#if recoveryLeft <= 2}{' · ' + $tr('recovery.low')}{/if}
         </p>
         {#if regenOpen}
           <form class="stack" onsubmit={regenerate}>

@@ -71,7 +71,7 @@
               <b>{actionText(item.action)}</b>
               {#if rc !== 'ok'}<span class="pr-tag {rc === 'failed' ? 'crit' : 'warn'}">{resultText(item.result)}</span>{/if}
             </div>
-            <div class="pr-l2">{item.actor || '—'}{#if item.target_name} · {item.target_name}{/if} · {shortTime(item.ts, $locale)}</div>
+            <div class="pr-l2">{item.actor || '—'}{#if item.target_name}{' · ' + item.target_name}{/if} · {shortTime(item.ts, $locale)}</div>
           </div>
           <span class="chev" class:open={isOpen} aria-hidden="true"></span>
         </button>
@@ -79,7 +79,7 @@
           <div class="pr-more">
             <div class="pr-kv"><span>{$translate('audit.col.time')}</span><span class="mono">{formatTime(item.ts, $locale)}</span></div>
             {#if item.target_type}
-              <div class="pr-kv"><span>{$translate('audit.col.target')}</span><span>{item.target_type}{#if item.target_name} · {item.target_name}{/if}</span></div>
+              <div class="pr-kv"><span>{$translate('audit.col.target')}</span><span>{item.target_type}{#if item.target_name}{' · ' + item.target_name}{/if}</span></div>
             {/if}
             <div class="pr-kv">
               <span>{$translate('audit.col.ip')}</span>

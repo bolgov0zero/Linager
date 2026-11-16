@@ -89,6 +89,12 @@
     return $trs(`fw.ports.st.${l.firewall}`);
   }
 
+  /** Phone: the plan opens below a long list of ports, so the page is brought to it. */
+  let planEl = $state<HTMLElement | undefined>(undefined);
+  $effect(() => {
+    if (plan && planEl && $isPhone) planEl.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  });
+
   function startPlan(l: FwListener): void {
     plan = { l, mode: l.risky ? 'close' : 'restrict' };
     source = '';
@@ -146,10 +152,10 @@
       {#if counts.norule > 0}<span class="crit">{$trs('fw.ports.exposed', { n: counts.norule })}</span>{/if}
     </p>
     <div class="row fl" class:pc-seg={$isPhone} role="group" aria-label={$trs('fw.ports.filter')}>
-      <button class="chip" type="button" aria-pressed={filter === 'all'} onclick={() => (filter = 'all')}>{$trs('fw.ports.f.all')} <span class="muted">{counts.all}</span></button>
-      <button class="chip" type="button" aria-pressed={filter === 'out'} onclick={() => (filter = 'out')}>{$trs('fw.ports.f.out')} <span class="muted">{counts.out}</span></button>
-      <button class="chip" type="button" aria-pressed={filter === 'local'} onclick={() => (filter = 'local')}>{$trs('fw.ports.f.local')} <span class="muted">{counts.local}</span></button>
-      <button class="chip" type="button" aria-pressed={filter === 'norule'} onclick={() => (filter = 'norule')}>{$trs('fw.ports.f.norule')} <span class="muted">{counts.norule}</span></button>
+      <button class="chip" type="button" aria-pressed={filter === 'all'} onclick={() => (filter = 'all')}><span>{$trs('fw.ports.f.all')} <span class="muted">{counts.all}</span></span></button>
+      <button class="chip" type="button" aria-pressed={filter === 'out'} onclick={() => (filter = 'out')}><span>{$trs('fw.ports.f.out')} <span class="muted">{counts.out}</span></span></button>
+      <button class="chip" type="button" aria-pressed={filter === 'local'} onclick={() => (filter = 'local')}><span>{$trs('fw.ports.f.local')} <span class="muted">{counts.local}</span></span></button>
+      <button class="chip" type="button" aria-pressed={filter === 'norule'} onclick={() => (filter = 'norule')}><span>{$trs('fw.ports.f.norule')} <span class="muted">{counts.norule}</span></span></button>
     </div>
 
     {#if $isPhone}
@@ -210,7 +216,7 @@
     {/if}
 
     {#if plan}
-      <div class="plan stack">
+      <div class="plan stack" bind:this={planEl}>
         <p>
           {$trs('fw.ports.plan', { port: `${plan.l.port}/${plan.l.proto}`, process: plan.l.process || '?' })}
         </p>
@@ -468,6 +474,10 @@
 
     .plan :global(.input) {
       height: 44px;
+    }
+
+    .plan {
+      scroll-margin-top: calc(var(--top-h) + 8px);
     }
 
     .plan :global(.src) {

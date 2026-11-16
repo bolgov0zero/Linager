@@ -8,6 +8,7 @@
   import TermIcon from '../../terminal/TermIcon.svelte';
   import { openTermWindow } from '../../terminal/windows';
   import { viewBox } from '../../terminal/vv';
+  import { lockScroll } from '../../ui/scrolllock';
   import { isPhone } from '../../ui/viewport';
 
   let { server }: { server: ServerDetail } = $props();
@@ -30,6 +31,12 @@
   function openSnippetSettings(): void {
     requestSettings('snippets');
   }
+
+  // Phone: the terminal is a full-screen layer, the page under it must stay still.
+  $effect(() => {
+    if (!$isPhone) return;
+    return lockScroll();
+  });
 
   // On a phone with the keyboard up the terminal covers the visible part of the screen (header and bottom bar included).
   const kbd = $derived($isPhone && $viewBox.kbd);
@@ -54,7 +61,7 @@
         <button class="btn" class:ink={keys} type="button" title={$tr('term.keys')} aria-label={$tr('term.keys')} aria-pressed={keys} onclick={() => (keys = !keys)}><KeyIcon /></button>
         <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.copy()}><span class="ic"><TermIcon name="copy" /></span><span class="tx">{$tr('term.copy')}</span></button>
         <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.paste()}><span class="ic"><TermIcon name="paste" /></span><span class="tx">{$tr('term.paste')}</span></button>
-        <button class="btn" type="button" title={$tr('termwin.openWindow')} onclick={popOut}><span class="ic"><TermIcon name="window" /></span><span class="tx">{$tr('termwin.openWindow')}</span></button>
+        <button class="btn popout" type="button" title={$tr('termwin.openWindow')} onclick={popOut}><span class="ic"><TermIcon name="window" /></span><span class="tx">{$tr('termwin.openWindow')}</span></button>
         <button class="btn" type="button" title={$tr('term.close')} onclick={() => session?.close()}><span class="ic"><TermIcon name="close" /></span><span class="tx">{$tr('term.close')}</span></button>
       </div>
     {/if}
@@ -94,6 +101,13 @@
       height: 1px;
       overflow: hidden;
       clip: rect(0 0 0 0);
+    }
+  }
+
+  /* Phone: the tab already fills the screen; a window over it would only stack a second terminal on the first. */
+  @media (max-width: 720px) {
+    .actions .btn.popout {
+      display: none;
     }
   }
 

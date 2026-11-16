@@ -218,12 +218,14 @@
               <th scope="row">{$tStore(r)}</th>
               {#each COLS as c, ci (c)}
                 <td>
-                  <input
-                    type="checkbox"
-                    aria-label="{$tStore(r)}: {$tStore(c)}"
-                    checked={bits[ri * 3 + ci]}
-                    disabled={locked || stat.type === 'link'}
-                    onchange={() => toggleBit(ri * 3 + ci)} />
+                  <label class="pc">
+                    <input
+                      type="checkbox"
+                      aria-label="{$tStore(r)}: {$tStore(c)}"
+                      checked={bits[ri * 3 + ci]}
+                      disabled={locked || stat.type === 'link'}
+                      onchange={() => toggleBit(ri * 3 + ci)} />
+                  </label>
                 </td>
               {/each}
             </tr>
@@ -350,6 +352,20 @@
 
   .perm td {
     padding: 4px 16px 4px 0;
+  }
+
+  /* Phone: the whole 44 px cell toggles the box. */
+  @media (max-width: 720px) {
+    .perm td {
+      padding: 0;
+    }
+
+    .pc {
+      display: flex;
+      align-items: center;
+      min-width: 44px;
+      min-height: 44px;
+    }
   }
 
   .grow {

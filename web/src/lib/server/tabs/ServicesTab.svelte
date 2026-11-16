@@ -469,7 +469,8 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 8px 0;
+    margin-bottom: -12px;
+    padding: 8px 0 20px;
     background: var(--bg);
   }
 

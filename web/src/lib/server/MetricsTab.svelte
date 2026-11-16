@@ -300,8 +300,8 @@
       top: var(--top-h);
       z-index: 9;
       display: flex;
-      margin: 0 -12px;
-      padding: 8px 12px;
+      margin: 0 -12px -12px;
+      padding: 8px 12px 20px;
       background: var(--bg);
     }
 

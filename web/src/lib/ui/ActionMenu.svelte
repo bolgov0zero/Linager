@@ -1,5 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import { lockScroll } from './scrolllock';
+  import { isPhone } from './viewport';
 
   /** A button that opens a menu of actions. The list is moved to <body> so scroll containers do not clip it. */
   let {
@@ -18,6 +20,12 @@
   let open = $state(false);
   let active = $state(0);
   let pos = $state({ left: 0, top: 0, up: false, max: 280, right: false });
+
+  // Phone: the list is a sheet over the page; the page behind it must not scroll with the finger.
+  $effect(() => {
+    if (!open || !$isPhone) return;
+    return lockScroll();
+  });
 
   function portal(node: HTMLElement) {
     document.body.appendChild(node);

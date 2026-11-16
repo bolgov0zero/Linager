@@ -501,10 +501,13 @@
         {#if searchOpen || query !== ''}
           <input class="input search" type="search" placeholder={$tr('dash.search')} aria-label={$tr('dash.search')} bind:value={query} />
         {/if}
-        {#if groups.length > 0}
-          <Select value={groupFilter} options={groupOptions} ariaLabel={$tr('dash.group.label')} onchange={pickGroup} />
-        {/if}
       </div>
+      {#if groups.length > 0}
+        <!-- Not pinned: on a short screen the pinned part is only the filter row (and the search field). -->
+        <div class="pgroup">
+          <Select value={groupFilter} options={groupOptions} ariaLabel={$tr('dash.group.label')} onchange={pickGroup} />
+        </div>
+      {/if}
     {:else}
     <div class="toolbar">
       <div class="group" role="group" aria-label={$tr('dash.filters')}>
@@ -936,7 +939,7 @@
   }
 
   .manage {
-    min-height: 36px !important;
+    min-height: 44px !important;
     padding: 0 10px !important;
     font-size: 13px;
   }
@@ -949,14 +952,22 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin: 4px -12px 8px;
-    padding: 8px 12px;
+    margin: 4px -12px 0;
+    padding: 8px 12px 16px;
     background: var(--bg);
   }
 
   .prow {
     display: flex;
     gap: 8px;
+  }
+
+  .ptool:has(+ .pgroup) {
+    padding-bottom: 8px;
+  }
+
+  .pgroup {
+    margin: 0 0 12px;
   }
 
   .pseg {
@@ -997,6 +1008,33 @@
   }
 
   @media (max-width: 720px) {
+    /* Tiles are two to a row: each meter is a row (label, bar, value), as in the design, so that "72%" never wraps. */
+    .tmeters {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 4px;
+    }
+
+    .tmeter {
+      grid-template-columns: 30px minmax(0, 1fr) 36px;
+      align-items: center;
+      gap: 0 5px;
+    }
+
+    .tlbl {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .tbar {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .tval {
+      grid-column: 3;
+      grid-row: 1;
+    }
+
     .count {
       margin: 0;
     }

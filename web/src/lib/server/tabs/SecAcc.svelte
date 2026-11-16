@@ -35,6 +35,8 @@
 <style>
   .acc {
     min-width: 0;
+    /* The header and the body bring their own padding (the card's phone padding would double it). */
+    padding: 0;
   }
 
   .ah {

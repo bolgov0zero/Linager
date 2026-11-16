@@ -20,6 +20,7 @@
   import UsersTab from './tabs/UsersTab.svelte';
   import DockerTab from './tabs/DockerTab.svelte';
   import { formatDateTime } from './format';
+  import { openTermWindow } from '../terminal/windows';
   import AgentUpdateBanner from './AgentUpdateBanner.svelte';
   import SideNav from './SideNav.svelte';
   import SectionsSheet from './SectionsSheet.svelte';
@@ -232,6 +233,7 @@
         securityUpdates={sample?.security_updates ?? 0}
         failedServices={sample?.failed_services ?? 0}
         agentVersion={detail.agent_version ? `agent ${detail.agent_version}` : ''}
+        onterminalwindow={canTerminal && online ? () => openTermWindow(detail!.id, detail!.name) : undefined}
       />
       <div class="main">
         <div class="crumb">{$tr(currentGroupKey)}</div>

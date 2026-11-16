@@ -1737,7 +1737,12 @@
       z-index: 6;
       display: flex;
       flex-direction: column;
-      margin: 0 -12px;
+      /* The negative bottom margin cancels the 16 px page padding: at the end of the scroll the bar still lies on the tab bar. */
+      margin: 0 -12px -16px;
+      /* Both blocks (confirm and draft) together must not eat the whole screen: the dock scrolls inside. */
+      max-height: 55dvh;
+      overflow-y: auto;
+      overscroll-behavior: contain;
       background: var(--surface);
       border-top: 2px solid var(--warn);
       box-shadow: 0 -4px 0 var(--shade);

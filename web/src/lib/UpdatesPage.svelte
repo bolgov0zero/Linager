@@ -735,7 +735,7 @@
     }
 
     :global(.upd-page:has(.upd-pin)) {
-      padding-bottom: 64px;
+      padding-bottom: calc(80px + var(--safe-b));
     }
 
     :global(.upd-tw) {

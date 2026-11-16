@@ -109,7 +109,7 @@
           n: row.step ?? 0,
           total: row.steps_total || TOTAL_STEPS,
           name: row.step_id ? $tr(`upd.agstep.${row.step_id}`) : '',
-        })}{#if row.message} · {row.message}{/if}
+        })}{#if row.message}{' · ' + row.message}{/if}
       </span>
     {:else if row.status === 'queued'}
       <span class="msg">{$tr('upd.ag.queued')}{#if row.message}: {row.message}{:else if !row.online}: {$tr('upd.ag.waiting')}{/if}</span>

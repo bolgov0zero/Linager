@@ -267,6 +267,9 @@
       font-size: 13px;
       line-height: 1.15;
       text-align: center;
+      /* Long labels (English) wrap inside the segment instead of being cut at both sides. */
+      white-space: normal;
+      overflow: visible;
     }
 
     .uform .pc-seg .chip:first-child {

@@ -2,6 +2,8 @@
   import { tr } from '../../i18n';
   import EditorWindowView from './EditorWindowView.svelte';
   import TermWindowView from './TermWindowView.svelte';
+  import { lockScroll } from '../ui/scrolllock';
+  import { isPhone } from '../ui/viewport';
   import { viewBox } from './vv';
   import { focusTermWindow, termWindows, updateTermWindow } from './windows';
 
@@ -14,6 +16,20 @@
       null,
     )?.key ?? null,
   );
+
+  // Phone: a window covers the whole screen, the page behind it must not scroll when a finger moves over the window.
+  $effect(() => {
+    if (!$isPhone || topKey === null) return;
+    return lockScroll();
+  });
+
+  // Phone: while every window is minimized the dock sits above the bottom bar; the page (and its pinned bars) make room.
+  $effect(() => {
+    if (!$isPhone || $termWindows.length === 0 || topKey !== null || $viewBox.kbd) return;
+    const root = document.documentElement;
+    root.style.setProperty('--bar-h', 'calc(var(--tab-h) + 54px)');
+    return () => root.style.removeProperty('--bar-h');
+  });
 
   /** Taskbar click: restore a minimized window, minimize the front one, bring any other to the front. */
   function toggle(key: number, minimized: boolean): void {
@@ -115,7 +131,8 @@
     }
 
     .layer.idle .dock {
-      bottom: calc(var(--bar-h) + var(--safe-b));
+      bottom: calc(var(--tab-h) + var(--safe-b));
+      padding-bottom: 4px;
     }
 
     .layer.kbd .dock {

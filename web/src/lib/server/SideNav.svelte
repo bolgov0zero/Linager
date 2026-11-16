@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tr } from '../../i18n';
+  import TermIcon from '../terminal/TermIcon.svelte';
   import { groupTabs, TAB_ICONS, type TabId, type TABS } from './model';
 
   let {
@@ -10,6 +11,7 @@
     securityUpdates = 0,
     failedServices = 0,
     agentVersion = '',
+    onterminalwindow,
   }: {
     tabs: readonly (typeof TABS)[number][];
     current: TabId;
@@ -19,6 +21,8 @@
     securityUpdates?: number;
     failedServices?: number;
     agentVersion?: string;
+    /** Opens the terminal of the server in a floating window; the button sits next to the Terminal item. */
+    onterminalwindow?: () => void;
   } = $props();
 
   const GROUPS_KEY = 'linager.side.groups';
@@ -119,18 +123,30 @@
           <div class="items">
             {#each g.tabs as t (t.id)}
               {@const b = badge(t.id)}
-              <button
-                class="item"
-                type="button"
-                role="tab"
-                aria-selected={current === t.id}
-                data-tip={$tr(t.key)}
-                onclick={() => pick(t.id)}
-              >
-                {@render icon(t.id)}
-                <span class="lbl">{$tr(t.key)}</span>
-                {#if b}<span class="cnt {b.tone}" title={b.hint}>{b.text}</span>{/if}
-              </button>
+              <div class="entry">
+                <button
+                  class="item"
+                  class:withwin={t.id === 'terminal' && !!onterminalwindow}
+                  type="button"
+                  role="tab"
+                  aria-selected={current === t.id}
+                  data-tip={$tr(t.key)}
+                  onclick={() => pick(t.id)}
+                >
+                  {@render icon(t.id)}
+                  <span class="lbl">{$tr(t.key)}</span>
+                  {#if b}<span class="cnt {b.tone}" title={b.hint}>{b.text}</span>{/if}
+                </button>
+                {#if t.id === 'terminal' && onterminalwindow}
+                  <button
+                    class="winbtn"
+                    class:on={current === t.id}
+                    type="button"
+                    title={$tr('termwin.openWindow')}
+                    aria-label={$tr('termwin.openWindow')}
+                    onclick={onterminalwindow}><TermIcon name="window" /></button>
+                {/if}
+              </div>
             {/each}
           </div>
         {/if}
@@ -223,6 +239,55 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+  }
+
+  .entry {
+    position: relative;
+  }
+
+  .item.withwin {
+    padding-right: 40px;
+  }
+
+  /* The "open in a window" button at the right end of the Terminal item. */
+  .winbtn {
+    position: absolute;
+    top: 50%;
+    right: 5px;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    transform: translateY(-50%);
+    background: var(--surface);
+    border: 2px solid var(--line);
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .winbtn:hover {
+    background: var(--seg-off);
+  }
+
+  .winbtn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .winbtn :global(svg) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .rail .winbtn {
+    display: none;
+  }
+
+  .rail .item.withwin {
+    padding-right: 0;
   }
 
   .item {

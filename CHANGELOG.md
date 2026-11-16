@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.56
+
+- Server page: a square icon button at the right end of the "Terminal" item of the side menu opens the terminal in a floating window (shown while the server is online and the terminal module is allowed).
+- Phone layout, fixes after the first real use: the page behind a full-screen layer (floating terminal window, dialog, sheet, drop-down list) no longer scrolls with the finger; the Terminal tab has no "open in window" button on a phone (a window stacked a second terminal over the tab); the button bar at the end of a dialog sits exactly on the bottom edge of the sheet; no gaps under the pinned bars (firewall and network draft/rollback, apt install, selection bar of Files, search bars of Metrics and Services, the toolbar of the dashboard); the dock of minimized windows no longer hides the last row of a page.
+- Phone: "Terminal as user" in the action sheet of a user works again; the group picker moved out of the pinned row of the dashboard; map tiles lay their meters out as rows; the sign-in page no longer scrolls by 1 px; chart labels no longer overlap in English; fields of the terminal use 16 px.
+
 ## 0.1.55
 
 - Phone layout, redone from scratch (up to 720 px, designed for an iPhone 14 Pro Max, mockup `docs/design/next/mobile.html`): a pinned top bar and a bottom bar instead of the drop-down menu (Servers, Linager updates, Log, More; on a server page Overview, Terminal, Files, Services and "Sections" with every tab by group). Drop-down lists, action menus, context menus and all dialogs open as sheets from the bottom edge, the buttons at the end of a dialog stay in reach, and the large dialogs fill the screen. No swipes; controls are 44 px high, fields use 16 px so iOS does not zoom.

@@ -250,8 +250,10 @@
         type="button"
         disabled={au.no_shell || !server.online}
         onclick={() => {
+          // `au` follows `actionUser`, so the user is taken before the sheet is closed.
+          const target = au;
           actionUser = null;
-          terminal(au);
+          terminal(target);
         }}>{$T('mobC.usr.termAs', { user: au.name })}</button
       >
     {/if}

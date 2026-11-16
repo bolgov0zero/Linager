@@ -396,8 +396,7 @@
     {#if info?.available && sec === 'containers'}
       <div class="card stack mchk">
         <span class="small muted" title={$tStore('docker.check.help')}>
-          {checkedText(info.checked_at)}{#if info.checked_at && updatable.length > 0}
-            · {$tStore('docker.check.avail', { n: updatable.length })}{/if}
+          {checkedText(info.checked_at)}{#if info.checked_at && updatable.length > 0}&nbsp;· {$tStore('docker.check.avail', { n: updatable.length })}{/if}
         </span>
         <div class="row nowrap">
           <button class="btn grow" type="button" disabled={readOnly || checking} onclick={() => void checkImages()}>

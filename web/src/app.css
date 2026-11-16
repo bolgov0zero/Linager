@@ -36,7 +36,8 @@
   --c6: #6b7488;
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
-  --bar-h: 64px;
+  --tab-h: 64px; /* the bottom bar of the phone layout (without the safe area) */
+  --bar-h: var(--tab-h); /* everything pinned at the bottom: the bar, plus the dock of minimized windows */
   --font-display: "Medeo Pixel", "Medeo Mono", ui-monospace, Menlo, Consolas, monospace;
   --font-body: "Medeo Mono", ui-monospace, Menlo, Consolas, monospace;
   font-variation-settings: "ELSH" 1;
@@ -320,6 +321,10 @@ input[type='checkbox']:focus-visible {
     padding: 0 14px;
   }
 
+  a.btn {
+    text-decoration: none;
+  }
+
   .input {
     min-height: 44px;
     font-size: 16px;
@@ -353,9 +358,11 @@ input[type='checkbox']:focus-visible {
     inset: 0;
     z-index: 59;
     background: color-mix(in srgb, var(--ink) 50%, transparent);
+    touch-action: none;
   }
 
   .sel-list {
+    overscroll-behavior: contain;
     position: fixed !important;
     inset: auto 0 0 0 !important;
     z-index: 60 !important;

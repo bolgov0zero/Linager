@@ -12,6 +12,9 @@
 
 <script lang="ts">
   import { onMount, tick } from 'svelte';
+  import { get } from 'svelte/store';
+  import { lockScroll } from './scrolllock';
+  import { isPhone } from './viewport';
 
   /** A menu at a screen position (right click or a "more" button). It closes on any outside action. */
   let {
@@ -46,9 +49,12 @@
       el.focus({ preventScroll: true });
     });
     const close = () => onclose();
+    // Phone: the sheet holds the page still (a finger over it must not scroll what is under it); elsewhere any scroll closes the menu.
+    const unlock = get(isPhone) ? lockScroll() : null;
     window.addEventListener('resize', close);
-    window.addEventListener('scroll', close, true);
+    if (!unlock) window.addEventListener('scroll', close, true);
     return () => {
+      unlock?.();
       window.removeEventListener('resize', close);
       window.removeEventListener('scroll', close, true);
     };

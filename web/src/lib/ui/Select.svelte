@@ -1,6 +1,8 @@
 <script lang="ts" generics="T extends string | number">
   import { tick } from 'svelte';
   import { locale } from '../../i18n';
+  import { lockScroll } from './scrolllock';
+  import { isPhone } from './viewport';
 
   // Project-styled replacement for <select>: a button with the current value and a listbox.
   // The list is moved to <body> and positioned with `fixed`, so table and scroll containers do not clip it
@@ -35,6 +37,12 @@
   let typedAt = 0;
 
   const current = $derived(options.find((o) => o.value === value));
+
+  // Phone: the list is a sheet over the page; the page behind it must not scroll with the finger.
+  $effect(() => {
+    if (!open || !$isPhone) return;
+    return lockScroll();
+  });
 
   // A combobox button does not take its name from a wrapping <label>; reuse the label's caption instead.
   let labelText = $state<string | undefined>(undefined);
@@ -161,6 +169,8 @@
   }
 
   function onScroll(event: Event): void {
+    // Phone: pinning the page (lockScroll) fires a scroll event on the document, which must not close the sheet.
+    if ($isPhone && event.target === document) return;
     if (open && !document.getElementById(`${uid}-list`)?.contains(event.target as Node)) hide();
   }
 </script>
@@ -314,5 +324,12 @@
   :global(.sel-list li[aria-selected='true']) {
     background: var(--ink);
     color: var(--surface);
+  }
+
+  /* Phone: a touch-sized control. */
+  @media (max-width: 720px) {
+    .sel {
+      min-height: 44px;
+    }
   }
 </style>

@@ -1497,15 +1497,17 @@
   /* The actions of the selection (or the clipboard) stay above the bottom bar while the list scrolls. */
   .pbar {
     position: sticky;
-    bottom: calc(var(--bar-h) + var(--safe-b) + 8px);
+    bottom: calc(var(--bar-h) + var(--safe-b));
     z-index: 5;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 8px;
+    margin: 0 -12px;
+    padding: 8px 12px;
     background: var(--surface);
-    border: 2px solid var(--line);
-    box-shadow: 3px 3px 0 var(--shade);
+    border: 0;
+    border-top: 2px solid var(--line);
+    box-shadow: 0 -4px 0 var(--shade);
   }
 
   .pbar-top {

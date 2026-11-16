@@ -605,7 +605,7 @@
 
   @media (max-width: 720px) {
     main.center {
-      min-height: calc(100dvh - 50px);
+      min-height: calc(100dvh - 52px - var(--safe-t));
     }
   }
   /* A counter inside a button must not make that button taller than its neighbours. */

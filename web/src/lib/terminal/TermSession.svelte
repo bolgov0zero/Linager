@@ -360,6 +360,11 @@
       border-width: 0;
     }
 
+    /* The hidden input of xterm: below 16 px iOS would zoom the page when the keyboard opens. */
+    .screen :global(.xterm-helper-textarea) {
+      font-size: 16px;
+    }
+
     .closed {
       order: 1;
       padding: 8px 12px;

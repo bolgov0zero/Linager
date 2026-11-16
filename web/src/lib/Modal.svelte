@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { tr } from '../i18n';
+  import { lockScroll } from './ui/scrolllock';
+  import { isPhone } from './ui/viewport';
 
   let {
     title,
@@ -27,6 +29,12 @@
 
   $effect(() => {
     dialog?.focus();
+  });
+
+  // Phone: the dialog is a sheet over the page; the page behind it must not scroll with the finger.
+  $effect(() => {
+    if (!$isPhone) return;
+    return lockScroll();
   });
 </script>
 
@@ -152,12 +160,24 @@
       gap: 12px;
       overflow-y: auto;
       overscroll-behavior: contain;
-      padding: 12px 12px calc(12px + var(--safe-b));
+      padding: 12px 12px 0;
+    }
+
+    /* The room under the content (home indicator): a spacer, not padding, so that a pinned button bar can sit
+       exactly on the bottom edge of the sheet. */
+    .dialog-body::after {
+      content: '';
+      flex: none;
+      height: var(--safe-b);
     }
 
     .dialog-body.flush {
-      padding: 0 0 var(--safe-b);
+      padding: 0;
       gap: 0;
+    }
+
+    .dialog-body.flush::after {
+      height: var(--safe-b);
     }
 
     /* The buttons at the end of a dialog stay in reach while its content scrolls. */
@@ -167,10 +187,15 @@
       bottom: 0;
       z-index: 2;
       flex-wrap: nowrap;
-      margin: 0 -12px calc(-12px - var(--safe-b));
+      margin: auto -12px 0;
       padding: 10px 12px calc(10px + var(--safe-b));
       background: var(--surface);
       border-top: 2px solid var(--line);
+    }
+
+    .dialog-body:has(> :global(.row.end:last-child))::after,
+    .dialog-body:has(> :global(form > .row.end:last-child))::after {
+      display: none;
     }
 
     .dialog-body > :global(.row.end:last-child > .btn),

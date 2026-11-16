@@ -144,7 +144,11 @@
     return [...set].sort((a, b) => a - b);
   });
 
-  const xTicks = $derived([0, 0.25, 0.5, 0.75, 1].map((f) => from + f * span));
+  // Five labels when they fit side by side (11 px glyphs are about 6.7 px wide; the middle ones are centered under their
+  // tick), three when the labels are long or the chart is narrow (a phone, "06:45 PM").
+  const xTicks = $derived(
+    (((X1 - X0) / 4 >= tickLabel(from).length * 6.7 * 1.5 + 4) ? [0, 0.25, 0.5, 0.75, 1] : [0, 0.5, 1]).map((f) => from + f * span),
+  );
 
   const marks = $derived(
     events
