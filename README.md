@@ -15,7 +15,7 @@ One web panel, a lightweight agent on every host: live metrics, terminal, files,
 
 **English** · [Русский](README.ru.md)
 
-[Features](#features) · [Screenshots](#screenshots) · [Install](#install) · [How it works](#how-it-works) · [Documentation](#documentation)
+[**Website**](https://bolgov0zero.github.io/linager/) · [Features](#features) · [Screenshots](#screenshots) · [Install](#install) · [How it works](#how-it-works) · [Documentation](#documentation)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/en/dashboard-dark.png">
@@ -166,12 +166,13 @@ Details and known limits: [docs/en/security.md](docs/en/security.md). To report 
 |---|---|---|
 | Installation | [install](docs/en/install.md) | [установка](docs/ru/install.md) |
 | Reverse proxy (Caddy, nginx, NPM) | [proxy](docs/en/proxy.md) | [прокси](docs/ru/proxy.md) |
+| Admin panel access | [access](docs/en/access.md) | [доступ к админке](docs/ru/access.md) |
 | Agent modules and configuration | [modules](docs/en/modules.md) | [модули](docs/ru/modules.md) |
 | Updates, backups, rollback | [updates](docs/en/updates.md) | [обновления](docs/ru/updates.md) |
 | Security | [security](docs/en/security.md) | [безопасность](docs/ru/security.md) |
 | Architecture | [architecture](docs/en/architecture.md) | [архитектура](docs/architecture.md) |
 
-The interface design and mockups are in [docs/design/](docs/design/).
+The documentation is also published as a site: <https://bolgov0zero.github.io/linager/>. The interface design and mockups are in [docs/design/](docs/design/).
 
 ## Development
 

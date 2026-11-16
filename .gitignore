@@ -21,3 +21,9 @@ agent.yaml
 .DS_Store
 .idea/
 .vscode/
+
+# site (VitePress): generated content and build output
+/site/content/
+/site/node_modules/
+/site/.vitepress/cache/
+/site/.vitepress/dist/

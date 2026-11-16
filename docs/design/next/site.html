@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Linager: site mockup (landing and documentation)</title>
+<style>
+@font-face{font-family:"Medeo Mono";src:url(../mockup/fonts/MedeoMonoVariable.woff2) format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Medeo Pixel";src:url(../mockup/fonts/MedeoPixelVariable.woff) format("woff");font-style:normal;font-display:swap}
+:root{
+  --bg:#e8ebe5;--surface:#f6f7f3;--ink:#14181e;--muted:#5d6572;--line:#14181e;--accent:#2b55d9;--good:#1e8a4b;--warn:#b36f0e;--crit:#c4352a;--seg-off:#d5d9d0;--shade:#c3c8bd;--term:#0f1218;--term-ink:#e6e9ef;
+  --font-display:"Medeo Pixel","Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  --font-body:"Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  font-variation-settings:"ELSH" 1;font-synthesis:none;color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;--term:#0a0c10;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;--term:#0a0c10;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.6}
+h1,h2,h3,h4,p,ul,ol,figure{margin:0}
+a{color:inherit}
+button{font:inherit;color:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+.muted{color:var(--muted)}
+.mono{font-family:var(--font-body)}
+
+/* ---- header ---- */
+.top{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:2px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:18px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--font-display);font-size:24px;line-height:1}
+.brand svg{width:30px;height:30px;shape-rendering:crispEdges}
+.nav{display:flex;gap:6px;margin-left:22px}
+.nav a{display:inline-flex;align-items:center;height:36px;padding:0 14px;border:2px solid transparent;text-decoration:none;font-family:var(--font-display);font-size:16px}
+.nav a:hover{border-color:var(--line)}
+.nav a[aria-current=page]{background:var(--ink);color:var(--surface);border-color:var(--ink);box-shadow:3px 3px 0 var(--shade)}
+.sp{flex:1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;cursor:pointer;font-family:var(--font-display);font-size:16px;line-height:1;letter-spacing:.02em;box-shadow:3px 3px 0 var(--shade);text-decoration:none;white-space:nowrap;transition:transform .08s,box-shadow .08s}
+.btn:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--shade)}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shade)}
+.btn.sm{height:32px;padding:0 10px;font-size:14px}
+.btn.primary{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.btn.ink{background:var(--ink);color:var(--surface)}
+.seg{display:inline-flex}
+.seg button{height:32px;padding:0 10px;border:2px solid var(--line);background:var(--surface);cursor:pointer;font-family:var(--font-display);font-size:14px}
+.seg button+button{border-left:0}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--surface)}
+.burger{display:none}
+
+/* ---- common blocks ---- */
+.card{background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade)}
+.eyebrow{font-family:var(--font-display);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.sec{padding:84px 0}
+.sec h2{font-family:var(--font-display);font-weight:400;font-size:clamp(28px,4vw,44px);line-height:1.1;margin:8px 0 14px}
+.sec .lead{max-width:640px;color:var(--muted);font-size:16px}
+.badge{display:inline-block;padding:0 6px;border:2px solid currentColor;font-size:12px;line-height:1.4}
+.dot{display:inline-block;width:8px;height:8px;background:currentColor}
+.ok{color:var(--good)}.warn{color:var(--warn)}.crit{color:var(--crit)}
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease;transition-delay:var(--d,0s)}
+.reveal.in{opacity:1;transform:none}
+
+/* pixel bar */
+.pbar{display:grid;grid-template-columns:repeat(20,1fr);gap:2px;height:10px}
+.pbar i{background:var(--seg-off);transition:background .25s}
+.pbar i.on{background:var(--accent)}
+.pbar.warn i.on{background:var(--warn)}
+.pbar.crit i.on{background:var(--crit)}
+
+/* ---- hero ---- */
+.hero{position:relative;overflow:hidden;padding:72px 0 80px;border-bottom:2px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;background-image:linear-gradient(var(--seg-off) 1px,transparent 1px),linear-gradient(90deg,var(--seg-off) 1px,transparent 1px);background-size:28px 28px;opacity:.55;mask-image:radial-gradient(ellipse at 70% 40%,#000 0,transparent 70%);-webkit-mask-image:radial-gradient(ellipse at 70% 40%,#000 0,transparent 70%);pointer-events:none}
+.hero .wrap{position:relative;display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
+.hero h1{font-family:var(--font-display);font-weight:400;font-size:clamp(38px,6vw,72px);line-height:1.02;letter-spacing:-.01em;margin:14px 0 20px}
+.hero h1 .cur{display:inline-block;width:.5em;height:.8em;background:var(--accent);margin-left:6px;vertical-align:-.05em;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.hero p.lead{font-size:17px;color:var(--muted);max-width:520px}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin:28px 0 22px}
+.cmd{display:flex;align-items:center;gap:0;max-width:540px;background:var(--term);color:var(--term-ink);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade)}
+.cmd code{flex:1;min-width:0;padding:10px 14px;font-size:12px;white-space:pre-wrap;word-break:break-all}
+.cmd code b{color:#7d9cff;font-weight:400}
+.cmd button{align-self:stretch;border:0;border-left:2px solid var(--line);background:var(--surface);color:var(--ink);padding:0 14px;cursor:pointer;font-family:var(--font-display);font-size:14px}
+.cmd button:hover{background:var(--accent);color:var(--surface)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:20px;font-size:12px;color:var(--muted)}
+
+/* hero live dashboard */
+.live{position:relative;transform:rotate(-1.2deg);animation:float 7s ease-in-out infinite}
+@keyframes float{50%{transform:rotate(-1.2deg) translateY(-8px)}}
+.live .bar{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:2px solid var(--line);font-size:12px;color:var(--muted)}
+.live .bar i{width:10px;height:10px;border:2px solid var(--line);background:var(--seg-off)}
+.live .bar span{margin-left:8px}
+.live .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px}
+.sc{border:2px solid var(--line);border-top-width:6px;padding:10px 12px;background:var(--surface)}
+.sc.w{border-top-color:var(--warn)}.sc.c{border-top-color:var(--crit)}
+.sc h4{font-family:var(--font-display);font-weight:400;font-size:18px;display:flex;align-items:center;gap:8px}
+.sc .row{display:grid;grid-template-columns:34px 1fr 38px;gap:8px;align-items:center;font-size:11px;color:var(--muted);margin-top:6px}
+.sc .row b{font-weight:400;color:var(--ink);text-align:right}
+.sc .tag{font-size:11px;margin-top:6px}
+.live .toast{position:absolute;right:-14px;bottom:-20px;background:var(--ink);color:var(--surface);padding:10px 14px;font-size:12px;box-shadow:4px 4px 0 var(--shade);animation:pop 6s ease-in-out infinite}
+@keyframes pop{0%,8%{opacity:0;transform:translateY(10px)}14%,80%{opacity:1;transform:none}90%,100%{opacity:0;transform:translateY(10px)}}
+
+/* ---- stats ---- */
+.stats{background:var(--ink);color:var(--surface)}
+.stats .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
+.stat{padding:30px 20px;border-left:2px solid #3b4455}
+.stat:first-child{border-left:0}
+.stat b{display:block;font-family:var(--font-display);font-weight:400;font-size:clamp(34px,4.4vw,52px);line-height:1}
+.stat span{display:block;margin-top:8px;font-size:13px;color:#aab2c2}
+
+/* ---- features ---- */
+.fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px}
+.feat{padding:20px;transition:transform .15s,box-shadow .15s}
+.feat:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--shade)}
+.feat .ic{width:44px;height:44px;border:2px solid var(--line);display:grid;place-items:center;background:var(--bg);margin-bottom:14px}
+.feat .ic svg{width:26px;height:26px;shape-rendering:crispEdges;fill:var(--ink)}
+.feat:hover .ic{background:var(--accent)}
+.feat:hover .ic svg{fill:var(--surface)}
+.feat h3{font-family:var(--font-display);font-weight:400;font-size:20px;margin-bottom:6px;display:flex;gap:8px;align-items:center}
+.feat p{color:var(--muted);font-size:14px}
+.new{padding:0 6px;border:2px solid var(--accent);color:var(--accent);font-size:11px;letter-spacing:.04em;text-transform:uppercase;font-family:var(--font-body)}
+
+/* ---- how it works ---- */
+.how{background:var(--surface);border-block:2px solid var(--line)}
+.diagram{margin-top:40px;padding:22px}
+.diagram svg{display:block;width:100%;height:auto}
+.diagram text{font-family:var(--font-body);font-size:12px;fill:var(--ink)}
+.diagram .t{font-family:var(--font-display);font-size:16px}
+.diagram .box{fill:var(--surface);stroke:var(--line);stroke-width:2}
+.diagram .ln{stroke:var(--line);stroke-width:2;stroke-dasharray:6 6;fill:none;animation:dash 1.4s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-24}}
+.diagram .pk{fill:var(--accent)}
+.points{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:26px}
+.points div{border-left:4px solid var(--accent);padding-left:14px;font-size:14px;color:var(--muted)}
+.points b{display:block;color:var(--ink);font-family:var(--font-display);font-weight:400;font-size:17px;margin-bottom:2px}
+
+/* ---- screenshots ---- */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:32px 0 18px}
+.tabs button{height:36px;padding:0 14px;border:2px solid var(--line);background:var(--surface);cursor:pointer;font-family:var(--font-display);font-size:15px;box-shadow:3px 3px 0 var(--shade)}
+.tabs button[aria-selected=true]{background:var(--ink);color:var(--surface)}
+.shot{position:relative;overflow:hidden}
+.shot .chrome{display:flex;gap:6px;align-items:center;padding:8px 12px;border-bottom:2px solid var(--line);font-size:12px;color:var(--muted)}
+.shot .chrome i{width:10px;height:10px;border:2px solid var(--line)}
+.shot .stage{position:relative;aspect-ratio:1600/1130;background:var(--bg)}
+.shot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top;opacity:0;transform:scale(1.015);transition:opacity .5s,transform .8s}
+.shot img.on{opacity:1;transform:none}
+.cap{margin-top:14px;color:var(--muted);font-size:14px;min-height:46px}
+
+/* ---- access spotlight ---- */
+.spot{display:grid;grid-template-columns:.9fr 1.1fr;gap:44px;align-items:center}
+.checks{list-style:none;padding:0;margin:20px 0 0;display:grid;gap:10px}
+.checks li{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.checks li::before{content:"";flex:none;width:14px;height:14px;margin-top:5px;background:var(--accent);clip-path:polygon(0 50%,35% 50%,35% 70%,70% 70%,70% 30%,100% 30%,100% 0,35% 0,35% 20%,0 20%)}
+.checks li{position:relative}
+.checks li::before{clip-path:polygon(0 55%,20% 40%,40% 62%,85% 10%,100% 25%,40% 90%)}
+
+/* ---- install ---- */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px;counter-reset:s}
+.step{padding:22px;position:relative}
+.step::before{counter-increment:s;content:"0" counter(s);position:absolute;top:-16px;left:16px;background:var(--accent);color:var(--surface);font-family:var(--font-display);font-size:18px;padding:0 10px;border:2px solid var(--line)}
+.step h3{font-family:var(--font-display);font-weight:400;font-size:20px;margin:4px 0 8px}
+.step p{color:var(--muted);font-size:14px}
+.term{margin-top:30px;background:var(--term);color:var(--term-ink);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);font-size:13px}
+.term .tb{display:flex;gap:6px;padding:8px 12px;border-bottom:2px solid #3b4455}
+.term .tb i{width:10px;height:10px;border:2px solid #3b4455}
+.term pre{margin:0;padding:16px;min-height:178px;white-space:pre-wrap;font-family:var(--font-body);line-height:1.55}
+.term .g{color:#4fcf86}.term .b{color:#7d9cff}.term .m{color:#8a93a4}
+.term .caret{display:inline-block;width:8px;height:15px;background:#7d9cff;vertical-align:-2px;animation:blink 1s steps(1) infinite}
+.platforms{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.platforms span{border:2px solid var(--line);padding:2px 10px;font-size:13px;background:var(--surface)}
+
+/* ---- cta + footer ---- */
+.cta-band{background:var(--accent);color:#fff;border-block:2px solid var(--line);text-align:center;padding:64px 0}
+.cta-band h2{font-family:var(--font-display);font-weight:400;font-size:clamp(28px,4vw,46px);margin-bottom:10px}
+.cta-band p{opacity:.85;margin-bottom:24px}
+.cta-band .btn{border-color:#fff}
+footer.site{padding:36px 0;background:var(--surface);font-size:13px;color:var(--muted)}
+footer.site .wrap{display:flex;flex-wrap:wrap;gap:16px 32px;justify-content:space-between;align-items:center}
+footer.site nav{display:flex;gap:18px;flex-wrap:wrap}
+footer.site a{text-decoration:none}
+footer.site a:hover{color:var(--ink);text-decoration:underline}
+
+/* ---- docs ---- */
+.docs{display:grid;grid-template-columns:268px minmax(0,1fr) 220px;gap:36px;max-width:1380px;margin:0 auto;padding:28px 20px 60px;align-items:start}
+.side,.toc{position:sticky;top:84px;max-height:calc(100vh - 104px);overflow:auto}
+.side{background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);padding:12px}
+.search{display:flex;align-items:center;gap:8px;border:2px solid var(--line);background:var(--bg);padding:0 10px;height:38px;margin-bottom:12px}
+.search input{flex:1;min-width:0;border:0;background:none;outline:0;font:inherit;font-size:13px;color:var(--ink)}
+.search kbd{font-size:11px;border:2px solid var(--seg-off);padding:0 5px;color:var(--muted)}
+.grp{margin-top:6px}
+.grp h5{margin:10px 6px 4px;font-family:var(--font-display);font-weight:400;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.side a{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:2px solid transparent;text-decoration:none;font-size:14px}
+.side a:hover{border-color:var(--seg-off);background:var(--bg)}
+.side a[aria-current=page]{background:var(--ink);color:var(--surface);border-color:var(--ink);box-shadow:3px 3px 0 var(--shade)}
+.side a.hide{display:none}
+.side .empty{padding:8px 10px;font-size:13px;color:var(--muted)}
+article{min-width:0}
+.crumbs{font-size:12px;color:var(--muted);margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap}
+article h1{font-family:var(--font-display);font-weight:400;font-size:clamp(30px,4vw,44px);line-height:1.1;margin-bottom:12px}
+article .lead{color:var(--muted);font-size:16px;margin-bottom:22px}
+article h2{font-family:var(--font-display);font-weight:400;font-size:26px;margin:38px 0 10px;padding-top:6px;border-top:2px dashed var(--seg-off)}
+article h3{font-family:var(--font-display);font-weight:400;font-size:20px;margin:26px 0 8px}
+article p{margin:10px 0}
+article ul,article ol{margin:10px 0;padding-left:22px}
+article li{margin:4px 0}
+article code{background:var(--surface);border:1px solid var(--seg-off);padding:1px 5px;font-size:.92em}
+.pre{position:relative;margin:14px 0;background:var(--term);color:var(--term-ink);border:2px solid var(--line);box-shadow:3px 3px 0 var(--shade)}
+.pre pre{margin:0;padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.55;font-family:var(--font-body)}
+.pre button{position:absolute;top:8px;right:8px;height:26px;padding:0 8px;border:2px solid #3b4455;background:var(--surface);color:var(--ink);cursor:pointer;font-family:var(--font-display);font-size:12px;opacity:0;transition:opacity .15s}
+.pre:hover button,.pre button:focus{opacity:1}
+.pre .c{color:#8a93a4}.pre .k{color:#7d9cff}.pre .s{color:#4fcf86}
+.note{margin:16px 0;padding:12px 14px;border:2px solid var(--accent);background:var(--surface);font-size:14px}
+.note.warn{border-color:var(--warn)}
+.note b{font-family:var(--font-display);font-weight:400;display:block;margin-bottom:2px;color:var(--accent)}
+.note.warn b{color:var(--warn)}
+table.t{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px}
+table.t th{font-family:var(--font-display);font-weight:400;text-align:left;border-bottom:2px solid var(--line);padding:6px 10px;color:var(--muted);font-size:13px}
+table.t td{padding:8px 10px;border-bottom:1px dashed var(--seg-off);vertical-align:top}
+article img.fig{display:block;width:100%;border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);margin:16px 0}
+.pn{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:44px}
+.pn a{display:block;padding:12px 16px;border:2px solid var(--line);background:var(--surface);text-decoration:none;box-shadow:3px 3px 0 var(--shade);transition:transform .1s,box-shadow .1s}
+.pn a:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--shade)}
+.pn a small{display:block;color:var(--muted);font-size:12px}
+.pn a b{font-family:var(--font-display);font-weight:400;font-size:18px}
+.pn a.next{text-align:right}
+.toc{font-size:13px;border-left:2px solid var(--seg-off);padding-left:14px}
+.toc h5{margin:0 0 8px;font-family:var(--font-display);font-weight:400;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.toc a{display:block;padding:3px 0;color:var(--muted);text-decoration:none;border-left:2px solid transparent;margin-left:-16px;padding-left:14px}
+.toc a.l3{padding-left:26px;font-size:12px}
+.toc a:hover{color:var(--ink)}
+.toc a.on{color:var(--accent);border-left-color:var(--accent)}
+.stubnote{margin-top:24px;padding:20px;border:2px dashed var(--seg-off);color:var(--muted)}
+
+/* ---- responsive ---- */
+@media (max-width:1100px){.docs{grid-template-columns:240px minmax(0,1fr)}.toc{display:none}}
+@media (max-width:900px){
+  .hero .wrap,.spot{grid-template-columns:1fr}
+  .live{max-width:520px}
+  .fgrid{grid-template-columns:1fr 1fr}
+  .stats .wrap{grid-template-columns:1fr 1fr}.stat:nth-child(3){border-left:0}.stat:nth-child(n+3){border-top:2px solid #3b4455}
+  .steps,.points{grid-template-columns:1fr}
+  .docs{grid-template-columns:1fr}.side{position:static;max-height:none}
+}
+@media (max-width:640px){
+  .fgrid{grid-template-columns:1fr}
+  .top .wrap{height:auto;flex-wrap:wrap;gap:8px;padding-top:8px;padding-bottom:8px}.hide-s{display:none}
+  .nav{order:5;width:100%;margin-left:0}.nav a{flex:1;justify-content:center;border-color:var(--seg-off)}
+  .sec{padding:56px 0}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .reveal{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#/" aria-label="Linager">
+      <svg viewBox="0 0 14 14"><rect width="14" height="14" rx="3" fill="#0f1218"/><rect x="2" y="3" width="2" height="2" fill="#e6e9ef"/><rect x="4" y="5" width="2" height="2" fill="#e6e9ef"/><rect x="6" y="7" width="2" height="2" fill="#e6e9ef"/><rect x="4" y="9" width="2" height="2" fill="#e6e9ef"/><rect x="8" y="10" width="4" height="2" fill="#7d9cff"/></svg>
+      Linager
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="#/" id="nHome" data-i="nav.home">Home</a>
+      <a href="#/docs/introduction" id="nDocs" data-i="nav.docs">Documentation</a>
+    </nav>
+    <span class="sp"></span>
+    <a class="btn sm hide-s" href="#" onclick="return false" data-i="nav.gh">GitHub ↗</a>
+    <span class="seg" role="group" aria-label="Language"><button type="button" data-lang="en" aria-pressed="true">EN</button><button type="button" data-lang="ru" aria-pressed="false">RU</button></span>
+    <button class="btn sm" type="button" id="theme" data-i="nav.theme">Theme</button>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<footer class="site">
+  <div class="wrap">
+    <div><b style="font-family:var(--font-display);font-weight:400;font-size:18px;color:var(--ink)">Linager</b> · <span data-i="foot.tag">Open-source server management</span></div>
+    <nav>
+      <a href="#/docs/introduction" data-i="nav.docs">Documentation</a>
+      <a href="#" onclick="return false">GitHub</a>
+      <a href="#" onclick="return false" data-i="foot.rel">Releases</a>
+      <a href="#" onclick="return false" data-i="foot.sec">Security policy</a>
+    </nav>
+    <div>Apache-2.0 · <span data-i="foot.font">Fonts: Medeo, SIL OFL</span></div>
+  </div>
+</footer>
+
+<script>
+(function(){
+"use strict";
+/* ============ i18n ============ */
+var I={
+en:{
+ "nav.home":"Home","nav.docs":"Documentation","nav.gh":"GitHub ↗","nav.theme":"Theme",
+ "hero.eyebrow":"Open source · Apache-2.0","hero.h1":"Every server, one panel",
+ "hero.lead":"Linager manages Debian and Ubuntu servers from a single web panel. A tiny agent on each host streams live metrics, opens a terminal, edits files, runs updates and keeps the firewall safe with an automatic rollback.",
+ "hero.install":"Install","hero.docs":"Read the docs","copy":"Copy","copied":"Copied",
+ "hero.m1":"Debian 12 · 13","hero.m2":"Ubuntu 22.04 · 24.04 · 26.04","hero.m3":"amd64 · agent also arm64",
+ "live.title":"linager · dashboard","live.toast":"firewall rolled back in 30 s",
+ "st.1":"days of metric history","st.2":"seconds between samples","st.3":"seconds to confirm a network change","st.4":"binary, two roles",
+ "f.eyebrow":"Features","f.h2":"Everything you reach for over SSH, in a browser","f.lead":"Each module can be switched off per host, so a server runs only what you let it.",
+ "f1.t":"Dashboard","f1.p":"Cards or a map, groups, filters and search. CPU, RAM, disk, network, updates and failed services at a glance.",
+ "f2.t":"Live metrics","f2.p":"Samples every 5 seconds and history up to 360 days, with events and reboots drawn on the charts.",
+ "f3.t":"Web terminal","f3.p":"Floating windows, snippets, a key panel for phones and a shell as any user.",
+ "f4.t":"Files","f4.p":"Explorer, multi-select, zip, chmod and chown, plus an editor with syntax highlighting.",
+ "f5.t":"apt updates","f5.p":"Install all or security-only updates with per-package progress. A closed tab never interrupts apt.",
+ "f6.t":"Network and firewall","f6.p":"Edit in a draft, apply with a 30-second rollback that lives on the agent, so a lockout fixes itself.",
+ "f7.t":"Docker","f7.p":"Containers, images, compose projects, a check for newer images and updates with rollback.",
+ "f8.t":"Security","f8.p":"SSH overview, password-guessing attempts, key audit, fail2ban, roles, 2FA and passkeys.",
+ "f9.t":"Admin access control","f9.p":"White or black list by real client address, trusted proxies and an access journal.","new":"new",
+ "h.eyebrow":"Architecture","h.h2":"Agents dial home, nothing listens on your hosts","h.lead":"The server keeps its data in a local PostgreSQL. Agents open an outgoing mutual-TLS connection and reconnect by themselves.",
+ "h.browser":"Browser","h.proxy":"Reverse proxy","h.proxy2":"optional","h.server":"Linager server","h.server2":"panel + API","h.db":"PostgreSQL","h.db2":"localhost only",
+ "h.a1":"web-01","h.a2":"db-01","h.a3":"raspberry","h.l1":"HTTPS","h.l2":"mTLS · signed messages",
+ "h.p1b":"Pairing you can verify","h.p1":"Both sides show a short check code before an agent is trusted.",
+ "h.p2b":"Rollback on the agent","h.p2":"A bad firewall rule that cuts the link is undone by the agent itself.",
+ "h.p3b":"Signed releases","h.p3":"minisign signatures, a database copy before each update, automatic rollback.",
+ "s.eyebrow":"Interface","s.h2":"A panel built to be used daily","s.lead":"Pixel-sharp, fast and readable on a phone. Light and dark themes.",
+ "s.t1":"Dashboard","s.t2":"Terminal","s.t3":"Firewall","s.t4":"Docker","s.t5":"Admin access",
+ "s.c1":"Every server on one screen: load, updates, reboots and failures.","s.c2":"A shell in the browser through the agent, with snippets and a key panel.","s.c3":"Draft, apply, confirm within 30 seconds or the agent rolls back.","s.c4":"Containers, images and compose projects with one-click updates.","s.c5":"White and black lists, trusted proxies and a journal of who knocked.",
+ "a.eyebrow":"New in 0.1.69","a.h2":"Open the panel only to the networks you use","a.lead":"Behind Nginx Proxy Manager the connection arrives from the proxy, not from the visitor. Linager reads the real address from X-Forwarded-For, and only from proxies you trust.",
+ "a.1":"White list (not listed means refused) or black list (not listed means allowed)","a.2":"The local network can still connect directly","a.3":"Settings that would lock you out are refused","a.4":"A journal of page opens, sign-ins and refused requests","a.5":"Lost access anyway? sudo linager access reset",
+ "i.eyebrow":"Install","i.h2":"Running in about five minutes","i.lead":"A wizard asks one question, Server or Client, and does the rest.",
+ "i.1t":"Install the server","i.1p":"Run the command on a clean Debian or Ubuntu host. PostgreSQL, keys and the service are set up for you.",
+ "i.2t":"Open the panel","i.2p":"Sign in with the administrator you created. Put a reverse proxy in front if you like.",
+ "i.3t":"Add your servers","i.3p":"Run the command on each host, choose Client, confirm the check code in the panel.",
+ "c.h2":"Take control of your servers","c.p":"Free, open source, and yours to host.",
+ "foot.tag":"Open-source server management","foot.rel":"Releases","foot.sec":"Security policy","foot.font":"Fonts: Medeo, SIL OFL",
+ "d.search":"Search the docs","d.none":"Nothing found","d.on":"On this page","d.prev":"Previous","d.next":"Next","d.docs":"Docs",
+ "d.stub":"This page is a placeholder in the mockup. On the real site it is rendered from the Markdown file in docs/ of the repository.",
+ "g.start":"Getting started","g.guides":"Guides","g.ops":"Operations","g.ref":"Reference",
+ "p.introduction":"Introduction","p.installation":"Installation","p.first-server":"Add your first server","p.reverse-proxy":"Reverse proxy","p.admin-access":"Admin panel access","p.modules":"Agent modules","p.updates":"Updates and backups","p.security":"Security","p.architecture":"Architecture","p.cli":"Command line"
+},
+ru:{
+ "nav.home":"Главная","nav.docs":"Документация","nav.gh":"GitHub ↗","nav.theme":"Тема",
+ "hero.eyebrow":"Открытый код · Apache-2.0","hero.h1":"Все серверы в одной панели",
+ "hero.lead":"Linager управляет серверами на Debian и Ubuntu из одной веб-админки. Лёгкий агент на каждом сервере передаёт метрики в реальном времени, открывает терминал, правит файлы, ставит обновления и страхует файрвол автоматическим откатом.",
+ "hero.install":"Установить","hero.docs":"Читать документацию","copy":"Копировать","copied":"Скопировано",
+ "hero.m1":"Debian 12 · 13","hero.m2":"Ubuntu 22.04 · 24.04 · 26.04","hero.m3":"amd64 · агент ещё и arm64",
+ "live.title":"linager · дашборд","live.toast":"файрвол откатился за 30 с",
+ "st.1":"дней истории метрик","st.2":"секунд между замерами","st.3":"секунд на подтверждение сетевых правок","st.4":"бинарник, две роли",
+ "f.eyebrow":"Возможности","f.h2":"Всё, за чем вы ходите по SSH, в браузере","f.lead":"Каждый модуль можно отключить на конкретном сервере: он делает только то, что вы разрешили.",
+ "f1.t":"Дашборд","f1.p":"Карточки или карта, группы, фильтры и поиск. CPU, RAM, диск, сеть, обновления и упавшие службы с первого взгляда.",
+ "f2.t":"Метрики","f2.p":"Замеры каждые 5 секунд и история до 360 дней, события и перезагрузки на графиках.",
+ "f3.t":"Веб-терминал","f3.p":"Плавающие окна, сниппеты, панель клавиш для телефона и оболочка от имени любого пользователя.",
+ "f4.t":"Файлы","f4.p":"Проводник, выбор нескольких файлов, zip, chmod и chown, редактор с подсветкой синтаксиса.",
+ "f5.t":"Обновления apt","f5.p":"Все обновления или только безопасности, прогресс по каждому пакету. Закрытая вкладка не прерывает apt.",
+ "f6.t":"Сеть и файрвол","f6.p":"Правки в черновике и откат через 30 секунд на агенте: даже потеря связи исправляется сама.",
+ "f7.t":"Docker","f7.p":"Контейнеры, образы, compose-проекты, проверка новых образов и обновление с откатом.",
+ "f8.t":"Безопасность","f8.p":"Обзор SSH, подбор паролей, аудит ключей, fail2ban, роли, 2FA и passkey.",
+ "f9.t":"Доступ к админке","f9.p":"Белый или чёрный список по реальному адресу клиента, доверенные прокси и журнал обращений.","new":"новое",
+ "h.eyebrow":"Архитектура","h.h2":"Агенты звонят домой, на ваших серверах ничего не слушает","h.lead":"Сервер хранит данные в локальном PostgreSQL. Агенты открывают исходящее соединение по взаимному TLS и переподключаются сами.",
+ "h.browser":"Браузер","h.proxy":"Обратный прокси","h.proxy2":"необязателен","h.server":"Сервер Linager","h.server2":"админка + API","h.db":"PostgreSQL","h.db2":"только localhost",
+ "h.a1":"web-01","h.a2":"db-01","h.a3":"raspberry","h.l1":"HTTPS","h.l2":"mTLS · подписанные сообщения",
+ "h.p1b":"Привязка с проверкой","h.p1":"Перед доверием к агенту обе стороны показывают короткий код сверки.",
+ "h.p2b":"Откат на агенте","h.p2":"Ошибочное правило файрвола, оборвавшее связь, агент отменяет сам.",
+ "h.p3b":"Подписанные релизы","h.p3":"Подписи minisign, копия базы перед обновлением, автоматический откат.",
+ "s.eyebrow":"Интерфейс","s.h2":"Панель, которой удобно пользоваться каждый день","s.lead":"Чёткая пиксельная графика, быстрая работа, удобно на телефоне. Светлая и тёмная темы.",
+ "s.t1":"Дашборд","s.t2":"Терминал","s.t3":"Файрвол","s.t4":"Docker","s.t5":"Доступ к админке",
+ "s.c1":"Все серверы на одном экране: нагрузка, обновления, перезагрузки и сбои.","s.c2":"Оболочка в браузере через агента, со сниппетами и панелью клавиш.","s.c3":"Черновик, применение, подтверждение за 30 секунд, иначе агент откатит.","s.c4":"Контейнеры, образы и compose-проекты, обновление в один щелчок.","s.c5":"Белый и чёрный списки, доверенные прокси и журнал того, кто стучался.",
+ "a.eyebrow":"Новое в 0.1.69","a.h2":"Открывайте админку только тем сетям, из которых заходите","a.lead":"За Nginx Proxy Manager соединение приходит от прокси, а не от посетителя. Linager берёт реальный адрес из X-Forwarded-For, и только от доверенных вами прокси.",
+ "a.1":"Белый (чего нет в списке, то запрещено) или чёрный (чего нет, то разрешено) список","a.2":"Из локальной сети можно заходить напрямую","a.3":"Настройки, которые заблокировали бы вас самих, не принимаются","a.4":"Журнал открытий страницы, входов и запрещённых запросов","a.5":"Всё же потеряли доступ? sudo linager access reset",
+ "i.eyebrow":"Установка","i.h2":"Работает минут через пять","i.lead":"Мастер задаёт один вопрос, Сервер или Клиент, и делает остальное.",
+ "i.1t":"Установите сервер","i.1p":"Запустите команду на чистом Debian или Ubuntu. PostgreSQL, ключи и служба настроятся сами.",
+ "i.2t":"Откройте админку","i.2p":"Войдите под созданным администратором. При желании поставьте перед ней обратный прокси.",
+ "i.3t":"Добавьте серверы","i.3p":"Запустите команду на каждом сервере, выберите Клиент и подтвердите код сверки в админке.",
+ "c.h2":"Возьмите серверы под контроль","c.p":"Бесплатно, с открытым кодом, и хостить можно у себя.",
+ "foot.tag":"Открытая система управления серверами","foot.rel":"Релизы","foot.sec":"Политика безопасности","foot.font":"Шрифты: Medeo, SIL OFL",
+ "d.search":"Поиск по документации","d.none":"Ничего не найдено","d.on":"На этой странице","d.prev":"Назад","d.next":"Дальше","d.docs":"Документация",
+ "d.stub":"В макете это страница-заглушка. На настоящем сайте она собирается из Markdown-файла в docs/ репозитория.",
+ "g.start":"Начало работы","g.guides":"Руководства","g.ops":"Эксплуатация","g.ref":"Справочник",
+ "p.introduction":"Введение","p.installation":"Установка","p.first-server":"Первый сервер","p.reverse-proxy":"Обратный прокси","p.admin-access":"Доступ к админке","p.modules":"Модули агента","p.updates":"Обновления и бэкапы","p.security":"Безопасность","p.architecture":"Архитектура","p.cli":"Командная строка"
+}};
+var lang="en";
+var tt=function(k){return (I[lang]&&I[lang][k])||I.en[k]||k};
+
+/* ============ pixel icons ============ */
+var ICONS={
+ dash:["11101110","10101010","11101110","00000000","11101110","10101010","11101110","00000000"],
+ chart:["00000001","00000001","00010001","00010101","01010101","01010101","01010101","11111111"],
+ term:["11111111","10000001","10100001","10010001","10100001","10001111","10000001","11111111"],
+ folder:["01110000","10001111","10000001","10000001","10000001","10000001","10000001","11111111"],
+ down:["00011000","00011000","00011000","11011011","01111110","00111100","00011000","11111111"],
+ net:["00011000","00011000","00111100","11111111","10011001","10011001","11100111","11100111"],
+ dock:["00000000","00111000","00111000","11111111","11111111","11111110","01111100","00000000"],
+ shield:["01111110","11111111","11100111","11100111","11100111","01100110","00111100","00011000"],
+ lock:["00111100","01000010","01000010","11111111","11111111","11100111","11100111","11111111"]
+};
+function icon(n){var g=ICONS[n],r="";for(var y=0;y<8;y++)for(var x=0;x<8;x++)if(g[y][x]==="1")r+='<rect x="'+x+'" y="'+y+'" width="1" height="1"/>';return '<svg viewBox="0 0 8 8" aria-hidden="true">'+r+'</svg>'}
+
+/* ============ landing ============ */
+var CMD='curl -fsSL https://raw.githubusercontent.com/bolgov0zero/linager/main/install.sh | sh';
+function landing(){
+ var feats=[["dash","f1"],["chart","f2"],["term","f3"],["folder","f4"],["down","f5"],["net","f6"],["dock","f7"],["shield","f8"],["lock","f9"]];
+ var fh=feats.map(function(f,i){return '<div class="card feat reveal" style="--d:'+(i%3*.08)+'s"><div class="ic">'+icon(f[0])+'</div><h3>'+tt(f[1]+".t")+(f[1]==="f9"?' <span class="new">'+tt("new")+'</span>':'')+'</h3><p>'+tt(f[1]+".p")+'</p></div>'}).join("");
+ var tabs=[["dashboard","s.t1","s.c1"],["terminal","s.t2","s.c2"],["firewall","s.t3","s.c3"],["docker","s.t4","s.c4"],["access-restriction","s.t5","s.c5"]];
+ return ''
+ +'<section class="hero"><div class="wrap"><div>'
+ +'<span class="eyebrow">'+tt("hero.eyebrow")+'</span>'
+ +'<h1>'+tt("hero.h1")+'<span class="cur"></span></h1>'
+ +'<p class="lead">'+tt("hero.lead")+'</p>'
+ +'<div class="cta"><a class="btn primary" href="#install">'+tt("hero.install")+'</a><a class="btn" href="#/docs/introduction">'+tt("hero.docs")+' →</a></div>'
+ +'<div class="cmd"><code><b>$</b> '+CMD+'</code><button type="button" data-copy="'+CMD+'">'+tt("copy")+'</button></div>'
+ +'<div class="meta"><span><i class="dot ok"></i> '+tt("hero.m1")+'</span><span><i class="dot ok"></i> '+tt("hero.m2")+'</span><span><i class="dot ok"></i> '+tt("hero.m3")+'</span></div>'
+ +'</div>'
+ +'<div class="live card" aria-hidden="true"><div class="bar"><i></i><i></i><i></i><span>'+tt("live.title")+'</span></div><div class="grid" id="live"></div><div class="toast">'+tt("live.toast")+'</div></div>'
+ +'</div></section>'
+ +'<section class="stats"><div class="wrap">'
+ +[["360","st.1"],["5","st.2"],["30","st.3"],["1","st.4"]].map(function(s){return '<div class="stat"><b data-count="'+s[0]+'">0</b><span>'+tt(s[1])+'</span></div>'}).join("")
+ +'</div></section>'
+ +'<section class="sec"><div class="wrap"><span class="eyebrow">'+tt("f.eyebrow")+'</span><h2>'+tt("f.h2")+'</h2><p class="lead">'+tt("f.lead")+'</p><div class="fgrid">'+fh+'</div></div></section>'
+ +'<section class="sec how"><div class="wrap"><span class="eyebrow">'+tt("h.eyebrow")+'</span><h2>'+tt("h.h2")+'</h2><p class="lead">'+tt("h.lead")+'</p>'+diagram()
+ +'<div class="points"><div class="reveal"><b>'+tt("h.p1b")+'</b>'+tt("h.p1")+'</div><div class="reveal" style="--d:.1s"><b>'+tt("h.p2b")+'</b>'+tt("h.p2")+'</div><div class="reveal" style="--d:.2s"><b>'+tt("h.p3b")+'</b>'+tt("h.p3")+'</div></div></div></section>'
+ +'<section class="sec"><div class="wrap"><span class="eyebrow">'+tt("s.eyebrow")+'</span><h2>'+tt("s.h2")+'</h2><p class="lead">'+tt("s.lead")+'</p>'
+ +'<div class="tabs" role="tablist">'+tabs.map(function(t,i){return '<button type="button" role="tab" data-shot="'+i+'" aria-selected="'+(i===0)+'">'+tt(t[1])+'</button>'}).join("")+'</div>'
+ +'<div class="card shot reveal"><div class="chrome"><i></i><i></i><i></i><span>linager.example.com</span></div><div class="stage" id="stage">'+tabs.map(function(t,i){return '<img data-n="'+i+'" class="'+(i===0?'on':'')+'" alt="" src="../../screenshots/'+lang+'/'+t[0]+'.png">'}).join("")+'</div></div>'
+ +'<p class="cap" id="cap">'+tt(tabs[0][2])+'</p></div></section>'
+ +'<section class="sec" style="padding-top:20px"><div class="wrap spot"><div><span class="eyebrow">'+tt("a.eyebrow")+'</span><h2>'+tt("a.h2")+'</h2><p class="lead">'+tt("a.lead")+'</p>'
+ +'<ul class="checks">'+[1,2,3,4,5].map(function(n){return '<li class="reveal" style="--d:'+n*.07+'s">'+tt("a."+n)+'</li>'}).join("")+'</ul></div>'
+ +'<div class="card reveal"><img alt="" style="display:block;width:100%" src="../../screenshots/'+lang+'/access-journal.png"></div></div></section>'
+ +'<section class="sec how" id="install"><div class="wrap"><span class="eyebrow">'+tt("i.eyebrow")+'</span><h2>'+tt("i.h2")+'</h2><p class="lead">'+tt("i.lead")+'</p>'
+ +'<div class="steps">'+[1,2,3].map(function(n){return '<div class="card step reveal" style="--d:'+(n-1)*.1+'s"><h3>'+tt("i."+n+"t")+'</h3><p>'+tt("i."+n+"p")+'</p></div>'}).join("")+'</div>'
+ +'<div class="term reveal"><div class="tb"><i></i><i></i><i></i></div><pre id="typed"></pre></div>'
+ +'<div class="platforms"><span>Debian 12</span><span>Debian 13</span><span>Ubuntu 22.04</span><span>Ubuntu 24.04</span><span>Ubuntu 26.04</span><span>amd64</span><span>arm64 (agent)</span></div></div></section>'
+ +'<section class="cta-band"><div class="wrap"><h2>'+tt("c.h2")+'</h2><p>'+tt("c.p")+'</p><div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap"><a class="btn" href="#install">'+tt("hero.install")+'</a><a class="btn" href="#/docs/introduction">'+tt("hero.docs")+' →</a></div></div></section>';
+}
+function diagram(){
+ return '<div class="card diagram reveal"><svg viewBox="0 0 900 300" role="img" aria-label="architecture">'
+ +'<g><rect class="box" x="20" y="110" width="130" height="70"/><text class="t" x="85" y="142" text-anchor="middle">'+tt("h.browser")+'</text><text x="85" y="162" text-anchor="middle" fill="var(--muted)">HTTPS</text></g>'
+ +'<g><rect class="box" x="215" y="110" width="150" height="70" stroke-dasharray="6 4"/><text class="t" x="290" y="142" text-anchor="middle">'+tt("h.proxy")+'</text><text x="290" y="162" text-anchor="middle" fill="var(--muted)">'+tt("h.proxy2")+'</text></g>'
+ +'<g><rect class="box" x="430" y="60" width="190" height="170" style="fill:var(--ink);stroke:var(--ink)"/><text class="t" x="525" y="105" text-anchor="middle" style="fill:var(--surface)">'+tt("h.server")+'</text><text x="525" y="125" text-anchor="middle" style="fill:#aab2c2">'+tt("h.server2")+'</text><rect x="450" y="150" width="150" height="62" style="fill:none;stroke:#7d9cff;stroke-width:2"/><text x="525" y="176" text-anchor="middle" style="fill:#7d9cff">'+tt("h.db")+'</text><text x="525" y="196" text-anchor="middle" style="fill:#aab2c2">'+tt("h.db2")+'</text></g>'
+ +[["h.a1",40],["h.a2",130],["h.a3",220]].map(function(a){return '<g><rect class="box" x="720" y="'+a[1]+'" width="150" height="56"/><text class="t" x="795" y="'+(a[1]+34)+'" text-anchor="middle">'+tt(a[0])+'</text></g>'}).join("")
+ +'<path class="ln" d="M150 145 H215"/><path class="ln" d="M365 145 H430"/>'
+ +'<path class="ln" id="p1" d="M720 68 H680 V110 H620"/><path class="ln" id="p2" d="M720 158 H620"/><path class="ln" id="p3" d="M720 248 H680 V190 H620"/>'
+ +'<rect class="pk" width="8" height="8" x="-4" y="-4"><animateMotion dur="3s" repeatCount="indefinite" path="M150 145 H215 M215 145 H430"/></rect>'
+ +'<rect class="pk" width="8" height="8" x="-4" y="-4"><animateMotion dur="2.4s" repeatCount="indefinite" path="M720 68 H680 V110 H620"/></rect>'
+ +'<rect class="pk" width="8" height="8" x="-4" y="-4"><animateMotion dur="2.8s" begin="-1s" repeatCount="indefinite" path="M720 158 H620"/></rect>'
+ +'<rect class="pk" width="8" height="8" x="-4" y="-4"><animateMotion dur="3.2s" begin="-2s" repeatCount="indefinite" path="M720 248 H680 V190 H620"/></rect>'
+ +'<text x="520" y="285" text-anchor="middle" fill="var(--muted)">'+tt("h.l2")+'</text></svg></div>';
+}
+
+/* live mini dashboard */
+var LIVE=[{n:"web-01",c:35,r:52,d:41,k:""},{n:"web-02",c:28,r:47,d:38,k:"w"},{n:"db-01",c:91,r:86,d:72,k:"c"},{n:"cache-01",c:12,r:31,d:22,k:""}];
+var liveTimer=null;
+function bar(v,cls){var on=Math.round(v/5),h='<div class="pbar '+(cls||'')+'">';for(var i=0;i<20;i++)h+='<i'+(i<on?' class="on"':'')+'></i>';return h+'</div>'}
+function paintLive(){
+ var el=document.getElementById("live");if(!el)return;
+ el.innerHTML=LIVE.map(function(s){var cl=s.c>85?"crit":s.c>65?"warn":"";return '<div class="sc '+s.k+'"><h4><i class="dot '+(s.k==="c"?"crit":s.k==="w"?"warn":"ok")+'"></i>'+s.n+'</h4>'
+  +'<div class="row"><span>CPU</span>'+bar(s.c,cl)+'<b>'+Math.round(s.c)+'%</b></div><div class="row"><span>RAM</span>'+bar(s.r,s.r>85?"crit":"")+'<b>'+Math.round(s.r)+'%</b></div><div class="row"><span>DISK</span>'+bar(s.d)+'<b>'+Math.round(s.d)+'%</b></div></div>'}).join("");
+}
+function tickLive(){LIVE.forEach(function(s){s.c=Math.max(3,Math.min(97,s.c+(Math.random()-.5)*14));s.r=Math.max(10,Math.min(95,s.r+(Math.random()-.5)*3))});paintLive()}
+
+/* typed install terminal */
+var TERM=[
+ ['b','$ sudo linager install'],
+ ['m','? Role: [S]erver / [C]lient   S'],
+ ['g','✔ PostgreSQL 17 ready (localhost, scram-sha-256)'],
+ ['g','✔ Keys and certificates created'],
+ ['g','✔ Administrator "admin" created'],
+ ['g','✔ linager-server.service started'],
+ ['b','  Admin panel: http://203.0.113.10:8080']
+];
+var typeRun=0;
+function runTyped(){
+ var el=document.getElementById("typed");if(!el)return;
+ var my=++typeRun,line=0,pos=0,html="";
+ if(matchMedia("(prefers-reduced-motion:reduce)").matches){el.innerHTML=TERM.map(function(l){return '<span class="'+l[0]+'">'+l[1]+'</span>'}).join("\n");return}
+ (function step(){
+  if(my!==typeRun||!document.getElementById("typed"))return;
+  if(line>=TERM.length){el.innerHTML=html+'<span class="caret"></span>';return}
+  var l=TERM[line],txt=l[1];
+  if(l[0]==='b'&&l[1][0]==='$'){pos++;el.innerHTML=html+'<span class="b">'+txt.slice(0,pos)+'</span><span class="caret"></span>';if(pos>=txt.length){html+='<span class="b">'+txt+'</span>\n';line++;pos=0;setTimeout(step,500)}else setTimeout(step,32)}
+  else{html+='<span class="'+l[0]+'">'+txt+'</span>\n';el.innerHTML=html+'<span class="caret"></span>';line++;setTimeout(step,420)}
+ })();
+}
+
+/* ============ docs content ============ */
+var PAGES=[
+ {g:"g.start",items:["introduction","installation","first-server"]},
+ {g:"g.guides",items:["reverse-proxy","admin-access","modules"]},
+ {g:"g.ops",items:["updates","security"]},
+ {g:"g.ref",items:["architecture","cli"]}
+];
+var FLAT=[];PAGES.forEach(function(g){g.items.forEach(function(s){FLAT.push(s)})});
+function code(txt){return '<div class="pre"><button type="button" data-copyblock>'+tt("copy")+'</button><pre>'+txt+'</pre></div>'}
+var DOC={
+en:{
+ "introduction":function(){return '<p class="lead">Linager is an open-source system for managing Debian and Ubuntu servers: a server with a web admin panel and lightweight agents on the managed hosts.</p>'
+  +'<h2 id="what">What you get</h2><ul><li>Live metrics every 5 seconds and history up to 360 days.</li><li>A web terminal, a file manager, systemd services, processes and logs.</li><li>apt updates, network and firewall editing with an automatic rollback, Docker.</li><li>Roles, 2FA, passkeys and an audit log of every administrator action.</li></ul>'
+  +'<div class="note"><b>One binary</b>The same <code>linager</code> binary is the server or the agent. You pick the role during installation.</div>'
+  +'<h2 id="how">How it fits together</h2><p>The server keeps its data in a local PostgreSQL and serves the panel. Each agent opens an outgoing mutual-TLS connection to the server, so managed hosts need no open inbound port.</p>'
+  +'<img class="fig" alt="" src="../../screenshots/'+lang+'/server-overview.png">'
+  +'<h3 id="platforms">Supported platforms</h3><table class="t"><tr><th>System</th><th>Server</th><th>Agent</th></tr><tr><td>Debian 12, 13</td><td>amd64</td><td>amd64, arm64</td></tr><tr><td>Ubuntu 22.04, 24.04, 26.04</td><td>amd64</td><td>amd64, arm64</td></tr></table>'
+  +'<h2 id="next">Where to go next</h2><p>Start with <a href="#/docs/installation">Installation</a>, then <a href="#/docs/first-server">add your first server</a>.</p>'},
+ "installation":function(){return '<p class="lead">Install the server on a clean Debian or Ubuntu host. The wizard sets up PostgreSQL, the keys, the administrator account and the service.</p>'
+  +'<h2 id="quick">Quick start</h2>'+code('<span class="k">curl</span> -fsSL https://raw.githubusercontent.com/bolgov0zero/linager/main/install.sh | <span class="k">sh</span>')
+  +'<p>The wizard first asks for the role: <b>Server</b> or <b>Client</b>. For the server it then asks for the client port and how the admin panel is reached.</p>'
+  +'<div class="note warn"><b>Check before you pipe</b>Prefer to read the script first? Download it, verify the checksum and signature, then run it. See the safe variant below.</div>'
+  +'<h3 id="safe">Safe variant</h3>'+code('<span class="c"># download, inspect, run</span>\ncurl -fsSLo install.sh https://raw.githubusercontent.com/bolgov0zero/linager/main/install.sh\nless install.sh\nsudo sh install.sh')
+  +'<h2 id="modes">Admin panel modes</h2><table class="t"><tr><th>Mode</th><th>Use when</th></tr><tr><td>Caddy on this server</td><td>You have a domain; Let\'s Encrypt is configured for you.</td></tr><tr><td>Own reverse proxy</td><td>nginx, Caddy or Nginx Proxy Manager already runs elsewhere.</td></tr></table>'
+  +'<h2 id="unattended">Unattended</h2>'+code('sudo linager install server --no-tui --agent-port 9443 --admin-mode proxy --admin-port 8080 --admin-user admin')},
+ "first-server":function(){return '<p class="lead">Add a managed host in three steps. The agent connects out to the server, so the host needs no open inbound port.</p>'
+  +'<h2 id="install-agent">1. Install the agent</h2>'+code('sudo linager install agent --server 10.0.0.5:9443')
+  +'<h2 id="pair">2. Pair</h2><p>The agent shows a <b>key</b> and a <b>check code</b>. Open the panel, click <b>+ Server</b>, enter the key and make sure both codes match.</p>'
+  +'<div class="note"><b>Why a check code?</b>It proves that the agent talks to your server and not to a man in the middle.</div>'
+  +'<h2 id="done">3. Done</h2><p>After you confirm, the agent receives its certificate and starts as a systemd service. The server appears on the dashboard.</p>'},
+ "reverse-proxy":function(){return '<p class="lead">Put the admin panel behind Caddy, nginx or Nginx Proxy Manager. The proxy must pass WebSocket traffic and the <code>X-Forwarded-*</code> headers.</p>'
+  +'<h2 id="caddy">Caddy</h2>'+code('linager.example.com {\n\tencode zstd gzip\n\t<span class="k">reverse_proxy</span> 10.0.0.5:8080\n}')
+  +'<h2 id="npm">Nginx Proxy Manager</h2><ul><li><b>Details:</b> scheme <code>http</code>, forward to the Linager host and the panel port. Turn on <b>Websockets Support</b>.</li><li><b>SSL:</b> pick a certificate, turn on Force SSL.</li><li><b>Advanced:</b> <code>proxy_buffering off;</code></li></ul>'
+  +'<div class="note warn"><b>Agents do not use the proxy</b>The client port cannot pass through a proxy: agents connect to it directly.</div>'
+  +'<h2 id="trusted">Trusted proxies</h2><p>Add the proxy under <a href="#/docs/admin-access">Settings → Admin access</a>, so the real visitor address is read from <code>X-Forwarded-For</code>.</p>'},
+ "admin-access":function(){return '<p class="lead">Restrict who may open the admin panel with a white or black list, judged by the real client address.</p>'
+  +'<h2 id="modes">Modes</h2><table class="t"><tr><th>Mode</th><th>Behavior</th></tr><tr><td>Off</td><td>The panel is open to everybody who reaches the port.</td></tr><tr><td>White list</td><td>Whatever is not listed is refused.</td></tr><tr><td>Black list</td><td>Whatever is not listed is allowed.</td></tr></table>'
+  +'<img class="fig" alt="" src="../../screenshots/'+lang+'/access-restriction.png">'
+  +'<h2 id="proxies">Trusted proxies</h2><p>The server believes <code>X-Forwarded-For</code> only from the proxies you list. A connection from any other address is judged by its own address, so the local network can connect directly.</p>'
+  +'<div class="note warn"><b>Do not skip this</b>If the proxy is not trusted and the white list holds your whole local network, every visitor looks like the proxy and the internet gets in. The panel refuses to save such settings.</div>'
+  +'<h2 id="journal">Access journal</h2><p>Page opens, sign-ins and refused requests are recorded with the client address and the proxy they came through. Keep them for 7, 30 or 90 days.</p>'
+  +'<h2 id="reset">If you lock yourself out</h2>'+code('sudo linager access reset')+'<p>The restriction turns off, the lists stay. A running server applies it within seconds.</p>'},
+ "security":function(){return '<p class="lead">How Linager protects your servers, and what it expects from you.</p>'
+  +'<h2 id="model">What is protected</h2><ul><li>mTLS between the server and agents, signed messages, a pinned server fingerprint.</li><li>Passwords hashed with Argon2id, optional mandatory 2FA, passkeys, recovery codes.</li><li>Dangerous actions need confirmation on the server; agents refuse them without it.</li><li>Network and firewall changes roll back on their own after 30 seconds.</li></ul>'
+  +'<h2 id="todo">What you should do</h2><ol><li>Turn on 2FA.</li><li>Set the trusted proxies and, if you like, an access list.</li><li>Open the client port only for the networks that need it.</li><li>Store backups as secrets: they contain the CA keys.</li></ol>'}
+},
+ru:{
+ "introduction":function(){return '<p class="lead">Linager — открытая система управления серверами на Debian и Ubuntu: сервер с веб-админкой и лёгкие агенты на управляемых серверах.</p>'
+  +'<h2 id="what">Что вы получаете</h2><ul><li>Метрики в реальном времени каждые 5 секунд и история до 360 дней.</li><li>Веб-терминал, файловый менеджер, службы systemd, процессы и журналы.</li><li>Обновления apt, правка сети и файрвола с автоматическим откатом, Docker.</li><li>Роли, 2FA, passkey и журнал аудита всех действий администратора.</li></ul>'
+  +'<div class="note"><b>Один бинарник</b>Один и тот же <code>linager</code> — это сервер или агент. Роль выбирается при установке.</div>'
+  +'<h2 id="how">Как это устроено</h2><p>Сервер хранит данные в локальном PostgreSQL и отдаёт админку. Каждый агент открывает исходящее соединение с сервером по взаимному TLS, поэтому на управляемых серверах не нужен открытый входящий порт.</p>'
+  +'<img class="fig" alt="" src="../../screenshots/'+lang+'/server-overview.png">'
+  +'<h3 id="platforms">Поддерживаемые системы</h3><table class="t"><tr><th>Система</th><th>Сервер</th><th>Агент</th></tr><tr><td>Debian 12, 13</td><td>amd64</td><td>amd64, arm64</td></tr><tr><td>Ubuntu 22.04, 24.04, 26.04</td><td>amd64</td><td>amd64, arm64</td></tr></table>'
+  +'<h2 id="next">Что дальше</h2><p>Начните с <a href="#/docs/installation">установки</a>, затем <a href="#/docs/first-server">добавьте первый сервер</a>.</p>'},
+ "installation":function(){return '<p class="lead">Установите сервер на чистый Debian или Ubuntu. Мастер настроит PostgreSQL, ключи, учётную запись администратора и службу.</p>'
+  +'<h2 id="quick">Быстрый старт</h2>'+code('<span class="k">curl</span> -fsSL https://raw.githubusercontent.com/bolgov0zero/linager/main/install.sh | <span class="k">sh</span>')
+  +'<p>Сначала мастер спрашивает роль: <b>Сервер</b> или <b>Клиент</b>. Для сервера затем спрашивает порт клиентов и способ доступа к админке.</p>'
+  +'<div class="note warn"><b>Проверяйте перед запуском</b>Хотите сначала прочитать скрипт? Скачайте его, проверьте контрольную сумму и подпись, затем запустите. Безопасный вариант ниже.</div>'
+  +'<h3 id="safe">Безопасный вариант</h3>'+code('<span class="c"># скачать, посмотреть, запустить</span>\ncurl -fsSLo install.sh https://raw.githubusercontent.com/bolgov0zero/linager/main/install.sh\nless install.sh\nsudo sh install.sh')
+  +'<h2 id="modes">Режимы админки</h2><table class="t"><tr><th>Режим</th><th>Когда подходит</th></tr><tr><td>Caddy на этом сервере</td><td>Есть домен; Let\'s Encrypt настроится сам.</td></tr><tr><td>Свой обратный прокси</td><td>nginx, Caddy или Nginx Proxy Manager уже работает в другом месте.</td></tr></table>'
+  +'<h2 id="unattended">Без вопросов</h2>'+code('sudo linager install server --no-tui --agent-port 9443 --admin-mode proxy --admin-port 8080 --admin-user admin')},
+ "first-server":function(){return '<p class="lead">Добавьте управляемый сервер за три шага. Агент подключается к серверу сам, поэтому открытый входящий порт не нужен.</p>'
+  +'<h2 id="install-agent">1. Установите агента</h2>'+code('sudo linager install agent --server 10.0.0.5:9443')
+  +'<h2 id="pair">2. Привяжите</h2><p>Агент покажет <b>ключ</b> и <b>код сверки</b>. Откройте админку, нажмите <b>+ Сервер</b>, введите ключ и убедитесь, что коды совпадают.</p>'
+  +'<div class="note"><b>Зачем код сверки?</b>Он доказывает, что агент говорит с вашим сервером, а не с посредником.</div>'
+  +'<h2 id="done">3. Готово</h2><p>После подтверждения агент получает сертификат и запускается как служба systemd. Сервер появляется на дашборде.</p>'},
+ "reverse-proxy":function(){return '<p class="lead">Поставьте админку за Caddy, nginx или Nginx Proxy Manager. Прокси должен передавать WebSocket и заголовки <code>X-Forwarded-*</code>.</p>'
+  +'<h2 id="caddy">Caddy</h2>'+code('linager.example.com {\n\tencode zstd gzip\n\t<span class="k">reverse_proxy</span> 10.0.0.5:8080\n}')
+  +'<h2 id="npm">Nginx Proxy Manager</h2><ul><li><b>Details:</b> схема <code>http</code>, адрес сервера Linager и порт админки. Включите <b>Websockets Support</b>.</li><li><b>SSL:</b> выберите сертификат, включите Force SSL.</li><li><b>Advanced:</b> <code>proxy_buffering off;</code></li></ul>'
+  +'<div class="note warn"><b>Агенты не идут через прокси</b>Порт клиентов через прокси не проходит: агенты подключаются к нему напрямую.</div>'
+  +'<h2 id="trusted">Доверенные прокси</h2><p>Добавьте прокси в <a href="#/docs/admin-access">Настройки → Доступ к админке</a>, чтобы реальный адрес посетителя брался из <code>X-Forwarded-For</code>.</p>'},
+ "admin-access":function(){return '<p class="lead">Ограничьте, кто может открыть админку, белым или чёрным списком по реальному адресу клиента.</p>'
+  +'<h2 id="modes">Режимы</h2><table class="t"><tr><th>Режим</th><th>Поведение</th></tr><tr><td>Выключено</td><td>Админка открыта всем, кто дошёл до порта.</td></tr><tr><td>Белый список</td><td>Чего нет в списке, то запрещено.</td></tr><tr><td>Чёрный список</td><td>Чего нет в списке, то разрешено.</td></tr></table>'
+  +'<img class="fig" alt="" src="../../screenshots/'+lang+'/access-restriction.png">'
+  +'<h2 id="proxies">Доверенные прокси</h2><p>Сервер верит <code>X-Forwarded-For</code> только от прокси из списка. Соединение с любого другого адреса оценивается по своему адресу, поэтому из локальной сети можно заходить напрямую.</p>'
+  +'<div class="note warn"><b>Не пропускайте этот шаг</b>Если прокси не доверенный, а в белом списке вся локальная сеть, каждый посетитель выглядит как прокси и интернет проходит. Админка не даёт сохранить такие настройки.</div>'
+  +'<h2 id="journal">Журнал обращений</h2><p>Открытия страницы, входы и запрещённые запросы пишутся с адресом клиента и прокси, через который он пришёл. Хранить можно 7, 30 или 90 дней.</p>'
+  +'<h2 id="reset">Если заблокировали себя</h2>'+code('sudo linager access reset')+'<p>Ограничение выключится, списки сохранятся. Работающий сервер применит это в течение нескольких секунд.</p>'},
+ "security":function(){return '<p class="lead">Как Linager защищает ваши серверы и что он ждёт от вас.</p>'
+  +'<h2 id="model">Что защищено</h2><ul><li>mTLS между сервером и агентами, подписанные сообщения, запомненный отпечаток сервера.</li><li>Пароли хранятся как Argon2id, 2FA можно сделать обязательной, passkey, коды восстановления.</li><li>Опасные действия подтверждаются на сервере, без этого агент их не выполняет.</li><li>Правки сети и файрвола откатываются сами через 30 секунд.</li></ul>'
+  +'<h2 id="todo">Что нужно сделать вам</h2><ol><li>Включите 2FA.</li><li>Укажите доверенные прокси и при желании список доступа.</li><li>Открывайте порт клиентов только нужным сетям.</li><li>Храните бэкапы как секреты: в них есть ключи CA.</li></ol>'}
+}};
+
+function renderDocs(slug){
+ var item=FLAT.indexOf(slug)>=0?slug:"introduction",i=FLAT.indexOf(item);
+ var side=PAGES.map(function(g){return '<div class="grp"><h5>'+tt(g.g)+'</h5>'+g.items.map(function(s){return '<a href="#/docs/'+s+'" data-s="'+tt("p."+s).toLowerCase()+'"'+(s===item?' aria-current="page"':'')+'>'+tt("p."+s)+'</a>'}).join("")+'</div>'}).join("");
+ var fn=(DOC[lang]||{})[item];
+ var body=fn?fn():'<p class="lead">'+tt("p."+item)+'</p><div class="stubnote">'+tt("d.stub")+'</div>';
+ var prev=FLAT[i-1],next=FLAT[i+1];
+ var h=''
+ +'<div class="docs"><aside class="side"><label class="search"><span aria-hidden="true">⌕</span><input id="q" placeholder="'+tt("d.search")+'" aria-label="'+tt("d.search")+'"><kbd>/</kbd></label><div id="nav">'+side+'</div><p class="empty" id="none" hidden>'+tt("d.none")+'</p></aside>'
+ +'<article><div class="crumbs"><a href="#/docs/introduction">'+tt("d.docs")+'</a><span>/</span><span>'+tt("p."+item)+'</span></div><h1>'+tt("p."+item)+'</h1>'+body
+ +'<div class="pn">'+(prev?'<a class="prev" href="#/docs/'+prev+'"><small>← '+tt("d.prev")+'</small><b>'+tt("p."+prev)+'</b></a>':'<span></span>')+(next?'<a class="next" href="#/docs/'+next+'"><small>'+tt("d.next")+' →</small><b>'+tt("p."+next)+'</b></a>':'<span></span>')+'</div></article>'
+ +'<nav class="toc" aria-label="'+tt("d.on")+'"><h5>'+tt("d.on")+'</h5><div id="toc"></div></nav></div>';
+ return h;
+}
+function afterDocs(){
+ var q=document.getElementById("q");
+ q.addEventListener("input",function(){
+  var v=q.value.trim().toLowerCase(),shown=0;
+  document.querySelectorAll("#nav a").forEach(function(a){var m=!v||a.dataset.s.indexOf(v)>=0;a.classList.toggle("hide",!m);if(m)shown++});
+  document.querySelectorAll("#nav .grp").forEach(function(g){g.style.display=g.querySelector("a:not(.hide)")?"":"none"});
+  document.getElementById("none").hidden=shown>0;
+ });
+ var hs=document.querySelectorAll("article h2,article h3"),toc=document.getElementById("toc");
+ toc.innerHTML=Array.prototype.map.call(hs,function(h){return '<a href="#'+h.id+'" data-id="'+h.id+'" class="'+(h.tagName==="H3"?"l3":"")+'">'+h.textContent+'</a>'}).join("");
+ toc.addEventListener("click",function(e){var a=e.target.closest("a");if(!a)return;e.preventDefault();var t=document.getElementById(a.dataset.id);if(t)t.scrollIntoView({behavior:"smooth"})});
+ if(!hs.length)return;
+ var io=new IntersectionObserver(function(es){es.forEach(function(en){if(en.isIntersecting){toc.querySelectorAll("a").forEach(function(a){a.classList.toggle("on",a.dataset.id===en.target.id)})}})},{rootMargin:"-90px 0px -70% 0px"});
+ hs.forEach(function(h){io.observe(h)});
+ var first=toc.querySelector("a");if(first)first.classList.add("on");
+}
+
+/* ============ router / render ============ */
+var app=document.getElementById("app"),landingObserver=null;
+function route(){
+ var h=location.hash.replace(/^#/,"")||"/";
+ var docs=h.indexOf("/docs")===0;
+ document.getElementById("nHome").setAttribute("aria-current",docs?"false":"page");
+ document.getElementById("nDocs").setAttribute("aria-current",docs?"page":"false");
+ if(!docs&&h==="install"&&document.getElementById("install")){document.getElementById("install").scrollIntoView();return}
+ clearInterval(liveTimer);typeRun++;
+ if(docs){
+  var slug=h.split("/")[2]||"introduction";
+  app.innerHTML=renderDocs(slug);afterDocs();window.scrollTo(0,0);document.title="Linager · "+tt("p."+(FLAT.indexOf(slug)>=0?slug:"introduction"));
+ }else{
+  app.innerHTML=landing();afterLanding();document.title="Linager";
+  if(h==="install"){var el=document.getElementById("install");if(el)el.scrollIntoView()}else window.scrollTo(0,0);
+ }
+}
+function afterLanding(){
+ paintLive();liveTimer=setInterval(tickLive,1400);
+ var io=new IntersectionObserver(function(es){es.forEach(function(en){if(en.isIntersecting){en.target.classList.add("in");io.unobserve(en.target)}})},{threshold:.15});
+ document.querySelectorAll(".reveal").forEach(function(el){io.observe(el)});
+ var co=new IntersectionObserver(function(es){es.forEach(function(en){if(!en.isIntersecting)return;co.unobserve(en.target);var el=en.target,to=+el.dataset.count,t0=performance.now();(function f(t){var p=Math.min(1,(t-t0)/1100),e=1-Math.pow(1-p,3);el.textContent=Math.round(to*e);if(p<1)requestAnimationFrame(f)})(t0)})},{threshold:.6});
+ document.querySelectorAll("[data-count]").forEach(function(el){co.observe(el)});
+ var to=new IntersectionObserver(function(es){es.forEach(function(en){if(en.isIntersecting){to.disconnect();runTyped()}})},{threshold:.4});
+ var tp=document.getElementById("typed");if(tp)to.observe(tp);
+ var tabsEl=document.querySelectorAll(".tabs button"),caps=["s.c1","s.c2","s.c3","s.c4","s.c5"],cur=0,auto=null;
+ function pick(n){cur=n;tabsEl.forEach(function(b,i){b.setAttribute("aria-selected",i===n)});document.querySelectorAll("#stage img").forEach(function(im,i){im.classList.toggle("on",i===n)});document.getElementById("cap").textContent=tt(caps[n])}
+ tabsEl.forEach(function(b,i){b.addEventListener("click",function(){clearInterval(auto);pick(i)})});
+ var so=new IntersectionObserver(function(es){es.forEach(function(en){clearInterval(auto);if(en.isIntersecting&&!matchMedia("(prefers-reduced-motion:reduce)").matches)auto=setInterval(function(){pick((cur+1)%caps.length)},4500)})},{threshold:.4});
+ var st=document.getElementById("stage");if(st)so.observe(st);
+}
+
+/* ============ global events ============ */
+document.addEventListener("click",function(e){
+ var c=e.target.closest("[data-copy]");
+ if(c){navigator.clipboard&&navigator.clipboard.writeText(c.dataset.copy).catch(function(){});var o=c.textContent;c.textContent=tt("copied");setTimeout(function(){c.textContent=o},1400);return}
+ var b=e.target.closest("[data-copyblock]");
+ if(b){var txt=b.parentNode.querySelector("pre").textContent;navigator.clipboard&&navigator.clipboard.writeText(txt).catch(function(){});var o2=b.textContent;b.textContent=tt("copied");setTimeout(function(){b.textContent=o2},1400)}
+ var l=e.target.closest("[data-lang]");
+ if(l){setLang(l.dataset.lang)}
+});
+document.addEventListener("keydown",function(e){if(e.key==="/"&&!/INPUT|TEXTAREA/.test(document.activeElement.tagName)){var q=document.getElementById("q");if(q){e.preventDefault();q.focus()}}});
+function setLang(l){lang=l;document.documentElement.lang=l;document.querySelectorAll("[data-lang]").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.lang===l)});
+ document.querySelectorAll("[data-i]").forEach(function(el){el.textContent=tt(el.dataset.i)});route()}
+document.getElementById("theme").addEventListener("click",function(){var r=document.documentElement,d=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme:dark)").matches;r.dataset.theme=d?"light":"dark"});
+window.addEventListener("hashchange",route);
+setLang("en");
+})();
+</script>
+</body>
+</html>

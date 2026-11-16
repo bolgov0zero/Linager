@@ -15,7 +15,7 @@
 
 [English](README.md) · **Русский**
 
-[Возможности](#возможности) · [Скриншоты](#скриншоты) · [Установка](#установка) · [Как это устроено](#как-это-устроено) · [Документация](#документация)
+[**Сайт**](https://bolgov0zero.github.io/linager/ru/) · [Возможности](#возможности) · [Скриншоты](#скриншоты) · [Установка](#установка) · [Как это устроено](#как-это-устроено) · [Документация](#документация)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/ru/dashboard-dark.png">
@@ -166,12 +166,13 @@ flowchart LR
 |---|---|---|
 | Установка | [установка](docs/ru/install.md) | [install](docs/en/install.md) |
 | Обратный прокси (Caddy, nginx, NPM) | [прокси](docs/ru/proxy.md) | [proxy](docs/en/proxy.md) |
+| Доступ к админке | [доступ к админке](docs/ru/access.md) | [access](docs/en/access.md) |
 | Модули агента и конфигурация | [модули](docs/ru/modules.md) | [modules](docs/en/modules.md) |
 | Обновления, бэкапы, откат | [обновления](docs/ru/updates.md) | [updates](docs/en/updates.md) |
 | Безопасность | [безопасность](docs/ru/security.md) | [security](docs/en/security.md) |
 | Архитектура | [архитектура](docs/architecture.md) | [architecture](docs/en/architecture.md) |
 
-Дизайн и макеты интерфейса: [docs/design/](docs/design/).
+Документация опубликована и как сайт: <https://bolgov0zero.github.io/linager/ru/>. Дизайн и макеты интерфейса: [docs/design/](docs/design/).
 
 ## Разработка
 
