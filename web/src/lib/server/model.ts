@@ -11,7 +11,7 @@ export interface ChartEvent {
   kind: string;
 }
 
-/** One client-side live sample; null when the value is unknown (seeded from spark, CPU only). */
+/** One client-side live sample; null when the value is unknown. */
 export interface LiveSample {
   cpu: number | null;
   mem: number | null;

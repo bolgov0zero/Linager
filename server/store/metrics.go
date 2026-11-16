@@ -222,6 +222,33 @@ func (s *Store) RecentCPU(ctx context.Context, serverID string, n int) ([]float6
 	return out, rows.Err()
 }
 
+// RecentPoint is one raw sample for the overview bars.
+type RecentPoint struct {
+	TS  int64   `json:"ts"`
+	CPU float64 `json:"cpu"`
+	Mem float64 `json:"mem"`
+	Rx  float64 `json:"rx"`
+	Tx  float64 `json:"tx"`
+}
+
+// RecentRaw returns the latest n raw samples, oldest first.
+func (s *Store) RecentRaw(ctx context.Context, serverID string, n int) ([]RecentPoint, error) {
+	rows, err := s.Pool.Query(ctx, `SELECT ts, cpu, mem, rx, tx FROM (SELECT extract(epoch FROM ts)::bigint AS ts, cpu, mem, rx, tx FROM metrics_raw WHERE server_id=$1 ORDER BY ts DESC LIMIT $2) x ORDER BY ts`, serverID, n)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []RecentPoint{}
+	for rows.Next() {
+		var p RecentPoint
+		if err := rows.Scan(&p.TS, &p.CPU, &p.Mem, &p.Rx, &p.Tx); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
 // ---- dashboard ----
 
 // DashboardID returns the id of the user's default dashboard.

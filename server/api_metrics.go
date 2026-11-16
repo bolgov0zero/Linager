@@ -30,6 +30,9 @@ var periods = map[string]periodDef{
 
 const targetBars = 120
 
+// recentLen is the number of samples behind the overview bars (the UI shows 60 slots).
+const recentLen = 60
+
 // binFor picks the bar width: a multiple of the tier step giving at most targetBars bars.
 func binFor(span, step time.Duration) time.Duration {
 	n := (span/targetBars + step - 1) / step
@@ -197,8 +200,14 @@ func (a *Admin) serverDetail(w http.ResponseWriter, r *http.Request, _ *store.Us
 	if mods == nil {
 		mods = []string{}
 	}
+	// the overview bars start filled: the last samples come from the stored raw metrics
+	recent, err := a.DB.RecentRaw(r.Context(), s.ID, recentLen)
+	if err != nil {
+		a.Log.Error("recent samples", "err", err)
+		recent = []store.RecentPoint{}
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"modules": mods,
+		"modules": mods, "recent": recent,
 		"id":      s.ID, "name": s.Name, "hostname": s.Hostname, "address": s.Address, "os": s.OS, "agent_version": s.AgentVersion,
 		"online": a.Hub.Online(s.ID), "last_seen_at": s.LastSeenAt, "enrolled_at": s.EnrolledAt,
 		"system": v.System, "sample": v.Sample, "spark": v.Spark,

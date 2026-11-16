@@ -192,7 +192,7 @@ TLS на порту агентов, mTLS и подписанные сообще�
 ## 12a. Этап 3: метрики и дашборд (реализовано)
 - Агент: сборщик по `/proc` каждые 5 с (CPU, RAM, диски, интерфейсы, нагрузка, uptime), раз в 30 с число упавших служб, раз в час число обновлений apt; нужна ли перезагрузка (`/var/run/reboot-required`). При обрыве связи до часа (720 образцов) буферизуются и досылаются пачкой (`metrics`, подписанное сообщение).
 - Сервер: сырые данные в `metrics_raw` (часовые секции), свёртки `1m/5m/15m/1h` (суточные, недельные, месячные секции) считает планировщик раз в минуту (повторяемые вставки `ON CONFLICT`); устаревшие секции удаляются (`DROP`), сроки по умолчанию как в таблице политики. Свёртки старших уровней строятся из младших; p95 старших уровней приближённый (персентиль по p95 младшего уровня).
-- API: `GET /api/dashboard`, `/api/dashboard/available`, `POST/DELETE /api/dashboard/items`, `PUT /api/dashboard/order`, `GET /api/servers/{id}`, `/metrics?period=`, `/metrics.csv`, `GET /api/live` (SSE: `metrics`, `status`, `dashboard`).
+- API: `GET /api/dashboard`, `/api/dashboard/available`, `POST/DELETE /api/dashboard/items`, `PUT /api/dashboard/order`, `GET /api/servers/{id}` (with `recent`: the last 60 raw samples that fill the overview bars at once), `/metrics?period=`, `/metrics.csv`, `GET /api/live` (SSE: `metrics`, `status`, `dashboard`).
 - События (перезагрузка, падение службы, подключение/отключение агента) пишутся в таблицу `events` и показываются на графиках.
 - Последний полный образец и сведения о системе сохраняются в `servers`, поэтому после перезапуска сервера и для offline-серверов показываются последние значения.
 

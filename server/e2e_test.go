@@ -329,6 +329,17 @@ func TestEndToEnd(t *testing.T) {
 	if hist.Tier != "raw" || hist.Stats["cpu"].Avg != 42 {
 		t.Fatalf("raw history: tier=%s stats=%+v", hist.Tier, hist.Stats)
 	}
+	// the server page seeds its overview bars from the stored samples
+	var seeded struct {
+		Recent []struct {
+			TS  int64   `json:"ts"`
+			CPU float64 `json:"cpu"`
+		} `json:"recent"`
+	}
+	api.do("GET", "/api/servers/"+id, nil, &seeded)
+	if len(seeded.Recent) == 0 || seeded.Recent[len(seeded.Recent)-1].CPU != 42 {
+		t.Fatalf("server detail must carry recent samples: %+v", seeded.Recent)
+	}
 	(&server.Scheduler{DB: db, Log: slog.New(slog.NewTextHandler(io.Discard, nil))}).RunOnce(ctx)
 	for _, p := range []string{"24h", "7d", "30d", "90d", "180d", "360d"} {
 		hist.Points = nil

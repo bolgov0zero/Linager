@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.61
+
+- Overview: the four bars (CPU, RAM, network) are filled at once when the page opens. `GET /api/servers/{id}` now returns `recent`, the last 60 raw samples (CPU, RAM, receive and send rate) from the stored metrics, and the page seeds its bars from them instead of starting empty and collecting samples live. RAM and network were empty before, CPU had only 12 values.
+
 ## 0.1.60
 
 - Phone: the line with the number of servers above the summary is gone (the summary strip already shows it).

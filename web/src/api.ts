@@ -305,6 +305,8 @@ export interface ServerDetail {
   id: string; name: string; hostname: string; address: string; os: string; agent_version: string;
   online: boolean; last_seen_at: string | null; enrolled_at: string;
   system: SystemInfo | null; sample: Sample | null; spark: number[];
+  /** Latest raw samples (oldest first) that seed the overview bars. */
+  recent: { ts: number; cpu: number; mem: number; rx: number; tx: number }[];
 }
 
 export type MetricKey = 'cpu' | 'mem' | 'disk' | 'rx' | 'tx';

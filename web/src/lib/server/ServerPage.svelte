@@ -118,7 +118,7 @@
         const d = await api.server(found.id);
         if (!active) return;
         detail = d;
-        live = d.spark.map((cpu) => ({ cpu, mem: null, rx: null, tx: null }));
+        live = (d.recent ?? []).map((p) => ({ cpu: p.cpu, mem: p.mem, rx: p.rx, tx: p.tx })).slice(-HISTORY_LIMIT);
         status = 'ready';
       } catch (e) {
         if (!active) return;
