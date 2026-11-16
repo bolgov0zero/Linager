@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.68
+
+- Updates, "Linager server": after a check that finds a newer release nothing pops up any more, the block just shows the button "Update to ...". The release notes open only by the button "Release notes" (without an update button in the dialog).
+- The progress of a server update is a dialog now (it is gone from the block): it opens when the update is confirmed, lists the steps and the result, and after a good result it closes by itself in 5 seconds or by the OK button. After an error or a rollback it stays until OK. A dialog is also opened if a running update is seen after a page reload.
+
 ## 0.1.67
 
 - Security: the "State" block is folded by default (its header shows the verdict, for example "4 things need attention"), and fail2ban moved to the first place, before "State" and "Now in the system". Same order on a phone.

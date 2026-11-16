@@ -24,6 +24,8 @@
   "upd.srv.backup": "Бэкап БД",
   "upd.srv.source": "Источник",
   "upd.srv.check": "Проверить обновления",
+  "upd.status.title": "Обновление сервера",
+  "upd.status.ok": "OK",
   "upd.notes.button": "Описание релиза",
   "upd.notes.title": "Релиз {version}",
   "upd.notes.empty": "Описание релиза отсутствует.",

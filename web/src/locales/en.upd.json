@@ -24,6 +24,8 @@
   "upd.srv.backup": "DB backup",
   "upd.srv.source": "Source",
   "upd.srv.check": "Check for updates",
+  "upd.status.title": "Server update",
+  "upd.status.ok": "OK",
   "upd.notes.button": "Release notes",
   "upd.notes.title": "Release {version}",
   "upd.notes.empty": "This release has no description.",

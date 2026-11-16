@@ -4,7 +4,7 @@
   import Modal from '../Modal.svelte';
   import { isPhone } from '../ui/viewport';
   import { locale, tr as trans } from '../../i18n';
-  import { RUN_VISIBLE_SEC, SERVER_STEPS, fmtDateTime } from './format';
+  import { SERVER_STEPS, fmtDateTime } from './format';
 
   let {
     info,
@@ -35,34 +35,54 @@
   const available = $derived(srv.available);
   const canUpdate = $derived(Boolean(available) && srv.can_update);
   const noUpdater = $derived(Boolean(available) && !srv.can_update);
-  const showRun = $derived(
-    run.state === 'running' ||
-      (run.state !== 'idle' && run.finished_at > 0 && Date.now() / 1000 - run.finished_at < RUN_VISIBLE_SEC),
-  );
+
+  // The progress of a server update is a dialog: it opens when the update is confirmed (or when a run is seen going on),
+  // and after a good result it closes by itself in 5 seconds or by the OK button.
+  const CLOSE_AFTER_MS = 5000;
+  let statusOpen = $state(false);
+  /** The run that was the latest before the update was confirmed: its state is not the one of the new update. */
+  let staleRun = $state('');
+  /** The run whose dialog the administrator closed; it is not opened again. */
+  let dismissedRun = $state('');
+  const freshRun = $derived(run.run_id !== staleRun);
+  const finished = $derived(freshRun && (run.state === 'done' || run.state === 'failed' || run.state === 'rolled_back'));
+  const working = $derived(!finished);
+
+  $effect(() => {
+    if ((run.state === 'running' || restarting) && run.run_id !== dismissedRun) statusOpen = true;
+  });
+
+  $effect(() => {
+    if (!statusOpen || !finished || run.state !== 'done') return;
+    const timer = setTimeout(closeStatus, CLOSE_AFTER_MS);
+    return () => clearTimeout(timer);
+  });
+
+  // The update did not start (the request failed): nothing to show.
+  $effect(() => {
+    if (statusOpen && !busy && !restarting && !freshRun) statusOpen = false;
+  });
+
+  function closeStatus(): void {
+    statusOpen = false;
+    dismissedRun = run.run_id;
+  }
 
   function stepState(id: UpdateStep['id']): UpdateStep['state'] {
+    if (!freshRun) return 'pending';
     return run.steps?.find((step) => step.id === id)?.state ?? 'pending';
   }
 
   const notes = $derived(srv.notes ?? []);
   const notesVersion = $derived(srv.notes_version ?? available ?? srv.current);
 
-  // After a check that found a newer release, its description opens by itself.
-  let wasChecking = false;
-  $effect(() => {
-    const now = checking;
-    if (wasChecking && !now && available && notes.length > 0) notesOpen = true;
-    wasChecking = now;
-  });
-
-  function updateFromNotes(): void {
-    notesOpen = false;
-    confirmOpen = true;
-  }
-
   function confirmUpdate(): void {
     confirmOpen = false;
-    if (available) onupdate(available);
+    if (!available) return;
+    staleRun = run.run_id;
+    dismissedRun = '';
+    statusOpen = true;
+    onupdate(available);
   }
 </script>
 
@@ -130,35 +150,38 @@
   {#if noUpdater}
     <p class="upd-hint">{$trans('upd.srv.noUpdater')}</p>
   {/if}
+</section>
 
-  {#if restarting || showRun}
+{#if statusOpen}
+  <Modal title={$trans('upd.status.title')} labelId="upd-status-title" onclose={closeStatus}>
     <div class="upd-run" aria-label={$trans('upd.srv.progressAria')}>
       {#if restarting}
         <p class="upd-hint">{$trans('upd.restarting')}</p>
       {/if}
-      {#if showRun}
-        <ol class="upd-steps">
-          {#each SERVER_STEPS as id (id)}
-            {@const st = stepState(id)}
-            <li class="upd-step {st}">
-              <span class="upd-ico" aria-hidden="true">
-                {#if st === 'done'}✓{:else if st === 'running'}<span class="upd-spin"></span>{:else if st === 'failed'}✗{:else}○{/if}
-              </span>
-              <span>{$trans(`upd.srvstep.${id}`)}</span>
-            </li>
-          {/each}
-        </ol>
-        {#if run.state === 'done'}
-          <p class="upd-ok">{$trans('upd.run.done', { version: run.to })}</p>
-        {:else if run.state === 'failed'}
-          <p class="upd-err">{$trans('upd.run.failed', { error: run.error ?? '' })}</p>
-        {:else if run.state === 'rolled_back'}
-          <p class="upd-err">{$trans('upd.run.rolledBack', { error: run.error ?? '' })}</p>
-        {/if}
+      <ol class="upd-steps">
+        {#each SERVER_STEPS as id (id)}
+          {@const st = stepState(id)}
+          <li class="upd-step {st}">
+            <span class="upd-ico" aria-hidden="true">
+              {#if st === 'done'}✓{:else if st === 'running'}<span class="upd-spin"></span>{:else if st === 'failed'}✗{:else}○{/if}
+            </span>
+            <span>{$trans(`upd.srvstep.${id}`)}</span>
+          </li>
+        {/each}
+      </ol>
+      {#if finished && run.state === 'done'}
+        <p class="upd-ok">{$trans('upd.run.done', { version: run.to })}</p>
+      {:else if finished && run.state === 'failed'}
+        <p class="upd-err">{$trans('upd.run.failed', { error: run.error ?? '' })}</p>
+      {:else if finished && run.state === 'rolled_back'}
+        <p class="upd-err">{$trans('upd.run.rolledBack', { error: run.error ?? '' })}</p>
       {/if}
     </div>
-  {/if}
-</section>
+    <div class="upd-acts upd-acts-end row end">
+      <button class="btn primary" type="button" disabled={working} onclick={closeStatus}>{$trans('upd.status.ok')}</button>
+    </div>
+  </Modal>
+{/if}
 
 {#if notesOpen}
   <Modal title={$trans('upd.notes.title', { version: notesVersion })} labelId="upd-notes-title" onclose={() => (notesOpen = false)}>
@@ -173,11 +196,6 @@
     {/if}
     <div class="upd-acts upd-acts-end row end">
       <button class="btn" type="button" onclick={() => (notesOpen = false)}>{$trans('upd.notes.close')}</button>
-      {#if canUpdate && available}
-        <button class="btn primary" type="button" disabled={busy} onclick={updateFromNotes}>
-          {$trans('upd.srv.update', { version: available })}
-        </button>
-      {/if}
     </div>
   </Modal>
 {/if}
