@@ -201,14 +201,26 @@ func (a *AgentPort) releaseLatest(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"version": c.Version, "min_agent": c.Manifest.MinAgent})
 }
 
-var releaseFiles = map[string]string{"manifest.json": "manifest.json", "manifest.json.minisig": "manifest.json.minisig", "binary": release.BinaryAsset}
+// releaseFiles maps the URL name to the cached file; "binary" is resolved by architecture.
+var releaseFiles = map[string]string{"manifest.json": "manifest.json", "manifest.json.minisig": "manifest.json.minisig", "binary": ""}
+
+// releaseBinary picks the cached file for the architecture an agent asked for. Agents of releases
+// before arm64 support send none and are always amd64.
+func releaseBinary(m release.Manifest, arch string) (string, bool) {
+	if arch == "" {
+		arch = release.ArchAMD64
+	}
+	a, ok := m.AssetList()[arch]
+	return a.Name, ok
+}
 
 func (a *AgentPort) releaseFile(w http.ResponseWriter, r *http.Request) {
 	if !a.agentAuth(w, r) || a.Updates == nil {
 		return
 	}
-	ver, file := r.PathValue("ver"), releaseFiles[r.PathValue("file")]
-	if !verRe.MatchString(ver) || file == "" {
+	ver := r.PathValue("ver")
+	file, known := releaseFiles[r.PathValue("file")]
+	if !verRe.MatchString(ver) || !known {
 		http.NotFound(w, r)
 		return
 	}
@@ -216,6 +228,14 @@ func (a *AgentPort) releaseFile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.NotFound(w, r)
 		return
+	}
+	if file == "" {
+		name, ok := releaseBinary(c.Manifest, r.URL.Query().Get("arch"))
+		if !ok {
+			http.Error(w, "this release has no binary for the requested architecture", http.StatusNotFound)
+			return
+		}
+		file = name
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	http.ServeFile(w, r, filepath.Join(c.Dir, file)) //nolint:gosec // path is built from a verified cache entry and a fixed file name

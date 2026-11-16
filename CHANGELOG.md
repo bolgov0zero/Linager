@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.51-beta.1
+
+- Releases: `manifest.json` now has an `assets` map with the binary of every architecture (name, SHA-256, size); the top-level `sha256` and `size` still describe the amd64 binary, so agents of earlier releases keep updating. The server downloads, verifies and caches every binary of a release and gives an agent the one for its own architecture (`/v1/release/<ver>/binary?arch=`; an agent that sends none gets amd64). The agent checks the downloaded file against its own entry of the signed manifest. First step of arm64 support for agents.
+- Build and release: `make build` produces `linager_linux_amd64` and `linager_linux_arm64` (`ARCHES=amd64` builds one), a release carries both binaries and one `.deb` per architecture (`linager_amd64.deb`, `linager_arm64.deb`), `SHA256SUMS` lists all of them and `manifest.json` has a checksum for each. CI runs the tests on an arm64 runner as well. 
+- Installer: `install.sh` now accepts arm64 (a Raspberry Pi 4 with Raspberry Pi OS 64-bit, Debian or Ubuntu for arm64) and downloads the binary and the checksum of its own architecture. It refuses other CPUs and a 32-bit system on a 64-bit kernel (Raspberry Pi OS 32-bit) with a clear message. The "CPU" line of an arm64 agent shows the board ("Raspberry Pi 4 Model B Rev 1.5") instead of staying empty.
+
 ## 0.1.50
 
 - Roles: besides the administrator there are now an Operator and an Auditor. When the administrator creates a user (or changes one in "Settings → Users → Role and access") they pick the role and, with two buttons, the servers and the modules. In the "Servers" window the servers are grouped; the switch of a group gives access to all its servers (they turn on and grey out) and to the servers that join the group later. The "Modules" window has a switch per module; Terminal, Files, Network, Firewall, Security and Docker are marked "root access", because they let a user do almost anything on the host.

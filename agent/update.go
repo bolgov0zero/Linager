@@ -154,6 +154,10 @@ func (u *updater) Apply(ctx context.Context, version string, key *release.Key) e
 	if strings.TrimPrefix(m.Version, "v") != strings.TrimPrefix(version, "v") {
 		return fail(1, errors.New("manifest version mismatch"))
 	}
+	asset, ok := m.Asset(release.HostArch)
+	if !ok {
+		return fail(1, fmt.Errorf("the release has no binary for %s", release.HostArch))
+	}
 	exe, err := os.Executable()
 	if err != nil {
 		return fail(1, err)
@@ -167,7 +171,7 @@ func (u *updater) Apply(ctx context.Context, version string, key *release.Key) e
 		return fail(1, err)
 	}
 	defer func() { _ = os.Remove(tmp) }()
-	brc, err := fetch(ctx, c, root+"/binary", 200<<20)
+	brc, err := fetch(ctx, c, root+"/binary?arch="+release.HostArch, 200<<20)
 	if err != nil {
 		_ = f.Close()
 		return fail(0, err)
@@ -181,7 +185,7 @@ func (u *updater) Apply(ctx context.Context, version string, key *release.Key) e
 	if err != nil {
 		return fail(0, err)
 	}
-	if hex.EncodeToString(h.Sum(nil)) != strings.ToLower(m.SHA256) || (m.Size > 0 && n != m.Size) {
+	if hex.EncodeToString(h.Sum(nil)) != strings.ToLower(asset.SHA256) || (asset.Size > 0 && n != asset.Size) {
 		return fail(1, errors.New("binary does not match the signed manifest"))
 	}
 	step(1, nil)

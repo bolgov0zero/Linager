@@ -242,14 +242,29 @@ func (c *linuxCollector) updateAptCount(ctx context.Context) {
 	c.slow.Unlock()
 }
 
-func (c *linuxCollector) System(agentVersion string) protocol.SystemInfo {
-	model := ""
-	for _, l := range strings.Split(read("/proc/cpuinfo"), "\n") {
-		if k, v, ok := strings.Cut(l, ":"); ok && strings.TrimSpace(k) == "model name" {
-			model = strings.TrimSpace(v)
-			break
+// cpuModel names the processor. x86 lists "model name" in /proc/cpuinfo. ARM has none: the Raspberry Pi
+// kernel gives the board as "Model" (and older ones as "Hardware"), and boards with a device tree
+// name themselves in /proc/device-tree/model (a NUL-terminated string).
+func cpuModel(cpuinfo, deviceTree string) string {
+	found := map[string]string{}
+	for _, l := range strings.Split(cpuinfo, "\n") {
+		if k, v, ok := strings.Cut(l, ":"); ok {
+			k, v = strings.TrimSpace(k), strings.TrimSpace(v)
+			if _, seen := found[k]; !seen && v != "" {
+				found[k] = v
+			}
 		}
 	}
+	for _, k := range []string{"model name", "Model", "Hardware"} {
+		if v := found[k]; v != "" {
+			return v
+		}
+	}
+	return strings.TrimSpace(strings.Trim(deviceTree, "\x00"))
+}
+
+func (c *linuxCollector) System(agentVersion string) protocol.SystemInfo {
+	model := cpuModel(read("/proc/cpuinfo"), read("/proc/device-tree/model"))
 	return protocol.SystemInfo{
 		Hostname: hostname(), OS: osName(), Kernel: strings.TrimSpace(read("/proc/sys/kernel/osrelease")), Arch: runtime.GOARCH,
 		CPUModel: model, CPUCores: runtime.NumCPU(), MemTotal: parseMeminfo(read("/proc/meminfo")).total, AgentVersion: agentVersion,

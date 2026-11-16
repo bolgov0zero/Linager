@@ -20,7 +20,7 @@ Status: implemented in 0.1; sections 12a–12e describe what was built and where
 
 | Area | Choice | Reason |
 |---|---|---|
-| Language | Go 1.23+, amd64 only | customer's decision |
+| Language | Go 1.23+, amd64; arm64 for the agent | customer's decision |
 | CLI | `spf13/cobra` | subcommands and flags for non-interactive mode |
 | HTTP/WS | `net/http` + `coder/websocket` | minimal dependencies |
 | DB | `jackc/pgx/v5`, queries written by hand in `server/store` | no ORM and no code generation |
@@ -136,7 +136,7 @@ The same host can be enrolled again: after deletion, it goes through enrollment 
 ### 8.1 `install.sh`
 A thin script (POSIX sh, about 80 lines):
 1. Clears the screen and the scrollback buffer before starting (`printf '\033[H\033[2J\033[3J'`).
-2. Checks Debian 12/13 or Ubuntu 22.04/24.04/26.04, amd64, root, and the presence of `curl`.
+2. Checks Debian 12/13 or Ubuntu 22.04/24.04/26.04, amd64 or arm64 (64-bit system), root, and the presence of `curl`.
 3. Downloads the release and `SHA256SUMS` with `SHA256SUMS.minisig`, verifies the checksum and the signature (the minimal `minisign` from the Debian repository; the public key is embedded in the script).
 4. Runs `linager install "$@"`; without a TTY it goes straight to non-interactive mode.
 The documentation's safe option: download, read, verify the signature, run.
@@ -159,7 +159,7 @@ Summary: admin panel address, agent certificate fingerprint, a ready-to-use comm
 ## 9. Signing and updates
 
 - **Release signing: minisign-compatible Ed25519.** One embedded public key, verification in pure Go with no external dependencies; `minisign` is available in the Debian repository for manual verification. Cosign was rejected: it pulls in the Sigstore chain and network checks, which are unnecessary for closed networks.
-- Release: `linager_<ver>_linux_amd64`, `.deb`, `SHA256SUMS`, `SHA256SUMS.minisig`, `manifest.json` (version, channel, minimum agent version, migration version, changelog), with a signature.
+- Release: `linager_linux_amd64` and `linager_linux_arm64`, a `.deb` per architecture, `SHA256SUMS`, `SHA256SUMS.minisig`, `manifest.json` (version, channel, minimum agent version, migration version, changelog), with a signature.
 - The secret signing key is stored in a GitHub Actions secret (`MINISIGN_KEY`); it is created by the owner (instructions will be in `docs/`).
 - The server caches releases from GitHub (`bolgov0zero/linager`), verifies the signature, and distributes them to agents. Order: the server first, then the agents.
 - Server update: signature check → `pg_dump` → service stop → binary backup → atomic replacement (`rename`) → forward migrations → start → health check → automatic binary rollback on failure (forward migrations are not rolled back, which is why `pg_dump` is taken beforehand).
@@ -172,7 +172,7 @@ TLS on the agent port, mTLS and signed messages; argon2id; TOTP; brute-force loc
 
 ## 11. CI and releases
 
-- GitHub Actions: `go vet`, `golangci-lint`, tests (with PostgreSQL in a service container), frontend build, `linux/amd64`, `.deb` (`nfpm`), `SHA256SUMS`, signing, publication to Releases on a `v*` tag.
+- GitHub Actions: `go vet`, `golangci-lint`, tests (with PostgreSQL in a service container), frontend build, `linux/amd64` and `linux/arm64` (tests on an arm64 runner too), `.deb` (`nfpm`), `SHA256SUMS`, signing, publication to Releases on a `v*` tag.
 - Installer test: a matrix of Debian 12/13 and Ubuntu 22.04/24.04/26.04 in containers with systemd (non-interactive mode), plus a TUI check via terminal snapshots.
 - Versioning: SemVer, `stable` (tags `vX.Y.Z`) and `beta` (`vX.Y.Z-beta.N`) channels.
 
@@ -216,7 +216,7 @@ Done when: on clean Debian 12/13 and Ubuntu 22.04/24.04/26.04, a single wizard r
 - Docker: Engine API over the socket; the module is enabled only if the socket exists; containers, images, logs, and pull via streaming. Docker and netplan have not been tested on live machines (not present in the test environment).
 
 ## 12d. Stage 6: updates, backups, log (implemented)
-- Signing: minisign-compatible Ed25519, verification in pure Go (`internal/release`, algorithms `Ed` and `ED`, trusted comment verification); the public key is embedded (`release.PublicKey`, can be overridden with ldflags). The release manifest (`manifest.json` + `.minisig`) contains the version, channel, SHA-256, size, number of migrations, `min_agent`, and the changelog.
+- Signing: minisign-compatible Ed25519, verification in pure Go (`internal/release`, algorithms `Ed` and `ED`, trusted comment verification); the public key is embedded (`release.PublicKey`, can be overridden with ldflags). The release manifest (`manifest.json` + `.minisig`) contains the version, channel, SHA-256 and size (of the amd64 binary, the fields of earlier releases), the `assets` map (per architecture: name, SHA-256 and size of the `linager_linux_<arch>` binary), number of migrations, `min_agent`, and the changelog.
 - Source: GitHub Releases or a mirror (`update.source`); releases are downloaded to the server cache at `/var/lib/linager/releases/<version>/`; the signature and checksum are verified again before each distribution.
 - Server: the privileged `updater` (root) is invoked by a systemd path unit watching the request file from the admin panel; the steps verify, backup, stop, replace, migrate, and start are written to `update-status.json`; on failure the binary is restored. History is kept in `update_runs`.
 - Agents: the server distributes the release over mTLS (`/v1/release/...`), command `update.apply`, messages `update.event`; the agent verifies the signature, creates `linager.prev`, replaces the binary, and arms the rollback timer (`systemd-run`, 70 s); the new version confirms itself by connecting. Rollout manager (all at once, one by one, first one then the rest; stop on error; offline agents queued in `agent_updates`).

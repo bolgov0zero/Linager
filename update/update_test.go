@@ -66,7 +66,7 @@ func (r *fakeRepo) publish(tag string, pre bool, binary string, tamper bool) {
 	r.data[tag+"/bin"], r.data[tag+"/m"], r.data[tag+"/s"] = []byte(served), m, []byte(signFile(r.priv, r.key.ID, m))
 	u := func(n string) string { return r.srv.URL + "/dl/" + tag + "/" + n }
 	r.rels = append(r.rels, map[string]any{"tag_name": tag, "prerelease": pre, "body": "- first\n- second\n\nFull Changelog: x",
-		"assets": []map[string]string{{"name": release.BinaryAsset, "browser_download_url": u("bin")}, {"name": "manifest.json", "browser_download_url": u("m")}, {"name": "manifest.json.minisig", "browser_download_url": u("s")}}})
+		"assets": []map[string]string{{"name": release.BinaryAsset(release.ArchAMD64), "browser_download_url": u("bin")}, {"name": "manifest.json", "browser_download_url": u("m")}, {"name": "manifest.json.minisig", "browser_download_url": u("s")}}})
 }
 
 func TestLatestByChannel(t *testing.T) {

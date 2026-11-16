@@ -9,7 +9,12 @@ permissions:
 
 jobs:
   go:
-    runs-on: ubuntu-24.04
+    # the agent runs on arm64 (Raspberry Pi), so the tests run there too
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
     services:
       postgres:
         image: postgres:17
@@ -37,10 +42,13 @@ jobs:
       - name: Vet and test
         run: go vet ./... && go test -race ./...
       - uses: golangci/golangci-lint-action@v8
+        if: matrix.runner == 'ubuntu-24.04'
         with:
           version: latest
-      - name: Build linux/amd64
-        run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o /dev/null ./cmd/linager
+      - name: Build linux/amd64 and linux/arm64
+        run: |
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o /dev/null ./cmd/linager
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -o /dev/null ./cmd/linager
   shell:
     runs-on: ubuntu-24.04
     steps:

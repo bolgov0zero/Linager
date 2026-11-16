@@ -4,6 +4,9 @@ DATE    ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 PKG     := github.com/bolgov0zero/linager/internal/version
 LDFLAGS := -s -w -X $(PKG).Version=$(VERSION) -X $(PKG).Commit=$(COMMIT) -X $(PKG).Date=$(DATE)
 
+# Architectures of the release binaries (GOARCH values); `make build ARCHES=amd64` builds one.
+ARCHES ?= amd64 arm64
+
 .PHONY: all web build test lint clean
 
 all: build
@@ -13,7 +16,9 @@ web:
 
 build: web
 	mkdir -p bin
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o bin/linager_linux_amd64 ./cmd/linager
+	for arch in $(ARCHES); do \
+		GOOS=linux GOARCH=$$arch CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o bin/linager_linux_$$arch ./cmd/linager || exit 1; \
+	done
 
 test:
 	go vet ./... && go test -race ./...

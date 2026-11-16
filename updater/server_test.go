@@ -69,7 +69,7 @@ func (e *env) cache(version, binary string) {
 	_ = os.MkdirAll(dir, 0o755) //nolint:gosec // test fixture
 	sum := sha256.Sum256([]byte(binary))
 	m, _ := json.Marshal(release.Manifest{Version: version, Channel: "stable", SHA256: hex.EncodeToString(sum[:]), Size: int64(len(binary))})
-	_ = os.WriteFile(filepath.Join(dir, release.BinaryAsset), []byte(binary), 0o755)                        //nolint:gosec // test fixture
+	_ = os.WriteFile(filepath.Join(dir, release.BinaryAsset(release.ArchAMD64)), []byte(binary), 0o755)     //nolint:gosec // test fixture
 	_ = os.WriteFile(filepath.Join(dir, "manifest.json"), m, 0o644)                                         //nolint:gosec // test fixture
 	_ = os.WriteFile(filepath.Join(dir, "manifest.json.minisig"), []byte(sign(e.priv, e.key.ID, m)), 0o644) //nolint:gosec // test fixture
 }
@@ -162,7 +162,7 @@ func TestBackupFailureTouchesNothing(t *testing.T) {
 func TestUnverifiedReleaseIsRefused(t *testing.T) {
 	e := newEnv(t)
 	e.cache("v0.2.0", "NEW")
-	_ = os.WriteFile(filepath.Join(e.d.CacheDir, "v0.2.0", release.BinaryAsset), []byte("EVIL"), 0o755) //nolint:gosec // test fixture: binary swapped after signing
+	_ = os.WriteFile(filepath.Join(e.d.CacheDir, "v0.2.0", release.BinaryAsset(release.ArchAMD64)), []byte("EVIL"), 0o755) //nolint:gosec // test fixture: binary swapped after signing
 	if err := ServerUpdate(context.Background(), e.d, "v0.2.0", "stable"); err == nil {
 		t.Fatal("a binary that does not match the signed manifest must be refused")
 	}

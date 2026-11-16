@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -162,16 +163,90 @@ func (v Version) String() string {
 // ---- manifest ----
 
 // Manifest describes one release; it is signed as manifest.json (+ .minisig).
+//
+// SHA256 and Size describe the amd64 binary: they are what releases before arm64 support carried, and
+// agents of those releases still read only them. Assets lists the binary of every architecture and is
+// what newer servers and agents use.
 type Manifest struct {
-	Version    string   `json:"version"`
-	Channel    string   `json:"channel"` // stable | beta
-	MinAgent   string   `json:"min_agent"`
-	SHA256     string   `json:"sha256"` // of linager_linux_amd64
-	Size       int64    `json:"size"`
-	Migrations int      `json:"migrations"` // number of DB migrations the release ships
-	Notes      []string `json:"notes"`
-	BuiltAt    string   `json:"built_at"`
+	Version    string           `json:"version"`
+	Channel    string           `json:"channel"` // stable | beta
+	MinAgent   string           `json:"min_agent"`
+	SHA256     string           `json:"sha256"` // of linager_linux_amd64
+	Size       int64            `json:"size"`
+	Assets     map[string]Asset `json:"assets,omitempty"` // GOARCH -> binary
+	Migrations int              `json:"migrations"`       // number of DB migrations the release ships
+	Notes      []string         `json:"notes"`
+	BuiltAt    string           `json:"built_at"`
 }
 
-// BinaryAsset is the release asset name of the binary.
-const BinaryAsset = "linager_linux_amd64"
+// Asset is the binary of one architecture.
+type Asset struct {
+	Name   string `json:"name"` // BinaryAsset(arch)
+	SHA256 string `json:"sha256"`
+	Size   int64  `json:"size"`
+}
+
+// Architectures a release ships binaries for (GOARCH values).
+const (
+	ArchAMD64 = "amd64"
+	ArchARM64 = "arm64"
+)
+
+// Arches lists the supported architectures.
+var Arches = []string{ArchAMD64, ArchARM64}
+
+// HostArch is the architecture of this process. Tests may override it.
+var HostArch = runtime.GOARCH
+
+// SupportedArch reports whether releases carry a binary for arch.
+func SupportedArch(arch string) bool {
+	for _, a := range Arches {
+		if a == arch {
+			return true
+		}
+	}
+	return false
+}
+
+// BinaryAsset is the release asset name of the binary for arch.
+func BinaryAsset(arch string) string { return "linager_linux_" + arch }
+
+// Asset returns the binary of arch. A manifest without an assets map (a release before arm64 support)
+// has only the amd64 binary, described by the top-level fields.
+func (m Manifest) Asset(arch string) (Asset, bool) {
+	if !SupportedArch(arch) {
+		return Asset{}, false
+	}
+	if a, ok := m.Assets[arch]; ok {
+		return a, true
+	}
+	if arch == ArchAMD64 && m.SHA256 != "" {
+		return Asset{Name: BinaryAsset(arch), SHA256: m.SHA256, Size: m.Size}, true
+	}
+	return Asset{}, false
+}
+
+// AssetList returns every binary of the release for the architectures this build knows. Entries for
+// architectures it does not know are ignored, so a newer release does not block an older server.
+func (m Manifest) AssetList() map[string]Asset {
+	out := map[string]Asset{}
+	for _, arch := range Arches {
+		if a, ok := m.Asset(arch); ok {
+			out[arch] = a
+		}
+	}
+	return out
+}
+
+// Validate checks the parts of the manifest that decide which files are read and trusted.
+func (m Manifest) Validate() error {
+	if !ParseVersion(m.Version).Valid || len(m.SHA256) != 64 {
+		return errors.New("manifest is invalid")
+	}
+	for arch, a := range m.AssetList() {
+		if a.Name != BinaryAsset(arch) || len(a.SHA256) != 64 || a.Size < 0 {
+			return fmt.Errorf("manifest: invalid %s asset", arch)
+		}
+	}
+	return nil
+}

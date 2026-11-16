@@ -29,8 +29,19 @@ type Cached struct {
 	Time     time.Time
 }
 
-// BinaryPath is the cached executable.
-func (c Cached) BinaryPath() string { return filepath.Join(c.Dir, release.BinaryAsset) }
+// BinaryPath is the cached executable for this machine's architecture.
+func (c Cached) BinaryPath() string { return c.BinaryPathFor(release.HostArch) }
+
+// BinaryPathFor is the cached executable for arch.
+func (c Cached) BinaryPathFor(arch string) string {
+	return filepath.Join(c.Dir, release.BinaryAsset(arch))
+}
+
+// Asset is the manifest entry of this machine's binary.
+func (c Cached) Asset() release.Asset {
+	a, _ := c.Manifest.Asset(release.HostArch)
+	return a
+}
 
 func normVersion(v string) string { return "v" + strings.TrimPrefix(v, "v") }
 
@@ -72,8 +83,8 @@ func VerifyManifest(key *release.Key, manifest []byte, sig string) (*release.Man
 	if err := json.Unmarshal(manifest, &m); err != nil {
 		return nil, err
 	}
-	if !release.ParseVersion(m.Version).Valid || len(m.SHA256) != 64 {
-		return nil, errors.New("manifest is invalid")
+	if err := m.Validate(); err != nil {
+		return nil, err
 	}
 	return &m, nil
 }
@@ -104,27 +115,19 @@ func Download(ctx context.Context, rel Release, key *release.Key, cacheDir strin
 		return nil, err
 	}
 	defer func() { _ = os.RemoveAll(tmp) }()
-	bin := filepath.Join(tmp, release.BinaryAsset)
-	f, err := os.OpenFile(bin, os.O_CREATE|os.O_WRONLY, 0o755) //nolint:gosec // executable
-	if err != nil {
-		return nil, err
+	assets := m.AssetList()
+	if _, ok := assets[release.HostArch]; !ok {
+		return nil, errors.New("the release has no binary for this machine (" + release.HostArch + ")")
 	}
-	rc, err := get(ctx, rel.Assets[release.BinaryAsset], maxBinary)
-	if err != nil {
-		_ = f.Close()
-		return nil, err
-	}
-	h := sha256.New()
-	n, err := io.Copy(io.MultiWriter(f, h), rc)
-	_ = rc.Close()
-	if cerr := f.Close(); err == nil {
-		err = cerr
-	}
-	if err != nil {
-		return nil, err
-	}
-	if hex.EncodeToString(h.Sum(nil)) != strings.ToLower(m.SHA256) || (m.Size > 0 && n != m.Size) {
-		return nil, errors.New("binary does not match the signed manifest (checksum mismatch)")
+	var hostSize int64
+	for arch, a := range assets {
+		n, err := downloadAsset(ctx, rel, a, filepath.Join(tmp, a.Name))
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", a.Name, err)
+		}
+		if arch == release.HostArch {
+			hostSize = n
+		}
 	}
 	if err := os.WriteFile(filepath.Join(tmp, "manifest.json"), mb, 0o644); err != nil { //nolint:gosec // not secret
 		return nil, err
@@ -138,7 +141,55 @@ func Download(ctx context.Context, rel Release, key *release.Key, cacheDir strin
 		return nil, err
 	}
 	_ = os.Chmod(dst, 0o755) //nolint:gosec // the agent port serves this directory's files read-only
-	return &Cached{Version: normVersion(m.Version), Dir: dst, Manifest: *m, Size: n, Time: time.Now()}, nil
+	return &Cached{Version: normVersion(m.Version), Dir: dst, Manifest: *m, Size: hostSize, Time: time.Now()}, nil
+}
+
+// downloadAsset fetches one binary into path and checks it against its manifest entry.
+func downloadAsset(ctx context.Context, rel Release, a release.Asset, path string) (int64, error) {
+	url := rel.Assets[a.Name]
+	if url == "" {
+		return 0, errors.New("the release does not contain this asset")
+	}
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0o755) //nolint:gosec // executable
+	if err != nil {
+		return 0, err
+	}
+	rc, err := get(ctx, url, maxBinary)
+	if err != nil {
+		_ = f.Close()
+		return 0, err
+	}
+	h := sha256.New()
+	n, err := io.Copy(io.MultiWriter(f, h), rc)
+	_ = rc.Close()
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return 0, err
+	}
+	if hex.EncodeToString(h.Sum(nil)) != strings.ToLower(a.SHA256) || (a.Size > 0 && n != a.Size) {
+		return 0, errors.New("binary does not match the signed manifest (checksum mismatch)")
+	}
+	return n, nil
+}
+
+// checkFile hashes the file at path and compares it with the manifest entry.
+func checkFile(path string, a release.Asset) (int64, error) {
+	f, err := os.Open(path) //nolint:gosec // cache path built from a validated version and a fixed name
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = f.Close() }()
+	h := sha256.New()
+	n, err := io.Copy(h, f)
+	if err != nil {
+		return 0, err
+	}
+	if hex.EncodeToString(h.Sum(nil)) != strings.ToLower(a.SHA256) || (a.Size > 0 && n != a.Size) {
+		return 0, errors.New("cached binary does not match its manifest")
+	}
+	return n, nil
 }
 
 // LoadCached re-verifies one cached release (signature and checksum) and returns it.
@@ -157,20 +208,19 @@ func LoadCached(key *release.Key, cacheDir, version string) (*Cached, error) {
 		return nil, err
 	}
 	c := &Cached{Version: normVersion(m.Version), Dir: dir, Manifest: *m}
-	f, err := os.Open(c.BinaryPath()) //nolint:gosec // see above
-	if err != nil {
-		return nil, err
+	assets := m.AssetList()
+	if _, ok := assets[release.HostArch]; !ok {
+		return nil, errors.New("the release has no binary for this machine (" + release.HostArch + ")")
 	}
-	defer func() { _ = f.Close() }()
-	h := sha256.New()
-	n, err := io.Copy(h, f)
-	if err != nil {
-		return nil, err
+	for arch, a := range assets {
+		n, err := checkFile(c.BinaryPathFor(arch), a)
+		if err != nil {
+			return nil, err
+		}
+		if arch == release.HostArch {
+			c.Size = n
+		}
 	}
-	if hex.EncodeToString(h.Sum(nil)) != strings.ToLower(m.SHA256) {
-		return nil, errors.New("cached binary does not match its manifest")
-	}
-	c.Size = n
 	if st, err := os.Stat(c.BinaryPath()); err == nil {
 		c.Time = st.ModTime()
 	}

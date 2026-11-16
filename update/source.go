@@ -27,7 +27,7 @@ type Release struct {
 
 // Complete reports whether the release has everything needed for an update.
 func (r Release) Complete() bool {
-	for _, n := range []string{release.BinaryAsset, "manifest.json", "manifest.json.minisig"} {
+	for _, n := range []string{release.BinaryAsset(release.ArchAMD64), "manifest.json", "manifest.json.minisig"} {
 		if r.Assets[n] == "" {
 			return false
 		}

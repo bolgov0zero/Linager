@@ -232,7 +232,7 @@ func ServerUpdate(ctx context.Context, d Deps, version, channel string) (err err
 		return failVerify(merr)
 	}
 	staged := filepath.Join(stageDir, "staged-"+strings.TrimPrefix(cached.Version, "v"))
-	if cerr := copyFile(cached.BinaryPath(), staged, 0o755, cached.Manifest.SHA256); cerr != nil {
+	if cerr := copyFile(cached.BinaryPath(), staged, 0o755, cached.Asset().SHA256); cerr != nil {
 		return failVerify(fmt.Errorf("stage binary: %w", cerr))
 	}
 	defer func() { _ = os.Remove(staged) }()
@@ -268,7 +268,7 @@ func ServerUpdate(ctx context.Context, d Deps, version, channel string) (err err
 		_, _ = d.Run(ctx, "systemctl", "start", "linager-server")
 		return fmt.Errorf("keep previous binary: %w", cerr)
 	}
-	if cerr := copyFile(staged, d.BinPath, 0o755, cached.Manifest.SHA256); cerr != nil {
+	if cerr := copyFile(staged, d.BinPath, 0o755, cached.Asset().SHA256); cerr != nil {
 		r.set(StepReplace, "failed")
 		r.rollback(ctx, prev, "")
 		return fmt.Errorf("install binary: %w", cerr)

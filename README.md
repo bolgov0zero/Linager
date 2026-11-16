@@ -55,7 +55,7 @@
 curl -fsSL https://raw.githubusercontent.com/bolgov0zero/linager/main/install.sh | sh
 ```
 
-Debian 12/13, Ubuntu 22.04/24.04/26.04, amd64, systemd. Подробно и безопасный вариант (скачать, проверить, запустить): [docs/ru/install.md](docs/ru/install.md) · [docs/en/install.md](docs/en/install.md).
+Debian 12/13, Ubuntu 22.04/24.04/26.04, amd64, systemd. Агент ещё и на arm64 (Raspberry Pi 4 с Raspberry Pi OS 64-bit); сервер на arm64 не поддерживается. Подробно и безопасный вариант (скачать, проверить, запустить): [docs/ru/install.md](docs/ru/install.md) · [docs/en/install.md](docs/en/install.md).
 
 ## Документация / Documentation
 
@@ -73,7 +73,7 @@ Debian 12/13, Ubuntu 22.04/24.04/26.04, amd64, systemd. Подробно и бе
 ## Разработка / Development
 
 ```bash
-make web && make build      # frontend (Svelte 5 + Vite) and the linux/amd64 binary
+make web && make build      # frontend (Svelte 5 + Vite) and the linux/amd64 and linux/arm64 binaries
 make test                   # go vet + tests (set LINAGER_TEST_DSN for the PostgreSQL end-to-end tests)
 cd web && npm run dev       # UI with hot reload, proxies /api to a local server on 127.0.0.1:18080 (see web/vite.config.ts)
 ```

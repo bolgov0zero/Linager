@@ -72,7 +72,7 @@ func TestUpdatesAndAuditAPI(t *testing.T) {
 		for _, tag := range []string{"v0.1.0", "v0.2.0"} {
 			u := func(n string) string { return base + "/dl/" + tag + "/" + n }
 			out = append(out, map[string]any{"tag_name": tag, "prerelease": false, "body": "- change one\n- change two",
-				"assets": []map[string]string{{"name": release.BinaryAsset, "browser_download_url": u("bin")}, {"name": "manifest.json", "browser_download_url": u("m")}, {"name": "manifest.json.minisig", "browser_download_url": u("s")}}})
+				"assets": []map[string]string{{"name": release.BinaryAsset(release.ArchAMD64), "browser_download_url": u("bin")}, {"name": "manifest.json", "browser_download_url": u("m")}, {"name": "manifest.json.minisig", "browser_download_url": u("s")}}})
 		}
 		_ = rels
 		_ = json.NewEncoder(w).Encode(out)

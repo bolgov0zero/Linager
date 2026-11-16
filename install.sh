@@ -14,8 +14,30 @@ if [ -t 1 ]; then printf '\033[H\033[2J\033[3J'; fi
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 
+# Prints the architecture of the release binary for this machine (amd64 or arm64).
+# Returns 1 for any other CPU and 2 when a 64-bit kernel runs a 32-bit system (Raspberry Pi OS 32-bit
+# can): the packages of such a system are armhf, so the arm64 binary would not match them.
+detect_arch() {
+  case "$(uname -m)" in
+    x86_64 | amd64) a=amd64 ;;
+    aarch64 | arm64) a=arm64 ;;
+    *) return 1 ;;
+  esac
+  if command -v dpkg >/dev/null 2>&1 && [ "$(dpkg --print-architecture 2>/dev/null)" != "$a" ]; then
+    return 2
+  fi
+  printf '%s' "$a"
+}
+
 [ "$(id -u)" -eq 0 ] || die "run as root (sudo sh install.sh)"
-[ "$(uname -m)" = "x86_64" ] || die "only amd64 is supported"
+rc=0
+arch=$(detect_arch) || rc=$?
+case "$rc" in
+  0) ;;
+  2) die "this is a 32-bit system on a 64-bit CPU; install a 64-bit OS (Raspberry Pi OS 64-bit, Debian arm64)" ;;
+  *) die "unsupported CPU: $(uname -m) (amd64 and arm64 only; on a Raspberry Pi use a 64-bit OS)" ;;
+esac
+bin="linager_linux_$arch"
 [ -r /etc/os-release ] || die "cannot detect the OS"
 # os-release is read in a subshell: it defines VERSION, NAME and friends that must not leak into this script
 os_id=$(. /etc/os-release && printf '%s' "${ID:-}")
@@ -42,10 +64,10 @@ trap 'rm -rf "$tmp"' EXIT INT TERM
 cd "$tmp"
 
 printf 'Downloading Linager...\n'
-curl -fsSL -o linager_linux_amd64 "$base/linager_linux_amd64" || die "download failed"
+curl -fsSL -o "$bin" "$base/$bin" || die "download failed"
 curl -fsSL -o SHA256SUMS "$base/SHA256SUMS" || die "checksums download failed"
 
-grep ' linager_linux_amd64$' SHA256SUMS | sha256sum -c --status - || die "checksum mismatch"
+grep " $bin\$" SHA256SUMS | sha256sum -c --status - || die "checksum mismatch"
 
 if curl -fsSL -o SHA256SUMS.minisig "$base/SHA256SUMS.minisig" 2>/dev/null; then
   case "$PUBKEY" in REPLACE_*) die "signing key is not configured in this script" ;; esac
@@ -58,7 +80,7 @@ else
   die "release is not signed; refusing to install"
 fi
 
-install -m 0755 linager_linux_amd64 /usr/local/bin/linager
+install -m 0755 "$bin" /usr/local/bin/linager
 
 # The downloads are no longer needed; `exec` below would skip the EXIT trap.
 cd /

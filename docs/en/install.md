@@ -1,6 +1,6 @@
 # Installing Linager
 
-Supported: Debian 12/13 and Ubuntu 22.04/24.04/26.04 (amd64, systemd).
+Supported: Debian 12/13 and Ubuntu 22.04/24.04/26.04 (amd64, systemd). The agent also runs on arm64, for example on a Raspberry Pi 4 with Raspberry Pi OS 64-bit (Debian 12/13). 32-bit systems are not supported, nor is the server on arm64.
 
 ## Quick install
 
