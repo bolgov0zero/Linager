@@ -18,6 +18,7 @@
   import { isPhone } from '../../ui/viewport';
   import { showToast } from '../../toast';
   import { formatBytes } from '../format';
+  import NetDnsModal from './NetDnsModal.svelte';
   import { applyNetwork } from './net-api';
   import { changeFromForm, formFromIface, ifaceAsChange, withChange, type NetForm } from './net-draft';
   import './phone-c.css';
@@ -60,8 +61,9 @@
   let actionError = $state<string | null>(null);
   let warnings = $state<ApplyWarning[] | null>(null);
   let showConfig = $state(false);
-  /** Phone: which interface cards are expanded (the primary one starts open). */
+  /** Which non-primary interface cards are expanded; all start closed. The primary one is always open. */
   let openMap = $state<Record<string, boolean>>({});
+  let showDns = $state(false);
 
   let nowMs = $state(Date.now());
   // Pending-change bookkeeping for the toast: not rendered, so plain variables.
@@ -70,6 +72,9 @@
   let validateSeq = 0;
 
   const ifaceList = $derived(info?.interfaces ?? []);
+  // The primary interface goes first; the others keep the agent's order.
+  const sortedIfaces = $derived([...ifaceList.filter((i) => i.primary), ...ifaceList.filter((i) => !i.primary)]);
+  const dnsEditable = $derived(info?.dns_editable ?? false);
   const ifaceMap = $derived(new Map<string, NetInterface>(ifaceList.map((i) => [i.name, i])));
   const draftByIface = $derived(new Map<string, NetChange>(draft.map((c) => [c.iface, c])));
   const editable = $derived(info?.editable ?? false);
@@ -209,11 +214,22 @@
   }
 
   function isOpen(iface: NetInterface, editing: boolean): boolean {
-    return editing || (openMap[iface.name] ?? iface.primary);
+    return iface.primary || editing || (openMap[iface.name] ?? false);
   }
 
-  function speedText(iface: NetInterface): string {
-    return iface.speed_mbps > 0 ? T('net.speed', { v: iface.speed_mbps }) : '';
+  function toggleIface(iface: NetInterface, editing: boolean) {
+    if (iface.primary || editing) return;
+    openMap[iface.name] = !isOpen(iface, editing);
+  }
+
+  /** The main IPv4 address for a collapsed row. */
+  function mainAddr(iface: NetInterface): string {
+    const extra = iface.addresses.length - 1;
+    return iface.addresses.length > 0 ? iface.addresses[0] + (extra > 0 ? ` +${extra}` : '') : '—';
+  }
+
+  function trafficText(iface: NetInterface): string {
+    return `${formatBytes(iface.rx_bytes)} / ${formatBytes(iface.tx_bytes)}`;
   }
 
   function openForm(iface: NetInterface) {
@@ -387,6 +403,43 @@
   }
 </script>
 
+{#snippet phoneHead(iface: NetInterface, inDraft: boolean, open: boolean, fixedOpen: boolean)}
+  <span class="pc-mn">
+    <span class="pc-l1">
+      <b class="mono">{iface.name}</b>
+      <span class="pc-tag" class:ok={iface.state === 'UP'} class:muted={iface.state !== 'UP'}>{iface.state}</span>
+      <span class="pc-tag muted">{$tr(KIND_KEYS[iface.kind])}</span>
+      {#if iface.primary}<span class="pc-tag warn">{$tr('net.badge.primary')}</span>{/if}
+      {#if inDraft}<span class="pc-tag accent">{$tr('net.badge.inDraft')}</span>{/if}
+    </span>
+    <span class="pc-l2 ihint mono">{mainAddr(iface)} · {trafficText(iface)}</span>
+  </span>
+  {#if !fixedOpen}
+    <span class="chev" class:up={open}><PixIcon name="chev" size={20} /></span>
+  {/if}
+{/snippet}
+
+{#snippet deskHead(iface: NetInterface, inDraft: boolean, open: boolean, fixedOpen: boolean)}
+  <h3 class="mono">{iface.name}</h3>
+  <span class="tag" class:up={iface.state === 'UP'} class:down={iface.state === 'DOWN'}>{iface.state}</span>
+  <span class="tag">{$tr(KIND_KEYS[iface.kind])}</span>
+  {#if iface.primary}
+    <span class="tag warn">{$tr('net.badge.primary')}</span>
+  {/if}
+  {#if inDraft}
+    <span class="tag accent">{$tr('net.badge.inDraft')}</span>
+  {/if}
+  {#if !open}
+    <span class="sum">
+      <span class="mono sum-ip">{mainAddr(iface)}</span>
+      <span class="mono sum-tr" title={$tr('net.row.traffic')}>{trafficText(iface)}</span>
+    </span>
+  {/if}
+  {#if !fixedOpen}
+    <span class="chev" class:up={open}><PixIcon name="chev" size={20} /></span>
+  {/if}
+{/snippet}
+
 {#snippet changeList()}
   <ul class="changes">
     {#each draft as c (c.iface)}
@@ -546,38 +599,29 @@
       {#if ifaceList.length === 0}
         <p class="muted">{$tr('net.ifaces.empty')}</p>
       {/if}
-      {#each ifaceList as iface (iface.name)}
+      {#each sortedIfaces as iface (iface.name)}
         {@const change = draftByIface.get(iface.name)}
         {@const isEditing = form !== null && form.iface === iface.name}
-        <article class="card iface" class:primary={iface.primary}>
+        {@const open = isOpen(iface, isEditing)}
+        {@const fixedOpen = iface.primary || isEditing}
+        <article class="card iface" class:primary={iface.primary} class:open>
           {#if $isPhone}
-            <button class="ihead" type="button" aria-expanded={isOpen(iface, isEditing)} onclick={() => (openMap[iface.name] = !isOpen(iface, isEditing))}>
-              <span class="pc-mn">
-                <span class="pc-l1">
-                  <b class="mono">{iface.name}</b>
-                  <span class="pc-tag" class:ok={iface.state === 'UP'} class:muted={iface.state !== 'UP'}>{iface.state}</span>
-                  {#if iface.primary}<span class="pc-tag warn">{$tr('net.badge.primary')}</span>{/if}
-                  {#if change}<span class="pc-tag accent">{$tr('net.badge.inDraft')}</span>{/if}
-                </span>
-                <span class="pc-l2 ihint mono">{[iface.addresses.join(', ') || '—', speedText(iface)].filter(Boolean).join(' · ')}</span>
-              </span>
-              <span class="chev" class:up={isOpen(iface, isEditing)}><PixIcon name="chev" size={20} /></span>
-            </button>
+            {#if fixedOpen}
+              <div class="ihead">{@render phoneHead(iface, !!change, open, fixedOpen)}</div>
+            {:else}
+              <button class="ihead" type="button" aria-expanded={open} onclick={() => toggleIface(iface, isEditing)}>
+                {@render phoneHead(iface, !!change, open, fixedOpen)}
+              </button>
+            {/if}
+          {:else if fixedOpen}
+            <header class="iface-head">{@render deskHead(iface, !!change, open, fixedOpen)}</header>
           {:else}
-          <header class="iface-head">
-            <h3 class="mono">{iface.name}</h3>
-            <span class="tag" class:up={iface.state === 'UP'} class:down={iface.state === 'DOWN'}>{iface.state}</span>
-            <span class="tag">{$tr(KIND_KEYS[iface.kind])}</span>
-            {#if iface.primary}
-              <span class="tag warn">{$tr('net.badge.primary')}</span>
-            {/if}
-            {#if change}
-              <span class="tag accent">{$tr('net.badge.inDraft')}</span>
-            {/if}
-          </header>
+            <button class="iface-head" type="button" aria-expanded={open} onclick={() => toggleIface(iface, isEditing)}>
+              {@render deskHead(iface, !!change, open, fixedOpen)}
+            </button>
           {/if}
 
-          {#if !$isPhone || isOpen(iface, isEditing)}
+          {#if open}
           <div class="ibody">
           <dl class="facts">
             <div class="fact"><dt>{$tr('net.row.mac')}</dt><dd class="mono">{iface.mac || '—'}</dd></div>
@@ -709,7 +753,12 @@
     </div>
 
     {#if $isPhone}
-      <div class="pc-sech"><h2>{$tr('net.dns.title')}</h2></div>
+      <div class="pc-sech">
+        <h2>{$tr('net.dns.title')}</h2>
+        {#if dnsEditable}
+          <button class="btn" type="button" disabled={busy || pending !== null} onclick={() => (showDns = true)}>{$tr('net.edit')}</button>
+        {/if}
+      </div>
       <ul class="pc-list">
         {#each info.dns.nameservers as ns (ns)}
           <li class="pc-li"><div class="pc-mn"><div class="pc-l1 mono">{ns}</div></div></li>
@@ -746,7 +795,12 @@
     {:else}
     <div class="split">
       <section class="card stack">
-        <h2>{$tr('net.dns.title')}</h2>
+        <div class="head">
+          <h2>{$tr('net.dns.title')}</h2>
+          {#if dnsEditable}
+            <button class="btn" type="button" disabled={busy || pending !== null} onclick={() => (showDns = true)}>{$tr('net.edit')}</button>
+          {/if}
+        </div>
         <dl class="facts">
           <div class="fact">
             <dt>{$tr('net.dns.servers')}</dt>
@@ -838,6 +892,19 @@
   <Modal wide title={$tr('net.config.title')} labelId="net-cfgedit-title" onclose={() => (editingConfig = false)}>
     {@render configEditor()}
   </Modal>
+{/if}
+
+{#if showDns && info}
+  <NetDnsModal
+    {serverId}
+    nameservers={info.dns.nameservers}
+    search={info.dns.search}
+    onclose={() => (showDns = false)}
+    onapplied={() => {
+      showDns = false;
+      void load(serverId);
+    }}
+  />
 {/if}
 
 {#if confirmConfig}
@@ -995,8 +1062,8 @@
   }
 
   .ifaces {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 12px;
   }
 
@@ -1020,6 +1087,72 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 6px;
+  }
+
+  /* A collapsed interface is one clickable line; the open card keeps the same header. */
+  button.iface-head {
+    flex-wrap: nowrap;
+    width: 100%;
+    min-height: 32px;
+    padding: 0;
+    background: none;
+    color: var(--ink);
+    border: 0;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .sum {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 4px 18px;
+    min-width: 0;
+    margin-left: 6px;
+  }
+
+  .sum-ip {
+    overflow-wrap: anywhere;
+  }
+
+  .sum-tr {
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .iface-head .chev {
+    margin-left: auto;
+  }
+
+  .sum + .chev {
+    margin-left: 0;
+  }
+
+  .chev {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 28px;
+    height: 28px;
+  }
+
+  .chev.up {
+    transform: rotate(180deg);
+  }
+
+  /* The wide card lays its facts out in columns. */
+  @media (min-width: 721px) {
+    .iface.open .facts {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+      gap: 4px 28px;
+    }
+
+    .iface-form {
+      max-width: 640px;
+    }
   }
 
   .tag {
@@ -1094,7 +1227,8 @@
 
   .split {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    align-items: start;
     gap: 12px;
   }
 
@@ -1186,6 +1320,10 @@
       font-family: var(--font-display);
       font-size: 18px;
       font-weight: 400;
+    }
+
+    div.ihead {
+      cursor: default;
     }
 
     .chev {

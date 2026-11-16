@@ -339,6 +339,7 @@ func (c *linuxCollector) Collect(now time.Time) protocol.Sample {
 	s.FailedServices, s.Updates, s.SecurityUpdates = c.slow.failed, c.slow.updates, c.slow.security
 	s.FailedUnits = append([]string(nil), c.slow.failedN...)
 	c.slow.Unlock()
+	s.ImageUpdates = imageUpdates()
 	return s
 }
 

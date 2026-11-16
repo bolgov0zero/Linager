@@ -423,7 +423,7 @@
         {#if sec === 'containers'}
           <span class="small muted" title={$tStore('docker.check.help')}>
             {checkedText(info.checked_at)}{#if info.checked_at && updatable.length > 0}
-              · {$tStore('docker.check.avail', { n: updatable.length })}{/if}
+              {' · '}{$tStore('docker.check.avail', { n: updatable.length })}{/if}
           </span>
           <button class="btn" type="button" disabled={readOnly || checking} onclick={() => void checkImages()}>
             {checking ? $tStore('docker.check.busy') : $tStore('docker.check.btn')}

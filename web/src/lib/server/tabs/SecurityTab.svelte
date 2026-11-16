@@ -7,8 +7,9 @@
   import { isPhone } from '../../ui/viewport';
   import { formatDateTime } from '../format';
   import F2bCard from './F2bCard.svelte';
+  import Fold from '../../ui/Fold.svelte';
   import SecAcc from './SecAcc.svelte';
-  import { barHeights, keyLabel, postureChecks, worstTone } from './sec-util';
+  import { barHeights, groupChecks, hintKey, issueCount, keyLabel, postureChecks, worstTone, type Check, type Tone } from './sec-util';
   import { unavailableKind } from './svc';
   import './phone-c.css';
 
@@ -138,10 +139,13 @@
 
   const checks = $derived(sec ? postureChecks(sec, server.sample) : []);
   const tone = $derived(worstTone(checks));
-  // Phone: the marks with the worst first, and the accordion sections (all closed at the start).
-  const TONE_RANK = { crit: 0, warn: 1, muted: 2, ok: 3 } as const;
-  const sortedChecks = $derived([...checks].sort((a, b) => TONE_RANK[a.tone] - TONE_RANK[b.tone]));
-  const issues = $derived(checks.filter((c) => c.tone === 'crit' || c.tone === 'warn').length);
+  const issues = $derived(issueCount(checks));
+  const groups = $derived(groupChecks(checks));
+  const verdictText = $derived(
+    issues === 0 ? $T('sec.state.ok') : $T(`sec.state.issues.${new Intl.PluralRules($locale).select(issues)}`, { n: issues }),
+  );
+  // The folding sections (an accordion on a phone, a card with a header on a desktop), all closed at the start.
+  const Section = $derived($isPhone ? SecAcc : Fold);
   let accOpen = $state({ sessions: false, logins: false, failures: false, f2b: false, keys: false });
   const f2bMeta = $derived(
     !sec ? '' : !sec.fail2ban.installed ? $T('sec.f2b.notInstalled') : !sec.fail2ban.active ? $T('sec.f2b.stoppedBadge') : $T('sec.f2b.running'),
@@ -156,6 +160,14 @@
     const end = new Date((sec.generated_at - (count - 1 - i) * 86400) * 1000);
     return end.toLocaleDateString($locale, { weekday: 'short' });
   }
+
+  /** 8x8 pixel marks of the checks: a tick, an exclamation, a cross and a dash for the informational ones. */
+  const MARKS: Record<Tone, readonly string[]> = {
+    ok: ['00000000', '00000001', '00000011', '10000110', '11001100', '01111000', '00110000', '00000000'],
+    warn: ['00011000', '00011000', '00011000', '00011000', '00011000', '00000000', '00011000', '00011000'],
+    crit: ['10000001', '11000011', '01100110', '00111100', '00111100', '01100110', '11000011', '10000001'],
+    muted: ['00000000', '00000000', '00000000', '01111110', '01111110', '00000000', '00000000', '00000000'],
+  };
 
   const method = (m: string) => {
     const key = `sec.method.${m}`;
@@ -223,9 +235,7 @@
     </section>
 {/snippet}
 
-{#snippet failuresBlock(sec: SecState)}
-    <section class="card stack" aria-labelledby="sec-fail">
-      <h3 id="sec-fail">{$T('sec.failures')}</h3>
+{#snippet failuresBody(sec: SecState)}
       <div class="fail-top">
         <div class="big-wrap">
           <p class="big">{sec.failures.total.toLocaleString($locale)}</p>
@@ -335,12 +345,9 @@
         </div>
         {/if}
       {/if}
-    </section>
 {/snippet}
 
-{#snippet loginsBlock(sec: SecState)}
-    <section class="card stack" aria-labelledby="sec-logins">
-      <h3 id="sec-logins">{$T('sec.logins')}</h3>
+{#snippet loginsBody(sec: SecState)}
       {#if sec.logins.length === 0}
         <p class="muted">{$T('sec.logins.none')}</p>
       {:else}
@@ -389,12 +396,9 @@
         </div>
         {/if}
       {/if}
-    </section>
 {/snippet}
 
-{#snippet keysBlock(sec: SecState)}
-    <section class="card stack" aria-labelledby="sec-keys">
-      <h3 id="sec-keys">{$T('sec.keys')}</h3>
+{#snippet keysBody(sec: SecState)}
       <p class="muted small">{$T('sec.keys.hint')}</p>
       {#if sec.keys.length === 0}
         <p class="muted">{$T('sec.keys.none')}</p>
@@ -464,7 +468,45 @@
           </div>
         {/if}
       {/if}
-    </section>
+{/snippet}
+
+{#snippet checkRow(c: Check)}
+  {@const hint = hintKey(c)}
+  <li class="crow">
+    <svg class="mark tone-{c.tone}" viewBox="0 0 8 8" width="20" height="20" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">
+      {#each MARKS[c.tone] as row, y (y)}
+        {#each [...row] as cell, x (x)}
+          {#if cell === '1'}<rect {x} {y} width="1" height="1" />{/if}
+        {/each}
+      {/each}
+    </svg>
+    <div class="cbody">
+      <div class="cline">
+        <span class="clabel">{$T(c.label)}</span>
+        <span class="cval tone-{c.tone}">{$T(c.value, c.vars)}</span>
+      </div>
+      {#if hint}<p class="chint muted small">{$T(hint)}</p>{/if}
+    </div>
+  </li>
+{/snippet}
+
+{#snippet stateBlock()}
+  <section class="card stack" aria-labelledby="sec-state">
+    <h3 id="sec-state">{$T('sec.state')}</h3>
+    <p class="verdict tone-{tone}" role="status">{verdictText}</p>
+    {#if groups.ssh.length > 0}
+      <h4 class="grp">{$T('sec.state.groupSsh')}</h4>
+      <ul class="checks">
+        {#each groups.ssh as c (c.id)}{@render checkRow(c)}{/each}
+      </ul>
+    {/if}
+    {#if groups.system.length > 0}
+      <h4 class="grp">{$T('sec.state.groupSystem')}</h4>
+      <ul class="checks">
+        {#each groups.system as c (c.id)}{@render checkRow(c)}{/each}
+      </ul>
+    {/if}
+  </section>
 {/snippet}
 
 <div class="sec">
@@ -512,68 +554,39 @@
     {/if}
 
     {#if $isPhone}
-      <div class="card sumcard tone-{tone}">
+      <div class="card sumcard">
         <div class="srow">
-          <div class="smain">
-            <div class="verdict tone-{tone}">{$T(`sec.verdict.${tone}`)}</div>
-            <div class="muted small">
-              {[issues > 0 ? $T('mobC.sec.issues', { n: issues }) : '', $T('sec.period', { days: sec.period_days ?? 7 }), $T('sec.updated', { time: formatDateTime(sec.generated_at, $locale) })].filter(Boolean).join(' · ')}
-            </div>
+          <div class="smain muted small">
+            {[$T('sec.period', { days: sec.period_days ?? 7 }), $T('sec.updated', { time: formatDateTime(sec.generated_at, $locale) })].join(' · ')}
           </div>
           <button class="btn" type="button" disabled={busy || unreachable} onclick={() => void load(server.id)}>{$T('sec.refresh')}</button>
         </div>
       </div>
-      <ul class="pc-list">
-        {#each sortedChecks as c (c.id)}
-          <li class="pc-li marks">
-            <span class="pc-dot tone-{c.tone}" aria-hidden="true"></span>
-            <div class="pc-mn"><div class="pc-l1">{$T(c.label)}</div></div>
-            <span class="pc-r tone-{c.tone}">{$T(c.value, c.vars)}</span>
-          </li>
-        {/each}
-      </ul>
+    {/if}
 
+    {@render stateBlock()}
+
+    {#if $isPhone}
       <SecAcc title={$T('sec.sessions')} meta={String(sec.sessions.length)} tone={sec.sessions.length > 0 ? 'warn' : 'muted'} bind:open={accOpen.sessions}>
         {@render sessionsBlock(sec)}
-      </SecAcc>
-      <SecAcc title={$T('sec.logins')} meta={String(sec.logins.length)} bind:open={accOpen.logins}>
-        {@render loginsBlock(sec)}
-      </SecAcc>
-      <SecAcc title={$T('sec.failures')} meta={sec.failures.total.toLocaleString($locale)} tone={sec.failures.total > 0 ? 'warn' : 'muted'} bind:open={accOpen.failures}>
-        {@render failuresBlock(sec)}
       </SecAcc>
       <SecAcc title="fail2ban" meta={f2bMeta} tone={f2bTone} bind:open={accOpen.f2b}>
         <F2bCard serverId={server.id} {sec} {unreachable} onchanged={() => load(server.id)} />
       </SecAcc>
-      <SecAcc title={$T('sec.keys')} meta={String(sec.keys.length)} bind:open={accOpen.keys}>
-        {@render keysBlock(sec)}
-      </SecAcc>
     {:else}
-    <section class="card stack" aria-labelledby="sec-state">
-      <h3 id="sec-state">
-        {$T('sec.state')}
-        <span class="badge tone-{tone}">{$T(`sec.verdict.${tone}`)}</span>
-      </h3>
-      <ul class="checks">
-        {#each checks as c (c.id)}
-          <li>
-            <span class="clabel">{$T(c.label)}</span>
-            <span class="cval tone-{c.tone}"><i class="dot" aria-hidden="true"></i>{$T(c.value, c.vars)}</span>
-          </li>
-        {/each}
-      </ul>
-    </section>
-
-    {@render sessionsBlock(sec)}
-
-    <F2bCard serverId={server.id} {sec} {unreachable} onchanged={() => load(server.id)} />
-
-    {@render failuresBlock(sec)}
-
-    {@render loginsBlock(sec)}
-
-    {@render keysBlock(sec)}
+      {@render sessionsBlock(sec)}
+      <F2bCard serverId={server.id} {sec} {unreachable} onchanged={() => load(server.id)} />
     {/if}
+
+    <Section title={$T('sec.failures')} meta={sec.failures.total.toLocaleString($locale)} tone={sec.failures.total > 0 ? 'warn' : 'muted'} bind:open={accOpen.failures}>
+      {#if $isPhone}<section class="card stack">{@render failuresBody(sec)}</section>{:else}{@render failuresBody(sec)}{/if}
+    </Section>
+    <Section title={$T('sec.logins')} meta={String(sec.logins.length)} bind:open={accOpen.logins}>
+      {#if $isPhone}<section class="card stack">{@render loginsBody(sec)}</section>{:else}{@render loginsBody(sec)}{/if}
+    </Section>
+    <Section title={$T('sec.keys')} meta={String(sec.keys.length)} bind:open={accOpen.keys}>
+      {#if $isPhone}<section class="card stack">{@render keysBody(sec)}</section>{:else}{@render keysBody(sec)}{/if}
+    </Section>
   {/if}
 </div>
 
@@ -670,41 +683,73 @@
     color: var(--muted);
   }
 
+  .verdict {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 22px;
+    line-height: 1.15;
+  }
+
+  .grp {
+    margin: 4px 0 -4px;
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
   .checks {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 8px 24px;
+    display: flex;
+    flex-direction: column;
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
-  .checks li {
+  .crow {
     display: flex;
-    justify-content: space-between;
+    align-items: flex-start;
     gap: 12px;
-    padding: 6px 0;
+    padding: 9px 0;
     border-bottom: 1px dashed var(--seg-off);
   }
 
+  .crow:last-child {
+    border-bottom: 0;
+  }
+
+  .mark {
+    flex: none;
+    display: block;
+    margin-top: 1px;
+  }
+
+  .cbody {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .cline {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 2px 16px;
+  }
+
   .clabel {
-    color: var(--muted);
+    min-width: 0;
   }
 
   .cval {
-    display: inline-flex;
-    align-items: flex-start;
-    gap: 8px;
+    min-width: 0;
+    margin-left: auto;
     text-align: right;
   }
 
-  .dot {
-    flex: none;
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    margin-top: 6px;
-    background: currentColor;
+  .chint {
+    margin: 2px 0 0;
   }
 
   .fail-top {
@@ -880,10 +925,6 @@
       grid-template-columns: minmax(0, 1fr);
     }
 
-    .checks {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
     .tbl thead {
       position: absolute;
       width: 1px;
@@ -922,23 +963,6 @@
       gap: 12px;
     }
 
-    .sumcard {
-      padding: 12px 12px 12px 14px;
-      border-left-width: 5px;
-    }
-
-    .sumcard.tone-ok {
-      border-left-color: var(--good);
-    }
-
-    .sumcard.tone-warn {
-      border-left-color: var(--warn);
-    }
-
-    .sumcard.tone-crit {
-      border-left-color: var(--crit);
-    }
-
     .srow {
       display: flex;
       align-items: center;
@@ -950,18 +974,14 @@
       min-width: 0;
     }
 
-    .verdict {
-      font-family: var(--font-display);
-      font-size: 22px;
-      line-height: 1.15;
+    .cline {
+      flex-direction: column;
+      gap: 0;
     }
 
-    .marks {
-      min-height: 48px;
-    }
-
-    .pc-r {
-      max-width: 55%;
+    .cval {
+      margin-left: 0;
+      text-align: left;
     }
 
     h4 {
@@ -972,6 +992,10 @@
       letter-spacing: 0.06em;
       text-transform: uppercase;
       color: var(--muted);
+    }
+
+    .grp {
+      margin: 4px 0 -4px;
     }
 
     .pc-l1 .badge {

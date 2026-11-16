@@ -32,7 +32,71 @@ var dockerChecks = struct {
 	mu      sync.Mutex
 	at      int64
 	entries map[string]checkEntry // by container id
+	updates int                   // containers with a newer image, see imageUpdates
 }{entries: map[string]checkEntry{}}
+
+// Timing of the automatic image check: the first one shortly after the agent starts, so that the start
+// is not slowed, then regularly. The result goes to the dashboard as Sample.ImageUpdates.
+const (
+	imageCheckFirst   = 60 * time.Second
+	imageCheckEvery   = 6 * time.Hour
+	imageCheckTimeout = 15 * time.Minute
+)
+
+// countNewImages is the number of containers whose image has a newer version; "current" and "unknown"
+// containers are not counted.
+func countNewImages(entries map[string]checkEntry) int {
+	n := 0
+	for _, e := range entries {
+		if e.status == "new" {
+			n++
+		}
+	}
+	return n
+}
+
+// imageUpdates is the value of Sample.ImageUpdates: containers with a newer image, -1 while unknown
+// (no check yet, or Docker is not used).
+func imageUpdates() int {
+	dockerChecks.mu.Lock()
+	defer dockerChecks.mu.Unlock()
+	if dockerChecks.at == 0 {
+		return -1
+	}
+	return dockerChecks.updates
+}
+
+// syncImageUpdates recounts the stored result over the containers that still run the checked image
+// (after an update or a removal the count drops without another check).
+func syncImageUpdates(valid map[string]checkEntry) {
+	dockerChecks.mu.Lock()
+	defer dockerChecks.mu.Unlock()
+	if dockerChecks.at != 0 {
+		dockerChecks.updates = countNewImages(valid)
+	}
+}
+
+// startImageChecks runs the image check in the background: first after imageCheckFirst, then every
+// imageCheckEvery, until ctx is cancelled. A failed check keeps the previous result.
+func startImageChecks(ctx context.Context) {
+	go func() {
+		wait := imageCheckFirst
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(wait):
+			}
+			wait = imageCheckEvery
+			if !dockerAvailable() {
+				continue
+			}
+			cctx, cancel := context.WithTimeout(ctx, imageCheckTimeout)
+			_, _ = checkImages(cctx)
+			cancel()
+		}
+	}()
+}
 
 // checkFor returns the stored result for a container, if it is still valid.
 func checkFor(containerID, imageID string) (checkEntry, bool) {
@@ -94,6 +158,12 @@ func classifyImage(containerImageID string, local dImageInfo, remoteDigest strin
 
 // dockerCheck is the command "docker.check": compares the images of all containers with the registry.
 func dockerCheck(ctx context.Context, _ json.RawMessage, _ bool) (any, error) {
+	return checkImages(ctx)
+}
+
+// checkImages is the check itself, shared by the button and the periodic run: it stores the result,
+// which is shown on the Docker tab and counted for the dashboard.
+func checkImages(ctx context.Context) (any, error) {
 	if !dockerAvailable() {
 		return nil, errors.New("docker is not available")
 	}
@@ -158,7 +228,7 @@ func dockerCheck(ctx context.Context, _ json.RawMessage, _ bool) (any, error) {
 	}
 	now := time.Now().Unix()
 	dockerChecks.mu.Lock()
-	dockerChecks.at, dockerChecks.entries = now, entries
+	dockerChecks.at, dockerChecks.entries, dockerChecks.updates = now, entries, countNewImages(entries)
 	dockerChecks.mu.Unlock()
 	return map[string]any{"checked_at": now, "new": counts["new"], "current": counts["current"], "unknown": counts["unknown"]}, nil
 }

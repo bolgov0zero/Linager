@@ -28,10 +28,15 @@ type netModule struct {
 	ifPath string
 	npDir  string // netplan directory
 	run    cmdRunner
+	// DNS editing: the files and the stdin-capable runner, replaced by tests.
+	resolvPath string // /etc/resolv.conf
+	resolvedD  string // /etc/systemd/resolved.conf.d
+	runStdin   stdinRunner
 }
 
 func newNetModule(p *Pending, dir string) *netModule {
-	return &netModule{pend: p, dir: dir, ifPath: "/etc/network/interfaces", npDir: "/etc/netplan", run: execRunner}
+	return &netModule{pend: p, dir: dir, ifPath: "/etc/network/interfaces", npDir: "/etc/netplan", run: execRunner,
+		resolvPath: "/etc/resolv.conf", resolvedD: "/etc/systemd/resolved.conf.d", runStdin: execStdinRunner}
 }
 
 type ipAddrInfo struct {
@@ -223,21 +228,24 @@ func (m *netModule) state(ctx context.Context, _ json.RawMessage, _ bool) (any, 
 		}
 		preview = sb.String()
 	}
+	dnsBackend, dnsEditable := pickDNSBackend(m.dnsProbe(backend, defDev, text, blocks))
 	dns := map[string][]string{"nameservers": {}, "search": {}}
-	for _, l := range strings.Split(read("/etc/resolv.conf"), "\n") {
-		f := strings.Fields(l)
-		if len(f) >= 2 && f[0] == "nameserver" {
-			dns["nameservers"] = append(dns["nameservers"], f[1])
-		} else if len(f) >= 2 && (f[0] == "search" || f[0] == "domain") {
-			dns["search"] = append(dns["search"], f[1:]...)
+	resolvText := read(m.resolvPath)
+	if dnsBackend == "resolved" {
+		// the stub file only names 127.0.0.53; the upstream list is what the administrator cares about
+		if up := read(resolvedUpstreamPath); len(parseResolvConf(up).ns) > 0 {
+			resolvText = up
 		}
 	}
+	rc := parseResolvConf(resolvText)
+	dns["nameservers"] = append(dns["nameservers"], rc.ns...)
+	dns["search"] = append(dns["search"], rc.search...)
 	rl := make([]map[string]any, 0, len(routes))
 	for _, r := range routes {
 		rl = append(rl, map[string]any{"dst": r.Dst, "gateway": r.Gateway, "dev": r.Dev, "metric": r.Metric, "protocol": r.Protocol})
 	}
 	st := map[string]any{"backend": backend, "editable": backend == "ifupdown", "config_editable": backend == "ifupdown" || backend == "netplan",
-		"interfaces": ifs, "dns": dns, "routes": rl, "config_preview": preview}
+		"interfaces": ifs, "dns": dns, "dns_editable": dnsEditable, "dns_backend": dnsBackend, "routes": rl, "config_preview": preview}
 	if backend == "netplan" {
 		st["netplan_files"] = m.netplanFiles()
 		st["netplan_effective"] = m.netplanEffective(ctx)
@@ -256,6 +264,9 @@ type netPendingData struct {
 	NpPath    string `json:"np_path,omitempty"`
 	NpBak     string `json:"np_bak,omitempty"`
 	NpExisted bool   `json:"np_existed,omitempty"`
+
+	// DNS change (network.dns): what to restore; Cand/Old are used only by the resolvconf backend
+	DNS *dnsPending `json:"dns,omitempty"`
 }
 
 func validateNetChange(c NetChange) error {
@@ -419,6 +430,9 @@ func (m *netModule) kind() PendingKind {
 			if d.Netplan {
 				return m.netplanRollback(d)
 			}
+			if d.DNS != nil {
+				return m.dnsRollback(d)
+			}
 			ctx := context.Background()
 			var firstErr error
 			for _, ifc := range d.Ifaces {
@@ -439,6 +453,9 @@ func (m *netModule) kind() PendingKind {
 			}
 			if d.Netplan {
 				return m.netplanCommit(d)
+			}
+			if d.DNS != nil && d.DNS.Backend != dnsResolvconf {
+				return nil // resolved and resolv.conf are already in place
 			}
 			cand, err := os.ReadFile(d.Cand) //nolint:gosec // our own candidate file
 			if err != nil {

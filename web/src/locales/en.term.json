@@ -28,8 +28,10 @@
   "logs.offline": "Server is offline. Logs unavailable.",
   "proc.sort.cpu": "By CPU",
   "proc.sort.mem": "By RAM",
+  "proc.sort.name": "By name",
   "proc.show": "Show",
   "proc.refresh": "top {n} · refreshes every 3 s",
+  "proc.refreshAll": "all processes · refreshes every 3 s",
   "proc.col.pid": "PID",
   "proc.col.user": "User",
   "proc.col.cpu": "CPU %",
@@ -38,6 +40,7 @@
   "proc.col.cmd": "Command",
   "proc.col.action": "Action",
   "proc.kill": "End",
+  "proc.endBtn": "End process {pid}",
   "proc.killTitle": "End process {pid}",
   "proc.killText": "Process “{cmd}” (PID {pid}) will receive SIGTERM and may exit cleanly.",
   "proc.force": "force (SIGKILL)",
@@ -74,5 +77,13 @@
   "term.user": "User",
   "term.userHint": "The account the shell runs as",
   "term.userFailed": "Could not get the list of users",
-  "term.userNone": "No users with a shell"
+  "term.userNone": "No users with a shell",
+  "proc.all": "all",
+  "proc.state.S": "Sleeping: waiting for an event or a signal",
+  "proc.state.R": "Running or ready to run",
+  "proc.state.I": "Idle kernel thread",
+  "proc.state.D": "Uninterruptible wait, usually for disk I/O",
+  "proc.state.Z": "Zombie: finished, waiting for its parent to collect the exit status",
+  "proc.state.T": "Stopped by a signal or a debugger",
+  "proc.state.other": "State {s}"
 }

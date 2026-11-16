@@ -172,6 +172,7 @@ func (a *Admin) Handler() http.Handler {
 	a.route(mux, "DELETE /api/servers/{id}/network/draft", "srv:network", a.resetDraft("network"))
 	a.route(mux, "POST /api/servers/{id}/network/apply", "srv:network", a.networkApply)
 	a.route(mux, "POST /api/servers/{id}/network/config", "srv:network", a.networkApplyConfig)
+	a.route(mux, "POST /api/servers/{id}/network/dns", "srv:network", a.networkApplyDNS)
 	a.route(mux, "POST /api/servers/{id}/network/confirm", "srv:network", a.confirmOrRollback("network", "confirm"))
 	a.route(mux, "POST /api/servers/{id}/network/rollback", "srv:network", a.confirmOrRollback("network", "rollback"))
 	a.route(mux, "GET /api/servers/{id}/firewall", "srv:firewall", a.firewallState)

@@ -192,6 +192,7 @@ func dockerState(ctx context.Context, _ json.RawMessage, _ bool) (any, error) {
 	}
 	wg.Wait()
 	cont := make([]map[string]any, 0, len(rows))
+	valid := map[string]checkEntry{}
 	for _, r := range rows {
 		m := map[string]any{"id": r.ID, "name": r.Name, "image": r.Image, "state": r.State, "status": r.Status, "ports": r.Ports,
 			"created": r.Created, "compose": r.Compose, "cpu": r.CPU, "mem_used": r.MemUsed, "mem_limit": r.MemLimit}
@@ -200,9 +201,11 @@ func dockerState(ctx context.Context, _ json.RawMessage, _ bool) (any, error) {
 		}
 		if e, ok := checkFor(r.FullID, r.ImageID); ok {
 			m["upd"], m["upd_local"], m["upd_remote"], m["upd_error"] = e.status, e.local, e.remote, e.err
+			valid[r.FullID] = e
 		}
 		cont = append(cont, m)
 	}
+	syncImageUpdates(valid)
 	sort.Slice(cont, func(i, j int) bool { return cont[i]["name"].(string) < cont[j]["name"].(string) })
 	imgs := make([]map[string]any, 0, len(ims))
 	for _, im := range ims {

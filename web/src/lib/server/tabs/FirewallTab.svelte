@@ -18,6 +18,7 @@
   import { isPhone } from '../../ui/viewport';
   import { showToast } from '../../toast';
   import { applyFirewall } from './fw-api';
+  import Fold from '../../ui/Fold.svelte';
   import FwPorts from './FwPorts.svelte';
   import FwSetsModal from './FwSetsModal.svelte';
   import SourceInput from './SourceInput.svelte';
@@ -71,6 +72,9 @@
   let addBusy = $state(false);
 
   let showRuleset = $state(false);
+  /** The "Ports" card is closed by default; the port list is loaded and polled only while it is open. */
+  let portsOpen = $state(false);
+  let portsMeta = $state<{ n: number; norule: number } | null>(null);
   let activeChain = $state<ChainName | 'all'>('input');
   /** Rules as nft text, not as columns. */
   let asNft = $state(false);
@@ -287,6 +291,25 @@
       untrack(() => {
         if (dirty && draft) void api.firewallSaveDraft(sid, draft).catch(() => undefined);
       });
+    };
+  });
+
+  // The closed "Ports" card shows a counter: one request, no polling (the open card polls itself).
+  const fwAvailable = $derived(info?.available === true);
+  $effect(() => {
+    const sid = serverId;
+    if (!fwAvailable || $isPhone) return;
+    portsMeta = null;
+    if (untrack(() => portsOpen)) return;
+    let active = true;
+    void api
+      .firewallPorts(sid)
+      .then((res) => {
+        if (active && res.available) portsMeta = { n: res.listeners.length, norule: res.listeners.filter((l) => l.firewall === 'open').length };
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
     };
   });
 
@@ -658,7 +681,7 @@
   <p class="muted">{$trs('common.loading')}</p>
 {:else}
   <div class="fw stack">
-    {#if info.available}
+    {#if info.available && $isPhone}
       <p class="status mono" role="status">{$trs('fw.status.active')}</p>
     {/if}
 
@@ -727,10 +750,10 @@
     {/if}
     </div>
 
-    {#if !info.available}
-      <p class="card">{$trs('fw.notAvailable')}</p>
-    {:else}
-      {#if $isPhone}
+    {#if $isPhone}
+      {#if !info.available}
+        <p class="card">{$trs('fw.notAvailable')}</p>
+      {:else}
         <div class="pc-seg sm" role="group" aria-label={$trs('mobC.fw.sections')}>
           <button type="button" aria-pressed={section === 'rules'} onclick={() => (section = 'rules')}>{$trs('mobC.fw.rules')}</button>
           <button type="button" aria-pressed={section === 'ports'} onclick={() => (section = 'ports')}>{$trs('mobC.fw.ports')}</button>
@@ -847,7 +870,16 @@
           </div>
           <button class="btn" type="button" onclick={() => (logOpen = true)}>{$trs('fw.log.open')}</button>
         {/if}
+      {/if}
+    {:else}
+    <section class="card rules">
+      <h3 class="cap">{$trs('fw.card.rules')}</h3>
+      {#if info.available}
+        <p class="status mono" role="status">{$trs('fw.status.active')}</p>
       {:else}
+        <p>{$trs('fw.notAvailable')}</p>
+      {/if}
+      {#if info.available}
       <div class="tabsrow">
         <div class="row" role="group" aria-label={$trs('fw.chains.tabs')}>
           <button class="chip" type="button" aria-pressed={activeChain === 'all'} onclick={() => (activeChain = 'all')}>
@@ -1088,27 +1120,33 @@
         {/if}
       </section>
       {/if}
-    {/if}
 
-    {#if info.available && !$isPhone}
-      <FwPorts serverId={serverId} lists={shownSets} onrules={addInputRules} />
-    {/if}
-
-    {#if !$isPhone}
-    <section class="ruleset-block">
-      <div class="ruleset-head">
-        <h3 class="sect">{$trs('fw.ruleset.title')}</h3>
-        <button class="btn" type="button" aria-expanded={showRuleset} onclick={() => (showRuleset = !showRuleset)}>
-          {showRuleset ? $trs('fw.ruleset.hide') : $trs('fw.ruleset.show')}
-        </button>
-      </div>
-      {#if showRuleset}
-        <pre class="ruleset mono">{info.ruleset}</pre>
-      {/if}
-      {#if info.other_tables.length}
-        <p class="hint">{$trs('fw.otherTables', { tables: info.other_tables.join(', ') })}</p>
-      {/if}
+      <section class="ruleset-block">
+        <div class="ruleset-head">
+          <h3 class="sect">{$trs('fw.ruleset.title')}</h3>
+          <button class="btn" type="button" aria-expanded={showRuleset} onclick={() => (showRuleset = !showRuleset)}>
+            {showRuleset ? $trs('fw.ruleset.hide') : $trs('fw.ruleset.show')}
+          </button>
+        </div>
+        {#if showRuleset}
+          <pre class="ruleset mono">{info.ruleset}</pre>
+        {/if}
+        {#if info.other_tables.length}
+          <p class="hint">{$trs('fw.otherTables', { tables: info.other_tables.join(', ') })}</p>
+        {/if}
+      </section>
     </section>
+
+    {#if info.available}
+      <Fold
+        title={$trs('fw.card.ports')}
+        meta={portsMeta ? String(portsMeta.n) : ''}
+        tone={portsMeta && portsMeta.norule > 0 ? 'warn' : 'muted'}
+        bind:open={portsOpen}
+      >
+        <FwPorts serverId={serverId} lists={shownSets} onrules={addInputRules} onsummary={(n, norule) => (portsMeta = { n, norule })} />
+      </Fold>
+    {/if}
     {/if}
   </div>
 {/if}
@@ -1284,6 +1322,22 @@
     margin: 0;
     font-size: 18px;
     line-height: 1.2;
+  }
+
+  .rules {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .cap {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
   .sect {

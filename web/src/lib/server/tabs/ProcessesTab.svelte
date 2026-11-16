@@ -11,13 +11,21 @@
 
   let { server }: { server: ServerDetail } = $props();
 
-  type Sort = 'cpu' | 'mem';
+  type Sort = 'cpu' | 'mem' | 'name';
   type Problem = 'offline' | 'disabled' | 'error';
 
   const REFRESH_MS = 3000;
+  // "all" asks the agent for its cap.
+  const ALL = 2000;
+  const COUNTS = [10, 20, 50, 100, ALL];
+  const countOptions = $derived(COUNTS.map((n) => ({ value: n, label: n === ALL ? $tr('proc.all') : String(n) })));
+  // Process states from /proc: the letter, and the warn tint for a zombie or a process stuck in I/O.
+  const STATES = ['S', 'R', 'I', 'D', 'Z', 'T'];
+  const WARN_STATES = ['D', 'Z'];
 
   let sort = $state<Sort>('cpu');
   let count = $state(10);
+  const refreshText = $derived(count === ALL ? $tr('proc.refreshAll') : $tr('proc.refresh', { n: count }));
   let rows = $state<ProcessInfo[]>([]);
   let loaded = $state(false);
   let problem = $state<Problem | null>(null);
@@ -76,7 +84,21 @@
   }
 
   /** The figure a phone row shows and draws: the one the list is sorted by. */
-  const metric = (p: ProcessInfo): number => (sort === 'cpu' ? p.cpu : p.mem_pct);
+  const metric = (p: ProcessInfo): number => (sort === 'mem' ? p.mem_pct : p.cpu);
+
+  function stateTitle(s: string): string {
+    const translate = get(tr);
+    return STATES.includes(s) ? translate(`proc.state.${s}`) : translate('proc.state.other', { s });
+  }
+
+  /** The command as shown: the executable name (normal weight), then its arguments (muted). Same rule as the agent. */
+  function splitCmd(cmd: string): { exe: string; args: string } {
+    const i = cmd.search(/\s/);
+    const head = i < 0 ? cmd : cmd.slice(0, i);
+    const args = i < 0 ? '' : cmd.slice(i);
+    const exe = head.startsWith('/') || head.startsWith('./') ? head.slice(head.lastIndexOf('/') + 1) : head;
+    return { exe, args };
+  }
 
   function closeKill(): void {
     if (!killing) victim = null;
@@ -113,23 +135,26 @@
         <button class="chip" type="button" aria-pressed={sort === 'mem'} onclick={() => (sort = 'mem')}>
           {$tr('proc.sort.mem')}
         </button>
+        <button class="chip" type="button" aria-pressed={sort === 'name'} onclick={() => (sort = 'name')}>
+          {$tr('proc.sort.name')}
+        </button>
         {#if !$isPhone}
           <label class="count">
             <span class="muted small">{$tr('proc.show')}</span>
-            <Select bind:value={count} width="auto" options={[10, 20, 50].map((n) => ({ value: n, label: String(n) }))} />
+            <Select bind:value={count} width="auto" options={countOptions} />
           </label>
         {/if}
       </div>
       {#if $isPhone}
         <div class="meta">
-          <p class="muted small">{$tr('proc.refresh', { n: count })}</p>
+          <p class="muted small">{refreshText}</p>
           <label class="count">
             <span class="muted small">{$tr('proc.show')}</span>
-            <Select bind:value={count} width="auto" ariaLabel={$tr('proc.show')} options={[10, 20, 50].map((n) => ({ value: n, label: String(n) }))} />
+            <Select bind:value={count} width="auto" ariaLabel={$tr('proc.show')} options={countOptions} />
           </label>
         </div>
       {:else}
-        <p class="muted small">{$tr('proc.refresh', { n: count })}</p>
+        <p class="muted small">{refreshText}</p>
       {/if}
     </div>
 
@@ -171,18 +196,31 @@
           </thead>
           <tbody>
             {#each rows as p (p.pid)}
+              {@const c = splitCmd(p.cmd)}
               <tr>
                 <td class="num">{p.pid}</td>
                 <td>{p.user}</td>
-                <td class="num" data-label="CPU">{p.cpu.toFixed(1)}</td>
+                <td class="num" data-label="CPU">
+                  <span class="fig">
+                    <span class="v">{p.cpu.toFixed(1)}</span>
+                    <span class="meter"><Segments value={p.cpu} segments={10} /></span>
+                  </span>
+                </td>
                 <td class="num" data-label="RAM">
-                  {p.mem_pct.toFixed(1)}
+                  <span class="fig">
+                    <span class="v">{p.mem_pct.toFixed(1)}</span>
+                    <span class="meter"><Segments value={p.mem_pct} segments={10} /></span>
+                  </span>
                   <span class="muted small">{formatBytes(p.rss)}</span>
                 </td>
-                <td>{p.state}</td>
-                <td class="cmd"><span class="ellipsis" title={p.cmd}>{p.cmd}</span></td>
+                <td>
+                  <span class="state" class:warn={WARN_STATES.includes(p.state)} title={stateTitle(p.state)}>{p.state}</span>
+                </td>
+                <td class="cmd">
+                  <span class="ellipsis" title={p.cmd}><span class="exe">{c.exe}</span><span class="args">{c.args}</span></span>
+                </td>
                 <td class="action">
-                  <button class="btn" type="button" onclick={() => (victim = p)}>{$tr('proc.kill')}</button>
+                  <button class="btn sm" type="button" title={$tr('proc.endBtn', { pid: p.pid })} onclick={() => (victim = p)}>{$tr('proc.kill')}</button>
                 </td>
               </tr>
             {/each}
@@ -242,6 +280,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    margin-left: 6px;
   }
 
 
@@ -303,6 +342,54 @@
 
   .action {
     text-align: right;
+  }
+
+  tbody tr:hover td {
+    background: var(--bg);
+  }
+
+  .fig {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .v {
+    min-width: 40px;
+    text-align: right;
+  }
+
+  .meter {
+    display: inline-block;
+    width: 72px;
+  }
+
+  .args {
+    color: var(--muted);
+  }
+
+  .state {
+    display: inline-block;
+    min-width: 20px;
+    padding: 0 6px;
+    border: 2px solid var(--line);
+    background: var(--surface);
+    font-size: 12px;
+    line-height: 1.3;
+    text-align: center;
+  }
+
+  .state.warn {
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+
+  .btn.sm {
+    min-height: 0;
+    padding: 2px 8px;
+    font-size: 12px;
+    box-shadow: 2px 2px 0 var(--shade);
   }
 
   .sr {

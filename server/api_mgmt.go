@@ -136,7 +136,7 @@ func (a *Admin) aptList(w http.ResponseWriter, r *http.Request, _ *store.User) {
 
 func (a *Admin) processesList(w http.ResponseWriter, r *http.Request, _ *store.User) {
 	sortBy := r.URL.Query().Get("sort")
-	if sortBy != "mem" {
+	if sortBy != "mem" && sortBy != "name" {
 		sortBy = "cpu"
 	}
 	n, _ := strconv.Atoi(r.URL.Query().Get("n"))

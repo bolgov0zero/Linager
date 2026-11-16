@@ -11,11 +11,14 @@
     serverId,
     lists,
     onrules,
+    onsummary,
   }: {
     serverId: string;
     lists: FwSet[];
     /** Adds rules to the input chain of the draft; returns an error text or null. */
     onrules: (texts: string[]) => Promise<string | null>;
+    /** Reports the number of listening ports and how many of them have no rule (for a closed card header). */
+    onsummary?: (n: number, norule: number) => void;
   } = $props();
 
   type Filter = 'all' | 'out' | 'local' | 'norule';
@@ -52,6 +55,7 @@
       if (id !== serverId) return;
       data = next;
       failed = false;
+      if (next.available) onsummary?.(next.listeners.length, next.listeners.filter((l) => l.firewall === 'open').length);
     } catch (e) {
       if (id !== serverId) return;
       failed = !(e instanceof ApiError && e.status === 501);

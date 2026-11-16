@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { HistoryEvent, Period } from '../../api';
   import { locale, tr } from '../../i18n';
+  import Fold from '../ui/Fold.svelte';
   import { isPhone } from '../ui/viewport';
   import { formatDateTime, formatStep } from './format';
 
@@ -22,45 +23,47 @@
 </script>
 
 <div class="extras">
-  <section class="card">
-    <h3>{$tr('srv.events.title')}</h3>
-    {#if events.length === 0}
-      <p class="small muted">{$tr('srv.events.none')}</p>
-    {:else}
-      <ul class="events">
-        {#each shown as ev, i (i)}
-          <li>
-            <time class="mono">{formatDateTime(ev.ts, $locale)}</time>
-            <span class="tag" class:crit={ev.kind === 'reboot'}>{$tr(`srv.event.${ev.kind}`)}</span>
-            <span class="msg">{ev.message}</span>
-          </li>
-        {/each}
-      </ul>
-      {#if $isPhone && events.length > PHONE_ROWS}
-        <button class="btn more" type="button" aria-expanded={expanded} onclick={() => (expanded = !expanded)}>
-          {expanded ? $tr('m.events.less') : $tr('m.events.all', { n: events.length })}
-        </button>
+  <Fold title={$tr('srv.events.title')} meta={events.length > 0 ? String(events.length) : ''}>
+    {#snippet children()}
+      {#if events.length === 0}
+        <p class="small muted">{$tr('srv.events.none')}</p>
+      {:else}
+        <ul class="events">
+          {#each shown as ev, i (i)}
+            <li>
+              <time class="mono">{formatDateTime(ev.ts, $locale)}</time>
+              <span class="tag" class:crit={ev.kind === 'reboot'}>{$tr(`srv.event.${ev.kind}`)}</span>
+              <span class="msg">{ev.message}</span>
+            </li>
+          {/each}
+        </ul>
+        {#if $isPhone && events.length > PHONE_ROWS}
+          <button class="btn more" type="button" aria-expanded={expanded} onclick={() => (expanded = !expanded)}>
+            {expanded ? $tr('m.events.less') : $tr('m.events.all', { n: events.length })}
+          </button>
+        {/if}
       {/if}
-    {/if}
-    <p class="hint">{$tr('srv.events.legend')}</p>
-  </section>
+      <p class="hint">{$tr('srv.events.legend')}</p>
+    {/snippet}
+  </Fold>
 
-  <section class="card">
-    <h3>{$tr('srv.policy.title')}</h3>
-    <div class="grid-table" role="table">
-      <div class="grow head" role="row">
-        <span role="columnheader">{$tr('srv.policy.period')}</span>
-        <span role="columnheader">{$tr('srv.policy.precision')}</span>
-      </div>
-      {#each POLICY as row (row.step)}
-        <div class="grow" role="row">
-          <span role="cell">{row.periods.map((p) => $tr(`srv.period.${p}`)).join(', ')}</span>
-          <span role="cell">{formatStep(row.step, $tr)}</span>
+  <Fold title={$tr('srv.policy.title')}>
+    {#snippet children()}
+      <div class="grid-table" role="table">
+        <div class="grow head" role="row">
+          <span role="columnheader">{$tr('srv.policy.period')}</span>
+          <span role="columnheader">{$tr('srv.policy.precision')}</span>
         </div>
-      {/each}
-    </div>
-    <p class="hint">{$tr('srv.policy.note')}</p>
-  </section>
+        {#each POLICY as row (row.step)}
+          <div class="grow" role="row">
+            <span role="cell">{row.periods.map((p) => $tr(`srv.period.${p}`)).join(', ')}</span>
+            <span role="cell">{formatStep(row.step, $tr)}</span>
+          </div>
+        {/each}
+      </div>
+      <p class="hint">{$tr('srv.policy.note')}</p>
+    {/snippet}
+  </Fold>
 </div>
 
 <style>
@@ -68,27 +71,13 @@
     display: grid;
     gap: 16px;
     grid-template-columns: 1fr;
+    align-items: start;
   }
 
   @media (min-width: 760px) {
     .extras {
       grid-template-columns: 1fr 1fr;
     }
-  }
-
-  .extras section {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    min-width: 0;
-  }
-
-  h3 {
-    margin: 0;
-    font-size: 16px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
   }
 
   /* The list scrolls inside the block, so a long history does not stretch it. */
@@ -102,7 +91,7 @@
 
   .events li {
     display: grid;
-    grid-template-columns: auto auto;
+    grid-template-columns: max-content 1fr;
     gap: 4px 10px;
     align-items: center;
     padding: 8px 0;

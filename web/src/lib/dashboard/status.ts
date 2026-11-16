@@ -4,7 +4,7 @@ import type { ServerCard } from '../../api';
 export type Level = 'ok' | 'warn' | 'crit' | 'off';
 
 export interface Tag {
-  id: 'reboot' | 'updates' | 'failed' | 'offline' | 'agentUpdate' | 'agentOld' | 'clean';
+  id: 'reboot' | 'updates' | 'images' | 'failed' | 'offline' | 'agentUpdate' | 'agentOld' | 'clean';
   n?: number;
   tone: 'ok' | 'warn' | 'crit' | 'muted' | 'plain';
 }
@@ -18,6 +18,8 @@ export interface Totals {
   critical: number;
   /** Sum of apt upgrades over all servers with a known count. */
   updates: number;
+  /** Sum of Docker containers with a newer image over all servers with a known count. */
+  imageUpdates: number;
   rebootPending: number;
   /** Average CPU over online servers, null when none. */
   cpuAvg: number | null;
@@ -58,12 +60,20 @@ function agentTag(agent: AgentFlag): Tag | null {
   return null;
 }
 
+/** Containers with a newer image: plain, warn from 5. Nothing for 0, -1 (unknown) or an agent without the field. */
+export function imagesTag(count: number | undefined): Tag | null {
+  if (count === undefined || count <= 0) return null;
+  return { id: 'images', n: count, tone: count >= 5 ? 'warn' : 'plain' };
+}
+
 export function tagsOf(card: ServerCard, agent: AgentFlag = null): Tag[] {
   const s = card.sample;
   if (!card.online) {
     const tags: Tag[] = [{ id: 'offline', tone: 'muted' }];
     const updates = s?.updates ?? -1;
     if (updates > 0) tags.push({ id: 'updates', n: updates, tone: updates >= 10 ? 'warn' : 'plain' });
+    const offlineImages = imagesTag(s?.image_updates);
+    if (offlineImages) tags.push(offlineImages);
     const offlineAgent = agentTag(agent);
     if (offlineAgent) tags.push(offlineAgent);
     return tags;
@@ -72,6 +82,8 @@ export function tagsOf(card: ServerCard, agent: AgentFlag = null): Tag[] {
   if (s) {
     if (s.reboot_required) tags.push({ id: 'reboot', tone: 'warn' });
     if (s.updates > 0) tags.push({ id: 'updates', n: s.updates, tone: s.updates >= 10 ? 'warn' : 'plain' });
+    const images = imagesTag(s.image_updates);
+    if (images) tags.push(images);
     if (s.failed_services > 0) tags.push({ id: 'failed', n: s.failed_services, tone: 'crit' });
   }
   const agentFlag = agentTag(agent);
@@ -85,6 +97,7 @@ export function summarize(cards: ServerCard[]): Totals {
   let problems = 0;
   let critical = 0;
   let updates = 0;
+  let imageUpdates = 0;
   let rebootPending = 0;
   let cpuSum = 0;
   let cpuCount = 0;
@@ -96,6 +109,7 @@ export function summarize(cards: ServerCard[]): Totals {
     const s = card.sample;
     if (!s) continue;
     if (s.updates > 0) updates += s.updates;
+    if ((s.image_updates ?? 0) > 0) imageUpdates += s.image_updates ?? 0;
     if (s.reboot_required) rebootPending++;
     if (card.online) {
       cpuSum += s.cpu;
@@ -109,6 +123,7 @@ export function summarize(cards: ServerCard[]): Totals {
     problems,
     critical,
     updates,
+    imageUpdates,
     rebootPending,
     cpuAvg: cpuCount > 0 ? cpuSum / cpuCount : null,
   };

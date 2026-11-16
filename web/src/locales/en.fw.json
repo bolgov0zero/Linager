@@ -93,6 +93,8 @@
   "fw.change.setRemoved": "list @{name}: removed",
   "fw.change.setChanged": "list @{name}: +{added} −{removed} addresses",
   "fw.col.actions": "Actions",
+  "fw.card.rules": "Rules",
+  "fw.card.ports": "Ports",
   "fw.ports.title": "Ports and connections",
   "fw.ports.refresh": "Refresh",
   "fw.ports.error": "Could not get the list of ports.",

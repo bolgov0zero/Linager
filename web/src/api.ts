@@ -70,6 +70,7 @@ export interface Sample {
   reboot_required: boolean;
   updates: number; // apt upgradable packages, -1 = unknown
   security_updates: number;
+  image_updates?: number; // Docker containers with a newer image, -1 or absent = unknown
   procs: number;
 }
 export interface SystemInfo {
@@ -205,6 +206,9 @@ export interface NetworkInfo {
   editable: boolean; // false for netplan in this version
   interfaces: NetInterface[];
   dns: { nameservers: string[]; search: string[] };
+  /** The name servers can be edited here (not on netplan hosts); absent on older agents. */
+  dns_editable?: boolean;
+  dns_backend?: 'resolved' | 'resolvconf' | 'file' | 'netplan' | 'unknown';
   routes: NetRoute[];
   config_preview: string;
   /** The configuration can be edited as text: ifupdown (one file) or netplan (pick a file). Absent on older agents. */
@@ -524,7 +528,8 @@ export const api = {
   securityTerminate: (id: string, target: { session: string } | { user: string }) =>
     request<{ ok: boolean; terminated: { id: string; user: string; ip: string }[] }>('POST', `api/servers/${enc(id)}/security/terminate`, { ...target, confirm: true }),
   reboot: (id: string) => request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/reboot`, { confirm: true }),
-  processes: (id: string, sort: 'cpu' | 'mem', n = 10) =>
+  /** n: 10..100, or 2000 for "all" (the agent's cap). */
+  processes: (id: string, sort: 'cpu' | 'mem' | 'name', n = 10) =>
     request<ProcessList>('GET', `api/servers/${enc(id)}/processes?sort=${sort}&n=${n}`),
   killProcess: (id: string, pid: number, signal: 'TERM' | 'KILL') =>
     request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/processes/${pid}/kill`, { signal, confirm: true }),
@@ -589,6 +594,9 @@ export const api = {
   /** Applies a hand-edited interfaces file; it is rolled back by the agent unless confirmed in time. */
   networkApplyConfig: (id: string, text: string, file?: string) =>
     request<PendingChange>('POST', `api/servers/${enc(id)}/network/config`, { text, file, confirm: true }),
+  /** Changes the name servers and search domains; the agent rolls it back unless confirmed in time. */
+  networkApplyDns: (id: string, nameservers: string[], search: string[]) =>
+    request<PendingChange>('POST', `api/servers/${enc(id)}/network/dns`, { nameservers, search, confirm: true }),
   networkConfirm: (id: string, changeId: string) =>
     request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/network/confirm`, { id: changeId }),
   networkRollback: (id: string, changeId: string) =>

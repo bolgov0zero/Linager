@@ -104,3 +104,40 @@ func TestUpdateManyValidates(t *testing.T) {
 		t.Fatal("an invalid name must be rejected before anything runs")
 	}
 }
+
+func TestCountNewImages(t *testing.T) {
+	if n := countNewImages(nil); n != 0 {
+		t.Fatalf("no containers: %d", n)
+	}
+	n := countNewImages(map[string]checkEntry{
+		"a": {status: "new"}, "b": {status: "new"}, "c": {status: "current"}, "d": {status: "unknown"},
+	})
+	if n != 2 {
+		t.Fatalf("only the new images are counted: %d", n)
+	}
+	if imageCheckEvery != 6*time.Hour {
+		t.Fatalf("the check interval: %v", imageCheckEvery)
+	}
+}
+
+func TestImageUpdatesUnknownUntilChecked(t *testing.T) {
+	dockerChecks.mu.Lock()
+	saved := dockerChecks.at
+	dockerChecks.at, dockerChecks.updates = 0, 5
+	dockerChecks.mu.Unlock()
+	t.Cleanup(func() {
+		dockerChecks.mu.Lock()
+		dockerChecks.at, dockerChecks.updates = saved, 0
+		dockerChecks.mu.Unlock()
+	})
+	if n := imageUpdates(); n != -1 {
+		t.Fatalf("before the first check the value is unknown: %d", n)
+	}
+	dockerChecks.mu.Lock()
+	dockerChecks.at = 100
+	dockerChecks.mu.Unlock()
+	syncImageUpdates(map[string]checkEntry{"a": {status: "new"}, "b": {status: "current"}})
+	if n := imageUpdates(); n != 1 {
+		t.Fatalf("after the check: %d", n)
+	}
+}

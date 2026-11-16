@@ -93,6 +93,8 @@
   "fw.change.setRemoved": "список @{name}: удалён",
   "fw.change.setChanged": "список @{name}: +{added} −{removed} адресов",
   "fw.col.actions": "Действия",
+  "fw.card.rules": "Правила",
+  "fw.card.ports": "Порты",
   "fw.ports.title": "Порты и соединения",
   "fw.ports.refresh": "Обновить",
   "fw.ports.error": "Не удалось получить список портов.",

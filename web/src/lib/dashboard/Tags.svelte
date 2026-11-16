@@ -12,6 +12,8 @@
         {$tr('dash.tag.reboot')}
       {:else if tag.id === 'updates'}
         {$tr('dash.tag.updates', { n: tag.n ?? 0 })}
+      {:else if tag.id === 'images'}
+        {$tr('dash.tag.images', { n: tag.n ?? 0 })}
       {:else if tag.id === 'failed'}
         {$tr('dash.tag.failed', { n: tag.n ?? 0 })}
       {:else if tag.id === 'agentUpdate'}

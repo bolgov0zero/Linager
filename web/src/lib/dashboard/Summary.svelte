@@ -26,7 +26,8 @@
   <div class="tile card">
     <span class="label">{$tr('dash.tile.updates')}</span>
     <strong class="val">{summary.updates}</strong>
-    <span class="hint">{$tr('dash.tile.updatesSub', { n: summary.rebootPending })}</span>
+    <span class="hint"
+      >{$tr('dash.tile.updatesSub', { n: summary.rebootPending })}{#if summary.imageUpdates > 0}{' · '}{$tr('dash.tile.imagesSub', { n: summary.imageUpdates })}{/if}</span>
   </div>
 
   <div class="tile card">
@@ -127,10 +128,13 @@
     }
 
     .hint {
+      display: -webkit-box;
       overflow: hidden;
       font-size: 10px;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      line-height: 1.25;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
     }
 
     .flag {

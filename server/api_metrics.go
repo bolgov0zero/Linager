@@ -208,7 +208,7 @@ func (a *Admin) serverDetail(w http.ResponseWriter, r *http.Request, _ *store.Us
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"modules": mods, "recent": recent,
-		"id":      s.ID, "name": s.Name, "hostname": s.Hostname, "address": s.Address, "os": s.OS, "agent_version": s.AgentVersion,
+		"id": s.ID, "name": s.Name, "hostname": s.Hostname, "address": s.Address, "os": s.OS, "agent_version": s.AgentVersion,
 		"online": a.Hub.Online(s.ID), "last_seen_at": s.LastSeenAt, "enrolled_at": s.EnrolledAt,
 		"system": v.System, "sample": v.Sample, "spark": v.Spark,
 	})

@@ -95,5 +95,21 @@
   "net.config.cloudInit": "Файл создан cloud-init и может быть перезаписан при перезагрузке. Чтобы правки сохранялись, отключите управление сетью в cloud-init (файл /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg со строкой network: {config: disabled}) или создайте свой файл с более поздним именем.",
   "net.config.effective": "Итоговая конфигурация",
   "net.config.effectiveHide": "Скрыть итоговую",
-  "net.config.effectiveEmpty": "Недоступна на этой системе."
+  "net.config.effectiveEmpty": "Недоступна на этой системе.",
+  "net.dns.edit.title": "Изменить DNS",
+  "net.dns.edit.limit": "от 1 до {n}",
+  "net.dns.edit.placeholder": "Адрес IPv4 или IPv6",
+  "net.dns.edit.serverN": "DNS-сервер {n}",
+  "net.dns.edit.remove": "Удалить",
+  "net.dns.edit.add": "Добавить сервер",
+  "net.dns.edit.search": "Домены поиска",
+  "net.dns.edit.searchHint": "до 6, через пробел или запятую",
+  "net.dns.edit.note": "После применения запускается окно подтверждения: если не подтвердить, агент сам вернёт прежние настройки DNS.",
+  "net.dns.edit.apply": "Применить",
+  "net.dns.err.ip": "Это не адрес IPv4 или IPv6",
+  "net.dns.err.none": "Добавьте хотя бы один DNS-сервер",
+  "net.dns.err.count": "Не больше 3 DNS-серверов",
+  "net.dns.err.domain": "Один из доменов не является допустимым именем хоста",
+  "net.dns.err.domains": "Не больше 6 доменов поиска",
+  "net.dns.err.long": "Домены поиска слишком длинные (до 256 символов)"
 }

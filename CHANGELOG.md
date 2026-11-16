@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.62
+
+- Metrics: the blocks "Events in period" and "Metric retention" are folded by default (the header shows the number of events).
+- Processes: new sort "By name" (all processes, alphabetically; "Show" gets 100 and "all", the agent caps a list at 2000). The rows show CPU and RAM as bars, the command as the executable name plus muted arguments, the state as a tag with a hint, and the end button is compact.
+- Network: the primary interface comes first and is open, the others are one-line rows (name, state, kind, address, traffic) that unfold on a click, folded by default. DNS can be edited (new `POST /api/servers/{id}/network/dns`, audit entry `network.dns`): 1-3 name servers and up to 6 search domains. The change goes through the same confirm-or-roll-back window as the interfaces. The agent writes where the host keeps DNS: `/etc/resolv.conf` (atomic rewrite), a drop-in `/etc/systemd/resolved.conf.d/linager.conf` under systemd-resolved, or the `dns-*` lines of the primary stanza with resolvconf; netplan hosts stay view-only. `network.state` gets `dns_editable` and `dns_backend`.
+- Firewall: two blocks like on the Metrics tab. "Rules" is always open, "Ports" (ports and connections, top remote addresses, how to read) is folded by default and loads only when opened.
+- Security: "Now in the system", fail2ban and "State" stay open, the other blocks (failed attempts, logins, keys) are folded by default. "State" became a checklist: a verdict ("Everything is fine" / "N things need attention"), one row per check with a mark, the value and, for every check that is not fine, a hint what to do. Phone: the accordions follow the same order.
+- Docker: the agent checks the images of its containers by itself, 60 seconds after start and then every 6 hours (the button uses the same code). The number of containers with a newer image (`image_updates` in the sample, -1 = unknown) is a tag "images: N" on the server card (warn from 5) and a part of the summary hint under the updates figure. A new shared component `Fold` is used for the folded blocks.
+
 ## 0.1.61
 
 - Overview: the four bars (CPU, RAM, network) are filled at once when the page opens. `GET /api/servers/{id}` now returns `recent`, the last 60 raw samples (CPU, RAM, receive and send rate) from the stored metrics, and the page seeds its bars from them instead of starting empty and collecting samples live. RAM and network were empty before, CPU had only 12 values.

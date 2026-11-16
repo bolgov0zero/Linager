@@ -87,6 +87,26 @@ export function worstTone(checks: Check[]): Tone {
   return 'ok';
 }
 
+/** How many checks need the administrator's attention (warnings and critical ones; "muted" is only informational). */
+export function issueCount(checks: Check[]): number {
+  return checks.filter((c) => c.tone === 'crit' || c.tone === 'warn').length;
+}
+
+const SSH_IDS = new Set(['port', 'root', 'password', 'pubkey', 'empty', 'allow', 'f2b']);
+
+/** The checks in two groups for the state block: everything about SSH access, and the system itself. */
+export function groupChecks(checks: Check[]): { ssh: Check[]; system: Check[] } {
+  return { ssh: checks.filter((c) => SSH_IDS.has(c.id)), system: checks.filter((c) => !SSH_IDS.has(c.id)) };
+}
+
+/** The locale key of the short "what to do" line for a check, or null when it is fine (or only informational). */
+export function hintKey(c: Check): string | null {
+  if (c.tone === 'ok') return null;
+  if (c.id === 'allow') return c.tone === 'muted' ? 'sec.hint.allow' : null;
+  if (c.tone === 'muted') return null;
+  return `sec.hint.${c.id}`;
+}
+
 /** Height of the bar of a day in percent of the busiest day (at least a visible stub for a non-zero day). */
 export function barHeights(byDay: number[]): number[] {
   const max = Math.max(1, ...byDay);

@@ -48,6 +48,7 @@ type Sample struct {
 	RebootRequired  bool       `json:"reboot_required"`
 	Updates         int        `json:"updates"` // -1 = unknown
 	SecurityUpdates int        `json:"security_updates"`
+	ImageUpdates    int        `json:"image_updates"` // containers with a newer Docker image, -1 = unknown or no Docker
 	Procs           int        `json:"procs"`
 }
 

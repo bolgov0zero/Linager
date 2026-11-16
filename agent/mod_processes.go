@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"os/user"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -85,15 +86,58 @@ func userName(uid uint32) string {
 	return n
 }
 
+// procMaxRows caps the list; "all" in the UI asks for this many.
+const procMaxRows = 2000
+
+// clampProcRows returns the row limit: the default 10 for a missing value, the cap for a larger one.
+func clampProcRows(n int) int {
+	switch {
+	case n < 1:
+		return 10
+	case n > procMaxRows:
+		return procMaxRows
+	}
+	return n
+}
+
+// procName is the executable name of a command line: "/usr/bin/python3 -m x" gives "python3".
+func procName(cmd string) string {
+	exe := cmd
+	if i := strings.IndexAny(cmd, " \t"); i >= 0 {
+		exe = cmd[:i]
+	}
+	// Only a path (absolute or ./relative) gives a base name; kernel thread names such as "kworker/0:1" stay whole.
+	if strings.HasPrefix(exe, "/") || strings.HasPrefix(exe, "./") {
+		return path.Base(exe)
+	}
+	return exe
+}
+
+// sortProcesses orders the rows in place: by RAM, by command name (case-insensitive, then PID), or by CPU.
+func sortProcesses(list []ProcInfo, by string) {
+	switch by {
+	case "mem":
+		sort.Slice(list, func(i, j int) bool { return list[i].RSS > list[j].RSS })
+	case "name":
+		sort.Slice(list, func(i, j int) bool {
+			a, b := strings.ToLower(procName(list[i].Cmd)), strings.ToLower(procName(list[j].Cmd))
+			if a != b {
+				return a < b
+			}
+			return list[i].PID < list[j].PID
+		})
+	default:
+		sort.Slice(list, func(i, j int) bool { return list[i].CPU > list[j].CPU })
+	}
+}
+
 func procList(ctx context.Context, raw json.RawMessage, _ bool) (any, error) {
 	var p struct {
 		Sort string
 		N    int
 	}
 	_ = json.Unmarshal(raw, &p)
-	if p.N < 1 || p.N > 200 {
-		p.N = 10
-	}
+	p.N = clampProcRows(p.N)
 	t0 := time.Now()
 	a := readTicks()
 	select {
@@ -124,11 +168,7 @@ func procList(ctx context.Context, raw json.RawMessage, _ bool) (any, error) {
 		}
 		list = append(list, pi)
 	}
-	if p.Sort == "mem" {
-		sort.Slice(list, func(i, j int) bool { return list[i].RSS > list[j].RSS })
-	} else {
-		sort.Slice(list, func(i, j int) bool { return list[i].CPU > list[j].CPU })
-	}
+	sortProcesses(list, p.Sort)
 	total := len(list)
 	if len(list) > p.N {
 		list = list[:p.N]

@@ -129,6 +129,7 @@ func NewRegistry(cfg *config.Agent, col Collector, log *slog.Logger, dataDir str
 		pend.Register("network", nm.kind())
 		r.cmds["network.state"] = nm.state
 		r.cmds["network.apply"] = nm.apply
+		r.cmds["network.dns"] = nm.dns
 	}
 	if cfg.Enabled("firewall") {
 		fm := newFwModule(pend, dataDir)
