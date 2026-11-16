@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { UpdateHistoryRow } from '../../api';
   import { locale, tr as trans } from '../../i18n';
+  import Fold from '../ui/Fold.svelte';
   import { fmtDateTime } from './format';
 
   let { history }: { history: UpdateHistoryRow[] } = $props();
@@ -12,9 +13,7 @@
   };
 </script>
 
-<section class="upd-panel">
-  <h3 class="upd-h">{$trans('upd.hist.title')}</h3>
-
+<Fold title={$trans('upd.hist.title')} meta={history.length > 0 ? String(history.length) : ''}>
   <div class="upd-tw">
     <table class="upd-tbl upd-rows upd-hist">
       <thead>
@@ -41,4 +40,4 @@
       </tbody>
     </table>
   </div>
-</section>
+</Fold>

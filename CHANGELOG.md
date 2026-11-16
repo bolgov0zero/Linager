@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.64
+
+- Updates: the block "Update history" is folded by default (the header shows the number of records), like the other folded blocks.
+
 ## 0.1.63
 
 - Phone, Firewall: "Ports" is no longer a tab of the segmented control but a folded block under the rules (closed by default, the header shows the number of listening ports), like on a desktop. The control keeps Rules, Lists and Log.
