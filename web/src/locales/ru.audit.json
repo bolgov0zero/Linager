@@ -114,5 +114,11 @@
   "audit.action.snippet.order": "Порядок сниппетов",
   "audit.action.snippet.run": "Запуск сниппета",
   "audit.action.security.session.terminate": "Завершение SSH-сессии",
-  "audit.group.security": "Безопасность"
+  "audit.group.security": "Безопасность",
+  "audit.action.hostuser.add": "Пользователь создан на сервере",
+  "audit.action.hostuser.update": "Пользователь изменён на сервере",
+  "audit.action.hostuser.delete": "Пользователь удалён с сервера",
+  "audit.action.hostuser.password": "Пароль пользователя сервера сменён",
+  "audit.action.hostuser.kill": "Сеансы пользователя сервера завершены",
+  "audit.group.hostusers": "Пользователи серверов"
 }

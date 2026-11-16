@@ -33,6 +33,7 @@ export const TABS = [
   { id: 'network', key: 'srv.tab.network' },
   { id: 'firewall', key: 'srv.tab.firewall' },
   { id: 'security', key: 'srv.tab.security' },
+  { id: 'users', key: 'srv.tab.users' },
   { id: 'docker', key: 'srv.tab.docker' },
   { id: 'updates', key: 'srv.tab.updates' },
   { id: 'logs', key: 'srv.tab.logs' },
@@ -49,6 +50,7 @@ const TAB_MODULE: Partial<Record<TabId, string>> = {
   network: 'network',
   firewall: 'firewall',
   security: 'security',
+  users: 'users',
   docker: 'docker',
   updates: 'apt',
   processes: 'processes',
@@ -65,7 +67,7 @@ export function visibleTabs(modules: readonly string[], allowed: readonly string
     if (!module) return true;
     // an operator only gets the modules that were given (an administrator: null), an auditor none
     if (allowed !== null && !allowed.includes(module)) return false;
-    if (modules.length === 0) return module !== 'docker' && module !== 'security' && module !== 'disk';
+    if (modules.length === 0) return module !== 'docker' && module !== 'security' && module !== 'disk' && module !== 'users';
     return modules.includes(module);
   });
 }
@@ -75,7 +77,7 @@ export const TAB_GROUPS: readonly { id: string; key: string; tabs: readonly TabI
   { id: 'general', key: 'srv.group.general', tabs: ['overview', 'metrics', 'terminal'] },
   { id: 'system', key: 'srv.group.system', tabs: ['services', 'processes', 'logs', 'updates'] },
   { id: 'fs', key: 'srv.group.fs', tabs: ['files', 'disk'] },
-  { id: 'net', key: 'srv.group.net', tabs: ['network', 'firewall', 'security'] },
+  { id: 'net', key: 'srv.group.net', tabs: ['network', 'firewall', 'security', 'users'] },
   { id: 'apps', key: 'srv.group.apps', tabs: ['docker'] },
 ];
 
@@ -102,5 +104,6 @@ export const TAB_ICONS: Record<TabId, readonly string[]> = {
   network: ['00011000', '00011000', '00011000', '11111111', '10011001', '10011001', '11011011', '11011011'],
   firewall: ['11101110', '11101110', '00000000', '10111011', '10111011', '00000000', '11101110', '11101110'],
   security: ['01111110', '11111111', '11100111', '11100111', '11100111', '01100110', '00111100', '00011000'],
+  users: ['00111100', '01111110', '01111110', '00111100', '00000000', '11111111', '11111111', '11111111'],
   docker: ['00110000', '00110000', '11011011', '11011011', '00000000', '11111111', '11111111', '01111110'],
 };

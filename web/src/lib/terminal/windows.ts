@@ -15,6 +15,8 @@ export interface TermWindow {
   /** Editor only: file path, server name and the content loaded when the window was opened. */
   path?: string;
   serverName?: string;
+  /** Terminal: the account the shell runs as (the Users tab); empty for root. */
+  asUser?: string;
   initialText?: string;
   initialMtime?: number;
   x: number;
@@ -42,13 +44,18 @@ const CASCADE = 28;
  * Opens a floating terminal to a server. Refuses with a toast when this page already holds the per-server
  * limit; terminals opened elsewhere are reported by the server (close code 4029) and handled by the window.
  */
-export function openTermWindow(serverId: string, name: string): void {
+export function openTermWindow(serverId: string, name: string, asUser?: string): void {
   const list = get(termWindows);
+  const open = asUser ? list.find((w) => w.kind === 'terminal' && w.serverId === serverId && w.asUser === asUser) : undefined;
+  if (open) {
+    focusTermWindow(open.key);
+    return;
+  }
   if (list.filter((w) => w.kind === 'terminal' && w.serverId === serverId).length >= TERM_LIMIT) {
     showToast(t('term.limit'));
     return;
   }
-  addWindow({ kind: 'terminal', serverId, name });
+  addWindow({ kind: 'terminal', serverId, name, asUser });
 }
 
 /** Opens a file in a floating editor; an already open file of the same server is brought to the front. */

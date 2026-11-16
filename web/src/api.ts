@@ -124,6 +124,20 @@ export interface F2bBan { ip: string; jail: string; banned_at: number; unban_at:
 export interface F2bSettings { maxretry: number; findtime: number; bantime: number; increment: boolean; recidive: boolean; ignore: string[] }
 export interface F2bEvent { time: number; event: 'ban' | 'unban'; ip: string; jail: string }
 export interface F2bHistory { events: F2bEvent[]; total: number; log: string; available: boolean }
+// ---- local accounts of a host (the Users tab) ----
+export type HostSudo = 'none' | 'pw' | 'nopw' | 'root';
+export interface HostUser {
+  name: string; uid: number; gid: number; gecos: string; home: string; shell: string;
+  groups: string[]; sudo: HostSudo; locked: boolean; has_password: boolean; pw_changed: number;
+  last_login: number; last_from: string; sessions: number; procs: number; keys: number;
+  human: boolean; protected: boolean; no_shell: boolean;
+}
+export interface HostUsersState { users: HostUser[]; groups: string[]; sudo_group: string; root_login: boolean; shells: string[] }
+export interface HostUserAdd {
+  name: string; gecos: string; shell: string; home: string; groups: string[]; sudo: 'none' | 'pw' | 'nopw'; password: string; ssh_key: string;
+}
+export interface HostUserPatch { groups?: string[]; sudo?: 'none' | 'pw' | 'nopw'; shell?: string; locked?: boolean }
+
 export interface SecState {
   generated_at: number; period_days: number;
   /** The address the administrator is connected from (never blocked by the panel). */
@@ -477,6 +491,17 @@ export const api = {
   serviceAction: (id: string, unit: string, action: ServiceAction, confirm: boolean) =>
     request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/services/${enc(unit)}/${action}`, { confirm }),
   apt: (id: string) => request<AptList>('GET', `api/servers/${enc(id)}/apt`),
+  hostUsers: (id: string) => request<HostUsersState>('GET', `api/servers/${enc(id)}/users`),
+  hostUserAdd: (id: string, u: HostUserAdd) =>
+    request<{ ok: boolean; warnings: string[] }>('POST', `api/servers/${enc(id)}/users`, { ...u, confirm: true }),
+  hostUserUpdate: (id: string, name: string, patch: HostUserPatch) =>
+    request<{ ok: boolean }>('PUT', `api/servers/${enc(id)}/users/${enc(name)}`, { ...patch, confirm: true }),
+  hostUserDelete: (id: string, name: string, removeHome: boolean) =>
+    request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/users/${enc(name)}/delete`, { remove_home: removeHome, confirm: true }),
+  hostUserPassword: (id: string, name: string, password: string) =>
+    request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/users/${enc(name)}/password`, { password, confirm: true }),
+  hostUserKill: (id: string, name: string) =>
+    request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/users/${enc(name)}/kill`, { confirm: true }),
   security: (id: string) => request<SecState>('GET', `api/servers/${enc(id)}/security`),
   /** Ends one remote session, or all remote sessions of a user. The processes of the sessions stop with them. */
   disk: (id: string) => request<DiskState>('GET', `api/servers/${enc(id)}/disk`),

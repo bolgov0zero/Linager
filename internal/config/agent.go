@@ -9,7 +9,7 @@ import (
 )
 
 // AgentModules lists all agent modules in display order.
-var AgentModules = []string{"metrics", "terminal", "services", "apt", "processes", "logs", "files", "disk", "network", "firewall", "security", "docker"}
+var AgentModules = []string{"metrics", "terminal", "services", "apt", "processes", "logs", "files", "disk", "network", "firewall", "security", "users", "docker"}
 
 // Agent is /etc/linager/agent.yaml. Every module can be switched off.
 type Agent struct {

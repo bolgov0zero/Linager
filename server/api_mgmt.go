@@ -575,7 +575,14 @@ func (a *Admin) streamParams(r *http.Request) (module string, params map[string]
 	q := r.URL.Query()
 	switch q.Get("kind") {
 	case "terminal":
-		return "terminal", map[string]any{"cols": atoiClamp(q.Get("cols"), 1, 500, 80), "rows": atoiClamp(q.Get("rows"), 1, 500, 24)}, true
+		p := map[string]any{"cols": atoiClamp(q.Get("cols"), 1, 500, 80), "rows": atoiClamp(q.Get("rows"), 1, 500, 24)}
+		if user := q.Get("user"); user != "" { // a shell as another account (the Users tab); the agent checks it again
+			if !termUserRe.MatchString(user) {
+				return "", nil, false
+			}
+			p["user"] = user
+		}
+		return "terminal", p, true
 	case "logs":
 		p := map[string]any{"lines": atoiClamp(q.Get("lines"), 0, 1000, 200)}
 		if u := q.Get("unit"); u != "" {

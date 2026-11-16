@@ -114,5 +114,11 @@
   "audit.action.snippet.order": "Snippets reordered",
   "audit.action.snippet.run": "Snippet run",
   "audit.action.security.session.terminate": "SSH session ended",
-  "audit.group.security": "Security"
+  "audit.group.security": "Security",
+  "audit.action.hostuser.add": "User created on a server",
+  "audit.action.hostuser.update": "User changed on a server",
+  "audit.action.hostuser.delete": "User deleted from a server",
+  "audit.action.hostuser.password": "Server user password changed",
+  "audit.action.hostuser.kill": "Server user sessions ended",
+  "audit.group.hostusers": "Server users"
 }

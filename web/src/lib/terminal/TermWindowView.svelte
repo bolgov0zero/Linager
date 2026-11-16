@@ -38,7 +38,7 @@
       <button class="btn sm" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.paste()}><span class="ic"><TermIcon name="paste" /></span><span class="tx">{$tr('term.paste')}</span></button>
     {/if}
   {/snippet}
-  <TermSession {serverId} bind:phase bind:keys bind:this={session} onlimit={() => closeTermWindow(key)} />
+  <TermSession {serverId} asUser={win.asUser ?? ''} bind:phase bind:keys bind:this={session} onlimit={() => closeTermWindow(key)} />
 </WindowFrame>
 
 <style>

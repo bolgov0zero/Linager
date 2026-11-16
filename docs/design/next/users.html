@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Linager: макет вкладки «Пользователи»</title>
+<style>
+@font-face{font-family:"Medeo Mono";src:url(../mockup/fonts/MedeoMonoVariable.woff2) format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Medeo Pixel";src:url(../mockup/fonts/MedeoPixelVariable.woff) format("woff");font-style:normal;font-display:swap}
+:root{
+  --bg:#e8ebe5;--surface:#f6f7f3;--ink:#14181e;--muted:#5d6572;--line:#14181e;--accent:#2b55d9;--good:#1e8a4b;--warn:#b36f0e;--crit:#c4352a;--seg-off:#d5d9d0;--shade:#c3c8bd;
+  --ctl:36px;--ctl-sm:28px;--side:236px;
+  --font-display:"Medeo Pixel","Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  --font-body:"Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  font-variation-settings:"ELSH" 1;font-synthesis:none;color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45}
+h1,h2,h3,h4,p{margin:0}
+button{font:inherit;color:inherit}
+.muted{color:var(--muted)}.small{font-size:12px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px;border-bottom:2px solid var(--line);background:var(--surface)}
+.brand{display:flex;align-items:center;gap:10px}
+.brand h1{font-family:var(--font-display);font-size:22px;font-weight:400}
+.note{margin:0;padding:8px 20px;background:var(--ink);color:var(--surface);font-size:12px}
+main{padding:20px;max-width:1440px;margin:0 auto}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.btn,.chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:var(--ctl);background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;padding:0 12px;cursor:pointer;font-family:var(--font-display);font-size:14px;line-height:1;letter-spacing:.02em;box-shadow:3px 3px 0 var(--shade);white-space:nowrap}
+.btn.sm{height:var(--ctl-sm);padding:0 8px;font-size:12px}
+.btn.primary{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.btn.danger{background:var(--crit);color:var(--surface);border-color:var(--crit)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.chip{font-size:13px;padding:0 10px}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--surface)}
+.input{height:var(--ctl);background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;padding:0 8px;font-family:var(--font-body);font-size:13px;line-height:1;min-width:0}
+textarea.input{height:auto;padding:8px;line-height:1.4;resize:vertical}
+.card{background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);padding:16px}
+h3.t{font-family:var(--font-display);font-weight:400;font-size:16px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:10px}
+.new{display:inline-block;padding:0 6px;border:2px solid var(--accent);color:var(--accent);font-size:11px;letter-spacing:.04em;font-family:var(--font-body);text-transform:uppercase}
+.badge{display:inline-block;padding:0 6px;border:2px solid currentColor;font-size:12px;white-space:nowrap;line-height:1.35}
+.ok{color:var(--good)}.warn{color:var(--warn)}.crit{color:var(--crit)}.acc{color:var(--accent)}
+.dot{display:inline-block;width:8px;height:8px;background:currentColor;margin-right:6px}
+
+/* server head and layout (same as the sidebar mockup) */
+.srv-head{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:18px}
+.srv-head h2{font-family:var(--font-display);font-size:34px;font-weight:400}
+.layout{display:grid;grid-template-columns:var(--side) minmax(0,1fr);gap:20px;align-items:start}
+.side{position:sticky;top:16px;background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);padding:6px 0}
+.grp{padding:4px 8px 6px}.grp+.grp{border-top:2px dashed var(--seg-off)}
+.grp-h{height:28px;padding:0 6px;margin:2px 0;font-family:var(--font-display);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center}
+.item{display:flex;align-items:center;gap:10px;width:100%;height:34px;padding:0 10px;border:2px solid transparent;background:none;cursor:default;font-size:14px;text-align:left;position:relative}
+.item svg{width:16px;height:16px;flex:none;shape-rendering:crispEdges}
+.item .lbl{flex:1}
+.item[aria-selected=true]{background:var(--ink);color:var(--surface);border-color:var(--ink);box-shadow:3px 3px 0 var(--shade)}
+.item .cnt{font-size:12px;min-width:20px;height:20px;padding:0 5px;display:inline-flex;align-items:center;justify-content:center;border:2px solid currentColor}
+.crumb{font-family:var(--font-display);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.page-title{font-family:var(--font-display);font-size:26px;font-weight:400;margin:2px 0 12px}
+
+/* tab */
+.panel{background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);padding:16px}
+.tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px}
+.tools .grow{flex:1 1 200px;max-width:320px}
+.tools .end{margin-left:auto}
+.sums{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.sum{border:2px solid var(--line);padding:10px 12px}
+.sum b{display:block;font-family:var(--font-display);font-weight:400;font-size:26px;line-height:1.1}
+.wrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:1100px}
+.tbl th{font-family:var(--font-display);font-weight:400;font-size:12px;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:2px solid var(--line);white-space:nowrap}
+.tbl td{padding:8px;border-bottom:1px dashed var(--seg-off);vertical-align:middle}
+.tbl tr.u{cursor:pointer}
+.tbl tr.u:hover td{background:var(--seg-off)}
+.tbl tr.u.sel td{background:var(--seg-off)}
+.tbl .num{text-align:right}
+.uname{display:flex;align-items:center;gap:8px;font-weight:600;white-space:nowrap}
+.tbl td.nw{white-space:nowrap}
+.gl{display:flex;flex-wrap:wrap;gap:4px}
+.gtag{padding:0 6px;border:1px solid var(--muted);color:var(--muted);font-size:12px}
+.gtag.hot{border-color:var(--warn);color:var(--warn)}
+.acts{display:flex;gap:6px;justify-content:flex-end}
+.legend{margin-top:12px;color:var(--muted);font-size:12px}
+
+/* user properties (modal) */
+.dlg.wide{width:min(680px,100%)}
+.dlg.wide .body{max-height:68vh;overflow-y:auto;gap:18px}
+.dlg header .ttl{display:flex;align-items:center;gap:10px}
+.dlg.wide footer{flex-wrap:wrap}
+.btn.icon{min-width:28px;padding:0 6px}
+.sec h4{font-family:var(--font-display);font-weight:400;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:4px 12px;font-size:13px}
+.kv dt{color:var(--muted)}.kv dd{margin:0;word-break:break-all}
+.radios{display:flex;flex-direction:column;gap:6px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:2px solid var(--seg-off);cursor:pointer}
+.opt input{margin-top:3px}
+.opt.on{border-color:var(--line)}
+.opt small{display:block;color:var(--muted);font-size:12px}
+.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.chk{display:flex;gap:8px;align-items:center;padding:6px 8px;border:2px solid var(--seg-off);cursor:pointer;font-size:13px}
+.chk.on{border-color:var(--line)}
+.chk .hint{margin-left:auto;font-size:11px}
+.warnbox{border:2px solid var(--warn);color:var(--warn);padding:8px 10px;font-size:12px}
+.critbox{border:2px solid var(--crit);color:var(--crit);padding:8px 10px;font-size:12px}
+.switch{display:flex;align-items:center;gap:10px;cursor:pointer}
+.switch i{width:34px;height:18px;border:2px solid var(--line);position:relative;background:var(--seg-off);flex:none}
+.switch i::after{content:"";position:absolute;top:1px;left:1px;width:12px;height:12px;background:var(--ink)}
+.switch.on i{background:var(--accent)}
+.switch.on i::after{left:17px;background:var(--surface)}
+
+/* modal */
+.modal{position:fixed;inset:0;z-index:30;display:none;align-items:flex-start;justify-content:center;padding:6vh 16px;overflow-y:auto;background:rgba(10,12,16,.55)}
+.modal.on{display:flex}
+.dlg{background:var(--surface);border:2px solid var(--line);box-shadow:6px 6px 0 var(--shade);width:min(560px,100%)}
+.dlg header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:2px solid var(--line)}
+.dlg header h3{font-family:var(--font-display);font-weight:400;font-size:20px}
+.dlg .body{padding:16px;display:flex;flex-direction:column;gap:14px}
+.dlg footer{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:2px solid var(--line)}
+.f{display:flex;flex-direction:column;gap:4px}
+.f label{font-size:12px;color:var(--muted)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cmd{background:var(--bg);border:2px dashed var(--seg-off);padding:8px 10px;font-size:12px;overflow-x:auto;white-space:pre;color:var(--muted)}
+.cmd b{color:var(--ink);font-weight:400}
+
+/* floating terminal windows (same frame as the panel's windows) */
+.layer{position:fixed;inset:0;z-index:15;pointer-events:none;isolation:isolate}
+.win{position:absolute;display:flex;flex-direction:column;min-width:0;pointer-events:auto;background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade)}
+.win.max{left:8px!important;top:8px!important;width:calc(100% - 16px)!important;height:calc(100% - 56px)!important}
+.win.hidden{visibility:hidden;pointer-events:none}
+.win .bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px 6px 12px;border-bottom:2px solid var(--line);cursor:move;user-select:none;touch-action:none}
+.win.front .bar{background:var(--seg-off)}
+.win.max .bar{cursor:default}
+.win .name{display:flex;align-items:center;gap:8px;min-width:0;margin:0;font-size:12px;white-space:nowrap}
+.win .name .label{font-family:var(--font-display);overflow:hidden;text-overflow:ellipsis}
+.win .name .dot{width:10px;height:10px;border:2px solid var(--line);background:var(--muted);margin:0}
+.win .name .dot.on{background:var(--good)}
+.win .tools{display:flex;flex:none;gap:4px}
+.win .tools .btn{height:24px;padding:0 6px;font-size:12px;min-width:28px;box-shadow:2px 2px 0 var(--shade)}
+.win .asuser{display:flex;gap:8px;align-items:center;padding:6px 12px;border-bottom:2px solid var(--line);font-size:12px;background:var(--bg)}
+.screen{flex:1;min-height:0;background:#0b0e13;color:#d7dce6;font-size:13px;line-height:1.5;padding:12px 14px;overflow-y:auto;white-space:pre-wrap}
+.screen .p{color:#7ee0a3}.screen .d{color:#8a93a4}.screen .a{color:#7d9cff}.screen .c{display:inline-block;width:8px;height:15px;background:#d7dce6;vertical-align:text-bottom;animation:bl 1s steps(1) infinite}
+@keyframes bl{50%{opacity:0}}
+.grip{position:absolute;touch-action:none}
+.grip.e{top:0;right:-5px;width:10px;height:100%;cursor:ew-resize}
+.grip.s{left:0;bottom:-5px;height:10px;width:100%;cursor:ns-resize}
+.grip.se{right:-6px;bottom:-6px;width:14px;height:14px;cursor:nwse-resize}
+.dock{position:absolute;left:16px;bottom:12px;z-index:100000;display:flex;flex-wrap:wrap;gap:6px;max-width:calc(100% - 32px);pointer-events:auto}
+.dock .btn{height:var(--ctl-sm);max-width:240px;overflow:hidden;text-overflow:ellipsis;font-size:12px;padding:0 8px}
+.btn.ink{background:var(--ink);color:var(--surface)}
+.btn.off{color:var(--muted)}
+@keyframes bl{50%{opacity:0}}
+.menu{position:absolute;right:0;top:calc(100% + 4px);z-index:10;background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);min-width:210px;display:none}
+.menu.on{display:block}
+.menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:8px 12px;cursor:pointer;font-size:13px}
+.menu button:hover{background:var(--seg-off)}
+.menu hr{border:0;border-top:2px dashed var(--seg-off);margin:2px 0}
+.rel{position:relative}
+@media (max-width:860px){.layout{grid-template-columns:1fr}.side{display:none}.sums{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 14 14" width="30" height="30" shape-rendering="crispEdges" aria-hidden="true"><rect width="14" height="14" rx="3" fill="#0f1218"/><rect x="2" y="3" width="2" height="2" fill="#e6e9ef"/><rect x="4" y="5" width="2" height="2" fill="#e6e9ef"/><rect x="6" y="7" width="2" height="2" fill="#e6e9ef"/><rect x="4" y="9" width="2" height="2" fill="#e6e9ef"/><rect x="8" y="10" width="4" height="2" fill="#7d9cff"/></svg>
+    <h1>Linager</h1>
+  </div>
+  <div class="row"><button class="btn" id="theme" type="button">Тема</button></div>
+</header>
+<p class="note">Макет вкладки «Пользователи» (новая вкладка группы «Сеть и защита», модуль агента <b>users</b>). Данные вымышленные. Работают: фильтры и поиск, строка открывает свойства учётной записи в окне, «Добавить», «Удалить»; «Терминал» открывает плавающее окно (перетаскивание, размер, свернуть, развернуть, закрыть, панель окон внизу слева), можно открыть несколько. Пометка «новое» отмечает то, чего в панели ещё нет.</p>
+
+<main>
+  <div class="srv-head">
+    <h2>web-01</h2>
+    <span class="badge ok"><span class="dot"></span>в сети</span>
+    <span class="muted small">5.42.125.44 · Debian 13 · агент v0.1.51</span>
+  </div>
+
+  <div class="layout">
+    <aside class="side" id="side"></aside>
+    <section>
+      <div class="crumb">Сеть и защита</div>
+      <h2 class="page-title">Пользователи <span class="new">новое</span></h2>
+      <div class="panel">
+        <div class="sums" id="sums"></div>
+        <div class="tools">
+          <input class="input grow" id="q" type="search" placeholder="Поиск по имени, группе, оболочке">
+          <button class="chip" data-f="human" aria-pressed="true" type="button">Обычные</button>
+          <button class="chip" data-f="system" aria-pressed="false" type="button">Системные</button>
+          <button class="chip" data-f="sudo" aria-pressed="false" type="button">С sudo</button>
+          <button class="chip" data-f="online" aria-pressed="false" type="button">В сети</button>
+          <button class="btn primary end" id="add" type="button">Добавить пользователя</button>
+        </div>
+        <div class="wrap">
+          <table class="tbl">
+            <thead><tr><th>Пользователь</th><th class="num">UID</th><th>Права</th><th>Группы</th><th>Оболочка</th><th>Последний вход</th><th>Сейчас</th><th></th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <p class="legend" id="legend"></p>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- user properties -->
+<div class="modal" id="m-user"><div class="dlg wide" id="user-dlg"></div></div>
+
+<!-- add dialog -->
+<div class="modal" id="m-add">
+  <div class="dlg">
+    <header><h3>Добавить пользователя</h3><button class="btn sm" data-close type="button">Закрыть</button></header>
+    <div class="body">
+      <div class="two">
+        <div class="f"><label>Имя (логин)</label><input class="input" id="a-login" value="reports" autocomplete="off"></div>
+        <div class="f"><label>Описание (GECOS)</label><input class="input" value="Отчёты и выгрузки"></div>
+      </div>
+      <div class="two">
+        <div class="f"><label>Оболочка</label><select class="input"><option>/bin/bash</option><option>/bin/sh</option><option>/usr/sbin/nologin (без входа)</option></select></div>
+        <div class="f"><label>Домашний каталог</label><input class="input" id="a-home" value="/home/reports"></div>
+      </div>
+      <div class="f"><label>Пароль</label>
+        <div class="radios">
+          <label class="opt on"><input type="radio" name="pw" checked><span>Сгенерировать и показать один раз<small>20 символов, срок не ограничен, смена при первом входе по желанию</small></span></label>
+          <label class="opt"><input type="radio" name="pw"><span>Задать вручную</span></label>
+          <label class="opt"><input type="radio" name="pw"><span>Без пароля, только вход по ключу<small>учётная запись создаётся с заблокированным паролем</small></span></label>
+        </div>
+      </div>
+      <div class="f"><label>Группы</label>
+        <div class="row" id="a-groups"></div>
+      </div>
+      <div class="f"><label>Открытый SSH-ключ (необязательно)</label><textarea class="input" rows="2" placeholder="ssh-ed25519 AAAA… user@host"></textarea></div>
+      <div class="f"><label>Будет выполнено на сервере</label><div class="cmd" id="a-cmd"></div></div>
+    </div>
+    <footer><button class="btn" data-close type="button">Отмена</button><button class="btn primary" id="a-do" type="button">Создать</button></footer>
+  </div>
+</div>
+
+<!-- delete dialog -->
+<div class="modal" id="m-del"><div class="dlg" id="del-dlg"></div></div>
+
+<!-- floating terminals as a user: above the page, below dialogs -->
+<div class="layer" id="layer"><nav class="dock" id="dock" aria-label="Открытые окна"></nav></div>
+
+<script>
+const ICONS={overview:["11100111","10100101","11100111","00000000","11100111","10100101","11100111","00000000"],metrics:["00000001","00000001","00010001","00010101","01010101","01010101","01010101","11111111"],terminal:["00000000","10000000","01000000","00100000","01000000","10000000","00011110","00000000"],services:["00000000","11001111","11001111","00000000","11110011","11110011","00000000","00000000"],processes:["01010100","01111110","11000011","01000010","11000011","01111110","00101010","00000000"],logs:["00000000","11111100","00000000","11111111","00000000","11110000","00000000","11111111"],updates:["00011000","00011000","01011010","00111100","00011000","00000000","11111111","11111111"],files:["00000000","11110000","11111111","10000001","10000001","10000001","11111111","00000000"],disk:["00000000","11111111","10000001","10000001","11111111","10000101","11111111","00000000"],network:["00011000","00011000","00011000","11111111","10011001","10011001","11011011","11011011"],firewall:["11101110","11101110","00000000","10111011","10111011","00000000","11101110","11101110"],security:["01111110","11111111","11100111","11100111","11100111","01100110","00111100","00011000"],docker:["00110000","00110000","11011011","11011011","00000000","11111111","11111111","01111110"],
+users:["00111100","01111110","01111110","00111100","00000000","11111111","11111111","11111111"]};
+const icon=id=>{let r="";(ICONS[id]||ICONS.overview).forEach((row,y)=>[...row].forEach((c,x)=>{if(c==="1")r+=`<rect x="${x}" y="${y}" width="1" height="1"/>`}));return `<svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true">${r}</svg>`};
+const NAV=[["Общее",[["overview","Обзор"],["metrics","Метрики"],["terminal","Терминал"]]],["Система",[["services","Службы"],["processes","Процессы"],["logs","Логи"],["updates","Обновления","12"]]],["Файловая система",[["files","Файлы"],["disk","Диск"]]],["Сеть и защита",[["network","Сеть"],["firewall","Файрвол"],["security","Безопасность"],["users","Пользователи"]]],["Приложения",[["docker","Docker"]]]];
+document.getElementById("side").innerHTML=NAV.map(([g,items])=>`<div class="grp"><div class="grp-h">${g}</div>${items.map(([id,t,c])=>`<div class="item" ${id==="users"?'aria-selected="true"':""}>${icon(id)}<span class="lbl">${t}</span>${c?`<span class="cnt warn">${c}</span>`:""}</div>`).join("")}</div>`).join("");
+
+/* demo data; sudo: none | pw | nopw | root */
+const GROUPS=["sudo","docker","adm","www-data","systemd-journal","backup","ssh-users"];
+const HOT={sudo:1,docker:1}; /* groups that give root-like power */
+const USERS=[
+ {n:"root",uid:0,gid:0,home:"/root",shell:"/bin/bash",g:[],sudo:"root",last:"сегодня 09:12",from:"10.0.0.5",sess:1,proc:42,human:true,locked:false,prot:true,keys:2,pw:"задан, изменён 02.09.2026"},
+ {n:"bolgov",uid:1000,gid:1000,home:"/home/bolgov",shell:"/bin/bash",g:["sudo","docker","adm"],sudo:"pw",last:"сегодня 14:02",from:"10.0.0.5",sess:2,proc:17,human:true,locked:false,keys:1,pw:"задан, изменён 14.10.2026",full:"Владелец сервера"},
+ {n:"deploy",uid:1001,gid:1001,home:"/home/deploy",shell:"/bin/bash",g:["docker","www-data"],sudo:"none",last:"12 ноя, 22:41",from:"172.20.99.7",sess:0,proc:3,human:true,locked:false,keys:3,pw:"не задан (вход по ключу)",full:"Выкладка сайта"},
+ {n:"reporter",uid:1002,gid:1002,home:"/home/reporter",shell:"/bin/bash",g:["adm","systemd-journal"],sudo:"none",last:"15 ноя, 08:03",from:"172.20.99.12",sess:0,proc:0,human:true,locked:false,keys:0,pw:"задан, изменён 01.11.2026",full:"Только чтение логов"},
+ {n:"ci-runner",uid:1003,gid:1003,home:"/home/ci-runner",shell:"/bin/bash",g:["docker"],sudo:"nopw",last:"14 сен, 03:15",from:"172.20.99.30",sess:0,proc:0,human:true,locked:true,keys:1,pw:"заблокирован",full:"Сборочный агент"},
+ {n:"backup",uid:1004,gid:1004,home:"/var/backups/linager",shell:"/usr/sbin/nologin",g:["backup"],sudo:"none",last:"никогда",from:"",sess:0,proc:0,human:true,locked:false,keys:1,pw:"не задан (вход по ключу)",full:"Резервное копирование"},
+ {n:"postgres",uid:108,gid:116,home:"/var/lib/postgresql",shell:"/bin/bash",g:["ssl-cert"],sudo:"none",last:"никогда",from:"",sess:0,proc:9,human:false,locked:true,keys:0,pw:"заблокирован"},
+ {n:"www-data",uid:33,gid:33,home:"/var/www",shell:"/usr/sbin/nologin",g:[],sudo:"none",last:"никогда",from:"",sess:0,proc:6,human:false,locked:true,keys:0,pw:"заблокирован"},
+ {n:"systemd-network",uid:998,gid:998,home:"/",shell:"/usr/sbin/nologin",g:[],sudo:"none",last:"никогда",from:"",sess:0,proc:1,human:false,locked:true,keys:0,pw:"заблокирован"},
+];
+const SUDO={none:["—","muted"],pw:["sudo","warn"],nopw:["sudo без пароля","crit"],root:["суперпользователь","crit"]};
+const $=s=>document.querySelector(s);
+const state={f:new Set(["human"]),q:"",sel:null};
+const nologin=u=>/nologin|false/.test(u.shell);
+
+function sums(){
+  const h=USERS.filter(u=>u.human);
+  $("#sums").innerHTML=[
+    [h.length,"обычных пользователей"],
+    [USERS.filter(u=>u.sudo!=="none").length,"с правами sudo"],
+    [USERS.reduce((a,u)=>a+u.sess,0),"сеансов сейчас"],
+    [USERS.filter(u=>u.locked&&u.human).length,"заблокировано"]
+  ].map(([n,t])=>`<div class="sum"><b>${n}</b><span class="muted small">${t}</span></div>`).join("");
+}
+function list(){
+  const q=state.q.toLowerCase();
+  const typeF=state.f.has("human")||state.f.has("system");
+  return USERS.filter(u=>{
+    if(typeF&&!((state.f.has("human")&&u.human)||(state.f.has("system")&&!u.human)))return false;
+    if(state.f.has("sudo")&&u.sudo==="none")return false;
+    if(state.f.has("online")&&!u.sess)return false;
+    if(q&&!(u.n+" "+u.g.join(" ")+" "+u.shell+" "+(u.full||"")).toLowerCase().includes(q))return false;
+    return true;
+  });
+}
+function rows(){
+  const us=list();
+  $("#rows").innerHTML=us.map(u=>{
+    const [st,tone]=SUDO[u.sudo];
+    const termOff=nologin(u);
+    return `<tr class="u ${state.sel===u.n?"sel":""}" data-u="${u.n}">
+      <td><div class="uname"><span>${u.n}</span>${u.locked?'<span class="badge warn">заблокирован</span>':""}${u.prot?'<span class="badge muted">защищён</span>':""}</div><div class="muted small">${u.full||(u.human?"":"системная учётная запись")}</div></td>
+      <td class="num">${u.uid}</td>
+      <td><span class="${tone==="muted"?"muted":"badge "+tone}">${st}</span></td>
+      <td><div class="gl">${u.g.length?u.g.map(g=>`<span class="gtag ${HOT[g]?"hot":""}">${g}</span>`).join(""):'<span class="muted">—</span>'}</div></td>
+      <td class="${termOff?"muted":""}">${u.shell}</td>
+      <td class="nw">${u.last}${u.from?`<div class="muted small">с ${u.from}</div>`:""}</td>
+      <td class="nw">${u.sess?`<span class="ok"><span class="dot"></span>${u.sess} ${u.sess===1?"сеанс":"сеанса"}</span>`:'<span class="muted">—</span>'}</td>
+      <td><div class="acts">
+        <button class="btn sm" data-term="${u.n}" ${termOff?'disabled title="У пользователя нет оболочки (nologin)"':""} type="button">Терминал</button>
+        <span class="rel"><button class="btn sm" data-more="${u.n}" type="button">⋯</button>
+          <div class="menu" data-menu="${u.n}">
+            <button data-open="${u.n}" type="button">Свойства и права</button>
+            <button data-lock="${u.n}" type="button">${u.locked?"Разблокировать":"Заблокировать"}</button>
+            <button data-pass="${u.n}" type="button">Сменить пароль</button>
+            <button data-kill="${u.n}" ${u.sess?"":"disabled"} type="button">Завершить сеансы</button>
+            <hr>
+            <button data-del="${u.n}" class="crit" ${u.prot?"disabled":""} type="button">Удалить…</button>
+          </div></span>
+      </div></td></tr>`}).join("")||`<tr><td colspan="8" class="muted" style="padding:24px;text-align:center">Нет пользователей по этим условиям</td></tr>`;
+  $("#legend").textContent=`Показано ${us.length} из ${USERS.length}. Оранжевые группы (sudo, docker) дают почти полный доступ к серверу. Эта вкладка относится к «правам root»: оператор видит её, только если администратор выдал модуль «Пользователи».`;
+}
+
+/* user properties (modal) */
+function closeModal(m){m.classList.remove("on");if(m.id==="m-user"){state.sel=null;rows()}}
+function openDrawer(name){
+  const u=USERS.find(x=>x.n===name);state.sel=name;rows();
+  const lastSudo=u.sudo!=="none"&&USERS.filter(x=>x.sudo!=="none"&&!x.locked&&x.n!==u.n).length===0;
+  $("#user-dlg").innerHTML=`
+  <header><div class="ttl"><h3>Свойства: ${u.n}</h3>${u.locked?'<span class="badge warn">заблокирован</span>':""}${u.prot?'<span class="badge muted">защищён</span>':""}</div><button class="btn sm icon" data-close title="Закрыть" aria-label="Закрыть" type="button">×</button></header>
+  <div class="body">
+    <div class="sec"><h4>Учётная запись</h4>
+      <dl class="kv"><dt>UID / GID</dt><dd>${u.uid} / ${u.gid}</dd><dt>Каталог</dt><dd>${u.home}</dd><dt>Оболочка</dt><dd>${u.shell}</dd><dt>Пароль</dt><dd>${u.pw}</dd><dt>Ключи SSH</dt><dd>${u.keys} <span class="muted">· <a href="#" style="color:var(--accent)">открыть во вкладке «Безопасность»</a></span></dd><dt>Сейчас</dt><dd>${u.sess?`${u.sess} сеанса, ${u.proc} процессов`:`нет сеансов, ${u.proc} процессов`}</dd></dl>
+    </div>
+    <div class="sec"><h4>Права sudo</h4>
+      <div class="radios" id="d-sudo">
+        ${[["none","Нет","обычный пользователь"],["pw","Да, с паролем","строка в /etc/sudoers.d/ с запросом пароля"],["nopw","Да, без пароля","NOPASSWD: ALL, опасно: любой, кто войдёт, станет root"]].map(([v,t,sm])=>`<label class="opt ${u.sudo===v?"on":""}"><input type="radio" name="sd" value="${v}" ${u.sudo===v?"checked":""} ${u.prot?"disabled":""}><span>${t}<small>${sm}</small></span></label>`).join("")}
+      </div>
+      ${lastSudo?'<div class="warnbox" style="margin-top:8px">Это единственный разблокированный пользователь с sudo. Снять права нельзя без выбора другого.</div>':""}
+    </div>
+    <div class="sec"><h4>Группы</h4>
+      <div class="checks">${GROUPS.map(g=>`<label class="chk ${u.g.includes(g)?"on":""}"><input type="checkbox" ${u.g.includes(g)?"checked":""} ${u.prot?"disabled":""}> ${g}${HOT[g]?'<span class="hint warn">почти root</span>':""}</label>`).join("")}</div>
+    </div>
+    <div class="sec"><h4>Вход</h4>
+      <label class="switch ${u.locked?"on":""}"><i></i><span>Заблокировать учётную запись<br><span class="muted small">пароль и вход по ключу перестают работать, сеансы остаются</span></span></label>
+    </div>
+    <div class="warnbox">Изменения применяются на сервере сразу, каждое запишется в журнал аудита: кто, на каком сервере, что изменено.</div>
+  </div>
+  <footer>
+    <button class="btn danger" data-del="${u.n}" ${u.prot?"disabled":""} type="button" style="margin-right:auto">Удалить…</button>
+    <button class="btn primary" type="button">Применить</button>
+    <button class="btn" data-close type="button">Отмена</button>
+  </footer>`;
+  $("#m-user").classList.add("on");
+}
+function closeDrawer(){closeModal($("#m-user"))}
+
+/* add dialog */
+function addCmd(){
+  const l=$("#a-login").value||"user",h=$("#a-home").value;
+  const g=[...document.querySelectorAll("#a-groups .gchip[aria-pressed=true]")].map(x=>x.dataset.g);
+  $("#a-cmd").innerHTML=`<b>useradd</b> --create-home --home-dir ${h} --shell /bin/bash${g.length?` --groups ${g.join(",")}`:""} ${l}\n<b>chpasswd</b> <span class="muted"># пароль идёт через stdin, в журнал не попадает</span>\n<b>chage</b> --lastday 0 ${l} <span class="muted"># по желанию: сменить при первом входе</span>`;
+}
+$("#a-groups").innerHTML=GROUPS.map(g=>`<button class="chip gchip" data-g="${g}" aria-pressed="${g==="www-data"}" type="button">${g}${HOT[g]?" ⚠":""}</button>`).join("");
+$("#a-groups").onclick=e=>{const b=e.target.closest(".gchip");if(!b)return;b.setAttribute("aria-pressed",b.getAttribute("aria-pressed")!=="true");addCmd()};
+$("#a-login").oninput=addCmd;$("#a-home").oninput=addCmd;addCmd();
+
+/* delete dialog */
+function openDel(name){
+  const u=USERS.find(x=>x.n===name);
+  $("#del-dlg").innerHTML=`
+  <header><h3>Удалить «${u.n}»?</h3><button class="btn sm" data-close type="button">Закрыть</button></header>
+  <div class="body">
+    <div class="critbox">Действие необратимо. Учётная запись исчезнет с сервера web-01.</div>
+    ${u.sess?`<div class="warnbox">Сейчас у пользователя ${u.sess} ${u.sess===1?"сеанс":"сеанса"} и ${u.proc} процессов. Они будут завершены.</div>`:""}
+    <label class="switch on"><i></i><span>Удалить домашний каталог <span class="muted">${u.home}, 1.4 GB</span><br><span class="muted small">без этого файлы останутся в каталоге без владельца</span></span></label>
+    <label class="switch"><i></i><span>Удалить почтовый ящик и задания cron</span></label>
+    ${u.keys?`<div class="muted small">Будут удалены ${u.keys} ключа SSH из его authorized_keys (вместе с каталогом).</div>`:""}
+    <div class="f"><label>Чтобы подтвердить, введите имя: <b>${u.n}</b></label><input class="input" id="del-in" autocomplete="off"></div>
+    <div class="cmd"><b>userdel</b> --remove ${u.n}</div>
+  </div>
+  <footer><button class="btn" data-close type="button">Отмена</button><button class="btn danger" id="del-do" disabled type="button">Удалить</button></footer>`;
+  $("#m-del").classList.add("on");
+  $("#del-in").oninput=e=>{$("#del-do").disabled=e.target.value!==u.n};
+  $("#del-do").onclick=()=>{USERS.splice(USERS.indexOf(u),1);$("#m-del").classList.remove("on");closeDrawer();sums();rows()};
+}
+
+/* floating terminal windows: drag, resize, minimize, maximize, close, dock */
+const layer=$("#layer"),dock=$("#dock");let wk=0,topZ=10;const WINS=[];
+const topWin=()=>WINS.filter(w=>!w.min).sort((a,b)=>b.z-a.z)[0];
+function paint(){
+  const top=topWin();
+  WINS.forEach(w=>{const e=w.el;e.style.left=w.x+"px";e.style.top=w.y+"px";e.style.width=w.w+"px";e.style.height=w.h+"px";e.style.zIndex=w.z;e.classList.toggle("max",w.max);e.classList.toggle("hidden",w.min);e.classList.toggle("front",w===top);e.querySelector('[data-w=max]').textContent=w.max?"▭":"□"});
+  dock.innerHTML=WINS.map(w=>`<button class="btn sm ${w===top?"ink":""} ${w.min?"off":""}" data-dock="${w.key}" title="${w.min?"Восстановить":"Свернуть"}" type="button">&gt;_ ${w.title}</button>`).join("");
+}
+function focusWin(w){if(w.z===topZ&&!w.min)return;w.z=++topZ;w.min=false;paint()}
+function drag(w,e,mode){
+  if(w.max)return;e.preventDefault();
+  const sx=e.clientX,sy=e.clientY,o={x:w.x,y:w.y,w:w.w,h:w.h};
+  const mv=ev=>{const dx=ev.clientX-sx,dy=ev.clientY-sy;
+    if(mode==="move"){w.x=Math.max(-w.w+120,Math.min(innerWidth-120,o.x+dx));w.y=Math.max(0,Math.min(innerHeight-60,o.y+dy))}
+    else{if(mode.includes("e"))w.w=Math.max(380,o.w+dx);if(mode.includes("s"))w.h=Math.max(240,o.h+dy)}
+    paint()};
+  const up=()=>{removeEventListener("pointermove",mv);removeEventListener("pointerup",up)};
+  addEventListener("pointermove",mv);addEventListener("pointerup",up);
+}
+function openTerm(name){
+  const u=USERS.find(x=>x.n===name);
+  const ex=WINS.find(w=>w.name===name);
+  if(ex){ex.min=false;ex.z=++topZ;paint();return}
+  const w={key:++wk,name,title:`${u.n}@web-01`,x:Math.min(120+WINS.length*36,Math.max(0,innerWidth-820)),y:110+WINS.length*30,w:780,h:430,z:++topZ,min:false,max:false};
+  const P=`<span class="p">${u.n}@web-01</span>:<span class="a">~</span>$ `;
+  const lines=[`<span class="d">Linager · сеанс от имени ${u.n} · web-01</span>`,`Linux web-01 6.12.117+deb13-cloud-amd64 #1 SMP PREEMPT_DYNAMIC Debian x86_64`,``,
+    P+`id`,`uid=${u.uid}(${u.n}) gid=${u.gid}(${u.n}) groups=${u.gid}(${u.n})${u.g.length?","+u.g.join(","):""}`,
+    P+`pwd`,u.home,
+    P+`sudo -n true`,u.sudo==="none"?`sudo: a password is required`:`<span class="d">(sudo ${u.sudo==="nopw"?"без пароля":"доступен"})</span>`,
+    P+`<span class="c"></span>`];
+  const el=document.createElement("section");el.className="win";el.setAttribute("aria-label",`Терминал ${w.title}`);
+  el.innerHTML=`<header class="bar"><p class="name"><span class="dot on"></span><span class="label">Терминал · ${w.title}</span><span class="badge acc">от имени ${u.n}</span></p>
+    <div class="tools"><button class="btn sm icon" data-w="min" title="Свернуть" aria-label="Свернуть" type="button">_</button><button class="btn sm icon" data-w="max" title="Развернуть" aria-label="Развернуть" type="button">□</button><button class="btn sm icon" data-w="close" title="Закрыть" aria-label="Закрыть" type="button">×</button></div></header>
+    <div class="asuser"><span class="muted">Сеанс открыт агентом как root через <b>runuser -l ${u.n}</b>. Пароль не нужен. Начало и конец сеанса записаны в журнал аудита.</span></div>
+    <div class="screen">${lines.join("\n")}</div>
+    <div class="grip e"></div><div class="grip s"></div><div class="grip se"></div>`;
+  w.el=el;WINS.push(w);layer.insertBefore(el,dock);
+  el.addEventListener("pointerdown",()=>focusWin(w),true);
+  const bar=el.querySelector(".bar");
+  bar.addEventListener("pointerdown",e=>{if(!e.target.closest("button"))drag(w,e,"move")});
+  bar.addEventListener("dblclick",()=>{w.max=!w.max;paint()});
+  el.querySelector(".grip.e").addEventListener("pointerdown",e=>drag(w,e,"e"));
+  el.querySelector(".grip.s").addEventListener("pointerdown",e=>drag(w,e,"s"));
+  el.querySelector(".grip.se").addEventListener("pointerdown",e=>drag(w,e,"se"));
+  el.querySelector('[data-w=min]').onclick=()=>{w.min=true;paint()};
+  el.querySelector('[data-w=max]').onclick=()=>{w.max=!w.max;paint()};
+  el.querySelector('[data-w=close]').onclick=()=>{WINS.splice(WINS.indexOf(w),1);el.remove();paint()};
+  paint();
+}
+
+/* events */
+document.addEventListener("click",e=>{
+  const t=e.target;
+  if(!t.closest(".rel"))document.querySelectorAll(".menu.on").forEach(m=>m.classList.remove("on"));
+  const more=t.closest("[data-more]");
+  if(more){e.stopPropagation();const m=document.querySelector(`[data-menu="${more.dataset.more}"]`);const on=m.classList.contains("on");document.querySelectorAll(".menu.on").forEach(x=>x.classList.remove("on"));if(!on)m.classList.add("on");return}
+  const dk=t.closest("[data-dock]");if(dk){const w=WINS.find(x=>x.key==+dk.dataset.dock);const top=topWin();if(w.min){w.min=false;w.z=++topZ}else if(w===top){w.min=true}else{w.z=++topZ}paint();return}
+  const term=t.closest("[data-term]");if(term&&!term.disabled){e.stopPropagation();closeDrawer();openTerm(term.dataset.term);return}
+  const del=t.closest("[data-del]");if(del&&!del.disabled){e.stopPropagation();openDel(del.dataset.del);return}
+  const open=t.closest("[data-open]");if(open){openDrawer(open.dataset.open);return}
+  const lock=t.closest("[data-lock]");if(lock){const u=USERS.find(x=>x.n===lock.dataset.lock);u.locked=!u.locked;sums();rows();return}
+  if(t.closest("[data-pass],[data-kill]"))return;
+  if(t.closest("[data-close]")){closeModal(t.closest(".modal"));return}
+  if(t.classList.contains("modal")){closeModal(t);return}
+  const row=t.closest("tr.u");if(row&&!t.closest(".acts")){openDrawer(row.dataset.u)}
+});
+document.getElementById("rows").addEventListener("click",()=>{});
+$("#add").onclick=()=>{$("#m-add").classList.add("on")};
+$("#a-do").onclick=()=>{
+  const n=$("#a-login").value.trim();if(!n)return;
+  USERS.splice(7,0,{n,uid:1005,gid:1005,home:$("#a-home").value,shell:"/bin/bash",g:[...document.querySelectorAll("#a-groups .gchip[aria-pressed=true]")].map(x=>x.dataset.g),sudo:"none",last:"никогда",from:"",sess:0,proc:0,human:true,locked:false,keys:0,pw:"задан",full:"Только что создан"});
+  $("#m-add").classList.remove("on");sums();rows();
+};
+document.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{
+  const f=b.dataset.f;
+  if(f==="human"||f==="system"){ /* the two kinds can be shown together */ }
+  state.f.has(f)?state.f.delete(f):state.f.add(f);
+  b.setAttribute("aria-pressed",state.f.has(f));rows();
+});
+$("#q").oninput=e=>{state.q=e.target.value;rows()};
+$("#theme").onclick=()=>{const r=document.documentElement,d=getComputedStyle(r).colorScheme==="dark";r.dataset.theme=d?"light":"dark"};
+document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".modal.on").forEach(closeModal)});
+sums();rows();
+</script>
+</body>
+</html>

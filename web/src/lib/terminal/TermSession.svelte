@@ -15,11 +15,14 @@
   // The xterm screen and its socket, shared by the server-page tab and the floating windows.
   let {
     serverId,
+    asUser = '',
     phase = $bindable('connecting'),
     keys = $bindable(false),
     onlimit,
   }: {
     serverId: string;
+    /** Open the shell as this account instead of root. */
+    asUser?: string;
     phase?: TermPhase;
     /** Show the on-screen key panel above the screen. */
     keys?: boolean;
@@ -155,7 +158,7 @@
       });
 
       const encoder = new TextEncoder();
-      const socket = openStream(id, 'terminal', { cols: term.cols, rows: term.rows });
+      const socket = openStream(id, 'terminal', asUser ? { cols: term.cols, rows: term.rows, user: asUser } : { cols: term.cols, rows: term.rows });
       let active = true;
       phase = 'connecting';
       reason = null;

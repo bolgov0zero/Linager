@@ -16,6 +16,9 @@ import (
 type termParams struct {
 	Cols int `json:"cols"`
 	Rows int `json:"rows"`
+	// User opens the shell as another account (the "Users" tab). The agent runs as root, so it needs no
+	// password: `runuser -l` starts a login shell for the account. The name is checked against /etc/passwd.
+	User string `json:"user"`
 }
 
 func clampSize(v, def int) int {
@@ -74,6 +77,14 @@ func termStream(ctx context.Context, raw json.RawMessage, sio *StreamIO) error {
 	cmd := exec.Command(shell, "-l") //nolint:gosec // the terminal is a root shell by design; gated by the terminal module and audit
 	cmd.Env = termEnv(shell, os.Environ())
 	cmd.Dir = homeDir()
+	if p.User != "" {
+		name, err := termUser(p.User)
+		if err != nil {
+			return err
+		}
+		cmd = exec.Command("runuser", "-l", name) //nolint:gosec // the name is a regular account found in /etc/passwd
+		cmd.Env = []string{"TERM=xterm-256color", "LANG=C.UTF-8", "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}
+	}
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: uint16(clampSize(p.Cols, 80)), Rows: uint16(clampSize(p.Rows, 24))}) //nolint:gosec // bounded by clampSize
 	if err != nil {
 		return err
@@ -135,6 +146,31 @@ func termStream(ctx context.Context, raw json.RawMessage, sio *StreamIO) error {
 			_ = pty.Setsize(ptmx, &pty.Winsize{Cols: uint16(clampSize(sz[0], 80)), Rows: uint16(clampSize(sz[1], 24))}) //nolint:gosec // bounded by clampSize
 		}
 	}
+}
+
+// termUser accepts an account for a terminal as a user: a regular account with a real shell that exists on
+// the host, so a name from the browser cannot select anything else.
+func termUser(name string) (string, error) {
+	if !userNameRe.MatchString(name) {
+		return "", errors.New("invalid user")
+	}
+	b, err := os.ReadFile("/etc/passwd")
+	if err != nil {
+		return "", err
+	}
+	for _, u := range parsePasswdAll(string(b)) {
+		if u.Name != name {
+			continue
+		}
+		if u.UID != 0 && (u.UID < uidMinHuman || u.UID > uidMaxHuman) {
+			return "", errors.New("a terminal can be opened as root or as a regular user only")
+		}
+		if isNoShell(u.Shell) {
+			return "", errors.New("this account has no shell")
+		}
+		return name, nil
+	}
+	return "", errors.New("no such user")
 }
 
 // homeDir is the working directory of new shells: the home of the user running the agent

@@ -23,13 +23,15 @@ import enAudit from './locales/en.audit.json';
 import enSettings from './locales/en.settings.json';
 import enSec from './locales/en.sec.json';
 import enDisk from './locales/en.disk.json';
+import ruUsers from './locales/ru.users.json';
+import enUsers from './locales/en.users.json';
 
 export type Locale = 'ru' | 'en';
 export type Vars = Record<string, string | number>;
 
 const dictionaries: Record<Locale, Record<string, string>> = {
-  ru: { ...ru, ...ruServer, ...ruTerm, ...ruMgmt, ...ruFiles, ...ruNet, ...ruFw, ...ruUpd, ...ruAudit, ...ruSettings, ...ruSec, ...ruDisk },
-  en: { ...en, ...enServer, ...enTerm, ...enMgmt, ...enFiles, ...enNet, ...enFw, ...enUpd, ...enAudit, ...enSettings, ...enSec, ...enDisk },
+  ru: { ...ru, ...ruServer, ...ruTerm, ...ruMgmt, ...ruFiles, ...ruNet, ...ruFw, ...ruUpd, ...ruAudit, ...ruSettings, ...ruSec, ...ruDisk, ...ruUsers },
+  en: { ...en, ...enServer, ...enTerm, ...enMgmt, ...enFiles, ...enNet, ...enFw, ...enUpd, ...enAudit, ...enSettings, ...enSec, ...enDisk, ...enUsers },
 };
 const STORAGE_KEY = 'linager.lang';
 const DEFAULT_LOCALE: Locale = 'ru';

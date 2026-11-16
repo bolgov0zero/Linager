@@ -20,10 +20,10 @@ import (
 // The auditor only reaches "any" and "srv" routes, which are reads or the own data of the user.
 
 // OperatorModules are the agent modules that can be given to an operator, in display order.
-var OperatorModules = []string{"terminal", "files", "services", "apt", "processes", "logs", "disk", "network", "firewall", "security", "docker"}
+var OperatorModules = []string{"terminal", "files", "services", "apt", "processes", "logs", "disk", "network", "firewall", "security", "users", "docker"}
 
 // RootModules give the access of root on the host, whatever the panel forbids elsewhere.
-var RootModules = []string{"terminal", "files", "network", "firewall", "security", "docker"}
+var RootModules = []string{"terminal", "files", "network", "firewall", "security", "users", "docker"}
 
 type routeInfo struct {
 	Pattern string

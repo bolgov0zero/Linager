@@ -192,6 +192,15 @@ func NewRegistry(cfg *config.Agent, col Collector, log *slog.Logger, dataDir str
 		r.cmds["disk.scan"] = dm.scanCmd
 		r.cmds["disk.clean"] = dm.cleanCmd
 	}
+	if cfg.Enabled("users") {
+		um := newUsersModule()
+		r.cmds["users.state"] = um.state
+		r.cmds["users.add"] = um.add
+		r.cmds["users.update"] = um.update
+		r.cmds["users.delete"] = um.del
+		r.cmds["users.passwd"] = um.passwd
+		r.cmds["users.kill"] = um.kill
+	}
 	r.cmds["system.reboot"] = sysReboot // always available: rebooting is not a toggleable module
 	return r
 }

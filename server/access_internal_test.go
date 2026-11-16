@@ -1,6 +1,7 @@
 package server
 
 import (
+	"net/http/httptest"
 	"regexp"
 	"strings"
 	"testing"
@@ -8,7 +9,7 @@ import (
 	"github.com/bolgov0zero/linager/internal/config"
 )
 
-var specRe = regexp.MustCompile(`^(any|admin|srv|srv:admin|srv:(services|apt|disk|security|processes|files|network|firewall|docker)|mod:terminal)$`)
+var specRe = regexp.MustCompile(`^(any|admin|srv|srv:admin|srv:(services|apt|disk|security|users|processes|files|network|firewall|docker)|mod:terminal)$`)
 
 // Every authenticated route has an access rule, and the loose ones ("any", "srv") are only the ones that are
 // meant to be: a new route cannot slip in open to an operator or an auditor by accident.
@@ -71,6 +72,29 @@ func TestStreamModules(t *testing.T) {
 	for _, m := range RootModules {
 		if !validModule(m) {
 			t.Errorf("%s is not an operator module", m)
+		}
+	}
+}
+
+// A terminal as another account: only a plain account name reaches the agent.
+func TestTerminalUserParam(t *testing.T) {
+	a := &Admin{}
+	for query, ok := range map[string]bool{
+		"kind=terminal":                                 true,
+		"kind=terminal&user=deploy":                     true,
+		"kind=terminal&user=ci.runner-2":                true,
+		"kind=terminal&user=a%20b":                      false,
+		"kind=terminal&user=%24%28id%29":                false,
+		"kind=terminal&user=root%3Bls":                  false,
+		"kind=terminal&user=" + strings.Repeat("a", 65): false,
+	} {
+		r := httptest.NewRequest("GET", "/api/servers/x/stream?"+query, nil)
+		_, p, got := a.streamParams(r)
+		if got != ok {
+			t.Errorf("%s: ok=%v want %v", query, got, ok)
+		}
+		if ok && strings.Contains(query, "user=") && p["user"] == nil {
+			t.Errorf("%s: the user must be passed to the agent", query)
 		}
 	}
 }

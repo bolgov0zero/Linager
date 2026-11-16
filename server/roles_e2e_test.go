@@ -89,6 +89,8 @@ func TestRolesOperatorAndAuditor(t *testing.T) {
 		{"GET", s("alpha", "/disk"), nil, 0},
 		{"GET", s("alpha", "/docker"), nil, 403},
 		{"GET", s("alpha", "/firewall"), nil, 403},
+		{"GET", s("alpha", "/users"), nil, 403}, // the Users tab is a root module: the operator was not given it
+		{"POST", s("alpha", "/users/deploy/delete"), map[string]any{"confirm": true}, 403},
 		{"POST", s("alpha", "/security/ban"), map[string]any{"ip": "203.0.113.9", "confirm": true}, 403},
 		{"GET", s("alpha", "/stream?kind=terminal"), nil, 403},
 		{"GET", s("alpha", "/files?path=/"), nil, 403},

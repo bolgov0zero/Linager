@@ -17,6 +17,7 @@
   import NetworkTab from './tabs/NetworkTab.svelte';
   import FirewallTab from './tabs/FirewallTab.svelte';
   import SecurityTab from './tabs/SecurityTab.svelte';
+  import UsersTab from './tabs/UsersTab.svelte';
   import DockerTab from './tabs/DockerTab.svelte';
   import { formatDateTime } from './format';
   import AgentUpdateBanner from './AgentUpdateBanner.svelte';
@@ -54,6 +55,8 @@
   const sample = $derived<Sample | null>(detail?.sample ?? null);
   const online = $derived(detail?.online ?? false);
   const isAdmin = $derived(role === 'admin');
+  // a terminal as a user needs the terminal module too, on the agent and in the rights of the operator
+  const canTerminal = $derived((detail?.modules ?? []).includes('terminal') && (isAdmin || (role === 'operator' && userModules.includes('terminal'))));
   const tabs = $derived(visibleTabs(detail?.modules ?? [], isAdmin ? null : role === 'operator' ? userModules : []));
   const tab = $derived<TabId>(tabs.find((x) => x.id === requestedTab)?.id ?? 'overview');
   const currentTabKey = $derived(tabs.find((x) => x.id === tab)?.key ?? 'srv.tab.overview');
@@ -210,6 +213,8 @@
         <ProcessesTab server={detail} />
       {:else if tab === 'security'}
         <SecurityTab server={detail} />
+      {:else if tab === 'users'}
+        <UsersTab server={detail} canTerminal={canTerminal} />
       {:else if tab === 'logs'}
         <LogsTab server={detail} />
       {:else}
