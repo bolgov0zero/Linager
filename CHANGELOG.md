@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.63
+
+- Phone, Firewall: "Ports" is no longer a tab of the segmented control but a folded block under the rules (closed by default, the header shows the number of listening ports), like on a desktop. The control keeps Rules, Lists and Log.
+- Network (wide screen): the primary interface is a column of its own on the left, the other interfaces are a column of folded rows on the right (closed by default, a click unfolds a row in place). The badges (state, kind, primary) stand under the interface name. Under 900 px the columns stack.
+- Side menu: the arrow of the fold button was redrawn as a clean symmetric pixel arrow (it was lopsided).
+
 ## 0.1.62
 
 - Metrics: the blocks "Events in period" and "Metric retention" are folded by default (the header shows the number of events).

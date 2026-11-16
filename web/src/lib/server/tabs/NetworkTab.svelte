@@ -73,7 +73,8 @@
 
   const ifaceList = $derived(info?.interfaces ?? []);
   // The primary interface goes first; the others keep the agent's order.
-  const sortedIfaces = $derived([...ifaceList.filter((i) => i.primary), ...ifaceList.filter((i) => !i.primary)]);
+  const mainIfaces = $derived(ifaceList.filter((i) => i.primary));
+  const otherIfaces = $derived(ifaceList.filter((i) => !i.primary));
   const dnsEditable = $derived(info?.dns_editable ?? false);
   const ifaceMap = $derived(new Map<string, NetInterface>(ifaceList.map((i) => [i.name, i])));
   const draftByIface = $derived(new Map<string, NetChange>(draft.map((c) => [c.iface, c])));
@@ -420,15 +421,19 @@
 {/snippet}
 
 {#snippet deskHead(iface: NetInterface, inDraft: boolean, open: boolean, fixedOpen: boolean)}
-  <h3 class="mono">{iface.name}</h3>
-  <span class="tag" class:up={iface.state === 'UP'} class:down={iface.state === 'DOWN'}>{iface.state}</span>
-  <span class="tag">{$tr(KIND_KEYS[iface.kind])}</span>
-  {#if iface.primary}
-    <span class="tag warn">{$tr('net.badge.primary')}</span>
-  {/if}
-  {#if inDraft}
-    <span class="tag accent">{$tr('net.badge.inDraft')}</span>
-  {/if}
+  <span class="hname">
+    <h3 class="mono">{iface.name}</h3>
+    <span class="badges">
+      <span class="tag" class:up={iface.state === 'UP'} class:down={iface.state === 'DOWN'}>{iface.state}</span>
+      <span class="tag">{$tr(KIND_KEYS[iface.kind])}</span>
+      {#if iface.primary}
+        <span class="tag warn">{$tr('net.badge.primary')}</span>
+      {/if}
+      {#if inDraft}
+        <span class="tag accent">{$tr('net.badge.inDraft')}</span>
+      {/if}
+    </span>
+  </span>
   {#if !open}
     <span class="sum">
       <span class="mono sum-ip">{mainAddr(iface)}</span>
@@ -438,6 +443,158 @@
   {#if !fixedOpen}
     <span class="chev" class:up={open}><PixIcon name="chev" size={20} /></span>
   {/if}
+{/snippet}
+
+{#snippet ifaceCard(iface: NetInterface)}
+        {@const change = draftByIface.get(iface.name)}
+        {@const isEditing = form !== null && form.iface === iface.name}
+        {@const open = isOpen(iface, isEditing)}
+        {@const fixedOpen = iface.primary || isEditing}
+        <article class="card iface" class:primary={iface.primary} class:open>
+          {#if $isPhone}
+            {#if fixedOpen}
+              <div class="ihead">{@render phoneHead(iface, !!change, open, fixedOpen)}</div>
+            {:else}
+              <button class="ihead" type="button" aria-expanded={open} onclick={() => toggleIface(iface, isEditing)}>
+                {@render phoneHead(iface, !!change, open, fixedOpen)}
+              </button>
+            {/if}
+          {:else if fixedOpen}
+            <header class="iface-head">{@render deskHead(iface, !!change, open, fixedOpen)}</header>
+          {:else}
+            <button class="iface-head" type="button" aria-expanded={open} onclick={() => toggleIface(iface, isEditing)}>
+              {@render deskHead(iface, !!change, open, fixedOpen)}
+            </button>
+          {/if}
+
+          {#if open}
+          <div class="ibody">
+          <dl class="facts">
+            <div class="fact"><dt>{$tr('net.row.mac')}</dt><dd class="mono">{iface.mac || '—'}</dd></div>
+            <div class="fact"><dt>{$tr('net.row.mtu')}</dt><dd>{iface.mtu}</dd></div>
+            <div class="fact"><dt>{$tr('net.row.mode')}</dt><dd>{modeLabel(iface.mode)}</dd></div>
+            <div class="fact"><dt>{$tr('net.row.ipv4')}</dt><dd class="mono">{iface.addresses.join(', ') || '—'}</dd></div>
+            <div class="fact"><dt>{$tr('net.row.gateway')}</dt><dd class="mono">{iface.gateway || '—'}</dd></div>
+            <div class="fact">
+              <dt>{$tr('net.row.speed')}</dt>
+              <dd>{iface.speed_mbps > 0 ? $tr('net.speed', { v: iface.speed_mbps }) : '—'}</dd>
+            </div>
+            <div class="fact">
+              <dt>{$tr('net.row.traffic')}</dt>
+              <dd class="mono">{formatBytes(iface.rx_bytes)} / {formatBytes(iface.tx_bytes)}</dd>
+            </div>
+            <div class="fact">
+              <dt>{$tr('net.row.packets')}</dt>
+              <dd class="mono">{fmt(iface.rx_packets)} / {fmt(iface.tx_packets)}</dd>
+            </div>
+            <div class="fact">
+              <dt>{$tr('net.row.errors')}</dt>
+              <dd class="mono">{fmt(iface.rx_errors)} / {fmt(iface.tx_errors)}</dd>
+            </div>
+            <div class="fact">
+              <dt>{$tr('net.row.drops')}</dt>
+              <dd class="mono">{fmt(iface.rx_dropped)} / {fmt(iface.tx_dropped)}</dd>
+            </div>
+          </dl>
+
+          {#if editable && iface.editable && !isEditing}
+            <div class="row">
+              <button class="btn" type="button" disabled={busy || pending !== null} onclick={() => openForm(iface)}
+                >{$tr('net.edit')}</button
+              >
+            </div>
+          {/if}
+
+          {#if !iface.editable}
+            <p class="hint">{$tr('net.readonly')}</p>
+          {/if}
+
+          {#if isEditing && form}
+            <form
+              class="iface-form stack"
+              onsubmit={(e) => {
+                e.preventDefault();
+                void saveDraft();
+              }}
+            >
+              <div class="grid2">
+                <label class="field">
+                  <span class="label">{$tr('net.form.mode')}</span>
+                  <Select
+                    bind:value={form.mode}
+                    options={[
+                      { value: 'static', label: $tr('net.option.static') },
+                      { value: 'dhcp', label: $tr('net.option.dhcp') },
+                    ]}
+                  />
+                  {#if fieldError('mode')}<p class="error small">{fieldError('mode')}</p>{/if}
+                </label>
+
+                <label class="field">
+                  <span class="label">{$tr('net.form.state')}</span>
+                  <Select
+                    bind:value={form.state}
+                    options={[
+                      { value: 'UP', label: $tr('net.option.up') },
+                      { value: 'DOWN', label: $tr('net.option.down') },
+                    ]}
+                  />
+                  {#if fieldError('state')}<p class="error small">{fieldError('state')}</p>{/if}
+                </label>
+
+                <label class="field wide">
+                  <span class="label">{$tr('net.form.address')}</span>
+                  <input
+                    class="input mono"
+                    type="text"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder={$tr('net.form.addressHint')}
+                    disabled={form.mode === 'dhcp'}
+                    bind:value={form.address}
+                  />
+                  {#if fieldError('address')}<p class="error small">{fieldError('address')}</p>{/if}
+                </label>
+
+                <label class="field">
+                  <span class="label">{$tr('net.form.gateway')}</span>
+                  <input
+                    class="input mono"
+                    type="text"
+                    autocomplete="off"
+                    spellcheck="false"
+                    disabled={form.mode === 'dhcp'}
+                    bind:value={form.gateway}
+                  />
+                  {#if fieldError('gateway')}<p class="error small">{fieldError('gateway')}</p>{/if}
+                </label>
+
+                <label class="field">
+                  <span class="label">{$tr('net.form.mtu')} <span class="muted">({$tr('net.form.mtuHint')})</span></span>
+                  <input class="input mono" type="number" min="68" max="9000" step="1" bind:value={form.mtu} />
+                  {#if fieldError('mtu')}<p class="error small">{fieldError('mtu')}</p>{/if}
+                </label>
+              </div>
+
+              {#each ownErrors as e (e.field + e.message)}
+                <p class="error small">{e.message}</p>
+              {/each}
+
+              {#if checking}
+                <p class="hint">{$tr('net.checking')}</p>
+              {/if}
+
+              <div class="row">
+                <button class="btn ink" type="submit" disabled={saving || checking || hasErrors}
+                  >{$tr('net.draft.save')}</button
+                >
+                <button class="btn" type="button" disabled={saving} onclick={closeForm}>{$tr('common.cancel')}</button>
+              </div>
+            </form>
+          {/if}
+          </div>
+          {/if}
+        </article>
 {/snippet}
 
 {#snippet changeList()}
@@ -595,161 +752,24 @@
       <p class="error" role="alert">{actionError}</p>
     {/if}
 
-    <div class="ifaces">
+    <div class="ifaces" class:two={!$isPhone && mainIfaces.length > 0 && otherIfaces.length > 0}>
       {#if ifaceList.length === 0}
         <p class="muted">{$tr('net.ifaces.empty')}</p>
       {/if}
-      {#each sortedIfaces as iface (iface.name)}
-        {@const change = draftByIface.get(iface.name)}
-        {@const isEditing = form !== null && form.iface === iface.name}
-        {@const open = isOpen(iface, isEditing)}
-        {@const fixedOpen = iface.primary || isEditing}
-        <article class="card iface" class:primary={iface.primary} class:open>
-          {#if $isPhone}
-            {#if fixedOpen}
-              <div class="ihead">{@render phoneHead(iface, !!change, open, fixedOpen)}</div>
-            {:else}
-              <button class="ihead" type="button" aria-expanded={open} onclick={() => toggleIface(iface, isEditing)}>
-                {@render phoneHead(iface, !!change, open, fixedOpen)}
-              </button>
-            {/if}
-          {:else if fixedOpen}
-            <header class="iface-head">{@render deskHead(iface, !!change, open, fixedOpen)}</header>
-          {:else}
-            <button class="iface-head" type="button" aria-expanded={open} onclick={() => toggleIface(iface, isEditing)}>
-              {@render deskHead(iface, !!change, open, fixedOpen)}
-            </button>
-          {/if}
-
-          {#if open}
-          <div class="ibody">
-          <dl class="facts">
-            <div class="fact"><dt>{$tr('net.row.mac')}</dt><dd class="mono">{iface.mac || '—'}</dd></div>
-            <div class="fact"><dt>{$tr('net.row.mtu')}</dt><dd>{iface.mtu}</dd></div>
-            <div class="fact"><dt>{$tr('net.row.mode')}</dt><dd>{modeLabel(iface.mode)}</dd></div>
-            <div class="fact"><dt>{$tr('net.row.ipv4')}</dt><dd class="mono">{iface.addresses.join(', ') || '—'}</dd></div>
-            <div class="fact"><dt>{$tr('net.row.gateway')}</dt><dd class="mono">{iface.gateway || '—'}</dd></div>
-            <div class="fact">
-              <dt>{$tr('net.row.speed')}</dt>
-              <dd>{iface.speed_mbps > 0 ? $tr('net.speed', { v: iface.speed_mbps }) : '—'}</dd>
-            </div>
-            <div class="fact">
-              <dt>{$tr('net.row.traffic')}</dt>
-              <dd class="mono">{formatBytes(iface.rx_bytes)} / {formatBytes(iface.tx_bytes)}</dd>
-            </div>
-            <div class="fact">
-              <dt>{$tr('net.row.packets')}</dt>
-              <dd class="mono">{fmt(iface.rx_packets)} / {fmt(iface.tx_packets)}</dd>
-            </div>
-            <div class="fact">
-              <dt>{$tr('net.row.errors')}</dt>
-              <dd class="mono">{fmt(iface.rx_errors)} / {fmt(iface.tx_errors)}</dd>
-            </div>
-            <div class="fact">
-              <dt>{$tr('net.row.drops')}</dt>
-              <dd class="mono">{fmt(iface.rx_dropped)} / {fmt(iface.tx_dropped)}</dd>
-            </div>
-          </dl>
-
-          {#if editable && iface.editable && !isEditing}
-            <div class="row">
-              <button class="btn" type="button" disabled={busy || pending !== null} onclick={() => openForm(iface)}
-                >{$tr('net.edit')}</button
-              >
-            </div>
-          {/if}
-
-          {#if !iface.editable}
-            <p class="hint">{$tr('net.readonly')}</p>
-          {/if}
-
-          {#if isEditing && form}
-            <form
-              class="iface-form stack"
-              onsubmit={(e) => {
-                e.preventDefault();
-                void saveDraft();
-              }}
-            >
-              <div class="grid2">
-                <label class="field">
-                  <span class="label">{$tr('net.form.mode')}</span>
-                  <Select
-                    bind:value={form.mode}
-                    options={[
-                      { value: 'static', label: $tr('net.option.static') },
-                      { value: 'dhcp', label: $tr('net.option.dhcp') },
-                    ]}
-                  />
-                  {#if fieldError('mode')}<p class="error small">{fieldError('mode')}</p>{/if}
-                </label>
-
-                <label class="field">
-                  <span class="label">{$tr('net.form.state')}</span>
-                  <Select
-                    bind:value={form.state}
-                    options={[
-                      { value: 'UP', label: $tr('net.option.up') },
-                      { value: 'DOWN', label: $tr('net.option.down') },
-                    ]}
-                  />
-                  {#if fieldError('state')}<p class="error small">{fieldError('state')}</p>{/if}
-                </label>
-
-                <label class="field wide">
-                  <span class="label">{$tr('net.form.address')}</span>
-                  <input
-                    class="input mono"
-                    type="text"
-                    autocomplete="off"
-                    spellcheck="false"
-                    placeholder={$tr('net.form.addressHint')}
-                    disabled={form.mode === 'dhcp'}
-                    bind:value={form.address}
-                  />
-                  {#if fieldError('address')}<p class="error small">{fieldError('address')}</p>{/if}
-                </label>
-
-                <label class="field">
-                  <span class="label">{$tr('net.form.gateway')}</span>
-                  <input
-                    class="input mono"
-                    type="text"
-                    autocomplete="off"
-                    spellcheck="false"
-                    disabled={form.mode === 'dhcp'}
-                    bind:value={form.gateway}
-                  />
-                  {#if fieldError('gateway')}<p class="error small">{fieldError('gateway')}</p>{/if}
-                </label>
-
-                <label class="field">
-                  <span class="label">{$tr('net.form.mtu')} <span class="muted">({$tr('net.form.mtuHint')})</span></span>
-                  <input class="input mono" type="number" min="68" max="9000" step="1" bind:value={form.mtu} />
-                  {#if fieldError('mtu')}<p class="error small">{fieldError('mtu')}</p>{/if}
-                </label>
-              </div>
-
-              {#each ownErrors as e (e.field + e.message)}
-                <p class="error small">{e.message}</p>
-              {/each}
-
-              {#if checking}
-                <p class="hint">{$tr('net.checking')}</p>
-              {/if}
-
-              <div class="row">
-                <button class="btn ink" type="submit" disabled={saving || checking || hasErrors}
-                  >{$tr('net.draft.save')}</button
-                >
-                <button class="btn" type="button" disabled={saving} onclick={closeForm}>{$tr('common.cancel')}</button>
-              </div>
-            </form>
-          {/if}
-          </div>
-          {/if}
-        </article>
-      {/each}
+      {#if mainIfaces.length > 0}
+        <div class="icol">
+          {#each mainIfaces as iface (iface.name)}
+            {@render ifaceCard(iface)}
+          {/each}
+        </div>
+      {/if}
+      {#if otherIfaces.length > 0}
+        <div class="icol">
+          {#each otherIfaces as iface (iface.name)}
+            {@render ifaceCard(iface)}
+          {/each}
+        </div>
+      {/if}
     </div>
 
     {#if $isPhone}
@@ -1065,6 +1085,45 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+  }
+
+  .icol {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  /* Wide screen: the primary interface is a column of its own, the other interfaces are a column of folded rows beside it. */
+  .ifaces.two {
+    display: grid;
+    grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .ifaces.two {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .hname {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .hname h3 {
+    margin: 0;
+  }
+
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
   .iface {

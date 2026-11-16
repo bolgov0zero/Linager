@@ -84,7 +84,7 @@
   let logBadge = $state<number | null>(null);
 
   // Phone: the section under the segmented control, the rule sheet and the "add rule" sheet.
-  type Section = 'rules' | 'ports' | 'sets' | 'log';
+  type Section = 'rules' | 'sets' | 'log';
   let section = $state<Section>('rules');
   let ruleSheet = $state<{ chain: ChainName; index: number } | null>(null);
   let ruleText = $state('');
@@ -298,7 +298,7 @@
   const fwAvailable = $derived(info?.available === true);
   $effect(() => {
     const sid = serverId;
-    if (!fwAvailable || $isPhone) return;
+    if (!fwAvailable) return;
     portsMeta = null;
     if (untrack(() => portsOpen)) return;
     let active = true;
@@ -675,6 +675,17 @@
   {/if}
 {/snippet}
 
+{#snippet portsFold()}
+  <Fold
+    title={$trs('fw.card.ports')}
+    meta={portsMeta ? String(portsMeta.n) : ''}
+    tone={portsMeta && portsMeta.norule > 0 ? 'warn' : 'muted'}
+    bind:open={portsOpen}
+  >
+    <FwPorts serverId={serverId} lists={shownSets} onrules={addInputRules} onsummary={(n, norule) => (portsMeta = { n, norule })} />
+  </Fold>
+{/snippet}
+
 {#if loadError && !info}
   <p class="card error" role="alert">{$trs('fw.loadError')}</p>
 {:else if !info}
@@ -756,7 +767,6 @@
       {:else}
         <div class="pc-seg sm" role="group" aria-label={$trs('mobC.fw.sections')}>
           <button type="button" aria-pressed={section === 'rules'} onclick={() => (section = 'rules')}>{$trs('mobC.fw.rules')}</button>
-          <button type="button" aria-pressed={section === 'ports'} onclick={() => (section = 'ports')}>{$trs('mobC.fw.ports')}</button>
           <button type="button" aria-pressed={section === 'sets'} onclick={() => (section = 'sets')}>{$trs('mobC.fw.sets')}</button>
           <button type="button" aria-pressed={section === 'log'} onclick={() => (section = 'log')}>
             {$trs('fw.log.open')}{#if logBadge !== null && logBadge > 0}<span class="cnt">{logBadge}</span>{/if}
@@ -838,8 +848,6 @@
           {#if info.other_tables.length}
             <p class="hint">{$trs('fw.otherTables', { tables: info.other_tables.join(', ') })}</p>
           {/if}
-        {:else if section === 'ports'}
-          <FwPorts serverId={serverId} lists={shownSets} onrules={addInputRules} />
         {:else if section === 'sets'}
           {#if shownSets.length === 0}
             <p class="muted pc-empty">{$trs('mobC.fw.noSets')}</p>
@@ -869,6 +877,10 @@
             </button>
           </div>
           <button class="btn" type="button" onclick={() => (logOpen = true)}>{$trs('fw.log.open')}</button>
+        {/if}
+        <!-- The ports are a folded block under the rules, like on a desktop. -->
+        {#if section === 'rules'}
+          {@render portsFold()}
         {/if}
       {/if}
     {:else}
@@ -1138,14 +1150,7 @@
     </section>
 
     {#if info.available}
-      <Fold
-        title={$trs('fw.card.ports')}
-        meta={portsMeta ? String(portsMeta.n) : ''}
-        tone={portsMeta && portsMeta.norule > 0 ? 'warn' : 'muted'}
-        bind:open={portsOpen}
-      >
-        <FwPorts serverId={serverId} lists={shownSets} onrules={addInputRules} onsummary={(n, norule) => (portsMeta = { n, norule })} />
-      </Fold>
+      {@render portsFold()}
     {/if}
     {/if}
   </div>

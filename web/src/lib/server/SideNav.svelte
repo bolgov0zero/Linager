@@ -163,7 +163,7 @@
       aria-label={$tr(rail ? 'srv.nav.expand' : 'srv.nav.collapse')}
       onclick={toggleRail}
     >
-      <svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><path d="M5 0h2v2H5zM3 2h2v2H3zM1 4h2v2H1zM3 6h2v2H3zM5 6h2v2H5z" /></svg>
+      <svg viewBox="1 0 7 7" fill="currentColor" aria-hidden="true"><path d="M5 0h2v1H5zM4 1h2v1H4zM3 2h2v1H3zM2 3h2v1H2zM3 4h2v1H3zM4 5h2v1H4zM5 6h2v1H5z" /></svg>
     </button>
   </div>
 </aside>
@@ -395,8 +395,8 @@
   }
 
   .collapse svg {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     shape-rendering: crispEdges;
   }
 
