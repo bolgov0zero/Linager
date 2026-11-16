@@ -37,7 +37,7 @@ Questions (the ports are required, there are no default values):
 
 Stages: system check, PostgreSQL (from the OS repository, localhost only, `scram-sha-256`), database and role with a random password, configuration `/etc/linager/server.yaml` (permissions 600, owner `linager`) and keys, administrator account, Caddy (if selected), `linager-server` service, startup check. The installation log is written to `/var/log/linager-install.log`.
 
-In "Own reverse proxy" mode the wizard installs and configures nothing; it only asks for the ports. The admin panel listens on `0.0.0.0:<port>`, and `X-Forwarded-*` headers are accepted from any address (the list can be narrowed in `server.yaml`: `admin.trusted_proxies`). The admin panel port is exposed directly, so restrict it with a firewall. Proxy examples: [proxy.md](proxy.md).
+In "Own reverse proxy" mode the wizard installs and configures nothing; it only asks for the ports. The admin panel listens on `0.0.0.0:<port>`, and `X-Forwarded-*` headers are accepted from any address (narrow the list in Settings → Admin panel access → Trusted proxies; `admin.trusted_proxies` in `server.yaml` is in force until something is saved there). The admin panel port is exposed directly, so restrict it with a firewall. Proxy examples: [proxy.md](proxy.md).
 
 At the end, the wizard shows the admin panel address, the fingerprint of the client-port certificate, and a ready-to-use client installation command.
 

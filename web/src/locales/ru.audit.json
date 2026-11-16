@@ -120,5 +120,9 @@
   "audit.action.hostuser.delete": "Пользователь удалён с сервера",
   "audit.action.hostuser.password": "Пароль пользователя сервера сменён",
   "audit.action.hostuser.kill": "Сеансы пользователя сервера завершены",
-  "audit.group.hostusers": "Пользователи серверов"
+  "audit.group.hostusers": "Пользователи серверов",
+  "audit.group.access": "Доступ к админке",
+  "audit.action.access.update": "Доступ к админке: изменение настроек",
+  "audit.action.access.retention": "Доступ к админке: срок журнала",
+  "audit.action.access.reset": "Доступ к админке: сброс командой"
 }

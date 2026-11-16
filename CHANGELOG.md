@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.69
+
+- New settings section "Admin access" (Settings → Admin access): restricts who may open the admin panel. Three modes: off, white list (whatever is not listed is refused) and black list (whatever is not listed is allowed), a separate list for each, judged by the real client address. A checkbox "Only through trusted proxies" refuses direct connections to the port. "Check an address" shows what the server would do with an address, and the panel tells what happens to you before anything is saved. The restriction applies to the admin panel port only; the agent port is not affected.
+- The trusted proxies (the addresses whose `X-Forwarded-For` is believed) are edited in the same section. The panel shows how the current request arrived and offers to add that proxy with one click. A connection from any other address is judged by its own address, so the local network can still connect directly while the internet comes through the reverse proxy. `admin.trusted_proxies` in `server.yaml` is used until something is saved in the section.
+- Saving is refused when it would lock you out, when everybody is trusted (`0.0.0.0/0`), when a proxy that sends `X-Forwarded-For` is not in the list (otherwise the whole internet would look like the proxy) or when the white list is empty. If access is lost anyway, `linager access reset` on the server turns the restriction off (the lists stay); a running server applies it within seconds.
+- Access journal: page opens, sign-ins (good and failed) and refused requests with the client address and the proxy it came through; filters, "to the white/black list" in one click, retention 7, 30 or 90 days. Changes of the settings are written to the audit log (`access.update`, `access.retention`, `access.reset`). New migration 00010.
+- Settings: the sections are in a new order: Profile, Users, Server groups, Snippets, Admin access, Updates, Log.
+
 ## 0.1.68
 
 - Updates, "Linager server": after a check that finds a newer release nothing pops up any more, the block just shows the button "Update to ...". The release notes open only by the button "Release notes" (without an update button in the dialog).

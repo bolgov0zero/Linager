@@ -85,6 +85,23 @@ export interface ServerCard {
   group_id: number | null;
 }
 export interface Group { id: number; name: string }
+
+/** Access restriction of the admin panel (settings, "Access to the admin panel"). */
+export interface AccessRule { cidr: string; note: string }
+export type AccessMode = 'off' | 'white' | 'black';
+export interface AccessConfig {
+  mode: AccessMode; only_proxy: boolean; white: AccessRule[]; black: AccessRule[]; proxies: AccessRule[]; retention_days: number;
+}
+export interface AccessYou { ip: string; remote_addr: string; forwarded_for: string; via_proxy: boolean; peer_trusted: boolean }
+export interface AccessState { config: AccessConfig; configured: boolean; you: AccessYou; denied_24h: number }
+export interface AccessProblem { code: string; ip?: string; reason?: string }
+export interface AccessVerdict { ip: string; allowed: boolean; reason: string; via_proxy: boolean; ignored_xff: boolean }
+export interface AccessCheck { problems: AccessProblem[]; you: AccessVerdict; test?: AccessVerdict }
+export type AccessLogFilter = 'all' | 'denied' | 'login' | 'fail' | 'proxy' | 'direct';
+export interface AccessLogRow {
+  id: number; ts: number; client_ip: string; remote_addr: string; via_proxy: boolean; proxy_trusted: boolean;
+  event: 'page' | 'login.ok' | 'login.fail' | 'denied'; login: string; path: string; user_agent: string; reason: string;
+}
 /** What a client needs to connect: agent port, agent-port certificate fingerprint, names/IPs of that certificate. */
 export interface ConnectInfo { port: string; fingerprint: string; hosts: string[] }
 export interface FileStat {
@@ -472,6 +489,14 @@ export const api = {
   snippetDelete: (id: number) => request<{ ok: boolean }>('DELETE', `api/snippets/${id}`),
   snippetsOrder: (ids: number[]) => request<{ ok: boolean }>('PUT', 'api/snippets/order', { ids }),
   snippetRan: (id: number, serverId: string) => request<{ ok: boolean }>('POST', `api/snippets/${id}/ran`, { server_id: serverId }),
+
+  access: () => request<AccessState>('GET', 'api/access'),
+  accessSave: (config: AccessConfig) => request<AccessState>('PUT', 'api/access', config),
+  accessCheck: (config: AccessConfig, test?: { ip: string; proxy: boolean }) =>
+    request<AccessCheck>('POST', 'api/access/check', { config, test }),
+  accessRetention: (days: number) => request<AccessState>('PUT', 'api/access/retention', { days }),
+  accessLog: (filter: AccessLogFilter, before = 0) =>
+    request<{ rows: AccessLogRow[] }>('GET', `api/access/log?filter=${filter}&limit=50${before ? `&before=${before}` : ''}`),
 
   dashboard: () => request<{ items: ServerCard[] }>('GET', 'api/dashboard'),
   groups: () => request<Group[]>('GET', 'api/groups'),

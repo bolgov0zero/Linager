@@ -45,6 +45,7 @@ type Admin struct {
 	Log     *slog.Logger
 	Cfg     *config.Server
 	Trust   *ProxyTrust
+	Access  *AccessGuard
 	Static  fs.FS // built frontend (may be nil in tests)
 
 	loginL *ipLimiter
@@ -63,7 +64,9 @@ func NewAdmin(db *store.Store, keys *Keys, hub *Hub, live *Live, metrics *Metric
 	if err != nil {
 		return nil, err
 	}
-	return &Admin{DB: db, Keys: keys, Hub: hub, Live: live, Metrics: metrics, Updates: updates, Log: log, Cfg: cfg, Trust: trust, Static: static, loginL: newLimiter(max(cfg.Admin.LoginRate, 10), time.Minute), terms: map[string]int{}, cers: map[string]*ceremony{}}, nil
+	guard := newAccessGuard(db, trust, cfg.Admin.TrustedProxies, log)
+	guard.Load(context.Background())
+	return &Admin{DB: db, Keys: keys, Hub: hub, Live: live, Metrics: metrics, Updates: updates, Log: log, Cfg: cfg, Trust: trust, Access: guard, Static: static, loginL: newLimiter(max(cfg.Admin.LoginRate, 10), time.Minute), terms: map[string]int{}, cers: map[string]*ceremony{}}, nil
 }
 
 // Handler returns the full admin handler including the base path and security headers.
@@ -125,6 +128,11 @@ func (a *Admin) Handler() http.Handler {
 	a.route(mux, "POST /api/updates/server", "admin", a.updatesServer)
 	a.route(mux, "POST /api/updates/agents", "admin", a.updatesAgents)
 	a.route(mux, "GET /api/audit", "admin", a.auditList)
+	a.route(mux, "GET /api/access", "admin", a.accessGet)
+	a.route(mux, "PUT /api/access", "admin", a.accessPut)
+	a.route(mux, "POST /api/access/check", "admin", a.accessCheck)
+	a.route(mux, "PUT /api/access/retention", "admin", a.accessRetention)
+	a.route(mux, "GET /api/access/log", "admin", a.accessLog)
 	a.route(mux, "GET /api/servers/{id}/services", "srv:services", a.servicesList)
 	a.route(mux, "GET /api/servers/{id}/services-ignored", "srv:services", a.servicesIgnored)
 	a.route(mux, "PUT /api/servers/{id}/services-ignored", "srv:services", a.servicesIgnore)
@@ -195,7 +203,7 @@ func (a *Admin) Handler() http.Handler {
 	if bp := strings.TrimRight(a.Cfg.Admin.BasePath, "/"); bp != "" {
 		h = http.StripPrefix(bp, mux)
 	}
-	return a.secureHeaders(h)
+	return a.secureHeaders(a.accessGuard(h))
 }
 
 func (a *Admin) secureHeaders(next http.Handler) http.Handler {
@@ -255,6 +263,13 @@ func (a *Admin) audit(r *http.Request, u *store.User, action, ttype, tid, tname,
 	}
 	if err := a.DB.WriteAudit(context.WithoutCancel(r.Context()), au); err != nil {
 		a.Log.Error("audit write failed", "action", action, "err", err)
+	}
+	if action == "auth.login" {
+		login := tname
+		if u != nil {
+			login = u.Login
+		}
+		a.Access.logLogin(r, a.Access.snap.Load().rules.decide(remoteAddr(r), r.Header.Get("X-Forwarded-For")), login, result)
 	}
 }
 

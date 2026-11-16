@@ -1,0 +1,466 @@
+package server
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"net/netip"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+	"unicode/utf8"
+
+	"github.com/bolgov0zero/linager/server/store"
+)
+
+// Access restriction of the admin panel: a white list (what is not listed is refused) or a black list (what is not
+// listed is allowed), judged by the real client address. The address comes from X-Forwarded-For only when the
+// connection is made by a trusted proxy; otherwise it is the address of the connection itself, so the clients of a
+// local network can reach the panel directly while the internet comes through the proxy.
+
+const (
+	accessSetting = "access"
+
+	// AccessOff, AccessWhite and AccessBlack are the modes of the restriction.
+	AccessOff   = "off"
+	AccessWhite = "white"
+	AccessBlack = "black"
+
+	defaultAccessRetention = 30
+	maxAccessRules         = 500
+	maxAccessProxies       = 50
+	maxRuleNote            = 100
+
+	pageLogEvery = 10 * time.Minute // the same address opens the page: one journal row per this time
+	denyLogEvery = time.Minute      // the same address is refused: one journal row per this time
+	maxLogSeen   = 4096
+	reloadEvery  = 5 * time.Second
+)
+
+// AccessRule is one address or network of a list.
+type AccessRule struct {
+	CIDR string `json:"cidr"`
+	Note string `json:"note"`
+}
+
+// AccessConfig is the restriction as the admin edits and stores it.
+type AccessConfig struct {
+	Mode      string       `json:"mode"`
+	OnlyProxy bool         `json:"only_proxy"`
+	White     []AccessRule `json:"white"`
+	Black     []AccessRule `json:"black"`
+	Proxies   []AccessRule `json:"proxies"`
+	Retention int          `json:"retention_days"`
+}
+
+// accessRules is the compiled form of the config.
+type accessRules struct {
+	mode            string
+	onlyProxy       bool
+	white, black    []netip.Prefix
+	proxies         []netip.Prefix
+	whiteN, blackN  int
+	proxiesN        int
+	trustAllProxies bool
+}
+
+// ParseAccessRule reads "203.0.113.7", "203.0.113.0/24" or an IPv6 form and returns the normalised rule.
+func ParseAccessRule(r AccessRule) (AccessRule, netip.Prefix, error) {
+	s := strings.TrimSpace(r.CIDR)
+	var p netip.Prefix
+	if strings.Contains(s, "/") {
+		var err error
+		if p, err = netip.ParsePrefix(s); err != nil {
+			return r, p, fmt.Errorf("bad address %q", s)
+		}
+		if p.Addr().Is4In6() {
+			return r, p, fmt.Errorf("bad address %q", s)
+		}
+		p = p.Masked()
+	} else {
+		a, err := netip.ParseAddr(s)
+		if err != nil {
+			return r, p, fmt.Errorf("bad address %q", s)
+		}
+		a = a.Unmap()
+		p = netip.PrefixFrom(a, a.BitLen())
+	}
+	note := strings.TrimSpace(r.Note)
+	if utf8.RuneCountInString(note) > maxRuleNote {
+		return r, p, errors.New("comment is too long")
+	}
+	return AccessRule{CIDR: p.String(), Note: note}, p, nil
+}
+
+func compileRules(in []AccessRule, limit int) ([]AccessRule, []netip.Prefix, error) {
+	if len(in) > limit {
+		return nil, nil, errors.New("too many entries")
+	}
+	rules := make([]AccessRule, 0, len(in))
+	nets := make([]netip.Prefix, 0, len(in))
+	seen := map[string]bool{}
+	for _, r := range in {
+		nr, p, err := ParseAccessRule(r)
+		if err != nil {
+			return nil, nil, err
+		}
+		if seen[nr.CIDR] {
+			continue
+		}
+		seen[nr.CIDR] = true
+		rules = append(rules, nr)
+		nets = append(nets, p)
+	}
+	return rules, nets, nil
+}
+
+// compileAccess validates and normalises a config.
+func compileAccess(cfg AccessConfig) (AccessConfig, *accessRules, error) {
+	switch cfg.Mode {
+	case AccessOff, AccessWhite, AccessBlack:
+	default:
+		return cfg, nil, errors.New("unknown mode")
+	}
+	if cfg.Retention == 0 {
+		cfg.Retention = defaultAccessRetention
+	}
+	if cfg.Retention < 1 || cfg.Retention > 365 {
+		return cfg, nil, errors.New("retention must be 1 to 365 days")
+	}
+	var err error
+	ar := &accessRules{mode: cfg.Mode, onlyProxy: cfg.OnlyProxy}
+	if cfg.White, ar.white, err = compileRules(cfg.White, maxAccessRules); err != nil {
+		return cfg, nil, err
+	}
+	if cfg.Black, ar.black, err = compileRules(cfg.Black, maxAccessRules); err != nil {
+		return cfg, nil, err
+	}
+	if cfg.Proxies, ar.proxies, err = compileRules(cfg.Proxies, maxAccessProxies); err != nil {
+		return cfg, nil, err
+	}
+	ar.whiteN, ar.blackN, ar.proxiesN = len(cfg.White), len(cfg.Black), len(cfg.Proxies)
+	for _, p := range ar.proxies {
+		if p.Bits() == 0 {
+			ar.trustAllProxies = true
+		}
+	}
+	return cfg, ar, nil
+}
+
+// Reason codes of a verdict (the interface translates them).
+const (
+	reasonOff        = "off"
+	reasonOnlyProxy  = "only_proxy"
+	reasonInWhite    = "in_white"
+	reasonNotInWhite = "not_in_white"
+	reasonInBlack    = "in_black"
+	reasonNotInBlack = "not_in_black"
+	reasonBadAddress = "bad_address"
+)
+
+// verdict is the decision about one connection.
+type verdict struct {
+	IP         string `json:"ip"`
+	Allowed    bool   `json:"allowed"`
+	Reason     string `json:"reason"`
+	ViaProxy   bool   `json:"via_proxy"`   // the connection is made by a trusted proxy
+	IgnoredXFF bool   `json:"ignored_xff"` // X-Forwarded-For came from an address that is not a trusted proxy
+}
+
+func listed(nets []netip.Prefix, a netip.Addr) bool {
+	for _, n := range nets {
+		if n.Contains(a) {
+			return true
+		}
+	}
+	return false
+}
+
+// decide judges a connection by the peer address and the X-Forwarded-For header.
+func (ar *accessRules) decide(peer netip.Addr, xff string) verdict {
+	peerTrusted := peer.IsValid() && inNets(ar.proxies, peer)
+	ip := effectiveIP(ar.proxies, peer, xff)
+	v := verdict{IP: ip, ViaProxy: peerTrusted, IgnoredXFF: xff != "" && !peerTrusted}
+	if ar.mode == AccessOff {
+		v.Allowed, v.Reason = true, reasonOff
+		return v
+	}
+	if ar.onlyProxy && !peerTrusted {
+		v.Reason = reasonOnlyProxy
+		return v
+	}
+	a, err := netip.ParseAddr(ip)
+	if err != nil {
+		v.Reason = reasonBadAddress
+		return v
+	}
+	a = a.Unmap()
+	if ar.mode == AccessWhite {
+		if v.Allowed = listed(ar.white, a); v.Allowed {
+			v.Reason = reasonInWhite
+		} else {
+			v.Reason = reasonNotInWhite
+		}
+		return v
+	}
+	if listed(ar.black, a) {
+		v.Reason = reasonInBlack
+		return v
+	}
+	v.Allowed, v.Reason = true, reasonNotInBlack
+	return v
+}
+
+// accessProblem is a reason why a config must not be applied (the interface translates the code).
+type accessProblem struct {
+	Code   string `json:"code"`
+	IP     string `json:"ip,omitempty"`
+	Reason string `json:"reason,omitempty"`
+}
+
+// Problem codes.
+const (
+	problemTrustAll     = "trust_all"
+	problemProxyUnknown = "proxy_unlisted"
+	problemWhiteEmpty   = "white_empty"
+	problemLockout      = "lockout"
+)
+
+// problems lists what is wrong with enabling the config for the request that is changing it. An empty answer
+// means the admin keeps access and the address that is judged cannot be forged.
+func (ar *accessRules) problems(peer netip.Addr, xff string) []accessProblem {
+	out := []accessProblem{}
+	if ar.mode == AccessOff {
+		return out
+	}
+	if ar.trustAllProxies {
+		out = append(out, accessProblem{Code: problemTrustAll})
+	}
+	if xff != "" && peer.IsValid() && !inNets(ar.proxies, peer) {
+		out = append(out, accessProblem{Code: problemProxyUnknown, IP: peer.String()})
+	}
+	if ar.mode == AccessWhite && ar.whiteN == 0 {
+		out = append(out, accessProblem{Code: problemWhiteEmpty})
+	}
+	if v := ar.decide(peer, xff); !v.Allowed {
+		out = append(out, accessProblem{Code: problemLockout, IP: v.IP, Reason: v.Reason})
+	}
+	return out
+}
+
+// accessSnapshot is the config in force.
+type accessSnapshot struct {
+	cfg        AccessConfig
+	rules      *accessRules
+	configured bool // false: nothing is stored yet, the proxies come from server.yaml
+}
+
+// AccessGuard holds the restriction in force and writes the journal of visits.
+type AccessGuard struct {
+	db    *store.Store
+	log   *slog.Logger
+	trust *ProxyTrust
+	yaml  []string
+	snap  atomic.Pointer[accessSnapshot]
+
+	mu       sync.Mutex
+	lastPage map[string]time.Time
+	lastDeny map[string]time.Time
+}
+
+func newAccessGuard(db *store.Store, trust *ProxyTrust, yamlProxies []string, log *slog.Logger) *AccessGuard {
+	g := &AccessGuard{db: db, log: log, trust: trust, yaml: yamlProxies, lastPage: map[string]time.Time{}, lastDeny: map[string]time.Time{}}
+	g.apply(g.defaults(), false)
+	return g
+}
+
+// defaults is the config of an installation where nothing is stored: no restriction, proxies from server.yaml.
+func (g *AccessGuard) defaults() AccessConfig {
+	cfg := AccessConfig{Mode: AccessOff, Retention: defaultAccessRetention, White: []AccessRule{}, Black: []AccessRule{}, Proxies: []AccessRule{}}
+	for _, c := range g.yaml {
+		cfg.Proxies = append(cfg.Proxies, AccessRule{CIDR: c, Note: ""})
+	}
+	return cfg
+}
+
+func (g *AccessGuard) apply(cfg AccessConfig, configured bool) {
+	norm, rules, err := compileAccess(cfg)
+	if err != nil {
+		// a damaged stored value must not lock everybody out: fall back to no restriction and say so
+		g.log.Error("access restriction: stored settings are invalid, the restriction is off", "err", err)
+		norm, rules, _ = compileAccess(g.defaults())
+		configured = false
+	}
+	g.trust.Set(rules.proxies)
+	g.snap.Store(&accessSnapshot{cfg: norm, rules: rules, configured: configured})
+}
+
+// Load reads the stored restriction.
+func (g *AccessGuard) Load(ctx context.Context) {
+	raw := g.db.SettingRaw(ctx, accessSetting)
+	if len(raw) == 0 {
+		g.apply(g.defaults(), false)
+		return
+	}
+	cfg := AccessConfig{}
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		g.log.Error("access restriction: stored settings are unreadable, the restriction is off", "err", err)
+		g.apply(g.defaults(), false)
+		return
+	}
+	g.apply(cfg, true)
+}
+
+// Save stores a validated config and puts it in force.
+func (g *AccessGuard) Save(ctx context.Context, cfg AccessConfig) error {
+	norm, _, err := compileAccess(cfg)
+	if err != nil {
+		return err
+	}
+	raw, err := json.Marshal(norm)
+	if err != nil {
+		return err
+	}
+	if err := g.db.SetSettingRaw(ctx, accessSetting, raw); err != nil {
+		return err
+	}
+	g.apply(norm, true)
+	return nil
+}
+
+// Current returns the config in force.
+func (g *AccessGuard) Current() (AccessConfig, bool) {
+	s := g.snap.Load()
+	return s.cfg, s.configured
+}
+
+// Run reloads the restriction every few seconds (so that `linager access reset` takes effect without a restart)
+// and removes the old journal rows.
+func (g *AccessGuard) Run(ctx context.Context) {
+	reload := time.NewTicker(reloadEvery)
+	purge := time.NewTicker(10 * time.Minute)
+	defer reload.Stop()
+	defer purge.Stop()
+	g.Purge(ctx)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-reload.C:
+			g.Load(ctx)
+		case <-purge.C:
+			g.Purge(ctx)
+		}
+	}
+}
+
+// Purge removes the journal rows older than the retention.
+func (g *AccessGuard) Purge(ctx context.Context) {
+	cfg, _ := g.Current()
+	if err := g.db.PurgeAccessLog(ctx, time.Duration(cfg.Retention)*24*time.Hour); err != nil && ctx.Err() == nil {
+		g.log.Warn("purge access log", "err", err)
+	}
+}
+
+// ResetAccess turns the restriction off in the database (the lists stay). It is the way back when the admin has
+// locked themselves out: `linager access reset` on the server.
+func ResetAccess(ctx context.Context, db *store.Store) (bool, error) {
+	raw := db.SettingRaw(ctx, accessSetting)
+	if len(raw) == 0 {
+		return false, nil
+	}
+	cfg := AccessConfig{}
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		cfg = AccessConfig{}
+	}
+	changed := (cfg.Mode != AccessOff && cfg.Mode != "") || cfg.OnlyProxy
+	cfg.Mode, cfg.OnlyProxy = AccessOff, false
+	norm, _, err := compileAccess(cfg)
+	if err != nil {
+		return false, err
+	}
+	out, _ := json.Marshal(norm)
+	if err := db.SetSettingRaw(ctx, accessSetting, out); err != nil {
+		return false, err
+	}
+	_ = db.WriteAudit(ctx, store.Audit{Actor: "cli", Action: "access.reset", TargetType: "access", Result: "ok"})
+	return changed, nil
+}
+
+// ---- the journal ----
+
+func (g *AccessGuard) record(r *http.Request, v verdict, peer netip.Addr, event, login, reason string) {
+	row := store.AccessLogRow{ClientIP: v.IP, RemoteAddr: peer.String(), ViaProxy: r.Header.Get("X-Forwarded-For") != "", ProxyTrusted: v.ViaProxy,
+		Event: event, Login: login, Path: r.URL.Path, UserAgent: r.UserAgent(), Reason: reason}
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 3*time.Second)
+	defer cancel()
+	if err := g.db.InsertAccessLog(ctx, row); err != nil {
+		g.log.Error("access log write failed", "event", event, "err", err)
+	}
+}
+
+// due reports whether a row about this address may be written now and remembers it.
+func (g *AccessGuard) due(seen map[string]time.Time, key string, every time.Duration) bool {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	now := time.Now()
+	if t, ok := seen[key]; ok && now.Sub(t) < every {
+		return false
+	}
+	if len(seen) >= maxLogSeen {
+		for k, t := range seen {
+			if now.Sub(t) >= every {
+				delete(seen, k)
+			}
+		}
+		if len(seen) >= maxLogSeen {
+			clear(seen)
+		}
+	}
+	seen[key] = now
+	return true
+}
+
+// logLogin writes a sign-in attempt (the result is the audit result: ok, failed, locked, rate_limited).
+func (g *AccessGuard) logLogin(r *http.Request, v verdict, login, result string) {
+	event, reason := store.AccessLoginOK, ""
+	if result != "ok" {
+		event, reason = store.AccessLoginFail, result
+	}
+	g.record(r, v, remoteAddr(r), event, login, reason)
+}
+
+// ---- the guard in front of the admin panel ----
+
+// isPageOpen tells the request that opens the panel itself (not a background request of the interface).
+func (a *Admin) isPageOpen(r *http.Request) bool {
+	if r.Method != http.MethodGet {
+		return false
+	}
+	p := strings.TrimPrefix(r.URL.Path, strings.TrimRight(a.Cfg.Admin.BasePath, "/"))
+	return (p == "" || p == "/" || p == "/index.html") && strings.Contains(r.Header.Get("Accept"), "text/html")
+}
+
+func (a *Admin) accessGuard(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		g := a.Access
+		peer, xff := remoteAddr(r), r.Header.Get("X-Forwarded-For")
+		v := g.snap.Load().rules.decide(peer, xff)
+		if !v.Allowed {
+			if g.due(g.lastDeny, v.IP, denyLogEvery) {
+				g.record(r, v, peer, store.AccessDenied, "", v.Reason)
+			}
+			w.Header().Set("Cache-Control", "no-store")
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		if a.isPageOpen(r) && g.due(g.lastPage, v.IP, pageLogEvery) {
+			g.record(r, v, peer, store.AccessPage, "", "")
+		}
+		next.ServeHTTP(w, r)
+	})
+}

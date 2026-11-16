@@ -120,5 +120,9 @@
   "audit.action.hostuser.delete": "User deleted from a server",
   "audit.action.hostuser.password": "Server user password changed",
   "audit.action.hostuser.kill": "Server user sessions ended",
-  "audit.group.hostusers": "Server users"
+  "audit.group.hostusers": "Server users",
+  "audit.group.access": "Admin panel access",
+  "audit.action.access.update": "Admin panel access: settings changed",
+  "audit.action.access.retention": "Admin panel access: journal retention",
+  "audit.action.access.reset": "Admin panel access: reset from the command line"
 }

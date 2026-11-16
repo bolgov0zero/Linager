@@ -61,6 +61,7 @@ func Run(ctx context.Context, cfg *config.Server, static fs.FS, log *slog.Logger
 	agents := NewAgentPort(db, keys, hub, metrics, updates, log)
 	agents.CertLifetime = cfg.AgentCertLifetime()
 	go (&Scheduler{DB: db, Log: log}).Run(ctx)
+	go admin.Access.Run(ctx)
 
 	adminSrv := &http.Server{Addr: cfg.Admin.Listen, Handler: admin.Handler(), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 120 * time.Second, MaxHeaderBytes: 64 << 10}
 	agentSrv := &http.Server{Handler: agents.Handler(), TLSConfig: agents.TLSConfig(), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 120 * time.Second, MaxHeaderBytes: 64 << 10}

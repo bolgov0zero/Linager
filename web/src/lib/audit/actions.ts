@@ -18,6 +18,7 @@ export const KNOWN_ACTIONS: ReadonlySet<string> = new Set([
   'metrics.export',
   'dashboard.add', 'dashboard.remove', 'dashboard.reorder',
   'group.create', 'group.rename', 'group.delete', 'group.assign',
+  'access.update', 'access.retention', 'access.reset',
 ]);
 
 export interface Option {
@@ -44,6 +45,7 @@ export const ACTION_GROUPS: Option[] = [
   { value: 'process.', key: 'audit.group.process' },
   { value: 'metrics.', key: 'audit.group.metrics' },
   { value: 'dashboard.', key: 'audit.group.dashboard' },
+  { value: 'access.', key: 'audit.group.access' },
 ];
 
 /** Result filter. Denial results (bad_key, locked, rate_limited) are all shown as "denied". */

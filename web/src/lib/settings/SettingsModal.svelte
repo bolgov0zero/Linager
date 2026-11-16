@@ -8,6 +8,7 @@
   import SnippetsSection from './SnippetsSection.svelte';
   import GroupsSection from './GroupsSection.svelte';
   import UsersSection from './UsersSection.svelte';
+  import AccessSection from './AccessSection.svelte';
 
   import { SETTINGS_SECTIONS, type SettingsSection } from './sections';
 
@@ -63,12 +64,14 @@
         <UsersSection {onauthlost} />
       {:else if section === 'groups'}
         <GroupsSection {onauthlost} />
+      {:else if section === 'snippets'}
+        <SnippetsSection {onauthlost} />
+      {:else if section === 'access'}
+        <AccessSection {onauthlost} />
       {:else if section === 'updates'}
         <UpdatesPage embedded onchanged={onupdateschanged} />
-      {:else if section === 'audit'}
-        <AuditPage embedded />
       {:else}
-        <SnippetsSection {onauthlost} />
+        <AuditPage embedded />
       {/if}
     </div>
   </div>

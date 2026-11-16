@@ -5,27 +5,45 @@ import (
 	"net/http"
 	"net/netip"
 	"strings"
+	"sync/atomic"
 )
 
-// ProxyTrust decides which peers may set X-Forwarded-* headers.
-type ProxyTrust struct{ nets []netip.Prefix }
+// ProxyTrust decides which peers may set X-Forwarded-* headers. The list can be replaced while the server runs
+// (the admin edits it in the settings).
+type ProxyTrust struct {
+	nets atomic.Pointer[[]netip.Prefix]
+}
 
 // NewProxyTrust parses CIDR strings.
 func NewProxyTrust(cidrs []string) (*ProxyTrust, error) {
-	var p ProxyTrust
+	var nets []netip.Prefix
 	for _, c := range cidrs {
 		pre, err := netip.ParsePrefix(c)
 		if err != nil {
 			return nil, err
 		}
-		p.nets = append(p.nets, pre)
+		nets = append(nets, pre)
 	}
-	return &p, nil
+	p := &ProxyTrust{}
+	p.nets.Store(&nets)
+	return p, nil
 }
 
-func (p *ProxyTrust) trusted(a netip.Addr) bool {
+// Set replaces the trusted networks.
+func (p *ProxyTrust) Set(nets []netip.Prefix) { p.nets.Store(&nets) }
+
+func (p *ProxyTrust) list() []netip.Prefix {
+	if n := p.nets.Load(); n != nil {
+		return *n
+	}
+	return nil
+}
+
+func (p *ProxyTrust) trusted(a netip.Addr) bool { return inNets(p.list(), a) }
+
+func inNets(nets []netip.Prefix, a netip.Addr) bool {
 	a = a.Unmap()
-	for _, n := range p.nets {
+	for _, n := range nets {
 		if n.Contains(a) {
 			return true
 		}
@@ -46,12 +64,13 @@ func remoteAddr(r *http.Request) netip.Addr {
 // skipping trusted proxies. If every hop is trusted, the left-most entry is used.
 // Callers should also store RemoteAddr, because with a broad trust list the header is spoofable.
 func (p *ProxyTrust) ClientIP(r *http.Request) string {
-	peer := remoteAddr(r)
-	if !peer.IsValid() || !p.trusted(peer) {
-		return peer.String()
-	}
-	xff := r.Header.Get("X-Forwarded-For")
-	if xff == "" {
+	return effectiveIP(p.list(), remoteAddr(r), r.Header.Get("X-Forwarded-For"))
+}
+
+// effectiveIP is ClientIP for a given trust list, peer and X-Forwarded-For value.
+func effectiveIP(nets []netip.Prefix, peer netip.Addr, xff string) string {
+	peer = peer.Unmap()
+	if !peer.IsValid() || !inNets(nets, peer) || xff == "" {
 		return peer.String()
 	}
 	parts := strings.Split(xff, ",")
@@ -60,7 +79,7 @@ func (p *ProxyTrust) ClientIP(r *http.Request) string {
 		if err != nil {
 			continue
 		}
-		if !p.trusted(a) || i == 0 {
+		if !inNets(nets, a) || i == 0 {
 			return a.Unmap().String()
 		}
 	}

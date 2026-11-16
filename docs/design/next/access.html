@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Linager: макет раздела «Доступ к админке»</title>
+<style>
+@font-face{font-family:"Medeo Mono";src:url(../mockup/fonts/MedeoMonoVariable.woff2) format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Medeo Pixel";src:url(../mockup/fonts/MedeoPixelVariable.woff) format("woff");font-style:normal;font-display:swap}
+:root{
+  --bg:#e8ebe5;--surface:#f6f7f3;--ink:#14181e;--muted:#5d6572;--line:#14181e;--accent:#2b55d9;--good:#1e8a4b;--warn:#b36f0e;--crit:#c4352a;--seg-off:#d5d9d0;--shade:#c3c8bd;
+  --ctl:36px;--ctl-sm:28px;
+  --font-display:"Medeo Pixel","Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  --font-body:"Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  font-variation-settings:"ELSH" 1;font-synthesis:none;color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45}
+h1,h2,h3,h4,p{margin:0}
+button{font:inherit;color:inherit}
+.muted{color:var(--muted)}.small{font-size:12px}
+.ok{color:var(--good)}.warn{color:var(--warn)}.crit{color:var(--crit)}.acc{color:var(--accent)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px;border-bottom:2px solid var(--line);background:var(--surface)}
+.brand h1{font-family:var(--font-display);font-size:22px;font-weight:400}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:var(--ctl);background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;padding:0 12px;cursor:pointer;font-family:var(--font-display);font-size:14px;line-height:1;letter-spacing:.02em;box-shadow:3px 3px 0 var(--shade);white-space:nowrap}
+.btn.sm{height:var(--ctl-sm);padding:0 8px;font-size:12px}
+.btn.sq{min-width:var(--ctl-sm);padding:0 6px;height:var(--ctl-sm)}
+.btn.primary{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.btn.danger{background:var(--crit);color:var(--surface);border-color:var(--crit)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.input{height:var(--ctl);background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;padding:0 8px;font-family:var(--font-body);font-size:13px;line-height:1;min-width:0}
+select.input{padding-right:4px}
+.badge{display:inline-block;padding:0 6px;border:2px solid currentColor;font-size:12px;white-space:nowrap;line-height:1.35}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.grow{flex:1 1 160px}
+
+/* demo controls (not part of the product) */
+.demo{margin:0;padding:8px 20px;background:var(--ink);color:var(--surface);font-size:12px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}
+.demo label{display:flex;align-items:center;gap:6px}
+.demo select{height:24px;background:var(--surface);color:var(--ink);border:2px solid var(--surface);font-family:inherit;font-size:12px;border-radius:0}
+.demo .btn{height:24px;font-size:12px;box-shadow:none;border-color:var(--surface)}
+
+/* settings window (same frame and side navigation as the real dialog) */
+main{padding:20px;display:flex;justify-content:center}
+.dlg{background:var(--surface);border:2px solid var(--line);box-shadow:6px 6px 0 var(--shade);width:min(1120px,100%)}
+.dlg>header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:2px solid var(--line)}
+.dlg>header h2{font-family:var(--font-display);font-weight:400;font-size:20px}
+.settings{display:grid;grid-template-columns:190px minmax(0,1fr);gap:20px;padding:16px}
+.side{display:flex;flex-direction:column;gap:6px;align-self:start}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;text-align:left;background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;font-family:var(--font-display);font-size:14px;cursor:pointer;box-shadow:3px 3px 0 var(--shade)}
+.nav.active{background:var(--ink);color:var(--surface)}
+.content{min-width:0;display:flex;flex-direction:column;gap:14px}
+.content>h3.page{font-family:var(--font-display);font-weight:400;font-size:20px}
+
+/* folded cards (same as ui/Fold.svelte) */
+.card{background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);padding:16px;min-width:0}
+.fh{display:flex;align-items:center;gap:10px;width:100%;min-height:36px;padding:0;background:none;border:0;text-align:left;cursor:pointer}
+.fh h3{flex:1;min-width:0;font-size:16px;font-weight:400;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.fh .meta{flex:none;font-size:12px;color:var(--muted)}
+.chev{display:inline-block;transition:transform .12s;width:20px;text-align:center}
+.card.open .chev{transform:rotate(180deg)}
+.fbody{display:none;flex-direction:column;gap:14px;margin-top:10px}
+.card.open .fbody{display:flex}
+
+.radios{display:flex;flex-direction:column;gap:6px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:2px solid var(--seg-off);cursor:pointer}
+.opt input{margin-top:3px}
+.opt.on{border-color:var(--line)}
+.opt small{display:block;color:var(--muted);font-size:12px}
+.warnbox{border:2px solid var(--warn);color:var(--warn);padding:8px 10px;font-size:12px}
+.critbox{border:2px solid var(--crit);color:var(--crit);padding:8px 10px;font-size:12px}
+.infobox{border:2px dashed var(--accent);padding:8px 10px;font-size:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.goodbox{border:2px solid var(--good);color:var(--good);padding:8px 10px;font-size:12px}
+.box p+p{margin-top:4px}
+.switch{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.switch i{width:34px;height:18px;border:2px solid var(--line);position:relative;background:var(--seg-off);flex:none;margin-top:1px}
+.switch i::after{content:"";position:absolute;top:1px;left:1px;width:12px;height:12px;background:var(--ink)}
+.switch.on i{background:var(--accent)}
+.switch.on i::after{left:17px;background:var(--surface)}
+.switch small{display:block;color:var(--muted);font-size:12px}
+.sec h4{font-family:var(--font-display);font-weight:400;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+
+.wrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-family:var(--font-display);font-weight:400;font-size:12px;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:2px solid var(--line);white-space:nowrap}
+.tbl td{padding:7px 8px;border-bottom:1px dashed var(--seg-off);vertical-align:middle}
+.tbl td.nw{white-space:nowrap}
+.tbl td.end{text-align:right}
+.tbl tr.den td{background:color-mix(in srgb,var(--crit) 8%,transparent)}
+.chip{display:inline-flex;align-items:center;height:var(--ctl-sm);padding:0 10px;border:2px solid var(--line);background:var(--surface);cursor:pointer;font-family:var(--font-display);font-size:13px;box-shadow:2px 2px 0 var(--shade)}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--surface)}
+.tester{border:2px dashed var(--seg-off);padding:10px;display:flex;flex-direction:column;gap:8px}
+
+.applybar{position:sticky;bottom:0;display:none;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;background:var(--surface);border:2px solid var(--accent);box-shadow:4px 4px 0 var(--shade)}
+.applybar.on{display:flex}
+.applybar .msg{flex:1 1 220px;font-size:12px}
+
+/* modal + toast */
+.modal{position:fixed;inset:0;z-index:30;display:none;align-items:flex-start;justify-content:center;padding:10vh 16px;overflow-y:auto;background:rgba(10,12,16,.55)}
+.modal.on{display:flex}
+.modal .dlg{width:min(520px,100%)}
+.modal .body{padding:16px;display:flex;flex-direction:column;gap:12px}
+.modal footer{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:2px solid var(--line)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:40;background:var(--ink);color:var(--surface);padding:10px 16px;font-size:13px;display:none;max-width:90vw}
+.toast.on{display:block}
+
+@media (max-width:720px){
+  main{padding:8px}
+  .settings{grid-template-columns:minmax(0,1fr);padding:12px;gap:12px}
+  .side{flex-direction:row;flex-wrap:wrap}
+  .nav{padding:6px 10px;font-size:13px}
+  .demo{padding:8px 12px}
+}
+</style>
+</head>
+<body>
+<div class="top"><div class="brand"><h1>Linager</h1></div><span class="muted small">макет · не рабочий код</span></div>
+
+<p class="demo">
+  <b>Демо:</b>
+  <label>Прокси в настройках
+    <select id="dScenario">
+      <option value="ok">указан NPM 192.168.1.5</option>
+      <option value="trustall">по умолчанию (0.0.0.0/0)</option>
+      <option value="none">не указан</option>
+    </select>
+  </label>
+  <label>Вы сейчас зашли
+    <select id="dMe">
+      <option value="proxy">через NPM из интернета (203.0.113.7)</option>
+      <option value="direct">напрямую из локальной сети (192.168.1.40)</option>
+    </select>
+  </label>
+  <button class="btn" id="dTheme" type="button">Тема</button>
+</p>
+
+<main>
+<div class="dlg">
+  <header><h2>Настройки</h2><button class="btn sm" type="button" data-toast="Закрыть окно (в макете не работает)">✕</button></header>
+  <div class="settings">
+    <nav class="side" aria-label="Разделы">
+      <button class="nav" type="button" data-toast="Другие разделы в этом макете не показаны">Профиль</button>
+      <button class="nav" type="button" data-toast="Другие разделы в этом макете не показаны">Пользователи</button>
+      <button class="nav" type="button" data-toast="Другие разделы в этом макете не показаны">Группы серверов</button>
+      <button class="nav" type="button" data-toast="Другие разделы в этом макете не показаны">Обновления</button>
+      <button class="nav" type="button" data-toast="Другие разделы в этом макете не показаны">Журнал</button>
+      <button class="nav" type="button" data-toast="Другие разделы в этом макете не показаны">Сниппеты</button>
+      <button class="nav active" type="button" aria-current="page">Доступ к админке</button>
+    </nav>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+</main>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="dlg">
+    <header><h2 id="mTitle">Применить ограничение?</h2></header>
+    <div class="body" id="mBody"></div>
+    <footer><button class="btn" type="button" id="mCancel">Отмена</button><button class="btn primary" type="button" id="mOk">Применить</button></footer>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+var PEER='192.168.1.5';              // address the proxy connects from (as the server sees it)
+var ME={proxy:{peer:PEER,xff:'203.0.113.7',direct:false},direct:{peer:'192.168.1.40',xff:'',direct:true}};
+var MODES={off:'Выключено',white:'Белый список',black:'Чёрный список'};
+
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function ip2n(s){var p=s.split('.');if(p.length!==4)return null;var n=0;for(var i=0;i<4;i++){var v=+p[i];if(!/^\d{1,3}$/.test(p[i])||v>255)return null;n=n*256+v}return n}
+function valid(s){s=s.trim();if(!s)return false;if(s.indexOf(':')>=0)return /^[0-9a-f:]+(\/\d{1,3})?$/i.test(s);
+  var m=s.split('/');if(m.length>2||ip2n(m[0])===null)return false;return m.length===1||(/^\d{1,2}$/.test(m[1])&&+m[1]<=32)}
+function norm(s){s=s.trim();return s.indexOf('/')<0&&s.indexOf(':')<0?s+'/32':s}
+function match(ip,cidr){
+  if(cidr==='::/0')return ip.indexOf(':')>=0;
+  if(cidr.indexOf(':')>=0||ip.indexOf(':')>=0)return ip===cidr.split('/')[0];
+  var m=norm(cidr).split('/'),b=ip2n(m[0]),a=ip2n(ip),l=+m[1];if(a===null||b===null)return false;
+  if(l===0)return true;var mask=(0xFFFFFFFF<<(32-l))>>>0;return ((a&mask)>>>0)===((b&mask)>>>0)}
+function any(list,ip){return list.some(function(r){return match(ip,r.cidr)})}
+
+var S={
+  scenario:'ok',me:'proxy',
+  saved:null,draft:null,
+  open:{access:true,proxy:true,log:true},
+  filter:'all',retention:30,ttest:{ip:'198.51.100.20',how:'proxy'}
+};
+function proxiesFor(sc){return sc==='ok'?[{cidr:PEER+'/32',note:'Nginx Proxy Manager'}]:sc==='trustall'?[{cidr:'0.0.0.0/0',note:'по умолчанию'},{cidr:'::/0',note:'по умолчанию'}]:[]}
+function initDraft(){
+  S.saved={mode:'off',onlyProxy:false,
+    white:[{cidr:'192.168.1.0/24',note:'Локальная сеть'},{cidr:'203.0.113.7/32',note:'Мой внешний адрес'}],
+    black:[{cidr:'198.51.100.0/24',note:'Сканер'},{cidr:'192.0.2.44/32',note:'Подбор паролей'}],
+    proxies:proxiesFor(S.scenario)};
+  S.draft=JSON.parse(JSON.stringify(S.saved));
+}
+function dirty(){return JSON.stringify(S.draft)!==JSON.stringify(S.saved)}
+
+// ---- logic shared with the (future) server check ----
+function trustAll(d){return d.proxies.some(function(p){return p.cidr==='0.0.0.0/0'||p.cidr==='::/0'})}
+function effective(d,conn){            // conn: {peer,xff,direct}
+  var peerTrusted=any(d.proxies,conn.peer);
+  if(peerTrusted&&conn.xff)return {ip:conn.xff,via:conn.peer,trusted:true};
+  return {ip:conn.peer,via:conn.xff?conn.peer:'',trusted:false,ignoredXff:!!conn.xff};
+}
+function verdict(d,conn){
+  var e=effective(d,conn);
+  if(d.mode==='off')return {ok:true,e:e,why:'ограничение выключено'};
+  var viaTrusted=e.trusted;
+  if(d.onlyProxy&&!viaTrusted)return {ok:false,e:e,why:'прямое подключение запрещено, разрешены только доверенные прокси'};
+  if(d.mode==='white'){var hit=any(d.white,e.ip);return {ok:hit,e:e,why:hit?'адрес есть в белом списке':'адреса нет в белом списке'}}
+  var bad=any(d.black,e.ip);return {ok:!bad,e:e,why:bad?'адрес есть в чёрном списке':'адреса нет в чёрном списке'}
+}
+function problems(d){
+  var p=[],my=verdict(d,ME[S.me]);
+  if(d.mode==='off')return p;
+  if(trustAll(d))p.push('Доверие ко всем адресам (0.0.0.0/0): заголовку X-Forwarded-For верит любой, и адрес клиента можно подделать. Сузьте список до адреса вашего прокси.');
+  if(S.me==='proxy'&&!any(d.proxies,PEER))p.push('Запросы приходят с '+PEER+' и несут X-Forwarded-For, но этот адрес не в доверенных прокси. Сервер видит всех посетителей как '+PEER+': если он попадёт в список, доступ получит весь интернет.');
+  if(d.mode==='white'&&!d.white.length)p.push('Белый список пуст: после применения войти не сможет никто.');
+  if(!my.ok)p.push('Вас заблокирует: ваш адрес '+my.e.ip+' — '+my.why+'.');
+  return p;
+}
+
+// ---- log (sample data) ----
+var LOG=[
+  ['10:42:18','203.0.113.7',PEER,'page','admin','открыта админка'],
+  ['10:42:31','203.0.113.7',PEER,'login.ok','admin','вход выполнен'],
+  ['10:15:02','192.168.1.40','','login.ok','admin','вход выполнен'],
+  ['09:58:44','198.51.100.20',PEER,'login.fail','admin','неверный пароль'],
+  ['09:58:40','198.51.100.20',PEER,'login.fail','root','неверный пароль'],
+  ['09:58:37','198.51.100.20',PEER,'login.fail','administrator','неверный пароль'],
+  ['09:12:09','45.155.205.17',PEER,'page','','открыта админка'],
+  ['09:12:09','45.155.205.17',PEER,'login.fail','admin','неверный пароль'],
+  ['08:31:55','192.168.1.23','','page','','открыта админка'],
+  ['08:30:12','192.168.1.23','','login.fail','ivan','неверный код 2FA'],
+  ['вчера 23:48','192.0.2.44',PEER,'page','','открыта админка'],
+  ['вчера 23:48','192.0.2.44',PEER,'login.fail','admin','неверный пароль'],
+  ['вчера 21:05','203.0.113.7',PEER,'login.ok','admin','вход выполнен'],
+  ['вчера 18:20','192.168.1.40','','page','','открыта админка'],
+  ['вчера 12:03','91.240.118.5',PEER,'page','','открыта админка']
+];
+var EVT={'page':['открытие','muted'],'login.ok':['вход','ok'],'login.fail':['неудачный вход','warn']};
+function logRows(){
+  var d=S.saved;
+  return LOG.map(function(r){
+    var conn={peer:r[2]||r[1],xff:r[2]?r[1]:'',direct:!r[2]};
+    var v=verdict(d,conn);
+    return {t:r[0],ip:v.e.ip,real:r[1],via:r[2],ev:r[3],user:r[4],note:r[5],denied:!v.ok,untrusted:!!r[2]&&!any(d.proxies,r[2])};
+  });
+}
+
+// ---- rendering ----
+function fold(id,title,meta,tone,body){
+  return '<section class="card'+(S.open[id]?' open':'')+'" data-fold="'+id+'"><button class="fh" type="button" aria-expanded="'+(!!S.open[id])+'" data-act="fold" data-id="'+id+'">'
+   +'<h3>'+title+'</h3><span class="meta '+(tone||'')+'">'+meta+'</span><span class="chev">▾</span></button><div class="fbody">'+body+'</div></section>';
+}
+function renderAccess(){
+  var d=S.draft,list=d.mode==='black'?d.black:d.white,key=d.mode==='black'?'black':'white',h='';
+  var opts=[['off','Выключено','Доступ к админке открыт всем, кто дошёл до порта.'],['white','Белый список','Что не в списке — запрещено. Подходит, если вы знаете, откуда заходите.'],['black','Чёрный список','Что не в списке — разрешено. Закрывает только известные неугодные адреса.']];
+  h+='<div class="radios" role="radiogroup" aria-label="Режим">'+opts.map(function(o){
+    return '<label class="opt'+(d.mode===o[0]?' on':'')+'"><input type="radio" name="mode" value="'+o[0]+'"'+(d.mode===o[0]?' checked':'')+' data-act="mode"><span>'+o[1]+'<small>'+o[2]+'</small></span></label>'}).join('')+'</div>';
+  if(d.mode!=='off'){
+    h+='<div class="sec"><h4>'+(d.mode==='white'?'Разрешённые адреса':'Запрещённые адреса')+' · '+list.length+'</h4>';
+    if(list.length){
+      h+='<div class="wrap"><table class="tbl"><thead><tr><th>Адрес или подсеть</th><th>Комментарий</th><th></th></tr></thead><tbody>'+list.map(function(r,i){
+        return '<tr><td class="nw">'+esc(r.cidr)+'</td><td>'+esc(r.note||'—')+'</td><td class="end"><button class="btn sm" type="button" data-act="rm" data-i="'+i+'" aria-label="Удалить '+esc(r.cidr)+'">Удалить</button></td></tr>'}).join('')+'</tbody></table></div>';
+    }else h+='<p class="muted small">Список пуст.</p>';
+    h+='<form class="row" id="addForm" style="margin-top:10px" autocomplete="off"><input class="input grow" id="addCidr" placeholder="203.0.113.0/24 или 203.0.113.7" aria-label="Адрес или подсеть"><input class="input grow" id="addNote" placeholder="Комментарий" aria-label="Комментарий"><button class="btn primary" type="submit">Добавить</button>'
+      +(d.mode==='white'?'<button class="btn" type="button" data-act="rfc">+ Частные сети (RFC 1918)</button>':'')+'</form><p class="crit small" id="addErr" role="alert" style="margin-top:6px"></p></div>';
+    h+='<label class="switch'+(d.onlyProxy?' on':'')+'" data-act="onlyProxy" role="switch" aria-checked="'+d.onlyProxy+'" tabindex="0"><i></i><span>Только через доверенные прокси<small>Прямое подключение к порту админки (в том числе из локальной сети) получит 403 даже при адресе из списка.</small></span></label>';
+    h+='<div class="tester"><h4 class="muted small" style="font-family:var(--font-display);text-transform:uppercase;letter-spacing:.08em">Проверить адрес</h4><div class="row">'
+      +'<input class="input grow" id="tIp" value="'+esc(S.ttest.ip)+'" aria-label="Адрес для проверки">'
+      +'<select class="input" id="tHow" aria-label="Как придёт запрос"><option value="proxy"'+(S.ttest.how==='proxy'?' selected':'')+'>через прокси '+PEER+'</option><option value="direct"'+(S.ttest.how==='direct'?' selected':'')+'>напрямую</option></select>'
+      +'</div><div id="tRes" class="small"></div></div>';
+  }
+  var pr=problems(d);
+  if(d.mode!=='off'){
+    var my=verdict(d,ME[S.me]);
+    h+=pr.length?'':'<div class="goodbox box"><p>Вы войдёте: '+esc(my.e.ip)+' — '+esc(my.why)+'.</p></div>';
+  }
+  var meta=S.saved.mode==='off'?'выключено':MODES[S.saved.mode].toLowerCase()+' · '+(S.saved.mode==='white'?S.saved.white:S.saved.black).length;
+  return fold('access','Ограничение доступа',meta,S.saved.mode==='off'?'':'ok',h);
+}
+function renderProxy(){
+  var d=S.draft,h='',seen=S.me==='proxy',unlisted=seen&&!any(d.proxies,PEER)&&!trustAll(d);
+  if(trustAll(d))h+='<div class="warnbox box"><p>Список по умолчанию: заголовкам <b>X-Forwarded-*</b> верят от любого адреса, поэтому адрес клиента можно подделать. Укажите адрес вашего прокси и удалите <b>0.0.0.0/0</b>.</p></div>';
+  h+=seen
+    ?'<div class="infobox"><span>Этот запрос пришёл от <b>'+PEER+'</b> с <b>X-Forwarded-For: 203.0.113.7</b>. Это ваш прокси?</span>'
+      +(any(d.proxies,PEER)&&!trustAll(d)?'<span class="ok">уже в списке</span>':'<button class="btn sm primary" type="button" data-act="addpeer">Добавить '+PEER+' как доверенный</button>')+'</div>'
+    :'<div class="infobox"><span>Этот запрос пришёл напрямую с <b>192.168.1.40</b>, без заголовков прокси. Прокси не обнаружен.</span></div>';
+  if(unlisted)h+='<div class="critbox box"><p>Обнаружен прокси <b>'+PEER+'</b>, которого нет в списке. Пока он не доверенный, сервер видит всех посетителей как '+PEER+'.</p></div>';
+  h+='<div class="sec"><h4>Доверенные прокси · '+d.proxies.length+'</h4>';
+  if(d.proxies.length)h+='<div class="wrap"><table class="tbl"><thead><tr><th>Адрес или подсеть</th><th>Комментарий</th><th></th></tr></thead><tbody>'+d.proxies.map(function(r,i){
+      return '<tr><td class="nw">'+esc(r.cidr)+'</td><td>'+esc(r.note||'—')+'</td><td class="end"><button class="btn sm" type="button" data-act="rmp" data-i="'+i+'">Удалить</button></td></tr>'}).join('')+'</tbody></table></div>';
+  else h+='<p class="muted small">Список пуст: заголовки <b>X-Forwarded-*</b> игнорируются, адрес клиента — это адрес соединения.</p>';
+  h+='<form class="row" id="addProxy" style="margin-top:10px" autocomplete="off"><input class="input grow" id="pCidr" placeholder="192.168.1.5" aria-label="Адрес прокси"><input class="input grow" id="pNote" placeholder="Комментарий" aria-label="Комментарий"><button class="btn primary" type="submit">Добавить</button></form><p class="crit small" id="pErr" role="alert" style="margin-top:6px"></p></div>';
+  var meta=trustAll(S.saved)?'доверие всем':S.saved.proxies.length?S.saved.proxies.length+' шт.':'не заданы';
+  return fold('proxy','Доверенные прокси',meta,trustAll(S.saved)?'warn':S.saved.proxies.length?'ok':'warn',h);
+}
+function renderLog(){
+  var rows=logRows(),f=S.filter;
+  var flt=[['all','Все'],['denied','Запрещённые'],['login','Входы'],['fail','Неудачные входы'],['proxy','Через прокси'],['direct','Напрямую']];
+  rows=rows.filter(function(r){return f==='all'||(f==='denied'&&r.denied)||(f==='login'&&r.ev.indexOf('login')===0)||(f==='fail'&&r.ev==='login.fail')||(f==='proxy'&&r.via)||(f==='direct'&&!r.via)});
+  var h='<div class="row">'+flt.map(function(x){return '<button class="chip" type="button" aria-pressed="'+(f===x[0])+'" data-act="flt" data-f="'+x[0]+'">'+x[1]+'</button>'}).join('')
+    +'<span style="margin-left:auto" class="row small muted"><label for="ret">Хранить</label><select class="input" id="ret" style="height:28px"><option value="7"'+(S.retention==7?' selected':'')+'>7 дней</option><option value="30"'+(S.retention==30?' selected':'')+'>30 дней</option><option value="90"'+(S.retention==90?' selected':'')+'>90 дней</option></select></span></div>';
+  var listName=S.saved.mode==='black'?'в чёрный список':'в белый список';
+  h+='<div class="wrap"><table class="tbl" style="min-width:720px"><thead><tr><th>Время</th><th>Адрес клиента</th><th>Как пришёл</th><th>Событие</th><th>Логин</th><th></th></tr></thead><tbody>'
+   +(rows.length?rows.map(function(r,i){
+      var e=EVT[r.ev],ev=r.denied?'<span class="badge crit">запрещён</span>':'<span class="badge '+e[1]+'">'+e[0]+'</span>';
+      var via=r.via?'через '+esc(r.via)+(r.untrusted?' <span class="badge warn" title="Есть X-Forwarded-For, но прокси не доверенный">не доверенный</span>':''):'напрямую';
+      var act=S.saved.mode==='off'?'':('<button class="btn sm" type="button" data-act="tolist" data-ip="'+esc(r.ip)+'">'+listName+'</button>');
+      return '<tr class="'+(r.denied?'den':'')+'"><td class="nw">'+esc(r.t)+'</td><td class="nw">'+esc(r.ip)+'</td><td class="nw">'+via+'</td><td class="nw">'+ev+'</td><td>'+esc(r.user||'—')+'</td><td class="end">'+act+'</td></tr>'}).join('')
+     :'<tr><td colspan="6" class="muted">Нет записей по этому фильтру.</td></tr>')+'</tbody></table></div>'
+   +'<p class="muted small">В журнал попадают открытие страницы, входы (удачные и нет) и запрещённые запросы. Фоновые запросы интерфейса не пишутся. Изменения списков пишутся в общий журнал аудита.</p>';
+  var den=logRows().filter(function(r){return r.denied}).length;
+  return fold('log','Журнал обращений',den?den+' запрещено':'записей: '+LOG.length,den?'warn':'',h);
+}
+function render(){
+  var d=S.draft,pr=problems(d),dt=dirty(),h='<h3 class="page">Доступ к админке</h3>'
+   +'<p class="muted small">Ограничение действует только на порт админки. Порт агентов не затрагивается, серверы остаются на связи.</p>'
+   +renderAccess()+renderProxy()+renderLog();
+  h+='<div class="applybar'+(dt?' on':'')+'" id="bar"><div class="msg">'+(pr.length?'<span class="crit">Применить нельзя:</span> '+pr.map(esc).join('<br>'):'Есть неприменённые изменения.')+'</div>'
+    +'<button class="btn" type="button" data-act="reset">Сбросить</button><button class="btn primary" type="button" data-act="apply"'+(pr.length?' disabled':'')+'>Применить</button></div>';
+  var y=window.scrollY;document.getElementById('content').innerHTML=h;
+  testRun();window.scrollTo(0,y);
+}
+function testRun(){
+  var el=document.getElementById('tRes');if(!el)return;
+  var ip=document.getElementById('tIp').value.trim(),how=document.getElementById('tHow').value;
+  S.ttest={ip:ip,how:how};
+  if(!valid(ip)){el.innerHTML='<span class="muted">Введите адрес.</span>';return}
+  var conn=how==='proxy'?{peer:PEER,xff:ip,direct:false}:{peer:ip,xff:'',direct:true};
+  var v=verdict(S.draft,conn);
+  el.innerHTML=(v.ok?'<span class="badge ok">пропущен</span>':'<span class="badge crit">запрещён</span>')+' '+esc(v.e.ip)+' — '+esc(v.why)+(v.e.ignoredXff?'; заголовок X-Forwarded-For проигнорирован, прокси не доверенный':'');
+}
+
+// ---- events ----
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(function(){t.classList.remove('on')},3500)}
+function addTo(list,cidr,note,errId){
+  var err=document.getElementById(errId);
+  if(!valid(cidr)){err.textContent='Неверный адрес. Пример: 203.0.113.7 или 203.0.113.0/24.';return false}
+  cidr=norm(cidr);
+  if(list.some(function(r){return r.cidr===cidr})){err.textContent='Такой адрес уже есть в списке.';return false}
+  list.push({cidr:cidr,note:note.trim()});return true;
+}
+document.addEventListener('click',function(e){
+  var t=e.target.closest('[data-act],[data-toast]');if(!t)return;
+  if(t.dataset.toast){toast(t.dataset.toast);return}
+  var a=t.dataset.act,d=S.draft,key=d.mode==='black'?'black':'white';
+  if(a==='fold'){S.open[t.dataset.id]=!S.open[t.dataset.id];render();return}
+  if(a==='rm'){d[key].splice(+t.dataset.i,1);render();return}
+  if(a==='rmp'){d.proxies.splice(+t.dataset.i,1);render();return}
+  if(a==='rfc'){['10.0.0.0/8','172.16.0.0/12','192.168.0.0/16'].forEach(function(c){if(!d.white.some(function(r){return r.cidr===c}))d.white.push({cidr:c,note:'Частная сеть'})});render();return}
+  if(a==='addpeer'){d.proxies=d.proxies.filter(function(p){return p.cidr!=='0.0.0.0/0'&&p.cidr!=='::/0'});if(!any(d.proxies,PEER))d.proxies.push({cidr:PEER+'/32',note:'Nginx Proxy Manager'});render();return}
+  if(a==='onlyProxy'){d.onlyProxy=!d.onlyProxy;render();return}
+  if(a==='flt'){S.filter=t.dataset.f;render();return}
+  if(a==='tolist'){var l=S.draft.mode==='black'?S.draft.black:S.draft.white,c=t.dataset.ip.indexOf(':')>=0?t.dataset.ip:t.dataset.ip+'/32';
+    if(S.draft.mode==='off'){toast('Сначала выберите режим');return}
+    if(!l.some(function(r){return r.cidr===c})){l.push({cidr:c,note:'из журнала'});S.open.access=true;render();toast(t.dataset.ip+' добавлен в черновик ('+(S.draft.mode==='black'?'чёрный':'белый')+' список), нажмите «Применить»')}else toast('Этот адрес уже в списке');return}
+  if(a==='reset'){S.draft=JSON.parse(JSON.stringify(S.saved));render();return}
+  if(a==='apply'){
+    var lst=d.mode==='black'?d.black:d.white;
+    document.getElementById('mBody').innerHTML='<p>Режим: <b>'+MODES[d.mode]+'</b>'+(d.mode!=='off'?', записей: <b>'+lst.length+'</b>':'')+(d.onlyProxy&&d.mode!=='off'?', только через доверенные прокси':'')+'.</p>'
+      +'<p class="muted small">Вы войдёте как '+esc(verdict(d,ME[S.me]).e.ip)+'. Если вы всё же потеряете доступ, на сервере сбросьте ограничение командой <b>linager access reset</b>.</p>'
+      +'<p class="muted small">Действие будет записано в журнал аудита.</p>';
+    document.getElementById('modal').classList.add('on');return}
+});
+document.addEventListener('change',function(e){
+  var t=e.target;
+  if(t.dataset.act==='mode'){S.draft.mode=t.value;render();return}
+  if(t.id==='tIp'||t.id==='tHow'){testRun();return}
+  if(t.id==='ret'){S.retention=+t.value;toast('Срок хранения: '+t.value+' дн. (сохранено)');return}
+});
+document.addEventListener('input',function(e){if(e.target.id==='tIp')testRun()});
+document.addEventListener('keydown',function(e){var t=e.target;if(t.dataset&&t.dataset.act==='onlyProxy'&&(e.key===' '||e.key==='Enter')){e.preventDefault();t.click()}});
+document.addEventListener('submit',function(e){
+  e.preventDefault();var d=S.draft,key=d.mode==='black'?'black':'white';
+  if(e.target.id==='addForm'){
+    if(addTo(d[key],document.getElementById('addCidr').value,document.getElementById('addNote').value,'addErr'))render();return}
+  if(e.target.id==='addProxy'){
+    var c=document.getElementById('pCidr').value;
+    if(c.trim()==='0.0.0.0/0'||c.trim()==='::/0'){document.getElementById('pErr').textContent='Доверие всем адресам небезопасно, укажите адрес прокси.';return}
+    if(addTo(d.proxies,c,document.getElementById('pNote').value,'pErr'))render()}
+});
+document.getElementById('mCancel').onclick=function(){document.getElementById('modal').classList.remove('on')};
+document.getElementById('mOk').onclick=function(){
+  document.getElementById('modal').classList.remove('on');
+  S.saved=JSON.parse(JSON.stringify(S.draft));render();
+  toast(S.saved.mode==='off'?'Ограничение выключено':'Применено: '+MODES[S.saved.mode].toLowerCase()+'. Запись добавлена в журнал аудита');
+};
+document.getElementById('dScenario').onchange=function(e){S.scenario=e.target.value;initDraft();render()};
+document.getElementById('dMe').onchange=function(e){S.me=e.target.value;render()};
+document.getElementById('dTheme').onclick=function(){
+  var r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  r.dataset.theme=dark?'light':'dark'};
+
+initDraft();render();
+})();
+</script>
+</body>
+</html>
