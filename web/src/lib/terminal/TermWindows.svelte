@@ -4,6 +4,9 @@
   import TermWindowView from './TermWindowView.svelte';
   import { focusTermWindow, termWindows, updateTermWindow } from './windows';
 
+  /** The administrator, or an operator who was given the Users module, may pick the account of a shell. */
+  let { canUsers = false }: { canUsers?: boolean } = $props();
+
   const topKey = $derived(
     $termWindows.filter((w) => !w.minimized).reduce<{ key: number; z: number } | null>(
       (best, w) => (!best || w.z > best.z ? { key: w.key, z: w.z } : best),
@@ -37,7 +40,7 @@
       {#if win.kind === 'editor'}
         <EditorWindowView {win} top={win.key === topKey} />
       {:else}
-        <TermWindowView {win} top={win.key === topKey} />
+        <TermWindowView {win} top={win.key === topKey} {canUsers} />
       {/if}
     {/each}
     <nav class="dock" aria-label={$tr('termwin.dock')}>

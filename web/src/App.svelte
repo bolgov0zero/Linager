@@ -25,7 +25,7 @@
   function initialTheme(): Theme {
     const attr = document.documentElement.dataset.theme;
     if (attr === 'light' || attr === 'dark') return attr;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return 'dark'; // the system setting is not followed; theme-init.js has normally set the attribute already
   }
 
   /**
@@ -126,6 +126,12 @@
   function toggleTheme(): void {
     theme = theme === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = theme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#0f1218' : '#e8ebe5');
+    try {
+      localStorage.setItem('linager.theme', theme); // the choice stays after a reload and does not depend on the system
+    } catch {
+      // storage is blocked (private mode): the choice lasts until the page is reloaded
+    }
   }
 
   function pickLocale(next: Locale): void {
@@ -344,7 +350,7 @@
 {/if}
 
 {#if session}
-  <TermWindows />
+  <TermWindows canUsers={(session.role ?? 'admin') === 'admin' || (session.role === 'operator' && (session.modules ?? []).includes('users'))} />
 {/if}
 
 <Toast />

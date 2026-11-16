@@ -70,5 +70,9 @@
   "term.keys.ctrl": "Ctrl+",
   "term.keys.nav": "Навиг.",
   "term.keys.fn": "F1–12",
-  "term.keys.sym": "Знаки"
+  "term.keys.sym": "Знаки",
+  "term.user": "Пользователь",
+  "term.userHint": "От чьего имени работает оболочка",
+  "term.userFailed": "Не удалось получить список пользователей",
+  "term.userNone": "Нет пользователей с оболочкой"
 }

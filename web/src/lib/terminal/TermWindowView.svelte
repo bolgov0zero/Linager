@@ -4,11 +4,12 @@
   import SnippetMenu from './SnippetMenu.svelte';
   import { requestSettings } from '../settings/request';
   import TermIcon from './TermIcon.svelte';
+  import TermUserMenu from './TermUserMenu.svelte';
   import TermSession, { type TermPhase } from './TermSession.svelte';
   import WindowFrame from './WindowFrame.svelte';
-  import { closeTermWindow, type TermWindow } from './windows';
+  import { closeTermWindow, setTermUser, type TermWindow } from './windows';
 
-  let { win, top }: { win: TermWindow; top: boolean } = $props();
+  let { win, top, canUsers = false }: { win: TermWindow; top: boolean; canUsers?: boolean } = $props();
 
   let phase = $state<TermPhase>('connecting');
   let keys = $state(false);
@@ -31,6 +32,9 @@
     <span class="muted status">· {statusText}</span>
   {/snippet}
   {#snippet tools()}
+    {#if canUsers}
+      <TermUserMenu {serverId} current={win.asUser ?? ''} onpick={(u) => setTermUser(key, u)} />
+    {/if}
     <SnippetMenu serverId={serverId} oninsert={(text, run) => session?.insert(text, run)} onmanage={() => requestSettings('snippets')} />
     <button class="btn sm icon" class:ink={keys} type="button" title={$tr('term.keys')} aria-label={$tr('term.keys')} aria-pressed={keys} onclick={() => (keys = !keys)}><KeyIcon /></button>
     {#if phase === 'open'}

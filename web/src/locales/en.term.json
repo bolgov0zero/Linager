@@ -70,5 +70,9 @@
   "term.keys.ctrl": "Ctrl+",
   "term.keys.nav": "Nav",
   "term.keys.fn": "F1–12",
-  "term.keys.sym": "Symbols"
+  "term.keys.sym": "Symbols",
+  "term.user": "User",
+  "term.userHint": "The account the shell runs as",
+  "term.userFailed": "Could not get the list of users",
+  "term.userNone": "No users with a shell"
 }

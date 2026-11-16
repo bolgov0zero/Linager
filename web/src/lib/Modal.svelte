@@ -7,6 +7,7 @@
     labelId,
     onclose,
     wide = false,
+    medium = false,
     children,
   }: {
     title: string;
@@ -14,6 +15,8 @@
     onclose: () => void;
     /** A large dialog (settings). */
     wide?: boolean;
+    /** A dialog with two columns of fields. */
+    medium?: boolean;
     children: Snippet;
   } = $props();
 
@@ -33,7 +36,7 @@
 <div class="modal-layer">
   <button class="backdrop" type="button" tabindex="-1" aria-label={$tr('common.close')} onclick={onclose}
   ></button>
-  <div class="dialog" class:wide role="dialog" aria-modal="true" aria-labelledby={labelId} tabindex="-1" bind:this={dialog}>
+  <div class="dialog" class:wide class:medium role="dialog" aria-modal="true" aria-labelledby={labelId} tabindex="-1" bind:this={dialog}>
     <header class="dialog-head">
       <h2 id={labelId}>{title}</h2>
       <button class="btn" type="button" aria-label={$tr('common.close')} onclick={onclose}>×</button>
@@ -73,6 +76,10 @@
     border: 2px solid var(--line);
     box-shadow: 4px 4px 0 var(--shade);
     outline: none;
+  }
+
+  .dialog.medium {
+    max-width: 920px;
   }
 
   .dialog.wide {

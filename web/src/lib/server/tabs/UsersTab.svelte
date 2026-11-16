@@ -48,7 +48,7 @@
   });
 
   // ---- filters ----
-  let fHuman = $state(true);
+  let fHuman = $state(false); // no kind pressed: everyone is shown
   let fSystem = $state(false);
   let fSudo = $state(false);
   let fOnline = $state(false);
@@ -101,7 +101,7 @@
   }
 
   function terminal(u: HostUser): void {
-    openTermWindow(server.id, `${u.name}@${server.name}`, u.name);
+    openTermWindow(server.id, server.name, u.name);
   }
 
   const sudoLabel = (s: HostUser['sudo']) => $T(`usr.sudo.badge.${s}`);

@@ -75,73 +75,77 @@
   }
 </script>
 
-<Modal title={$tr('usr.add.title')} labelId="usr-add" {onclose}>
+<Modal title={$tr('usr.add.title')} labelId="usr-add" medium {onclose}>
   <form class="stack" onsubmit={(e) => { e.preventDefault(); void create(); }}>
-    <div class="two">
-      <label class="field">
-        <span class="label">{$tr('usr.add.login')}</span>
-        <input class="input" bind:value={name} autocomplete="off" spellcheck="false" autocapitalize="none" />
-        {#if name && !nameOk}<span class="error small">{$tr('usr.add.loginRule')}</span>{:else if taken}<span class="error small">{$tr('usr.add.taken')}</span>{/if}
-      </label>
-      <label class="field">
-        <span class="label">{$tr('usr.add.gecos')}</span>
-        <input class="input" bind:value={gecos} maxlength="100" />
-      </label>
-    </div>
-    <div class="two">
-      <div class="field">
-        <span class="label">{$tr('usr.props.shell')}</span>
-        <Select bind:value={shell} options={shellOptions} ariaLabel={$tr('usr.props.shell')} />
-      </div>
-      <label class="field">
-        <span class="label">{$tr('usr.props.home')}</span>
-        <input class="input mono" bind:value={home} placeholder={`/home/${name || 'login'}`} spellcheck="false" />
-      </label>
-    </div>
-
-    <div class="field">
-      <span class="label">{$tr('usr.add.password')}</span>
-      <div class="opts">
-        <label class="opt" class:on={pwMode === 'generate'}><input type="radio" bind:group={pwMode} value="generate" /><span>{$tr('usr.pw.generate')}<small class="muted">{$tr('usr.pw.generateHint')}</small></span></label>
-        <label class="opt" class:on={pwMode === 'manual'}><input type="radio" bind:group={pwMode} value="manual" /><span>{$tr('usr.pw.manual')}</span></label>
-        <label class="opt" class:on={pwMode === 'none'}><input type="radio" bind:group={pwMode} value="none" /><span>{$tr('usr.add.pwNone')}<small class="muted">{$tr('usr.add.pwNoneHint')}</small></span></label>
-      </div>
-      {#if pwMode === 'generate'}
-        <div class="row">
-          <input class="input mono grow" readonly value={generated} aria-label={$tr('usr.pw.generated')} />
-          <button class="btn" type="button" onclick={() => void copy()}>{$tr('common.copy')}</button>
-          <button class="btn" type="button" onclick={() => (generated = genPassword())}>{$tr('usr.pw.again')}</button>
+    <div class="cols">
+      <div class="col">
+        <div class="two">
+          <label class="field">
+            <span class="label">{$tr('usr.add.login')}</span>
+            <input class="input" bind:value={name} autocomplete="off" spellcheck="false" autocapitalize="none" />
+            {#if name && !nameOk}<span class="error small">{$tr('usr.add.loginRule')}</span>{:else if taken}<span class="error small">{$tr('usr.add.taken')}</span>{/if}
+          </label>
+          <label class="field">
+            <span class="label">{$tr('usr.add.gecos')}</span>
+            <input class="input" bind:value={gecos} maxlength="100" />
+          </label>
         </div>
-        <span class="muted small">{$tr('usr.pw.once')}</span>
-      {:else if pwMode === 'manual'}
-        <input class="input" type="password" autocomplete="new-password" bind:value={manual} aria-label={$tr('usr.pw.new')} />
-        <span class="muted small">{$tr('usr.pw.rule')}</span>
-      {/if}
-    </div>
-
-    <div class="field">
-      <span class="label">{$tr('usr.props.sudo')}</span>
-      <div class="row">
-        <button class="chip" type="button" aria-pressed={sudo === 'none'} onclick={() => (sudo = 'none')}>{$tr('usr.sudo.none')}</button>
-        <button class="chip" type="button" aria-pressed={sudo === 'pw'} onclick={() => (sudo = 'pw')}>{$tr('usr.sudo.pw')}</button>
-        <button class="chip" type="button" aria-pressed={sudo === 'nopw'} onclick={() => (sudo = 'nopw')}>{$tr('usr.sudo.nopw')}</button>
+        <div class="two">
+          <div class="field">
+            <span class="label">{$tr('usr.props.shell')}</span>
+            <Select bind:value={shell} options={shellOptions} ariaLabel={$tr('usr.props.shell')} />
+          </div>
+          <label class="field">
+            <span class="label">{$tr('usr.props.home')}</span>
+            <input class="input mono" bind:value={home} placeholder={`/home/${name || 'login'}`} spellcheck="false" />
+          </label>
+        </div>
+        <div class="field">
+          <span class="label">{$tr('usr.props.sudo')}</span>
+          <div class="row">
+            <button class="chip" type="button" aria-pressed={sudo === 'none'} onclick={() => (sudo = 'none')}>{$tr('usr.sudo.none')}</button>
+            <button class="chip" type="button" aria-pressed={sudo === 'pw'} onclick={() => (sudo = 'pw')}>{$tr('usr.sudo.pw')}</button>
+            <button class="chip" type="button" aria-pressed={sudo === 'nopw'} onclick={() => (sudo = 'nopw')}>{$tr('usr.sudo.nopw')}</button>
+          </div>
+          {#if sudo === 'nopw'}<span class="error small">{$tr('usr.sudo.nopwHint')}</span>{/if}
+        </div>
+        <div class="field">
+          <span class="label">{$tr('usr.props.groups')}</span>
+          <div class="row">
+            {#each info.groups as g (g)}
+              <button class="chip" type="button" aria-pressed={groups.includes(g)} onclick={() => toggleGroup(g)}>{g}{HOT_GROUPS.includes(g) ? ' ⚠' : ''}</button>
+            {/each}
+          </div>
+        </div>
       </div>
-      {#if sudo === 'nopw'}<span class="error small">{$tr('usr.sudo.nopwHint')}</span>{/if}
-    </div>
 
-    <div class="field">
-      <span class="label">{$tr('usr.props.groups')}</span>
-      <div class="row">
-        {#each info.groups as g (g)}
-          <button class="chip" type="button" aria-pressed={groups.includes(g)} onclick={() => toggleGroup(g)}>{g}{HOT_GROUPS.includes(g) ? ' ⚠' : ''}</button>
-        {/each}
+      <div class="col">
+        <div class="field">
+          <span class="label">{$tr('usr.add.password')}</span>
+          <div class="opts">
+            <label class="opt" class:on={pwMode === 'generate'}><input type="radio" bind:group={pwMode} value="generate" /><span>{$tr('usr.pw.generate')}<small class="muted">{$tr('usr.pw.generateHint')}</small></span></label>
+            <label class="opt" class:on={pwMode === 'manual'}><input type="radio" bind:group={pwMode} value="manual" /><span>{$tr('usr.pw.manual')}</span></label>
+            <label class="opt" class:on={pwMode === 'none'}><input type="radio" bind:group={pwMode} value="none" /><span>{$tr('usr.add.pwNone')}<small class="muted">{$tr('usr.add.pwNoneHint')}</small></span></label>
+          </div>
+          {#if pwMode === 'generate'}
+            <div class="row">
+              <input class="input mono grow" readonly value={generated} aria-label={$tr('usr.pw.generated')} />
+              <button class="btn sm" type="button" onclick={() => void copy()}>{$tr('common.copy')}</button>
+              <button class="btn sm" type="button" onclick={() => (generated = genPassword())}>{$tr('usr.pw.again')}</button>
+            </div>
+            <span class="muted small">{$tr('usr.pw.once')}</span>
+          {:else if pwMode === 'manual'}
+            <input class="input" type="password" autocomplete="new-password" bind:value={manual} aria-label={$tr('usr.pw.new')} />
+            <span class="muted small">{$tr('usr.pw.rule')}</span>
+          {/if}
+        </div>
+
+        <label class="field">
+          <span class="label">{$tr('usr.add.key')}</span>
+          <textarea class="input mono" rows="2" bind:value={sshKey} placeholder="ssh-ed25519 AAAA… user@host" spellcheck="false"></textarea>
+        </label>
       </div>
     </div>
-
-    <label class="field">
-      <span class="label">{$tr('usr.add.key')}</span>
-      <textarea class="input mono" rows="2" bind:value={sshKey} placeholder="ssh-ed25519 AAAA… user@host" spellcheck="false"></textarea>
-    </label>
 
     <div class="field">
       <span class="label">{$tr('usr.add.preview')}</span>
@@ -157,6 +161,20 @@
 </Modal>
 
 <style>
+  .cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 24px;
+    align-items: start;
+  }
+
+  .col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+
   .two {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -187,6 +205,11 @@
     font-size: 12px;
   }
 
+  /* the hint of an option is shown only for the chosen one, so the column stays short */
+  .opt:not(.on) small {
+    display: none;
+  }
+
   .grow {
     flex: 1 1 200px;
     min-width: 0;
@@ -196,13 +219,16 @@
     margin: 0;
     padding: 8px 10px;
     overflow-x: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
     border: 2px dashed var(--seg-off);
     background: var(--bg);
     color: var(--muted);
     font-size: 12px;
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 760px) {
+    .cols,
     .two {
       grid-template-columns: 1fr;
     }

@@ -111,6 +111,7 @@
   $effect(() => {
     const el = host;
     const id = serverId;
+    const as = asUser; // a new account starts a new shell
     void attempt;
     if (!el) return;
 
@@ -158,7 +159,7 @@
       });
 
       const encoder = new TextEncoder();
-      const socket = openStream(id, 'terminal', asUser ? { cols: term.cols, rows: term.rows, user: asUser } : { cols: term.cols, rows: term.rows });
+      const socket = openStream(id, 'terminal', as ? { cols: term.cols, rows: term.rows, user: as } : { cols: term.cols, rows: term.rows });
       let active = true;
       phase = 'connecting';
       reason = null;

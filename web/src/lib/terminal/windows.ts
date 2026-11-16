@@ -44,7 +44,7 @@ const CASCADE = 28;
  * Opens a floating terminal to a server. Refuses with a toast when this page already holds the per-server
  * limit; terminals opened elsewhere are reported by the server (close code 4029) and handled by the window.
  */
-export function openTermWindow(serverId: string, name: string, asUser?: string): void {
+export function openTermWindow(serverId: string, serverName: string, asUser?: string): void {
   const list = get(termWindows);
   const open = asUser ? list.find((w) => w.kind === 'terminal' && w.serverId === serverId && w.asUser === asUser) : undefined;
   if (open) {
@@ -55,7 +55,19 @@ export function openTermWindow(serverId: string, name: string, asUser?: string):
     showToast(t('term.limit'));
     return;
   }
-  addWindow({ kind: 'terminal', serverId, name, asUser });
+  addWindow({ kind: 'terminal', serverId, name: termWindowName(serverName, asUser), serverName, asUser });
+}
+
+/** The title of a terminal window: the server, or user@server when the shell runs as another account. */
+function termWindowName(serverName: string, asUser?: string): string {
+  return asUser ? `${asUser}@${serverName}` : serverName;
+}
+
+/** Switches the account of a terminal window; the shell is started again as that account ('' is root). */
+export function setTermUser(key: number, user: string): void {
+  const win = get(termWindows).find((w) => w.key === key);
+  if (!win || win.kind !== 'terminal') return;
+  updateTermWindow(key, { asUser: user || undefined, name: termWindowName(win.serverName ?? win.name, user || undefined) });
 }
 
 /** Opens a file in a floating editor; an already open file of the same server is brought to the front. */
