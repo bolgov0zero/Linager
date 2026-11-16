@@ -56,6 +56,9 @@
   "upd.cache.note": "The signature is checked with the public key built into the binary.",
 
   "upd.agents.title": "Agents",
+  "upd.agents.metaNeed": "to update: {n}",
+  "upd.agents.metaOk": "all up to date",
+  "upd.agents.metaRunning": "update running",
   "upd.agents.intro": "Agents get their version from the server; right now it is",
   "upd.agents.needServer": "To roll out {version}, update the server first.",
   "upd.agents.order": "Order",

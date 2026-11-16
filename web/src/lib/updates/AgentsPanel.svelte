@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { AgentUpdateRow, RolloutMode, UpdatesInfo } from '../../api';
+  import Fold from '../ui/Fold.svelte';
   import Select from '../ui/Select.svelte';
   import { tr as trans } from '../../i18n';
 
@@ -29,6 +30,18 @@
   const needServer = $derived(
     Boolean(info.server.available) && info.server.available !== info.server.current,
   );
+
+  /** The folded header says what needs doing, so the list can stay closed. */
+  const meta = $derived(
+    rolloutRunning
+      ? $trans('upd.agents.metaRunning')
+      : applicable.length > 0
+        ? $trans('upd.agents.metaNeed', { n: applicable.length })
+        : info.agents.length > 0
+          ? $trans('upd.agents.metaOk')
+          : '',
+  );
+  const metaTone = $derived<'ok' | 'warn' | 'muted'>(rolloutRunning || applicable.length > 0 ? 'warn' : info.agents.length > 0 ? 'ok' : 'muted');
 
   async function run(ids: string[] | 'all', clear: string[] = []): Promise<void> {
     submitting = true;
@@ -68,9 +81,7 @@
   }
 </script>
 
-<section class="upd-panel">
-  <h3 class="upd-h">{$trans('upd.agents.title')}</h3>
-
+<Fold title={$trans('upd.agents.title')} {meta} tone={metaTone}>
   <p class="upd-intro">
     {$trans('upd.agents.intro')} <b class="upd-mono">{info.agents_target}</b>.
     {#if needServer}{$trans('upd.agents.needServer', { version: info.server.available ?? '' })}{/if}
@@ -210,4 +221,4 @@
       </tbody>
     </table>
   </div>
-</section>
+</Fold>

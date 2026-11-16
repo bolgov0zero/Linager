@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.65
+
+- Updates: the blocks "Agents" and "Same from the terminal" are folded by default, like "Update history". The header of "Agents" tells what needs doing: "to update: N" (the agents that can be updated, including failed and rolled-back ones), "all up to date", or "update running" while a rollout is in progress.
+
 ## 0.1.64
 
 - Updates: the block "Update history" is folded by default (the header shows the number of records), like the other folded blocks.

@@ -56,6 +56,9 @@
   "upd.cache.note": "Подпись проверяется встроенным в бинарник публичным ключом.",
 
   "upd.agents.title": "Агенты",
+  "upd.agents.metaNeed": "нужно обновить: {n}",
+  "upd.agents.metaOk": "все актуальны",
+  "upd.agents.metaRunning": "идёт обновление",
   "upd.agents.intro": "Агенты получают версию с сервера: сейчас это",
   "upd.agents.needServer": "Чтобы раздать {version}, сначала обновите сервер.",
   "upd.agents.order": "Порядок",

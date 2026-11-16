@@ -4,7 +4,7 @@
   import { api, type RolloutMode, type UpdatesInfo } from '../api';
   import { locale, t, tr as trans } from '../i18n';
   import { showToast } from './toast';
-  import { isPhone } from './ui/viewport';
+  import Fold from './ui/Fold.svelte';
   import ServerPanel from './updates/ServerPanel.svelte';
   import CachePanel from './updates/CachePanel.svelte';
   import AgentsPanel from './updates/AgentsPanel.svelte';
@@ -230,23 +230,12 @@
 
     <div class="upd-grid">
       <HistoryPanel history={info.history} />
-      {#if $isPhone}
-        <details class="upd-panel upd-cli">
-          <summary class="upd-h">{$trans('upd.cli.title')}</summary>
-          <pre class="upd-term"><code><span class="cmd">linager update --check</span>      <span class="dim">{$trans('upd.cli.check')}</span>
-<span class="cmd">linager update</span>              <span class="dim">{$trans('upd.cli.update')}</span>
-<span class="cmd">linager agent update</span>        <span class="dim">{$trans('upd.cli.agentUpdate')}</span>
-<span class="cmd">linager agent status</span>        <span class="dim">{$trans('upd.cli.agentStatus')}</span></code></pre>
-        </details>
-      {:else}
-      <section class="upd-panel">
-        <h3 class="upd-h">{$trans('upd.cli.title')}</h3>
+      <Fold title={$trans('upd.cli.title')}>
         <pre class="upd-term"><code><span class="cmd">linager update --check</span>      <span class="dim">{$trans('upd.cli.check')}</span>
 <span class="cmd">linager update</span>              <span class="dim">{$trans('upd.cli.update')}</span>
 <span class="cmd">linager agent update</span>        <span class="dim">{$trans('upd.cli.agentUpdate')}</span>
 <span class="cmd">linager agent status</span>        <span class="dim">{$trans('upd.cli.agentStatus')}</span></code></pre>
-      </section>
-      {/if}
+      </Fold>
     </div>
   {/if}
 </div>
