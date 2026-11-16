@@ -1,7 +1,7 @@
 import { defineConfig, type DefaultTheme } from 'vitepress';
 
 const REPO = 'https://github.com/bolgov0zero/linager';
-const SITE = 'https://bolgov0zero.github.io/Linager';
+const SITE = 'https://bolgov0zero.github.io/linager';
 
 const sidebar = (p: string, t: Record<string, string>): DefaultTheme.SidebarItem[] => [
   { text: t.start, items: [
@@ -26,11 +26,11 @@ export default defineConfig({
   srcDir: 'content',
   title: 'Linager',
   description: 'Open-source server management for Debian and Ubuntu: a web panel and lightweight agents.',
-  base: '/Linager/',
+  base: '/linager/',
   cleanUrls: true,
   lastUpdated: false,
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/Linager/logo.svg' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/linager/logo.svg' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:title', content: 'Linager: server management for Debian and Ubuntu' }],
     ['meta', { property: 'og:description', content: 'One web panel, a lightweight agent on every host: live metrics, terminal, files, firewall, Docker.' }],
