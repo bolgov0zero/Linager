@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Linager: макет следующих вкладок</title>
+<style>
+@font-face{font-family:"Medeo Mono";src:url(../mockup/fonts/MedeoMonoVariable.woff2) format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Medeo Pixel";src:url(../mockup/fonts/MedeoPixelVariable.woff) format("woff");font-style:normal;font-display:swap}
+:root{
+  --bg:#e8ebe5;--surface:#f6f7f3;--ink:#14181e;--muted:#5d6572;--line:#14181e;--accent:#2b55d9;--good:#1e8a4b;--warn:#b36f0e;--crit:#c4352a;--seg-off:#d5d9d0;--shade:#c3c8bd;
+  --c1:#2b55d9;--c2:#a3369a;--c3:#b36f0e;--c4:#1e8a4b;--c5:#1f8aa0;--c6:#6b7488;
+  --ctl:36px;--ctl-sm:28px;
+  --font-display:"Medeo Pixel","Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  --font-body:"Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  font-variation-settings:"ELSH" 1;font-synthesis:none;color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;
+  --c1:#7d9cff;--c2:#c95fc0;--c3:#e6b04b;--c4:#4fcf86;--c5:#4fc3d9;--c6:#9aa3b5;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;--c1:#7d9cff;--c2:#c95fc0;--c3:#e6b04b;--c4:#4fcf86;--c5:#4fc3d9;--c6:#9aa3b5;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45}
+h1,h2,h3,h4,p{margin:0}
+button{font:inherit;color:inherit}
+.mono{font-family:var(--font-body)}
+.muted{color:var(--muted)}.small{font-size:12px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px;border-bottom:2px solid var(--line);background:var(--surface)}
+.brand{display:flex;align-items:center;gap:10px}
+.brand h1{font-family:var(--font-display);font-size:22px;font-weight:400}
+.note{margin:0;padding:8px 20px;background:var(--ink);color:var(--surface);font-size:12px}
+main{padding:20px;max-width:1280px;margin:0 auto}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:var(--ctl);background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;padding:0 12px;cursor:pointer;font-family:var(--font-display);font-size:14px;line-height:1;letter-spacing:.02em;box-shadow:3px 3px 0 var(--shade);white-space:nowrap}
+.btn.sm{height:var(--ctl-sm);padding:0 8px;font-size:12px}
+.btn.primary{background:var(--accent);color:var(--surface)}
+.btn.danger{background:var(--crit);color:var(--surface)}
+.btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+.card{background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);padding:16px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.row.end{justify-content:flex-end}.row.between{justify-content:space-between}
+h3.t{font-family:var(--font-display);font-weight:400;font-size:16px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:10px}
+.new{display:inline-block;padding:0 6px;border:2px solid var(--accent);color:var(--accent);font-size:11px;letter-spacing:.04em;font-family:var(--font-body);text-transform:uppercase}
+.badge{display:inline-block;padding:1px 6px;border:2px solid currentColor;font-size:12px;white-space:nowrap;font-family:var(--font-body);letter-spacing:0;text-transform:none}
+.ok{color:var(--good)}.warn{color:var(--warn)}.crit{color:var(--crit)}.mut{color:var(--muted)}
+.dot{display:inline-block;width:8px;height:8px;background:currentColor;margin-right:6px}
+.chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:var(--ctl);background:var(--surface);color:var(--ink);border:2px solid var(--line);padding:0 10px;cursor:pointer;font-family:var(--font-display);font-size:13px;line-height:1;box-shadow:3px 3px 0 var(--shade)}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--surface)}
+.input{height:var(--ctl);background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;padding:0 8px;font-family:var(--font-body);font-size:13px;line-height:1}
+select.input{padding-right:4px}
+/* a status in a column of buttons looks like a small button, so the column stays even */
+.pill{display:inline-flex;align-items:center;justify-content:center;height:var(--ctl-sm);padding:0 8px;border:2px solid currentColor;font-family:var(--font-display);font-size:12px;line-height:1;white-space:nowrap}
+/* tabs of a server page */
+.srv-head{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:6px}
+.srv-head h2{font-family:var(--font-display);font-size:34px;font-weight:400}
+.tabs{display:flex;flex-wrap:wrap;gap:2px;margin-top:14px}
+.tab{background:none;border:0;border-bottom:2px solid var(--line);padding:9px 14px;cursor:pointer;color:var(--muted);font-size:14px}
+.tab[aria-selected=true]{color:var(--ink);border:2px solid var(--line);border-bottom-color:var(--bg);background:var(--bg);margin-bottom:-2px}
+.tab.dim{opacity:.45;cursor:default}
+.panel{border:2px solid var(--line);padding:16px;display:none;flex-direction:column;gap:16px}
+.panel.on{display:flex}
+/* tables */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:6px 10px;text-align:left;font-weight:400;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--line)}
+.tbl td{padding:9px 10px;vertical-align:middle;border-bottom:1px dashed var(--seg-off)}
+.tbl .num{text-align:right}
+.tbl tr.hl td{background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.wrap{overflow-x:auto}
+.confirm{padding:12px;border:2px solid var(--crit);display:none;flex-direction:column;gap:8px}
+.confirm.on{display:flex}
+.confirm.info{border-color:var(--accent)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px}
+.cmd{font-family:var(--font-body);font-size:12px;background:var(--ink);color:var(--surface);padding:6px 10px;white-space:pre-wrap}
+.ips{display:flex;flex-wrap:wrap;gap:6px}
+.ipchip{display:inline-flex;align-items:center;gap:6px;border:2px solid var(--line);padding:1px 4px 1px 8px;font-size:12px}
+.ipchip button{border:0;background:none;cursor:pointer;color:var(--muted);padding:0 4px;font-size:14px}
+/* docker */
+.grp{border:2px solid var(--line)}
+.grp-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:var(--seg-off);cursor:pointer}
+.grp-h h4{font-family:var(--font-display);font-weight:400;font-size:16px}
+.grp .tbl{margin:0;table-layout:fixed;min-width:900px}
+.grp .tbl th:nth-child(1){width:22%}.grp .tbl th:nth-child(2){width:22%}.grp .tbl th:nth-child(3){width:13%}.grp .tbl th:nth-child(4){width:6%}.grp .tbl th:nth-child(5){width:9%}.grp .tbl th:nth-child(6){width:19%}.grp .tbl th:nth-child(7){width:9%}
+.caret{display:inline-block;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid currentColor;margin-right:8px;transition:transform .15s}
+.grp.closed .caret{transform:rotate(-90deg)}
+.grp.closed .wrap{display:none}
+/* pie charts: one look everywhere */
+.piewrap{position:relative;flex:none;padding:10px}
+.pie{display:block;overflow:visible}
+.pie path{stroke:var(--surface);stroke-width:2;stroke-linejoin:miter;cursor:default}
+.pietip{position:absolute;pointer-events:none;z-index:6;display:none;background:var(--ink);color:var(--surface);border:2px solid var(--line);padding:3px 8px;font-size:12px;white-space:nowrap;box-shadow:3px 3px 0 var(--shade)}
+.legend{width:100%}
+.legend td{padding:7px 8px;cursor:default}
+.legend tr.on td{background:color-mix(in srgb,var(--accent) 14%,transparent);font-weight:600}
+.sw{display:inline-block;width:12px;height:12px;margin-right:8px;vertical-align:-1px}
+.disks{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px}
+.gauge{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.spark{display:flex;align-items:flex-end;gap:2px;height:34px}
+.spark i{flex:1;background:var(--c1);min-height:2px}
+.spark i:last-child{background:var(--warn)}
+.breakdown{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center}
+.bars{display:flex;flex-direction:column;gap:2px}
+.bar{display:grid;grid-template-columns:minmax(120px,240px) 1fr 90px;gap:12px;align-items:center;padding:6px 8px;cursor:default}
+.bar.link{cursor:pointer}.bar.link:hover{background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.bar .track{height:14px;background:var(--seg-off)}
+.bar .track i{display:block;height:100%;background:var(--c1)}
+.crumbs{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.crumbs button{border:0;background:none;color:var(--accent);cursor:pointer;text-decoration:underline;padding:0 2px}
+.clean{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.cc{border:2px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:8px}
+.cc .big{font-family:var(--font-display);font-size:24px}
+/* fail2ban */
+.mockbar{display:flex;align-items:center;gap:8px;padding:6px 10px;border:2px dashed var(--muted);color:var(--muted);font-size:12px}
+.f2h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.callout{display:flex;flex-wrap:wrap;gap:14px 28px;align-items:center;padding:14px;border:2px solid var(--warn)}
+.callout .num{font-family:var(--font-display);font-size:30px;line-height:1}
+.presets{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.preset{display:flex;flex-direction:column;gap:6px;text-align:left;border:2px solid var(--line);background:var(--surface);padding:12px;cursor:pointer;box-shadow:3px 3px 0 var(--shade)}
+.preset[aria-pressed=true]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.preset b{font-family:var(--font-display);font-weight:400;font-size:16px}
+.preset .tag{align-self:flex-start}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{border:2px solid var(--line);padding:10px 12px}
+.stat b{display:block;font-family:var(--font-display);font-weight:400;font-size:28px;line-height:1.1}
+.stat span{color:var(--muted);font-size:12px}
+.manual{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px;border:2px dashed var(--line)}
+
+/* modals (same look as the app: hard border, offset shadow) */
+.mlayer{position:fixed;inset:0;z-index:20;display:none;align-items:flex-start;justify-content:center;padding:48px 16px 16px;overflow:auto}
+.mlayer.on{display:flex}
+.backdrop{position:absolute;inset:0;border:0;padding:0;cursor:default;background:color-mix(in srgb,var(--ink) 55%,transparent)}
+.dialog{position:relative;width:100%;max-width:640px;background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);display:flex;flex-direction:column;max-height:calc(100dvh - 72px)}
+.dialog.wide{max-width:900px}
+.dh{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:2px solid var(--line)}
+.dh h2{font-size:20px;line-height:1.1}
+.db{padding:16px;overflow:auto}
+.df{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px;padding:12px 16px;border-top:2px solid var(--line)}
+h4.t.sub{font-size:14px}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.check{display:flex;align-items:flex-start;gap:8px;cursor:pointer}
+.check input{margin-top:3px;accent-color:var(--accent)}
+.stat.link{text-align:left;background:var(--surface);color:var(--ink);cursor:pointer;box-shadow:3px 3px 0 var(--shade)}
+.stat.link:hover{border-color:var(--accent)}
+@media (max-width:900px){.breakdown{grid-template-columns:1fr}.bar{grid-template-columns:90px 1fr 70px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 14 14" width="30" height="30" shape-rendering="crispEdges" aria-hidden="true"><rect width="14" height="14" rx="3" fill="#0f1218"/><rect x="2" y="3" width="2" height="2" fill="#e6e9ef"/><rect x="4" y="5" width="2" height="2" fill="#e6e9ef"/><rect x="6" y="7" width="2" height="2" fill="#e6e9ef"/><rect x="4" y="9" width="2" height="2" fill="#e6e9ef"/><rect x="8" y="10" width="4" height="2" fill="#7d9cff"/></svg>
+    <h1>Linager</h1>
+  </div>
+  <div class="row"><button class="btn" id="theme" type="button">Тема</button></div>
+</header>
+<p class="note">Макет следующих вкладок, версия 3. Данные вымышленные, кнопки показывают сценарий, но ничего не делают. Пометка «новое» отмечает то, чего в панели ещё нет.</p>
+
+<main>
+  <div class="srv-head">
+    <button class="btn" type="button">← Серверы</button>
+    <h2>web-01</h2><span class="badge ok">в сети</span>
+  </div>
+  <p class="muted small">Debian 13 · 10.20.0.11 · linager-agent v0.1.45</p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab dim" type="button" role="tab">Обзор</button>
+    <button class="tab dim" type="button" role="tab">Метрики</button>
+    <button class="tab dim" type="button" role="tab">Терминал</button>
+    <button class="tab dim" type="button" role="tab">Файлы</button>
+    <button class="tab dim" type="button" role="tab">Службы</button>
+    <button class="tab dim" type="button" role="tab">Сеть</button>
+    <button class="tab" type="button" role="tab" data-go="fw">Файрвол</button>
+    <button class="tab" type="button" role="tab" data-go="sec">Безопасность</button>
+    <button class="tab" type="button" role="tab" data-go="disk" aria-selected="true">Диск <span class="new">новое</span></button>
+    <button class="tab" type="button" role="tab" data-go="docker">Docker</button>
+    <button class="tab dim" type="button" role="tab">Обновления</button>
+    <button class="tab dim" type="button" role="tab">Логи</button>
+  </div>
+
+  <!-- ============ DISK ============ -->
+  <section class="panel on" data-screen="disk">
+    <div class="disks">
+      <article class="card stack">
+        <h3 class="t">Раздел <span class="mono">/</span> <span class="muted small" style="text-transform:none">vda1 · ext4</span></h3>
+        <div class="gauge">
+          <div class="piewrap" id="p1"></div>
+          <div class="stack" style="flex:1;min-width:200px">
+            <table class="tbl legend" data-pie="p1"><tbody></tbody></table>
+            <p class="small muted">Растёт на <b style="color:var(--ink)">0.9 ГБ в сутки</b></p>
+            <div class="spark" id="spark1" aria-label="Занято за 30 дней"></div>
+            <p class="small"><span class="badge warn">заполнится через ~52 дня</span></p>
+          </div>
+        </div>
+      </article>
+      <article class="card stack">
+        <h3 class="t">Раздел <span class="mono">/var/lib</span> <span class="muted small" style="text-transform:none">vdb1 · ext4</span></h3>
+        <div class="gauge">
+          <div class="piewrap" id="p2"></div>
+          <div class="stack" style="flex:1;min-width:200px">
+            <table class="tbl legend" data-pie="p2"><tbody></tbody></table>
+            <p class="small muted">Растёт на <b style="color:var(--ink)">2.4 ГБ в сутки</b></p>
+            <div class="spark" id="spark2" aria-label="Занято за 30 дней"></div>
+            <p class="small"><span class="badge crit">заполнится через ~11 дней</span></p>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <article class="card stack">
+      <div class="row between">
+        <h3 class="t">Что занимает место <span class="muted small" style="text-transform:none">33 ГБ из 80 ГБ</span></h3>
+        <div class="row" role="group" aria-label="Раздел">
+          <button class="chip" type="button" aria-pressed="true">/</button>
+          <button class="chip" type="button" aria-pressed="false">/var/lib</button>
+        </div>
+      </div>
+      <div class="breakdown">
+        <div class="piewrap" id="p3"></div>
+        <table class="tbl legend" data-pie="p3">
+          <thead><tr><th>Категория</th><th class="num">Размер</th><th class="num">Доля</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="card stack">
+      <div class="row between">
+        <h3 class="t">Самые большие каталоги</h3>
+        <div class="crumbs" id="crumbs"></div>
+      </div>
+      <div class="bars" id="bars"></div>
+      <p class="small muted">Клик по строке со стрелкой открывает вложенные каталоги. Размеры считает агент по запросу (несколько секунд на большом разделе).</p>
+    </article>
+
+    <article class="card stack">
+      <div class="row between">
+        <h3 class="t">Очистка <span class="new">новое</span></h3>
+        <p class="small">Можно освободить до <b>7.4 ГБ</b></p>
+      </div>
+      <div class="clean">
+        <div class="cc"><span class="muted small">Журнал journald</span><span class="big">2.1 ГБ</span><span class="small muted">Оставить 500 МБ. Освободится около 1.6 ГБ.</span><div class="row end"><button class="btn sm" type="button" data-clean="journalctl --vacuum-size=500M|Журнал journald|1.6 ГБ">Очистить</button></div></div>
+        <div class="cc"><span class="muted small">Кэш apt</span><span class="big">410 МБ</span><span class="small muted">Скачанные пакеты, которые уже установлены.</span><div class="row end"><button class="btn sm" type="button" data-clean="apt-get clean|Кэш apt|410 МБ">Очистить</button></div></div>
+        <div class="cc"><span class="muted small">Неиспользуемые образы Docker</span><span class="big">3.4 ГБ</span><span class="small muted">4 образа без контейнеров. Список перед удалением.</span><div class="row end"><button class="btn sm" type="button" data-clean="docker image prune -a|Неиспользуемые образы Docker|3.4 ГБ">Показать и удалить</button></div></div>
+        <div class="cc"><span class="muted small">Кэш сборки Docker</span><span class="big">1.2 ГБ</span><span class="small muted">Промежуточные слои сборок.</span><div class="row end"><button class="btn sm" type="button" data-clean="docker builder prune|Кэш сборки Docker|1.2 ГБ">Очистить</button></div></div>
+        <div class="cc"><span class="muted small">Старые ядра</span><span class="big">620 МБ</span><span class="small muted">2 неиспользуемых ядра. Текущее ядро остаётся.</span><div class="row end"><button class="btn sm" type="button" data-clean="apt-get autoremove --purge linux-image-6.12.101 linux-image-6.12.105|Старые ядра|620 МБ">Удалить</button></div></div>
+      </div>
+      <div class="confirm info" id="cleanConfirm">
+        <p id="cleanText"></p>
+        <div class="cmd" id="cleanCmd"></div>
+        <p class="small muted">Действие запишется в журнал аудита. Данные приложений и ваши файлы не затрагиваются.</p>
+        <div class="row end"><button class="btn" type="button" id="cleanNo">Отмена</button><button class="btn danger" type="button" id="cleanYes">Очистить</button></div>
+      </div>
+    </article>
+  </section>
+
+  <!-- ============ FIREWALL ============ -->
+  <section class="panel" data-screen="fw">
+    <article class="card">
+      <div class="row between"><h3 class="t">Цепочки</h3><span class="small muted">input · политика drop · 6 правил · output · forward <span class="muted">(как сейчас)</span></span></div>
+    </article>
+    <article class="card stack">
+      <div class="row between">
+        <h3 class="t">Порты и соединения <span class="new">новое</span></h3>
+        <button class="btn" type="button">Обновить</button>
+      </div>
+      <p>Слушает <b>8 портов</b>. <span class="crit">2 доступны снаружи без правила файрвола.</span></p>
+      <div class="row" role="group" aria-label="Фильтр" id="portFilter">
+        <button class="chip" type="button" aria-pressed="true" data-f="all">Все <span class="muted">8</span></button>
+        <button class="chip" type="button" aria-pressed="false" data-f="out">Снаружи <span class="muted">5</span></button>
+        <button class="chip" type="button" aria-pressed="false" data-f="local">Только локально <span class="muted">3</span></button>
+        <button class="chip" type="button" aria-pressed="false" data-f="norule">Без правила <span class="muted">2</span></button>
+      </div>
+      <div class="wrap">
+      <table class="tbl" id="ports">
+        <thead><tr><th>Порт</th><th>Адрес</th><th>Процесс</th><th class="num">Соединений</th><th>Файрвол</th><th></th></tr></thead>
+        <tbody>
+          <tr data-k="out"><td class="mono">22/tcp</td><td class="mono">0.0.0.0</td><td>sshd <span class="muted small">(812)</span></td><td class="num">3</td><td><span class="badge ok">разрешён правилом</span></td><td></td></tr>
+          <tr data-k="out"><td class="mono">80/tcp</td><td class="mono">0.0.0.0</td><td>nginx <span class="muted small">(1204)</span></td><td class="num">41</td><td><span class="badge ok">разрешён правилом</span></td><td></td></tr>
+          <tr data-k="out"><td class="mono">443/tcp</td><td class="mono">0.0.0.0</td><td>nginx <span class="muted small">(1204)</span></td><td class="num">118</td><td><span class="badge ok">разрешён правилом</span></td><td></td></tr>
+          <tr data-k="out norule" class="hl"><td class="mono">6379/tcp</td><td class="mono">0.0.0.0</td><td>redis-server <span class="muted small">(1488)</span></td><td class="num">0</td><td><span class="badge crit">нет правила, открыт всем</span></td><td class="num"><button class="btn sm" type="button" data-rule="6379|закрыть">Закрыть порт</button></td></tr>
+          <tr data-k="out norule"><td class="mono">9100/tcp</td><td class="mono">0.0.0.0</td><td>node_exporter <span class="muted small">(960)</span></td><td class="num">2</td><td><span class="badge warn">нет правила, политика accept</span></td><td class="num"><button class="btn sm" type="button" data-rule="9100|разрешить только из сети 10.20.0.0/24">Ограничить</button></td></tr>
+          <tr data-k="local"><td class="mono">5432/tcp</td><td class="mono">127.0.0.1</td><td>postgres <span class="muted small">(1102)</span></td><td class="num">12</td><td><span class="badge mut">только локально</span></td><td></td></tr>
+          <tr data-k="local"><td class="mono">3306/tcp</td><td class="mono">172.17.0.1</td><td>docker-proxy <span class="muted small">(2210)</span></td><td class="num">4</td><td><span class="badge mut">сеть Docker</span></td><td></td></tr>
+          <tr data-k="local"><td class="mono">53/udp</td><td class="mono">127.0.0.53</td><td>systemd-resolved <span class="muted small">(701)</span></td><td class="num">0</td><td><span class="badge mut">только локально</span></td><td></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="confirm info" id="ruleConfirm">
+        <p id="ruleText"></p>
+        <p class="small muted">Правило попадёт в черновик файрвола. Применение, как всегда, с подтверждением и автоматическим откатом через 30 секунд.</p>
+        <div class="row end"><button class="btn" type="button" id="ruleNo">Отмена</button><button class="btn primary" type="button" id="ruleYes">Добавить в черновик</button></div>
+      </div>
+      <div class="grid2">
+        <div class="stack">
+          <h3 class="t">Топ удалённых адресов</h3>
+          <table class="tbl"><thead><tr><th>Адрес</th><th>Порт</th><th class="num">Соединений</th></tr></thead><tbody>
+            <tr><td class="mono">203.0.113.5</td><td class="mono">443</td><td class="num">38</td></tr>
+            <tr><td class="mono">198.51.100.20</td><td class="mono">22</td><td class="num">3</td></tr>
+            <tr><td class="mono">192.0.2.44</td><td class="mono">443</td><td class="num">27</td></tr>
+          </tbody></table>
+        </div>
+        <div class="stack">
+          <h3 class="t">Как это читать</h3>
+          <p class="small muted">«Разрешён правилом» значит, что в input есть явное правило. «Нет правила, открыт всем» значит, что процесс слушает на всех интерфейсах, а файрвол пропускает трафик политикой. Адреса 127.0.0.1 и сети Docker наружу не видны.</p>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <!-- ============ SECURITY ============ -->
+  <section class="panel" data-screen="sec">
+    <div class="mockbar"><span>Только в макете, показать состояние:</span>
+      <button class="chip" type="button" aria-pressed="true" data-f2b="off">fail2ban не установлен</button>
+      <button class="chip" type="button" aria-pressed="false" data-f2b="on">fail2ban работает</button>
+    </div>
+
+    <!-- not installed -->
+    <article class="card stack" id="f2bOff">
+      <div class="f2h"><h3 class="t">fail2ban <span class="new">новое</span></h3><span class="badge warn">не установлен</span></div>
+      <div class="callout">
+        <div><span class="num crit">8 421</span><p class="small muted">неудачных попыток входа за неделю</p></div>
+        <div><span class="num">137</span><p class="small muted">адресов подбирали пароль</p></div>
+        <p style="flex:1;min-width:240px">fail2ban следит за журналом SSH и автоматически блокирует адреса, которые подбирают пароль. Это снимет большую часть шума и нагрузки.</p>
+      </div>
+      <div class="stack">
+        <h4 class="t" style="font-size:14px">Насколько строго блокировать</h4>
+        <div class="presets" id="presets">
+          <button class="preset" type="button" aria-pressed="false" data-p="soft"><b>Мягко</b><span class="small muted">10 неудач за 10 минут, бан на 10 минут</span></button>
+          <button class="preset" type="button" aria-pressed="true" data-p="norm"><b>Обычно</b><span class="small muted">5 неудач за 10 минут, бан на 1 час</span><span class="badge ok tag">рекомендуется</span></button>
+          <button class="preset" type="button" aria-pressed="false" data-p="hard"><b>Строго</b><span class="small muted">3 неудачи за 10 минут, бан на 24 часа</span></button>
+        </div>
+        <p class="small muted">Свой адрес <span class="badge ok">198.51.100.20</span> и сеть 127.0.0.0/8 не блокируются. Порог можно изменить позже.</p>
+      </div>
+      <div class="row end"><button class="btn primary" type="button" id="f2bInstall">Установить и включить</button></div>
+      <div class="confirm info" id="f2bConfirm">
+        <p>Будет установлен пакет и включена защита SSH с порогом «<b id="f2bPreset">Обычно</b>»:</p>
+        <div class="cmd">apt-get install -y fail2ban
+systemctl enable --now fail2ban
+# /etc/fail2ban/jail.d/linager.conf  [sshd]  maxretry=5  findtime=10m  bantime=1h  ignoreip=127.0.0.1/8 198.51.100.20</div>
+        <p class="small muted">Действие пишется в журнал аудита. Если менеджер пакетов занят, агент подождёт до двух минут.</p>
+        <div class="row end"><button class="btn" type="button" id="f2bNo">Отмена</button><button class="btn primary" type="button">Установить</button></div>
+      </div>
+    </article>
+
+    <!-- installed -->
+    <article class="card stack" id="f2bOn" style="display:none">
+      <div class="f2h">
+        <h3 class="t">fail2ban <span class="badge ok">работает</span> <span class="muted small" style="text-transform:none">sshd · 5 неудач за 10 мин → бан на 1 час</span></h3>
+        <div class="row"><button class="btn" type="button" data-open="mBans">Список блокировок <span class="badge crit" style="margin-left:4px">2</span></button><button class="btn" type="button" data-open="mSettings">Настройки</button></div>
+      </div>
+      <div class="stats">
+        <button class="stat link" type="button" data-open="mBans"><b class="crit">2</b><span>забанено сейчас</span></button>
+        <div class="stat"><b>412</b><span>банов за всё время</span></div>
+        <div class="stat"><b>3</b><span>неудач в текущем окне</span></div>
+      </div>
+      <div class="manual">
+        <b class="small">Заблокировать вручную</b>
+        <input class="input" placeholder="198.51.100.7" size="16">
+        <select class="input"><option>на 1 час</option><option>на 24 часа</option><option>на 7 дней</option><option>навсегда</option></select>
+        <button class="btn danger" type="button">Заблокировать</button>
+        <span class="small muted">Свой адрес панель заблокировать не даст.</span>
+      </div>
+    </article>
+
+    <article class="card stack">
+      <h3 class="t">Неудачные попытки входа · топ адресов</h3>
+      <div class="wrap"><table class="tbl"><thead><tr><th>Адрес</th><th class="num">Попыток</th><th class="num">Логинов</th><th>Последняя</th><th></th></tr></thead><tbody>
+        <tr><td class="mono">198.51.100.7</td><td class="num">1 481</td><td class="num">38</td><td class="small muted">15 нояб., 14:41</td><td class="num"><span class="pill crit">Забанен</span></td></tr>
+        <tr><td class="mono">203.0.113.77</td><td class="num">902</td><td class="num">12</td><td class="small muted">15 нояб., 12:02</td><td class="num"><button class="btn sm" type="button">Забанить</button></td></tr>
+        <tr><td class="mono">192.0.2.190</td><td class="num">640</td><td class="num">5</td><td class="small muted">15 нояб., 10:02</td><td class="num"><button class="btn sm" type="button">Забанить</button></td></tr>
+      </tbody></table></div>
+    </article>
+
+    <article class="card stack">
+      <h3 class="t">Ключи для входа <span class="new">удаление</span></h3>
+      <p class="small muted">authorized_keys каждого пользователя. Отпечатки видны, сами ключи не передаются.</p>
+      <div class="wrap"><table class="tbl" id="keys"><thead><tr><th>Пользователь</th><th>Тип</th><th>Отпечаток</th><th>Комментарий</th><th>Файл изменён</th><th></th></tr></thead><tbody>
+        <tr><td class="mono">root</td><td>ED25519</td><td class="mono small">SHA256:3k9Zq1Jm0cX7VbYt2nLw8dQ5rHf6AaUeGpS4oKxIiB0</td><td>ops@workstation</td><td class="small muted">6 окт.</td><td class="num"><button class="btn sm" type="button" data-key="last">Удалить</button></td></tr>
+        <tr class="hl"><td class="mono">root</td><td>RSA 1024 <span class="badge crit">слабый</span> <span class="badge mut">с ограничениями</span></td><td class="mono small">SHA256:Xp2LrQw9oT1eYk7MnZc4bHdV6sJf8AuGiB3aKtE5RyU</td><td>old backup key</td><td class="small muted">6 окт.</td><td class="num"><button class="btn sm" type="button" data-key="weak">Удалить</button></td></tr>
+        <tr><td class="mono">alice</td><td>RSA 4096</td><td class="mono small">SHA256:Qe7YtUi2Oo9PaSdFgHjKl3ZxCvBnM1wR5T6y8uIoPaS</td><td>alice@laptop</td><td class="small muted">12 нояб.</td><td class="num"><button class="btn sm" type="button" data-key="ok">Удалить</button></td></tr>
+      </tbody></table></div>
+      <div class="confirm" id="keyConfirm">
+        <p id="keyText"></p>
+        <p class="crit" id="keyWarn"></p>
+        <p class="small muted">Перед удалением рядом сохраняется копия файла (authorized_keys.bak-ДАТА). Уже открытые сессии это не завершает. Действие пишется в журнал аудита.</p>
+        <div class="row end"><button class="btn" type="button" id="keyNo">Отмена</button><button class="btn danger" type="button">Удалить ключ</button></div>
+      </div>
+    </article>
+  </section>
+
+  <!-- ============ DOCKER ============ -->
+  <section class="panel" data-screen="docker">
+    <div class="row between">
+      <div class="row" role="group"><button class="chip" type="button" aria-pressed="true">Контейнеры <span class="muted">7</span></button><button class="chip" type="button" aria-pressed="false">Образы <span class="muted">9</span></button></div>
+      <div class="row">
+        <span class="small muted">образы проверены в 12:31 · можно обновить: <b class="warn">2</b></span>
+        <button class="btn" type="button">Проверить образы <span class="new">новое</span></button>
+        <button class="btn primary" type="button">Обновить помеченные</button>
+      </div>
+    </div>
+
+    <div class="grp closed" data-grp>
+      <div class="grp-h" data-toggle>
+        <div class="row"><span class="caret"></span><h4>shop</h4><span class="badge mut">compose</span><span class="small muted">3 контейнера · все работают · /srv/shop/docker-compose.yml</span><span class="new">новое</span></div>
+        <div class="row"><span class="badge warn">1 образ можно обновить</span><button class="btn sm" type="button">Обновить проект</button><button class="btn sm" type="button">Перезапустить</button><button class="btn sm" type="button">Логи проекта</button></div>
+      </div>
+      <div class="wrap"><table class="tbl"><thead><tr><th>Контейнер</th><th>Образ</th><th>Статус</th><th class="num">CPU</th><th class="num">RAM</th><th>Образ в реестре</th><th></th></tr></thead><tbody>
+        <tr class="hl"><td><b>shop-web-1</b></td><td class="mono small">shop-web:1.4</td><td><span class="ok"><i class="dot"></i></span>Up 3 часа</td><td class="num">2%</td><td class="num">120 МБ</td><td><span class="badge warn">есть новый</span> <span class="small muted mono">5f2a → 9c1d</span></td><td class="num"><button class="btn sm" type="button">Действия ▾</button></td></tr>
+        <tr><td><b>shop-db-1</b></td><td class="mono small">postgres:16</td><td><span class="ok"><i class="dot"></i></span>Up 3 часа</td><td class="num">4%</td><td class="num">380 МБ</td><td><span class="badge ok">актуален</span></td><td class="num"><button class="btn sm" type="button">Действия ▾</button></td></tr>
+        <tr><td><b>shop-redis-1</b></td><td class="mono small">redis:7</td><td><span class="ok"><i class="dot"></i></span>Up 3 часа</td><td class="num">1%</td><td class="num">18 МБ</td><td><span class="badge ok">актуален</span></td><td class="num"><button class="btn sm" type="button">Действия ▾</button></td></tr>
+      </tbody></table></div>
+    </div>
+
+    <div class="grp closed" data-grp>
+      <div class="grp-h" data-toggle>
+        <div class="row"><span class="caret"></span><h4>monitoring</h4><span class="badge mut">compose</span><span class="small muted">2 контейнера · 1 остановлен · /srv/monitoring/compose.yaml</span></div>
+        <div class="row"><button class="btn sm" type="button">Запустить проект</button><button class="btn sm" type="button">Логи проекта</button></div>
+      </div>
+      <div class="wrap"><table class="tbl"><thead><tr><th>Контейнер</th><th>Образ</th><th>Статус</th><th class="num">CPU</th><th class="num">RAM</th><th>Образ в реестре</th><th></th></tr></thead><tbody>
+        <tr><td><b>monitoring-prometheus-1</b></td><td class="mono small">prom/prometheus:v2.54</td><td><span class="ok"><i class="dot"></i></span>Up 2 дня</td><td class="num">3%</td><td class="num">210 МБ</td><td><span class="badge ok">актуален</span></td><td class="num"><button class="btn sm" type="button">Действия ▾</button></td></tr>
+        <tr><td><b>monitoring-grafana-1</b></td><td class="mono small">registry.local/grafana:10</td><td><span class="mut"><i class="dot"></i></span>Exited (0)</td><td class="num">—</td><td class="num">—</td><td><span class="badge mut" title="Реестр недоступен или образ только на этом хосте">нельзя проверить</span></td><td class="num"><button class="btn sm" type="button">Действия ▾</button></td></tr>
+      </tbody></table></div>
+    </div>
+
+    <div class="grp" data-grp>
+      <div class="grp-h" data-toggle>
+        <div class="row"><span class="caret"></span><h4>Без compose</h4><span class="small muted">2 контейнера</span></div>
+        <div class="row"><span class="badge warn">1 образ можно обновить</span></div>
+      </div>
+      <div class="wrap"><table class="tbl"><thead><tr><th>Контейнер</th><th>Образ</th><th>Статус</th><th class="num">CPU</th><th class="num">RAM</th><th>Образ в реестре</th><th></th></tr></thead><tbody>
+        <tr class="hl"><td><b>nginx</b></td><td class="mono small">nginx:latest</td><td><span class="ok"><i class="dot"></i></span>Up 2 дня</td><td class="num">1%</td><td class="num">12 МБ</td><td><span class="badge warn">есть новый</span> <span class="small muted mono">3c1d → 5f2a</span></td><td class="num"><button class="btn sm" type="button">Действия ▾</button></td></tr>
+        <tr><td><b>portainer</b></td><td class="mono small">portainer/portainer-ce:2.21</td><td><span class="ok"><i class="dot"></i></span>Up 9 дней</td><td class="num">1%</td><td class="num">64 МБ</td><td><span class="badge ok">актуален</span></td><td class="num"><button class="btn sm" type="button">Действия ▾</button></td></tr>
+      </tbody></table></div>
+    </div>
+    <p class="small muted">Проверка сравнивает digest образа на хосте с digest в реестре для того же тега, образ при этом не скачивается. Обновление запускается кнопкой, как сейчас, с откатом при неудаче. Группы compose свёрнуты, заголовок показывает итог по проекту.</p>
+  </section>
+</main>
+
+<!-- ============ MODALS (fail2ban) ============ -->
+<div class="mlayer" id="mSettings" role="dialog" aria-modal="true" aria-labelledby="mSettingsT">
+  <button class="backdrop" type="button" data-close aria-label="Закрыть"></button>
+  <div class="dialog">
+    <header class="dh"><h2 id="mSettingsT">Настройки fail2ban</h2><button class="btn" type="button" data-close aria-label="Закрыть">×</button></header>
+    <div class="db stack">
+      <div class="stack">
+        <h4 class="t sub">Порог блокировки</h4>
+        <div class="row" role="group" aria-label="Готовые режимы">
+          <button class="chip" type="button" aria-pressed="false" data-fill="3|10|24|h">Строго</button>
+          <button class="chip" type="button" aria-pressed="true" data-fill="5|10|1|h">Обычно</button>
+          <button class="chip" type="button" aria-pressed="false" data-fill="10|10|10|m">Мягко</button>
+          <span class="small muted">или задайте значения вручную</span>
+        </div>
+        <div class="form">
+          <label>Неудач до блокировки<input class="input" id="fMax" type="number" min="1" max="100" value="5"></label>
+          <label>За какое время (минут)<input class="input" id="fFind" type="number" min="1" max="1440" value="10"></label>
+          <label>Срок бана
+            <span class="row" style="gap:6px;flex-wrap:nowrap"><input class="input" id="fBan" type="number" min="1" value="1" style="width:72px"><select class="input" id="fUnit"><option value="m">минут</option><option value="h" selected>часов</option><option value="d">дней</option><option value="perm">навсегда</option></select></span>
+          </label>
+        </div>
+        <p class="small muted" id="fSummary">Адрес блокируется, если за 10 минут было 5 неудачных попыток входа, на 1 час.</p>
+      </div>
+
+      <div class="stack">
+        <h4 class="t sub">Повторные нарушители</h4>
+        <label class="check"><input type="checkbox" checked> Увеличивать срок бана при каждом повторе (в 2 раза, не больше 7 дней)</label>
+        <label class="check"><input type="checkbox" checked> Блокировать на 7 дней адреса, которые банили 3 раза за сутки (recidive)</label>
+      </div>
+
+      <div class="stack">
+        <h4 class="t sub">Не блокировать</h4>
+        <div class="ips"><span class="ipchip mono">127.0.0.0/8</span><span class="ipchip mono">198.51.100.20 · ваш адрес</span><span class="ipchip mono">10.20.0.0/24 <button type="button" title="Убрать">×</button></span></div>
+        <div class="row"><input class="input" placeholder="адрес или сеть, например 203.0.113.0/24" size="34"><button class="btn" type="button">Добавить</button></div>
+        <p class="small muted">Ваш текущий адрес всегда остаётся в исключениях.</p>
+      </div>
+
+      <details class="stack">
+        <summary class="small muted" style="cursor:pointer">Показать файл настроек</summary>
+        <div class="cmd" id="fConf">[sshd]
+enabled   = true
+maxretry  = 5
+findtime  = 10m
+bantime   = 1h
+bantime.increment = true
+bantime.factor    = 2
+bantime.maxtime   = 7d
+ignoreip  = 127.0.0.1/8 198.51.100.20 10.20.0.0/24</div>
+      </details>
+    </div>
+    <footer class="df">
+      <span class="small muted" style="flex:1">fail2ban перечитает настройки, текущие блокировки сохранятся. Изменение пишется в журнал аудита.</span>
+      <button class="btn" type="button" data-close>Отмена</button><button class="btn primary" type="button" data-close>Сохранить</button>
+    </footer>
+  </div>
+</div>
+
+<div class="mlayer" id="mBans" role="dialog" aria-modal="true" aria-labelledby="mBansT">
+  <button class="backdrop" type="button" data-close aria-label="Закрыть"></button>
+  <div class="dialog wide">
+    <header class="dh"><h2 id="mBansT">Блокировки fail2ban</h2><button class="btn" type="button" data-close aria-label="Закрыть">×</button></header>
+    <div class="db stack">
+      <div class="row between">
+        <div class="row" role="tablist">
+          <button class="chip" type="button" aria-pressed="true" data-btab="now">Сейчас <span class="muted">2</span></button>
+          <button class="chip" type="button" aria-pressed="false" data-btab="hist">История <span class="muted">412</span></button>
+        </div>
+        <div class="row"><input class="input" placeholder="Поиск по адресу" size="18"><select class="input"><option>Все правила</option><option>sshd</option><option>recidive</option></select></div>
+      </div>
+
+      <div id="bNow" class="stack">
+        <div class="wrap"><table class="tbl" id="bansTbl"><thead><tr><th style="width:34px"><input type="checkbox" id="bAll" aria-label="Выбрать все"></th><th>Адрес</th><th>Правило</th><th>Забанен</th><th>Разбан</th><th class="num">Попыток</th><th></th></tr></thead><tbody>
+          <tr><td><input type="checkbox" class="bsel"></td><td class="mono">198.51.100.7</td><td>sshd</td><td class="small muted">15 нояб., 14:41</td><td class="small">через 38 мин</td><td class="num">1 481</td><td class="num"><button class="btn sm" type="button">Разбанить</button></td></tr>
+          <tr><td><input type="checkbox" class="bsel"></td><td class="mono">203.0.113.9</td><td>sshd</td><td class="small muted">15 нояб., 15:02</td><td class="small">через 59 мин</td><td class="num">96</td><td class="num"><button class="btn sm" type="button">Разбанить</button></td></tr>
+        </tbody></table></div>
+        <div class="row between">
+          <span class="small muted" id="bSel">Выбрано: 0</span>
+          <div class="row"><button class="btn sm" type="button" id="bUnbanSel" disabled>Разбанить выбранные</button><button class="btn sm danger" type="button" id="bUnbanAll">Разбанить все</button></div>
+        </div>
+        <div class="confirm on" id="bConfirm" style="display:none">
+          <p>Разбанить все адреса (2)? Они снова смогут подбирать пароль, пока fail2ban не заблокирует их повторно.</p>
+          <div class="row end"><button class="btn" type="button" id="bNo">Отмена</button><button class="btn danger" type="button" id="bYes">Разбанить все</button></div>
+        </div>
+      </div>
+
+      <div id="bHist" class="stack" style="display:none">
+        <div class="wrap"><table class="tbl"><thead><tr><th>Время</th><th>Событие</th><th>Адрес</th><th>Правило</th><th class="num">Попыток</th><th></th></tr></thead><tbody>
+          <tr><td class="small muted">15 нояб., 15:02</td><td><span class="badge crit">бан</span></td><td class="mono">203.0.113.9</td><td>sshd</td><td class="num">96</td><td class="num"><span class="small muted">действует</span></td></tr>
+          <tr><td class="small muted">15 нояб., 14:41</td><td><span class="badge crit">бан</span></td><td class="mono">198.51.100.7</td><td>sshd</td><td class="num">1 481</td><td class="num"><span class="small muted">действует</span></td></tr>
+          <tr><td class="small muted">15 нояб., 13:12</td><td><span class="badge ok">разбан</span></td><td class="mono">192.0.2.190</td><td>sshd</td><td class="num">640</td><td class="num"><button class="btn sm" type="button">Забанить снова</button></td></tr>
+          <tr><td class="small muted">15 нояб., 12:12</td><td><span class="badge crit">бан</span></td><td class="mono">192.0.2.190</td><td>sshd</td><td class="num">640</td><td class="num"><span class="small muted">истёк</span></td></tr>
+          <tr><td class="small muted">14 нояб., 22:40</td><td><span class="badge crit">бан</span></td><td class="mono">198.51.100.55</td><td>recidive</td><td class="num">3 бана</td><td class="num"><span class="small muted">истёк</span></td></tr>
+        </tbody></table></div>
+        <div class="row between"><span class="small muted">Показаны последние 5 из 412 событий по журналу /var/log/fail2ban.log</span><button class="btn sm" type="button">Показать ещё</button></div>
+      </div>
+    </div>
+    <footer class="df"><span class="small muted" style="flex:1">Разбан и бан пишутся в журнал аудита.</span><button class="btn" type="button" data-close>Закрыть</button></footer>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $=function(s,r){return (r||document).querySelector(s)}, $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+  var root=document.documentElement;
+  $('#theme').onclick=function(){var dark=getComputedStyle(root).colorScheme==='dark';root.dataset.theme=dark?'light':'dark'};
+  $$('[data-go]').forEach(function(b){b.onclick=function(){
+    $$('[data-go]').forEach(function(x){x.setAttribute('aria-selected',x===b?'true':'false')});
+    $$('.panel').forEach(function(p){p.classList.toggle('on',p.dataset.screen===b.dataset.go)});
+  }});
+
+  /* ---- one pie chart for every block: solid circle, sectors, a lift and a tooltip on hover ---- */
+  var NS='http://www.w3.org/2000/svg';
+  function fmt(g){return g>=1?g.toFixed(1).replace('.',',')+' ГБ':Math.round(g*1024)+' МБ'}
+  function pie(host,size,parts,legendTable){
+    host.innerHTML='';
+    var r=size/2,cx=r,cy=r,total=parts.reduce(function(a,p){return a+p.v},0),a0=-Math.PI/2;
+    var svg=document.createElementNS(NS,'svg');svg.setAttribute('class','pie');svg.setAttribute('width',size);svg.setAttribute('height',size);svg.setAttribute('viewBox','0 0 '+size+' '+size);
+    var top=document.createElementNS(NS,'g');top.setAttribute('pointer-events','none');   // the lifted sector is drawn here, above the others
+    var tip=document.createElement('div');tip.className='pietip';
+    var rows={},paths={},current=null;
+    // the sector that is hovered is never moved or re-inserted: only a copy is lifted, so the pointer events stay stable
+    function off(){
+      if(current===null)return;
+      var p=paths[current];p.style.opacity='';
+      if(rows[current])rows[current].classList.remove('on');
+      top.innerHTML='';tip.style.display='none';current=null;
+    }
+    function place(e){var bb=host.getBoundingClientRect();tip.style.left=(e.clientX-bb.left+14)+'px';tip.style.top=(e.clientY-bb.top-34)+'px'}
+    // fromPie: the tooltip belongs to the pointer over the chart; a hover that starts on the legend row only lifts the sector
+    function on(id,fromPie,e){
+      if(current===id&&(!fromPie||tip.style.display==='block'))return;
+      off();current=id;
+      var p=paths[id],part=parts.filter(function(x){return x.id===id})[0];
+      if(rows[id])rows[id].classList.add('on');
+      var c=p.cloneNode();c.style.opacity='';
+      c.style.transform='translate('+(Math.cos(p._mid)*9).toFixed(1)+'px,'+(Math.sin(p._mid)*9).toFixed(1)+'px)';
+      top.appendChild(c);p.style.opacity='0';
+      if(fromPie){tip.innerHTML='<b>'+part.n+'</b> · '+fmt(part.v)+' · '+Math.round(part.v/total*100)+'%';if(e)place(e);tip.style.display='block'}
+    }
+    parts.forEach(function(p){
+      var a1=a0+p.v/total*2*Math.PI,big=(a1-a0)>Math.PI?1:0;
+      var d=(parts.length===1)?('M'+cx+' '+(cy-r)+' A'+r+' '+r+' 0 1 1 '+(cx-.01)+' '+(cy-r)+' Z'):
+        'M'+cx+' '+cy+' L'+(cx+r*Math.cos(a0)).toFixed(2)+' '+(cy+r*Math.sin(a0)).toFixed(2)+' A'+r+' '+r+' 0 '+big+' 1 '+(cx+r*Math.cos(a1)).toFixed(2)+' '+(cy+r*Math.sin(a1)).toFixed(2)+' Z';
+      var el=document.createElementNS(NS,'path');el.setAttribute('d',d);el.setAttribute('fill',p.c);el._mid=(a0+a1)/2;
+      el.addEventListener('pointerenter',function(e){on(p.id,true,e)});
+      el.addEventListener('pointermove',function(e){if(current===p.id&&tip.style.display==='block')place(e)});
+      el.addEventListener('pointerleave',off);
+      paths[p.id]=el;svg.appendChild(el);a0=a1;
+    });
+    svg.appendChild(top);host.appendChild(svg);host.appendChild(tip);
+    host.addEventListener('pointerleave',off);host.addEventListener('pointercancel',off);   // never leave a sector lifted
+    if(legendTable){
+      var body=$('tbody',legendTable);body.innerHTML='';
+      parts.forEach(function(p){
+        var tr=document.createElement('tr');
+        tr.innerHTML='<td><i class="sw" style="background:'+p.c+'"></i>'+p.n+'</td><td class="num mono">'+fmt(p.v)+'</td>'+(legendTable.querySelector('thead')?'<td class="num muted">'+Math.round(p.v/total*100)+'%</td>':'');
+        tr.addEventListener('pointerenter',function(){on(p.id,false)});
+        tr.addEventListener('pointerleave',off);
+        rows[p.id]=tr;body.appendChild(tr);
+      });
+    }
+  }
+  var free='var(--seg-off)';
+  function usedColor(pct){return pct>=85?'var(--crit)':pct>=70?'var(--warn)':'var(--c1)'}
+  pie($('#p1'),150,[{id:'u',n:'Занято',v:33,c:usedColor(41)},{id:'f',n:'Свободно',v:47,c:free}],$('[data-pie=p1]'));
+  pie($('#p2'),150,[{id:'u',n:'Занято',v:174,c:usedColor(87)},{id:'f',n:'Свободно',v:26,c:free}],$('[data-pie=p2]'));
+  pie($('#p3'),250,[
+    {id:'sys',n:'Система и пакеты',v:9.2,c:'var(--c1)'},{id:'docker',n:'Docker (образы, тома)',v:11.8,c:'var(--c2)'},
+    {id:'logs',n:'Журналы',v:2.4,c:'var(--c3)'},{id:'db',n:'Базы данных',v:4.9,c:'var(--c4)'},
+    {id:'tmp',n:'Кэш apt и временные',v:1.1,c:'var(--c5)'},{id:'home',n:'Домашние каталоги',v:3.6,c:'var(--c6)'},
+    {id:'free',n:'Свободно',v:47,c:free}],$('[data-pie=p3]'));
+  function sparkline(el,vals){var mx=Math.max.apply(null,vals),mn=Math.min.apply(null,vals);vals.forEach(function(v){var i=document.createElement('i');i.style.height=(18+(v-mn)/(mx-mn||1)*82)+'%';el.appendChild(i)})}
+  sparkline($('#spark1'),[31,31,31.2,31.5,31.6,31.9,32,32.2,32.2,32.6,32.8,32.9,33,33.4,33.5,33.6,33.9,34,34.3,34.6,34.9,35,35.2,35.5,35.8,36,36.3,36.5,36.9,37.1]);
+  sparkline($('#spark2'),[150,151,153,155,156,158,160,161,163,165,166,168,170,171,172,173,174,175,176,177,178,180,181,183,184,185,186,187,189,190]);
+
+  /* ---- directories: drill down ---- */
+  var tree={n:'/',s:33,c:[{n:'var',s:17.6,c:[{n:'lib',s:14.9,c:[{n:'docker',s:11.8},{n:'postgresql',s:2.7},{n:'прочее',s:.4}]},{n:'log',s:2.4},{n:'cache',s:.3}]},{n:'usr',s:7.9,c:[{n:'lib',s:4.1},{n:'share',s:2.2},{n:'bin',s:1.6}]},{n:'home',s:3.6,c:[{n:'alice',s:2.9},{n:'deploy',s:.7}]},{n:'opt',s:2.5},{n:'прочее',s:1.4}]};
+  var path=[tree];
+  function draw(){
+    var cur=path[path.length-1],cr=$('#crumbs'),bars=$('#bars');
+    cr.innerHTML='';
+    path.forEach(function(n,i){
+      var b=document.createElement('button');b.type='button';b.textContent=n.n;b.onclick=function(){path=path.slice(0,i+1);draw()};
+      cr.appendChild(b);if(i<path.length-1){var s=document.createElement('span');s.textContent='›';s.className='muted';cr.appendChild(s)}
+    });
+    bars.innerHTML='';
+    cur.c.forEach(function(ch){
+      var d=document.createElement('div');d.className='bar'+(ch.c?' link':'');
+      d.innerHTML='<span class="mono">'+(ch.c?'▸ ':'')+ch.n+'</span><span class="track"><i style="width:'+Math.round(ch.s/cur.s*100)+'%"></i></span><span class="num mono" style="text-align:right">'+fmt(ch.s)+'</span>';
+      if(ch.c)d.onclick=function(){path.push(ch);draw()};
+      bars.appendChild(d);
+    });
+  }
+  draw();
+
+  /* ---- cleanup confirm ---- */
+  $$('[data-clean]').forEach(function(b){b.onclick=function(){
+    var p=b.dataset.clean.split('|');
+    $('#cleanText').innerHTML='Очистить: <b>'+p[1]+'</b>. Освободится около '+p[2]+'.';
+    $('#cleanCmd').textContent=p[0];$('#cleanConfirm').classList.add('on');
+  }});
+  $('#cleanNo').onclick=$('#cleanYes').onclick=function(){$('#cleanConfirm').classList.remove('on')};
+
+  /* ---- ports ---- */
+  $$('#portFilter .chip').forEach(function(c){c.onclick=function(){
+    $$('#portFilter .chip').forEach(function(x){x.setAttribute('aria-pressed',x===c?'true':'false')});
+    var f=c.dataset.f;$$('#ports tbody tr').forEach(function(r){r.style.display=(f==='all'||r.dataset.k.split(' ').indexOf(f)>=0)?'':'none'});
+  }});
+  $$('[data-rule]').forEach(function(b){b.onclick=function(){
+    var p=b.dataset.rule.split('|');
+    $('#ruleText').innerHTML='Порт <b>'+p[0]+'/tcp</b>: '+p[1]+'.';$('#ruleConfirm').classList.add('on');
+  }});
+  $('#ruleNo').onclick=$('#ruleYes').onclick=function(){$('#ruleConfirm').classList.remove('on')};
+
+  /* ---- fail2ban ---- */
+  $$('[data-f2b]').forEach(function(b){b.onclick=function(){
+    $$('[data-f2b]').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+    $('#f2bOff').style.display=b.dataset.f2b==='off'?'':'none';$('#f2bOn').style.display=b.dataset.f2b==='on'?'':'none';
+  }});
+  var presetNames={soft:'Мягко',norm:'Обычно',hard:'Строго'};
+  $$('#presets .preset').forEach(function(b){b.onclick=function(){
+    $$('#presets .preset').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+    $('#f2bPreset').textContent=presetNames[b.dataset.p];
+  }});
+  $('#f2bInstall').onclick=function(){$('#f2bConfirm').classList.add('on')};
+  $('#f2bNo').onclick=function(){$('#f2bConfirm').classList.remove('on')};
+
+  /* ---- keys ---- */
+  var keyInfo={
+    last:{t:'Удалить ключ <b>ED25519</b> <span class="mono small">SHA256:3k9Zq1…</span> (ops@workstation) из <span class="mono">/root/.ssh/authorized_keys</span>? Пользователь root не сможет входить по этому ключу.',w:'Это единственный ключ root, а вход по паролю запрещён: после удаления войти по SSH под root будет нельзя. Убедитесь, что есть другой путь (консоль хостинга).'},
+    weak:{t:'Удалить ключ <b>RSA 1024</b> <span class="mono small">SHA256:Xp2LrQ…</span> (old backup key) из <span class="mono">/root/.ssh/authorized_keys</span>? Пользователь root не сможет входить по этому ключу.',w:'Ключ слабый (1024 бита), удаление рекомендуется.'},
+    ok:{t:'Удалить ключ <b>RSA 4096</b> <span class="mono small">SHA256:Qe7YtU…</span> (alice@laptop) из <span class="mono">/home/alice/.ssh/authorized_keys</span>? Пользователь alice не сможет входить по этому ключу.',w:''}
+  };
+  $$('[data-key]').forEach(function(b){b.onclick=function(){
+    var k=keyInfo[b.dataset.key];$('#keyText').innerHTML=k.t;$('#keyWarn').textContent=k.w;$('#keyWarn').style.display=k.w?'':'none';
+    $('#keyConfirm').classList.add('on');
+  }});
+  $('#keyNo').onclick=function(){$('#keyConfirm').classList.remove('on')};
+
+
+  /* ---- fail2ban modals ---- */
+  function openM(id){var m=$('#'+id);m.classList.add('on')}
+  function closeM(m){m.classList.remove('on')}
+  $$('[data-open]').forEach(function(b){b.onclick=function(){openM(b.dataset.open)}});
+  $$('.mlayer').forEach(function(m){$$('[data-close]',m).forEach(function(c){c.onclick=function(){closeM(m)}})});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')$$('.mlayer.on').forEach(closeM)});
+  // settings
+  var units={m:'минуту',h:'час',d:'день',perm:'навсегда'};
+  function summary(){
+    var u=$('#fUnit').value,n=$('#fBan').value;
+    $('#fBan').disabled=u==='perm';
+    var ban=u==='perm'?'навсегда':('на '+n+' '+({m:'мин',h:'ч',d:'дн'})[u]);
+    $('#fSummary').textContent='Адрес блокируется, если за '+$('#fFind').value+' мин. было '+$('#fMax').value+' неудачных попыток входа, '+ban+'.';
+    $('#fConf').textContent=$('#fConf').textContent.replace(/maxretry  = .*/,'maxretry  = '+$('#fMax').value).replace(/findtime  = .*/,'findtime  = '+$('#fFind').value+'m').replace(/bantime   = .*/,'bantime   = '+(u==='perm'?'-1':n+u));
+  }
+  ['#fMax','#fFind','#fBan','#fUnit'].forEach(function(q){$(q).oninput=$(q).onchange=summary});
+  $$('[data-fill]').forEach(function(b){b.onclick=function(){
+    var v=b.dataset.fill.split('|');$('#fMax').value=v[0];$('#fFind').value=v[1];$('#fBan').value=v[2];$('#fUnit').value=v[3];
+    $$('[data-fill]').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});summary();
+  }});
+  // bans
+  $$('[data-btab]').forEach(function(b){b.onclick=function(){
+    $$('[data-btab]').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+    $('#bNow').style.display=b.dataset.btab==='now'?'':'none';$('#bHist').style.display=b.dataset.btab==='hist'?'':'none';
+  }});
+  function selCount(){var n=$$('.bsel:checked').length;$('#bSel').textContent='Выбрано: '+n;$('#bUnbanSel').disabled=n===0}
+  $$('.bsel').forEach(function(c){c.onchange=selCount});
+  $('#bAll').onchange=function(){$$('.bsel').forEach(function(c){c.checked=$('#bAll').checked});selCount()};
+  $('#bUnbanAll').onclick=function(){$('#bConfirm').style.display='flex'};
+  $('#bNo').onclick=$('#bYes').onclick=function(){$('#bConfirm').style.display='none'};
+
+  /* ---- docker groups (compose groups start collapsed) ---- */
+  $$('[data-toggle]').forEach(function(h){h.onclick=function(e){if(e.target.closest('button'))return;h.parentElement.classList.toggle('closed')}});
+})();
+</script>
+</body>
+</html>

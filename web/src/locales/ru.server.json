@@ -106,5 +106,14 @@
   "srv.chart.avgLegend": "среднее",
   "srv.chart.peakLegend": "пик",
   "srv.chart.rx": "приём",
-  "srv.chart.tx": "отдача"
+  "srv.chart.tx": "отдача",
+  "srv.group.general": "Общее",
+  "srv.group.system": "Система",
+  "srv.group.fs": "Файловая система",
+  "srv.group.net": "Сеть и защита",
+  "srv.group.apps": "Приложения",
+  "srv.nav.collapse": "Свернуть меню",
+  "srv.nav.expand": "Развернуть меню",
+  "srv.nav.badgeUpdates": "Доступно обновлений: {n}",
+  "srv.nav.badgeFailed": "Упавших служб: {n}"
 }

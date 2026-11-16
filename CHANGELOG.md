@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.52
+
+- Server page: the tabs moved from the top row to a sidebar on the left, split into groups: General (Overview, Metrics, Terminal), System (Services, Processes, Logs, Updates), File system (Files, Disk), Network and security (Network, Firewall, Security) and Applications (Docker). Every tab has a pixel icon; a group is folded with a click on its title (the group of the open tab stays open). Counters: the number of apt updates on "Updates" (red when some of them are security updates) and of failed services on "Services". The button at the bottom folds the menu into a narrow column of icons (a hint shows the name on hover). The state is kept in the browser. A group whose tabs are all hidden (a disabled agent module, an operator without the module) disappears. Up and Down move between the tabs. On a narrow screen the menu is a drop-down with the current section on top. The page shows the group and the name of the open tab above the panel. Addresses `#srv-<name>/<tab>` are unchanged. Server only, agents need no update.
 ## 0.1.51
 
 - Releases: `manifest.json` now has an `assets` map with the binary of every architecture (name, SHA-256, size); the top-level `sha256` and `size` still describe the amd64 binary, so agents of earlier releases keep updating. The server downloads, verifies and caches every binary of a release and gives an agent the one for its own architecture (`/v1/release/<ver>/binary?arch=`; an agent that sends none gets amd64). The agent checks the downloaded file against its own entry of the signed manifest. First step of arm64 support for agents.

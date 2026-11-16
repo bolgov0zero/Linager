@@ -20,7 +20,8 @@
   import DockerTab from './tabs/DockerTab.svelte';
   import { formatDateTime } from './format';
   import AgentUpdateBanner from './AgentUpdateBanner.svelte';
-  import { HISTORY_LIMIT, visibleTabs, type LiveSample, type TabId } from './model';
+  import SideNav from './SideNav.svelte';
+  import { groupTabs, HISTORY_LIMIT, visibleTabs, type LiveSample, type TabId } from './model';
 
   let {
     name,
@@ -55,6 +56,8 @@
   const isAdmin = $derived(role === 'admin');
   const tabs = $derived(visibleTabs(detail?.modules ?? [], isAdmin ? null : role === 'operator' ? userModules : []));
   const tab = $derived<TabId>(tabs.find((x) => x.id === requestedTab)?.id ?? 'overview');
+  const currentTabKey = $derived(tabs.find((x) => x.id === tab)?.key ?? 'srv.tab.overview');
+  const currentGroupKey = $derived(groupTabs(tabs).find((g) => g.tabs.some((x) => x.id === tab))?.key ?? 'srv.group.general');
 
   // Resolve the server by name, then load its detail. Reruns on name change or retry.
   $effect(() => {
@@ -169,20 +172,19 @@
       <p class="banner" role="status">{$tr('srv.rebootRequired')}</p>
     {/if}
 
-    <div class="tabs" role="tablist" aria-label={$tr('srv.tabsLabel')}>
-      {#each tabs as t (t.id)}
-        <button
-          class="tab"
-          type="button"
-          role="tab"
-          aria-selected={tab === t.id}
-          onclick={() => ontab?.(t.id)}
-        >
-          {$tr(t.key)}
-        </button>
-      {/each}
-    </div>
-
+    <div class="body">
+      <SideNav
+        {tabs}
+        current={tab}
+        onselect={(id) => ontab?.(id)}
+        updates={sample?.updates ?? 0}
+        securityUpdates={sample?.security_updates ?? 0}
+        failedServices={sample?.failed_services ?? 0}
+        agentVersion={detail.agent_version ? `agent ${detail.agent_version}` : ''}
+      />
+      <div class="main">
+        <div class="crumb">{$tr(currentGroupKey)}</div>
+        <h2 class="page-title">{$tr(currentTabKey)}</h2>
     <div class="tabpanel" role="tabpanel">
       {#if tab === 'overview'}
         <OverviewTab server={detail} {sample} {live} {online} />
@@ -214,6 +216,8 @@
         <p class="soon">{$tr('srv.soon')}</p>
       {/if}
     </div>
+      </div>
+    </div>
   {/if}
 </section>
 
@@ -235,7 +239,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    max-width: 1200px;
+    max-width: 1440px;
     margin: 0 auto;
   }
 
@@ -312,35 +316,33 @@
     gap: 12px;
   }
 
-  /* Horizontally scrollable tab bar; active tab sits on the panel's top border. The page is a column with a 12px gap,
-     so the bar pulls 12px + the 2px border back to touch the panel. */
-  .tabs {
+  /* Sidebar with the tabs on the left, the panel on the right. */
+  .body {
     display: flex;
-    gap: 4px;
-    overflow-x: auto;
-    scrollbar-width: thin;
-    margin-top: 12px;
-    margin-bottom: -14px;
-    padding-bottom: 0;
+    align-items: flex-start;
+    gap: 20px;
+    margin-top: 6px;
   }
 
-  .tab {
-    flex: none;
-    position: relative;
-    padding: 8px 14px;
-    background: none;
-    border: 2px solid transparent;
-    border-bottom: 0;
+  .main {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .crumb {
+    font-family: var(--font-display);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     color: var(--muted);
-    cursor: pointer;
-    white-space: nowrap;
   }
 
-  .tab[aria-selected='true'] {
-    color: var(--ink);
-    background: var(--surface);
-    border-color: var(--line);
-    z-index: 1;
+  .page-title {
+    margin: 2px 0 12px;
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 400;
+    line-height: 1.2;
   }
 
   .tabpanel {
@@ -358,6 +360,14 @@
     color: var(--muted);
     font-family: var(--font-display);
     font-size: 20px;
+  }
+
+  @media (max-width: 860px) {
+    .body {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 14px;
+    }
   }
 
   @media (max-width: 600px) {

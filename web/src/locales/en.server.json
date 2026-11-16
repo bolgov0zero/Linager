@@ -106,5 +106,14 @@
   "srv.chart.avgLegend": "average",
   "srv.chart.peakLegend": "peak",
   "srv.chart.rx": "receive",
-  "srv.chart.tx": "send"
+  "srv.chart.tx": "send",
+  "srv.group.general": "General",
+  "srv.group.system": "System",
+  "srv.group.fs": "File system",
+  "srv.group.net": "Network and security",
+  "srv.group.apps": "Applications",
+  "srv.nav.collapse": "Collapse menu",
+  "srv.nav.expand": "Expand menu",
+  "srv.nav.badgeUpdates": "Updates available: {n}",
+  "srv.nav.badgeFailed": "Failed services: {n}"
 }

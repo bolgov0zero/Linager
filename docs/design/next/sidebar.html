@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Linager: макет бокового меню сервера</title>
+<style>
+@font-face{font-family:"Medeo Mono";src:url(../mockup/fonts/MedeoMonoVariable.woff2) format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Medeo Pixel";src:url(../mockup/fonts/MedeoPixelVariable.woff) format("woff");font-style:normal;font-display:swap}
+:root{
+  --bg:#e8ebe5;--surface:#f6f7f3;--ink:#14181e;--muted:#5d6572;--line:#14181e;--accent:#2b55d9;--good:#1e8a4b;--warn:#b36f0e;--crit:#c4352a;--seg-off:#d5d9d0;--shade:#c3c8bd;
+  --ctl:36px;--ctl-sm:28px;--side:236px;--rail:60px;
+  --font-display:"Medeo Pixel","Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  --font-body:"Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  font-variation-settings:"ELSH" 1;font-synthesis:none;color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45}
+h1,h2,h3,h4,p{margin:0}
+button{font:inherit;color:inherit}
+.muted{color:var(--muted)}.small{font-size:12px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px;border-bottom:2px solid var(--line);background:var(--surface)}
+.brand{display:flex;align-items:center;gap:10px}
+.brand h1{font-family:var(--font-display);font-size:22px;font-weight:400}
+.note{margin:0;padding:8px 20px;background:var(--ink);color:var(--surface);font-size:12px}
+main{padding:20px;max-width:1360px;margin:0 auto}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.btn,.chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:var(--ctl);background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;padding:0 12px;cursor:pointer;font-family:var(--font-display);font-size:14px;line-height:1;letter-spacing:.02em;box-shadow:3px 3px 0 var(--shade);white-space:nowrap}
+.chip{font-size:13px;padding:0 10px}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--surface)}
+.card{background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);padding:16px}
+h3.t{font-family:var(--font-display);font-weight:400;font-size:16px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.ok{color:var(--good)}.warn{color:var(--warn)}.crit{color:var(--crit)}
+.badge{display:inline-block;padding:1px 6px;border:2px solid currentColor;font-size:12px;white-space:nowrap}
+.dot{display:inline-block;width:8px;height:8px;background:currentColor;margin-right:6px}
+
+/* ───── server head ───── */
+.srv-head{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:18px}
+.srv-head h2{font-family:var(--font-display);font-size:34px;font-weight:400}
+.toolbar{margin-left:auto}
+
+/* ───── layout: sidebar + content ───── */
+.layout{display:grid;grid-template-columns:var(--side) minmax(0,1fr);gap:20px;align-items:start}
+.layout.rail{grid-template-columns:var(--rail) minmax(0,1fr)}
+
+.side{position:sticky;top:16px;background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);display:flex;flex-direction:column}
+.side-nav{display:flex;flex-direction:column;padding:6px 0}
+
+.grp{padding:4px 8px 6px}
+.grp+.grp{border-top:2px dashed var(--seg-off)}
+.grp-h{display:flex;align-items:center;justify-content:space-between;width:100%;height:28px;padding:0 6px;margin:2px 0;background:none;border:0;cursor:pointer;color:var(--muted);font-family:var(--font-display);font-size:12px;letter-spacing:.1em;text-transform:uppercase;text-align:left}
+.grp-h:hover{color:var(--ink)}
+.grp-h .chev{width:8px;height:8px;transition:transform .12s;flex:none}
+.grp[data-collapsed=true] .chev{transform:rotate(-90deg)}
+.grp[data-collapsed=true] .items{display:none}
+.items{display:flex;flex-direction:column;gap:2px}
+
+.item{display:flex;align-items:center;gap:10px;width:100%;height:34px;padding:0 10px;border:2px solid transparent;background:none;cursor:pointer;color:var(--ink);font-size:14px;text-align:left;position:relative}
+.item:hover{background:var(--seg-off)}
+.item:focus-visible,.grp-h:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.item[aria-selected=true]{background:var(--ink);color:var(--surface);border-color:var(--ink);box-shadow:3px 3px 0 var(--shade)}
+.item svg.ic{width:16px;height:16px;flex:none;shape-rendering:crispEdges}
+.item .lbl{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .cnt{font-size:12px;min-width:20px;height:20px;padding:0 5px;display:inline-flex;align-items:center;justify-content:center;border:2px solid currentColor}
+.item .cnt.acc{color:var(--accent)}.item .cnt.wrn{color:var(--warn)}
+.item[aria-selected=true] .cnt{color:var(--surface)}
+.item .mark{width:8px;height:8px;background:var(--warn);flex:none}
+.item[aria-selected=true] .mark{background:var(--surface)}
+
+.side-foot{border-top:2px solid var(--line);padding:8px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.side-foot .ver{font-size:12px;color:var(--muted);line-height:1.3}
+.collapse{width:var(--ctl-sm);height:var(--ctl-sm);display:inline-flex;align-items:center;justify-content:center;border:2px solid var(--line);background:var(--surface);cursor:pointer;box-shadow:2px 2px 0 var(--shade);flex:none;padding:0}
+.collapse svg{width:12px;height:12px}
+.layout.rail .collapse svg{transform:rotate(180deg)}
+
+/* rail (icons only) */
+.layout.rail .grp{padding:4px 6px}
+.layout.rail .grp-h{height:12px;margin:4px 0;justify-content:center;pointer-events:none}
+.layout.rail .grp-h span,.layout.rail .grp-h .chev{display:none}
+.layout.rail .grp-h::after{content:"";width:14px;height:2px;background:var(--line);opacity:.35}
+.layout.rail .grp[data-collapsed=true] .items{display:flex}
+.layout.rail .item{justify-content:center;padding:0}
+.layout.rail .item .lbl{display:none}
+.layout.rail .item .cnt{position:absolute;top:1px;right:1px;min-width:0;width:9px;height:9px;padding:0;font-size:0;border-width:0;background:currentColor}
+.layout.rail .item[aria-selected=true] .cnt{background:var(--surface)}
+.layout.rail .item .mark{position:absolute;top:3px;right:3px;width:7px;height:7px}
+.layout.rail .side-foot{flex-direction:column;padding:8px 4px}
+.layout.rail .side-foot .ver{display:none}
+.layout.rail .item:hover::after{content:attr(data-tip);position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);z-index:5;background:var(--ink);color:var(--surface);padding:3px 8px;font-size:12px;white-space:nowrap;pointer-events:none}
+
+/* ───── content ───── */
+.crumb{font-family:var(--font-display);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.page-h{display:flex;align-items:baseline;gap:12px;margin-bottom:14px}
+.page-h h3{font-family:var(--font-display);font-weight:400;font-size:26px}
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:16px}
+.big{font-family:var(--font-display);font-size:34px;line-height:1.1;margin:6px 0 10px}
+.segs{display:flex;gap:3px;margin:8px 0 6px}
+.segs i{flex:1;height:10px;background:var(--seg-off)}
+.segs i.on{background:var(--accent)}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-family:var(--font-display);font-weight:400;font-size:12px;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:2px solid var(--line)}
+.tbl td{padding:7px 8px;border-bottom:1px dashed var(--seg-off)}
+.tbl .num{text-align:right}
+.ph{min-height:260px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;color:var(--muted)}
+.ph svg{width:48px;height:48px;color:var(--ink);shape-rendering:crispEdges}
+
+/* ───── narrow screens: sidebar becomes a drop-down menu ───── */
+.menu-btn{display:none}
+@media (max-width:860px){
+  main{padding:14px}
+  .layout,.layout.rail{grid-template-columns:1fr;gap:14px}
+  .side{position:static}
+  .menu-btn{display:flex;align-items:center;gap:10px;width:100%;height:var(--ctl);padding:0 12px;background:var(--surface);border:0;cursor:pointer;font-family:var(--font-display);font-size:14px}
+  .menu-btn .cur{flex:1;text-align:left}
+  .side .side-nav,.side .side-foot{display:none}
+  .side.open .side-nav{display:flex;border-top:2px solid var(--line)}
+  .collapse{display:none}
+  .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .toolbar{margin-left:0}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 14 14" width="30" height="30" shape-rendering="crispEdges" aria-hidden="true"><rect width="14" height="14" rx="3" fill="#0f1218"/><rect x="2" y="3" width="2" height="2" fill="#e6e9ef"/><rect x="4" y="5" width="2" height="2" fill="#e6e9ef"/><rect x="6" y="7" width="2" height="2" fill="#e6e9ef"/><rect x="4" y="9" width="2" height="2" fill="#e6e9ef"/><rect x="8" y="10" width="4" height="2" fill="#7d9cff"/></svg>
+    <h1>Linager</h1>
+  </div>
+  <div class="row"><button class="btn" id="theme" type="button">Тема</button></div>
+</header>
+<p class="note">Макет бокового меню страницы сервера. Вкладки перенесены из верхней строки в левую колонку и разбиты на группы. Данные вымышленные; меню работает (группы сворачиваются, колонка сворачивается в значки), содержимое вкладок не меняется.</p>
+
+<main>
+  <div class="srv-head">
+    <h2>web-01</h2>
+    <span class="badge ok"><span class="dot"></span>онлайн</span>
+    <span class="muted small">5.42.125.44 · Debian 13 · агент v0.1.51</span>
+    <div class="row toolbar">
+      <button class="chip" id="demo-nodocker" type="button" aria-pressed="false">Агент без модуля Docker</button>
+    </div>
+  </div>
+
+  <div class="layout" id="layout">
+    <aside class="side" id="side" aria-label="Разделы сервера">
+      <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false"><span class="cur" id="menu-cur">Обзор</span><svg viewBox="0 0 8 8" width="12" height="12" shape-rendering="crispEdges"><path d="M0 2h8v2H6v2H4v2H2V6H0z" fill="currentColor" transform="scale(1)" /></svg></button>
+      <nav class="side-nav" role="tablist" aria-orientation="vertical" id="nav"></nav>
+      <div class="side-foot">
+        <span class="ver">Агент v0.1.51<br>обновлений: 12</span>
+        <button class="collapse" id="collapse" type="button" title="Свернуть меню" aria-label="Свернуть меню"><svg viewBox="0 0 8 8" shape-rendering="crispEdges"><path d="M5 0h2v2H5zM3 2h2v2H3zM1 4h2v2H1zM3 6h2v2H3zM5 6h2v2H5z" fill="currentColor"/></svg></button>
+      </div>
+    </aside>
+
+    <section id="content" aria-live="polite"></section>
+  </div>
+</main>
+
+<script>
+/* 8x8 pixel icons; "1" is a filled square */
+const ICONS = {
+  overview:["11100111","10100101","11100111","00000000","11100111","10100101","11100111","00000000"],
+  metrics:["00000001","00000001","00010001","00010101","01010101","01010101","01010101","11111111"],
+  terminal:["00000000","10000000","01000000","00100000","01000000","10000000","00011110","00000000"],
+  services:["00000000","11001111","11001111","00000000","11110011","11110011","00000000","00000000"],
+  processes:["01010100","01111110","11000011","01000010","11000011","01111110","00101010","00000000"],
+  logs:["00000000","11111100","00000000","11111111","00000000","11110000","00000000","11111111"],
+  updates:["00011000","00011000","01011010","00111100","00011000","00000000","11111111","11111111"],
+  files:["00000000","11110000","11111111","10000001","10000001","10000001","11111111","00000000"],
+  disk:["00000000","11111111","10000001","10000001","11111111","10000101","11111111","00000000"],
+  network:["00011000","00011000","00011000","11111111","10011001","10011001","11011011","11011011"],
+  firewall:["11101110","11101110","00000000","10111011","10111011","00000000","11101110","11101110"],
+  security:["01111110","11111111","11100111","11100111","11100111","01100110","00111100","00011000"],
+  docker:["00110000","00110000","11011011","11011011","00000000","11111111","11111111","01111110"]
+};
+function icon(id,cls){
+  const rows=ICONS[id]||ICONS.overview;let r="";
+  rows.forEach((row,y)=>{[...row].forEach((c,x)=>{if(c==="1")r+=`<rect x="${x}" y="${y}" width="1" height="1"/>`})});
+  return `<svg class="${cls||"ic"}" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true">${r}</svg>`;
+}
+
+/* groups and tabs (ids match the real tabs of the server page) */
+const GROUPS = [
+  {id:"general", title:"Общее", items:[
+    {id:"overview", title:"Обзор"},
+    {id:"metrics", title:"Метрики"},
+    {id:"terminal", title:"Терминал"}]},
+  {id:"system", title:"Система", items:[
+    {id:"services", title:"Службы"},
+    {id:"processes", title:"Процессы"},
+    {id:"logs", title:"Логи"},
+    {id:"updates", title:"Обновления", badge:{t:"12", c:"wrn"}}]},
+  {id:"fs", title:"Файловая система", items:[
+    {id:"files", title:"Файлы"},
+    {id:"disk", title:"Диск"}]},
+  {id:"net", title:"Сеть и защита", items:[
+    {id:"network", title:"Сеть"},
+    {id:"firewall", title:"Файрвол"},
+    {id:"security", title:"Безопасность", mark:true}]},
+  {id:"apps", title:"Приложения", items:[
+    {id:"docker", title:"Docker", badge:{t:"2", c:"acc"}, module:"docker"}]}
+];
+
+const $=s=>document.querySelector(s);
+const nav=$("#nav"),layout=$("#layout"),content=$("#content");
+let current="overview",collapsedGroups={},rail=false,noDocker=false;
+try{collapsedGroups=JSON.parse(localStorage.getItem("lg.side.groups")||"{}");rail=localStorage.getItem("lg.side.rail")==="1"}catch(e){}
+function save(){try{localStorage.setItem("lg.side.groups",JSON.stringify(collapsedGroups));localStorage.setItem("lg.side.rail",rail?"1":"0")}catch(e){}}
+
+function render(){
+  nav.innerHTML="";
+  GROUPS.forEach(g=>{
+    const items=g.items.filter(i=>!(noDocker&&i.module==="docker"));
+    if(!items.length)return; /* a group with no visible tabs disappears */
+    const holdsCurrent=items.some(i=>i.id===current);
+    const collapsed=!!collapsedGroups[g.id]&&!holdsCurrent;
+    const el=document.createElement("div");
+    el.className="grp";el.dataset.collapsed=collapsed;
+    el.innerHTML=`<button class="grp-h" type="button" aria-expanded="${!collapsed}"><span>${g.title}</span><svg class="chev" viewBox="0 0 8 8" shape-rendering="crispEdges"><path d="M0 2h2v2h2v2h2V4h2V2h-2v-0H0z" fill="currentColor" transform="translate(0 1)"/></svg></button><div class="items"></div>`;
+    el.querySelector(".grp-h").onclick=()=>{collapsedGroups[g.id]=!collapsed;save();render()};
+    const box=el.querySelector(".items");
+    items.forEach(i=>{
+      const b=document.createElement("button");
+      b.type="button";b.className="item";b.setAttribute("role","tab");b.dataset.id=i.id;b.dataset.tip=i.title;
+      b.setAttribute("aria-selected",i.id===current);
+      b.innerHTML=`${icon(i.id)}<span class="lbl">${i.title}</span>`+(i.badge?`<span class="cnt ${i.badge.c}">${i.badge.t}</span>`:"")+(i.mark?`<span class="mark" title="Есть что проверить"></span>`:"");
+      b.onclick=()=>{current=i.id;render();$("#side").classList.remove("open");$("#menu-btn").setAttribute("aria-expanded","false")};
+      box.appendChild(b);
+    });
+    nav.appendChild(el);
+  });
+  layout.classList.toggle("rail",rail);
+  $("#collapse").title=rail?"Развернуть меню":"Свернуть меню";
+  const g=GROUPS.find(g=>g.items.some(i=>i.id===current)),it=g.items.find(i=>i.id===current);
+  $("#menu-cur").textContent=g.title+" · "+it.title;
+  renderContent(g,it);
+}
+
+function renderContent(g,it){
+  const head=`<div class="crumb">${g.title}</div><div class="page-h"><h3>${it.title}</h3></div>`;
+  if(it.id==="overview"){
+    content.innerHTML=head+`
+    <div class="cards">
+      <div class="card"><h3 class="t">CPU</h3><div class="big">1%</div><div class="segs">${seg(1)}</div><div class="muted small">load average: 0.00 · 0.00 · 0.00</div></div>
+      <div class="card"><h3 class="t">RAM</h3><div class="big">57% <span class="muted small">· 550 MB</span></div><div class="segs">${seg(6)}</div><div class="muted small">всего 968 MB · swap 0 B</div></div>
+      <div class="card"><h3 class="t">Сеть · приём</h3><div class="big">2.2 KB/s</div><div class="segs">${seg(2)}</div><div class="muted small">↑ отдача 2.9 KB/s</div></div>
+      <div class="card"><h3 class="t">Диски</h3><div class="big">33%</div><div class="segs">${seg(4)}</div><div class="muted small">4.8 GB / 14.6 GB</div></div>
+    </div>
+    <div class="card"><h3 class="t" style="margin-bottom:10px">Интерфейсы</h3>
+      <table class="tbl"><thead><tr><th>Имя</th><th>Состояние</th><th>IP</th><th class="num">приём/с</th><th class="num">отдача/с</th></tr></thead><tbody>
+        <tr><td>eth0</td><td class="ok">UP</td><td>5.42.125.44</td><td class="num">2.2 KB/s</td><td class="num">2.9 KB/s</td></tr>
+        <tr><td>docker0</td><td class="ok">UP</td><td>172.17.0.1</td><td class="num">0 B/s</td><td class="num">0 B/s</td></tr>
+        <tr><td>br-c8a0cac65f2a</td><td class="ok">UP</td><td>172.30.0.1</td><td class="num">2.1 KB/s</td><td class="num">2.0 KB/s</td></tr>
+      </tbody></table></div>`;
+  }else{
+    content.innerHTML=head+`<div class="card ph">${icon(it.id,"")}<div>Содержимое вкладки «${it.title}» остаётся прежним.</div><div class="small">Меняется только место переключателя.</div></div>`;
+  }
+}
+function seg(n){let s="";for(let k=0;k<12;k++)s+=`<i class="${k<n?"on":""}"></i>`;return s}
+
+$("#collapse").onclick=()=>{rail=!rail;save();render()};
+$("#menu-btn").onclick=()=>{const s=$("#side"),o=s.classList.toggle("open");$("#menu-btn").setAttribute("aria-expanded",o)};
+$("#demo-nodocker").onclick=e=>{noDocker=!noDocker;e.currentTarget.setAttribute("aria-pressed",noDocker);if(noDocker&&current==="docker")current="overview";render()};
+$("#theme").onclick=()=>{const r=document.documentElement,d=getComputedStyle(r).colorScheme==="dark";r.dataset.theme=d?"light":"dark"};
+/* arrow keys move between tabs */
+nav.addEventListener("keydown",e=>{
+  if(e.key!=="ArrowDown"&&e.key!=="ArrowUp")return;
+  const all=[...nav.querySelectorAll(".item")],i=all.indexOf(document.activeElement);
+  if(i<0)return;e.preventDefault();
+  all[(i+(e.key==="ArrowDown"?1:-1)+all.length)%all.length].focus();
+});
+render();
+</script>
+</body>
+</html>
