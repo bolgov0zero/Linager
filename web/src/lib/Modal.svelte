@@ -188,7 +188,7 @@
       z-index: 2;
       flex-wrap: nowrap;
       margin: auto -12px 0;
-      padding: 10px 12px calc(10px + var(--safe-b));
+      padding: 10px 16px calc(10px + var(--safe-b));
       background: var(--surface);
       border-top: 2px solid var(--line);
     }

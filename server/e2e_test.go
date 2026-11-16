@@ -199,8 +199,34 @@ func TestEndToEnd(t *testing.T) {
 	if code := api.do("GET", "/api/groups", nil, &gl); code != 200 || len(gl) != 1 || gl[0].Name != "Production" {
 		t.Fatalf("group list: %d %+v", code, gl)
 	}
-	if code := api.do("DELETE", "/api/groups/"+strconv.FormatInt(grp.ID, 10), nil, nil); code != 200 {
-		t.Fatalf("group delete: %d", code)
+	// the order: a new group goes last, an arranged order is kept, a wrong list is refused
+	var grp2 struct {
+		ID   int64  `json:"id"`
+		Name string `json:"name"`
+	}
+	if code := api.do("POST", "/api/groups", map[string]string{"name": "Test"}, &grp2); code != 200 {
+		t.Fatalf("second group create: %d", code)
+	}
+	var ordered []struct{ Name string }
+	if code := api.do("GET", "/api/groups", nil, &ordered); code != 200 || len(ordered) != 2 || ordered[1].Name != "Test" {
+		t.Fatalf("a new group must go last: %d %+v", code, ordered)
+	}
+	if code := api.do("PUT", "/api/groups/order", map[string][]int64{"ids": {grp2.ID, grp.ID}}, nil); code != 200 {
+		t.Fatalf("group reorder: %d", code)
+	}
+	if code := api.do("GET", "/api/groups", nil, &ordered); code != 200 || ordered[0].Name != "Test" || ordered[1].Name != "Production" {
+		t.Fatalf("group order was not kept: %d %+v", code, ordered)
+	}
+	if code := api.do("PUT", "/api/groups/order", map[string][]int64{"ids": {grp.ID}}, nil); code != http.StatusBadRequest {
+		t.Fatalf("an incomplete order must be refused, got %d", code)
+	}
+	if code := api.do("PUT", "/api/groups/order", map[string][]int64{"ids": {grp.ID, grp.ID}}, nil); code != http.StatusBadRequest {
+		t.Fatalf("a repeated id must be refused, got %d", code)
+	}
+	for _, id := range []int64{grp.ID, grp2.ID} {
+		if code := api.do("DELETE", "/api/groups/"+strconv.FormatInt(id, 10), nil, nil); code != 200 {
+			t.Fatalf("group delete: %d", code)
+		}
 	}
 
 	// --- enrollment with a wrong pinned fingerprint is refused ---

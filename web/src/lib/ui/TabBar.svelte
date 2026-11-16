@@ -40,7 +40,7 @@
       grid-auto-flow: column;
       grid-auto-columns: 1fr;
       gap: 4px;
-      padding: 4px 6px calc(4px + var(--safe-b));
+      padding: 4px max(14px, env(safe-area-inset-right, 0px)) calc(4px + var(--safe-b)) max(14px, env(safe-area-inset-left, 0px));
       background: var(--surface);
       border-top: 2px solid var(--line);
     }

@@ -106,6 +106,7 @@ func (a *Admin) Handler() http.Handler {
 	a.route(mux, "GET /api/connect", "admin", a.connectInfo)
 	a.route(mux, "GET /api/groups", "any", a.groupsList)
 	a.route(mux, "POST /api/groups", "admin", a.groupCreate)
+	a.route(mux, "PUT /api/groups/order", "admin", a.groupsReorder)
 	a.route(mux, "PUT /api/groups/{id}", "admin", a.groupRename)
 	a.route(mux, "DELETE /api/groups/{id}", "admin", a.groupDelete)
 	a.route(mux, "PUT /api/servers/{id}/group", "srv:admin", a.serverSetGroup)

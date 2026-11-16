@@ -471,6 +471,8 @@ export const api = {
   groupCreate: (name: string) => request<Group>('POST', 'api/groups', { name }),
   groupRename: (id: number, name: string) => request<void>('PUT', `api/groups/${id}`, { name }),
   groupDelete: (id: number) => request<void>('DELETE', `api/groups/${id}`),
+  /** Stores the order of the groups: every group id exactly once, in the wanted order. */
+  groupsReorder: (ids: number[]) => request<void>('PUT', 'api/groups/order', { ids }),
   serverSetGroup: (serverId: string, groupId: number | null) =>
     request<void>('PUT', `api/servers/${enc(serverId)}/group`, { group_id: groupId }),
   connectInfo: () => request<ConnectInfo>('GET', 'api/connect'),

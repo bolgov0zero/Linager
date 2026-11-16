@@ -24,9 +24,9 @@ func groupErr(err error) error {
 	return err
 }
 
-// Groups lists groups in creation order.
+// Groups lists groups in the order the administrator arranged them (new groups go last).
 func (s *Store) Groups(ctx context.Context) ([]Group, error) {
-	rows, err := s.Pool.Query(ctx, `SELECT id, name FROM server_groups ORDER BY id`)
+	rows, err := s.Pool.Query(ctx, `SELECT id, name FROM server_groups ORDER BY position, id`)
 	if err != nil {
 		return nil, err
 	}
@@ -45,8 +45,42 @@ func (s *Store) Groups(ctx context.Context) ([]Group, error) {
 // GroupCreate adds a group.
 func (s *Store) GroupCreate(ctx context.Context, name string) (Group, error) {
 	g := Group{Name: name}
-	err := s.Pool.QueryRow(ctx, `INSERT INTO server_groups (name) VALUES ($1) RETURNING id`, name).Scan(&g.ID)
+	err := s.Pool.QueryRow(ctx, `INSERT INTO server_groups (name, position) VALUES ($1, (SELECT COALESCE(MAX(position), 0) + 1 FROM server_groups)) RETURNING id`, name).Scan(&g.ID)
 	return g, groupErr(err)
+}
+
+// ErrGroupOrder is returned when the list given to GroupsReorder is not exactly the set of existing groups.
+var ErrGroupOrder = errors.New("group order does not match the groups")
+
+// GroupsReorder sets the order of the groups; ids must list every existing group exactly once.
+func (s *Store) GroupsReorder(ctx context.Context, ids []int64) error {
+	tx, err := s.Pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var have int
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM server_groups`).Scan(&have); err != nil {
+		return err
+	}
+	if have != len(ids) {
+		return ErrGroupOrder
+	}
+	seen := make(map[int64]bool, len(ids))
+	for i, id := range ids {
+		if seen[id] {
+			return ErrGroupOrder
+		}
+		seen[id] = true
+		tag, err := tx.Exec(ctx, `UPDATE server_groups SET position=$2 WHERE id=$1`, id, i+1)
+		if err != nil {
+			return err
+		}
+		if tag.RowsAffected() == 0 {
+			return ErrGroupOrder
+		}
+	}
+	return tx.Commit(ctx)
 }
 
 // GroupRename renames a group; ErrNotFound if it does not exist.

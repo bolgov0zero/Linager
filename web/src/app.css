@@ -300,6 +300,14 @@ input[type='checkbox']:focus-visible {
   box-shadow: 3px 3px 0 var(--shade);
 }
 
+/* Phones and tablets with a touch screen have rounded corners: whatever sits at the bottom edge is lifted by at least
+   16 px, the fill (the bar's background) still reaches the edge. */
+@media (pointer: coarse) {
+  :root {
+    --safe-b: max(env(safe-area-inset-bottom, 0px), 16px);
+  }
+}
+
 /* ── Phone layout (up to 720 px; the same breakpoint as PHONE_MAX in lib/ui/viewport.ts) ──
    One column, a pinned top bar and a bottom bar, touch-sized controls (44 px), 16 px fields so iOS does not zoom,
    menus and dialogs as sheets from the bottom edge. */

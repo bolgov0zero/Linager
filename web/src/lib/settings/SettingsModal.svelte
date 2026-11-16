@@ -6,6 +6,7 @@
   import UpdatesPage from '../UpdatesPage.svelte';
   import ProfileSection from './ProfileSection.svelte';
   import SnippetsSection from './SnippetsSection.svelte';
+  import GroupsSection from './GroupsSection.svelte';
   import UsersSection from './UsersSection.svelte';
 
   import { SETTINGS_SECTIONS, type SettingsSection } from './sections';
@@ -60,6 +61,8 @@
         <ProfileSection {session} {onrefresh} {onauthlost} />
       {:else if section === 'users'}
         <UsersSection {onauthlost} />
+      {:else if section === 'groups'}
+        <GroupsSection {onauthlost} />
       {:else if section === 'updates'}
         <UpdatesPage embedded onchanged={onupdateschanged} />
       {:else if section === 'audit'}

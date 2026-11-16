@@ -5,7 +5,6 @@
   import { subscribeLive } from '../live';
   import CardView from './dashboard/CardView.svelte';
   import { fmtAgo, fmtRate, fmtUptime, pluralForm, type Units } from './dashboard/format';
-  import GroupsModal from './dashboard/GroupsModal.svelte';
   import Summary from './dashboard/Summary.svelte';
   import Tags from './dashboard/Tags.svelte';
   import { levelOf, summarize, tagsOf, toneOfPct, type AgentFlag } from './dashboard/status';
@@ -82,7 +81,6 @@
   let groups = $state<Group[]>([]);
   /** 'all', 'none' (servers without a group) or a group id. */
   let groupFilter = $state(readGroup());
-  let groupsOpen = $state(false);
   /** Agent update state per server id, from the same endpoint as the updates page. */
   let agentFlags = $state<Record<string, AgentFlag>>({});
   let loaded = $state(false);
@@ -477,12 +475,7 @@
   {:else if loadFailed && items.length === 0}
     <p class="error" role="alert">{$tr('dash.loadFailed')}</p>
   {:else}
-    <div class="countrow">
-      <p class="muted small count">{countLabel}</p>
-      {#if $isPhone}
-        <button class="chip manage" type="button" onclick={() => (groupsOpen = true)}>{$tr('dash.group.manage')}</button>
-      {/if}
-    </div>
+    <p class="muted small count">{countLabel}</p>
 
     <Summary summary={totals} />
 
@@ -526,7 +519,6 @@
         {#if groups.length > 0}
           <Select size="sm" value={groupFilter} options={groupOptions} ariaLabel={$tr('dash.group.label')} onchange={pickGroup} />
         {/if}
-        <button class="chip" type="button" onclick={() => (groupsOpen = true)}>{$tr('dash.group.manage')}</button>
       </div>
       <div class="group end">
         <button class="chip" type="button" aria-pressed={view === 'cards'} onclick={() => setView('cards')}
@@ -652,9 +644,6 @@
   <ContextMenu x={menu.x} y={menu.y} items={menu.items} label={$tr('dash.menu')} onclose={() => (menu = null)} />
 {/if}
 
-{#if groupsOpen}
-  <GroupsModal {groups} onclose={() => (groupsOpen = false)} onchanged={() => void load()} {onauthlost} />
-{/if}
 
 {#if pending}
   <div class="toast undo" role="status" aria-live="polite">
@@ -931,19 +920,6 @@
     gap: 12px;
   }
 
-  .countrow {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .manage {
-    min-height: 44px !important;
-    padding: 0 10px !important;
-    font-size: 13px;
-  }
-
   /* Phone toolbar: pinned under the top bar, its background hides the cards that pass under it. */
   .ptool {
     position: sticky;
@@ -1036,11 +1012,7 @@
     }
 
     .count {
-      margin: 0;
-    }
-
-    .countrow {
-      margin-bottom: 8px;
+      margin: 0 0 8px;
     }
 
     .grid {

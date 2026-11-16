@@ -132,5 +132,9 @@
   "acc.mod.security": "SSH logins, fail2ban, access keys.",
   "acc.mod.users": "Local accounts of the server: create, rights, delete, a terminal as the user.",
   "acc.mod.docker": "Docker containers and images.",
-  "app.profile": "Profile"
+  "app.profile": "Profile",
+  "settings.section.groups": "Server groups",
+  "dash.group.hint": "Groups collect servers on the dashboard: the group filter and the access of operators. The order here is the order in the dashboard list.",
+  "dash.group.up": "Up",
+  "dash.group.down": "Down"
 }

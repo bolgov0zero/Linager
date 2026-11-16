@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.58
+
+- Phone: the lightning bolt of the snippets button was redrawn (a clean pixel bolt). Everything at the bottom edge (the tab bar, the button bars of dialogs, the dock of terminal windows) is lifted by at least 16 px above the rounded screen corners and the bars keep a margin at their sides; the fill of the bars still reaches the edge.
+- Server groups moved to the settings (new section "Server groups", administrator only): create, rename, delete and, new, arrange the groups with the up and down buttons. The "Groups..." button of the dashboard is gone, on a phone and on a desktop. The order of the groups is kept on the server (migration 00009, `PUT /api/groups/order`, audit entry `group.reorder`) and is the order of the group list on the dashboard and in the access settings.
+
 ## 0.1.57
 
 - Phone: while a layer is open (the terminal, a floating window, a dialog, a sheet) a finger move that cannot scroll anything inside it is cancelled, so the page no longer moves or bounces behind it, and the visual area does not pan while the keyboard is up. The content of a dialog and the list of a sheet still scroll.

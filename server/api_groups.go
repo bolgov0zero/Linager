@@ -59,6 +59,26 @@ func (a *Admin) groupCreate(w http.ResponseWriter, r *http.Request, u *store.Use
 	writeJSON(w, http.StatusOK, g)
 }
 
+// groupsReorder stores the order of the groups: the body lists the id of every group in the wanted order.
+func (a *Admin) groupsReorder(w http.ResponseWriter, r *http.Request, u *store.User) {
+	var req struct {
+		IDs []int64 `json:"ids"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	switch err := a.DB.GroupsReorder(r.Context(), req.IDs); {
+	case errors.Is(err, store.ErrGroupOrder):
+		jsonErr(w, http.StatusBadRequest, "bad group order")
+	case err != nil:
+		jsonErr(w, http.StatusInternalServerError, "internal error")
+	default:
+		a.audit(r, u, "group.reorder", "group", "", "", "ok", nil)
+		a.Live.Publish("dashboard", map[string]any{})
+		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+	}
+}
+
 func (a *Admin) groupRename(w http.ResponseWriter, r *http.Request, u *store.User) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	var req struct {

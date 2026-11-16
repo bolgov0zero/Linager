@@ -125,7 +125,7 @@
       gap: 4px;
       max-width: none;
       overflow-x: auto;
-      padding: 4px 6px calc(4px + var(--safe-b));
+      padding: 4px 14px calc(4px + var(--safe-b));
       background: var(--surface);
       border-top: 2px solid var(--line);
     }
