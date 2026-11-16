@@ -15,7 +15,7 @@ One web panel, a lightweight agent on every host: live metrics, terminal, files,
 
 **English** · [Русский](README.ru.md)
 
-[**Website**](https://bolgov0zero.github.io/linager/) · [Features](#features) · [Screenshots](#screenshots) · [Install](#install) · [How it works](#how-it-works) · [Documentation](#documentation)
+[**Website**](https://bolgov0zero.github.io/Linager/) · [Features](#features) · [Screenshots](#screenshots) · [Install](#install) · [How it works](#how-it-works) · [Documentation](#documentation)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/en/dashboard-dark.png">
@@ -172,7 +172,7 @@ Details and known limits: [docs/en/security.md](docs/en/security.md). To report 
 | Security | [security](docs/en/security.md) | [безопасность](docs/ru/security.md) |
 | Architecture | [architecture](docs/en/architecture.md) | [архитектура](docs/architecture.md) |
 
-The documentation is also published as a site: <https://bolgov0zero.github.io/linager/>. The interface design and mockups are in [docs/design/](docs/design/).
+The documentation is also published as a site: <https://bolgov0zero.github.io/Linager/>. The interface design and mockups are in [docs/design/](docs/design/).
 
 ## Development
 

@@ -15,7 +15,7 @@
 
 [English](README.md) · **Русский**
 
-[**Сайт**](https://bolgov0zero.github.io/linager/ru/) · [Возможности](#возможности) · [Скриншоты](#скриншоты) · [Установка](#установка) · [Как это устроено](#как-это-устроено) · [Документация](#документация)
+[**Сайт**](https://bolgov0zero.github.io/Linager/ru/) · [Возможности](#возможности) · [Скриншоты](#скриншоты) · [Установка](#установка) · [Как это устроено](#как-это-устроено) · [Документация](#документация)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/ru/dashboard-dark.png">
@@ -172,7 +172,7 @@ flowchart LR
 | Безопасность | [безопасность](docs/ru/security.md) | [security](docs/en/security.md) |
 | Архитектура | [архитектура](docs/architecture.md) | [architecture](docs/en/architecture.md) |
 
-Документация опубликована и как сайт: <https://bolgov0zero.github.io/linager/ru/>. Дизайн и макеты интерфейса: [docs/design/](docs/design/).
+Документация опубликована и как сайт: <https://bolgov0zero.github.io/Linager/ru/>. Дизайн и макеты интерфейса: [docs/design/](docs/design/).
 
 ## Разработка
 
