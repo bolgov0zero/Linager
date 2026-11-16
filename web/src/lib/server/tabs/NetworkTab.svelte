@@ -14,10 +14,13 @@
   } from '../../../api';
   import { locale, t, tr, type Vars } from '../../../i18n';
   import Modal from '../../Modal.svelte';
+  import PixIcon from '../../ui/PixIcon.svelte';
+  import { isPhone } from '../../ui/viewport';
   import { showToast } from '../../toast';
   import { formatBytes } from '../format';
   import { applyNetwork } from './net-api';
   import { changeFromForm, formFromIface, ifaceAsChange, withChange, type NetForm } from './net-draft';
+  import './phone-c.css';
 
   let { server }: { server: ServerDetail } = $props();
 
@@ -57,6 +60,8 @@
   let actionError = $state<string | null>(null);
   let warnings = $state<ApplyWarning[] | null>(null);
   let showConfig = $state(false);
+  /** Phone: which interface cards are expanded (the primary one starts open). */
+  let openMap = $state<Record<string, boolean>>({});
 
   let nowMs = $state(Date.now());
   // Pending-change bookkeeping for the toast: not rendered, so plain variables.
@@ -203,7 +208,16 @@
     return hit ? hit.message : null;
   }
 
+  function isOpen(iface: NetInterface, editing: boolean): boolean {
+    return editing || (openMap[iface.name] ?? iface.primary);
+  }
+
+  function speedText(iface: NetInterface): string {
+    return iface.speed_mbps > 0 ? T('net.speed', { v: iface.speed_mbps }) : '';
+  }
+
   function openForm(iface: NetInterface) {
+    openMap[iface.name] = true;
     actionError = null;
     form = formFromIface(iface, draftByIface.get(iface.name));
   }
@@ -373,6 +387,70 @@
   }
 </script>
 
+{#snippet changeList()}
+  <ul class="changes">
+    {#each draft as c (c.iface)}
+      {@const cur = ifaceMap.get(c.iface)}
+      <li>
+        <span class="mono">{c.iface}</span>: {describe(c)}
+        {#if cur}
+          <span class="muted">({$tr('net.draft.was')}: {describe(ifaceAsChange(cur))})</span>
+        {/if}
+      </li>
+    {/each}
+  </ul>
+{/snippet}
+
+{#snippet configEditor()}
+  <p class="small muted">{$tr(isNetplan ? 'net.config.hintNetplan' : 'net.config.hint')}</p>
+  {#if isNetplan}
+    <div class="row">
+      {#if npNew}
+        <input
+          class="input mono grow"
+          maxlength="64"
+          placeholder={$tr('net.config.newFileName')}
+          aria-label={$tr('net.config.newFileName')}
+          bind:value={newName} />
+      {:else}
+        <Select
+          size="sm"
+          value={npFile}
+          ariaLabel={$tr('net.config.file')}
+          options={npFiles.map((f) => ({ value: f.name, label: f.name }))}
+          onchange={pickFile} />
+      {/if}
+      <button class="btn" type="button" disabled={npNew} onclick={startNewFile}>{$tr('net.config.newFile')}</button>
+    </div>
+    {#if !fileNameOk}
+      <p class="error" role="alert">{$tr('net.config.fileInvalid')}</p>
+    {/if}
+    {#if npCurrent?.cloud_init}
+      <p class="banner" role="status">{$tr('net.config.cloudInit')}</p>
+    {/if}
+  {/if}
+  <textarea
+    class="input mono config-edit"
+    rows="22"
+    spellcheck="false"
+    aria-label={$tr('net.config.title')}
+    bind:value={configText}></textarea>
+  {#if actionError}
+    <p class="error" role="alert">{actionError}</p>
+  {/if}
+  <div class="row end">
+    <button class="btn" type="button" disabled={busy} onclick={() => (editingConfig = false)}
+      >{$tr('net.config.cancel')}</button
+    >
+    <button
+      class="btn primary"
+      type="button"
+      disabled={busy || !fileNameOk || configText.trim() === '' || configText.trim() === originalText.trim()}
+      onclick={() => (confirmConfig = true)}>{$tr('net.config.apply')}</button
+    >
+  </div>
+{/snippet}
+
 <div class="net stack">
   {#if !info}
     {#if loadFailed}
@@ -412,6 +490,9 @@
             {:else}
               <p>{$tr('net.pending.text')}</p>
             {/if}
+            {#if $isPhone}
+              <div class="pc-pbar" aria-hidden="true"><i style:width="{Math.min(100, (secondsLeft / 30) * 100)}%"></i></div>
+            {/if}
             <div class="row">
               <button
                 class="btn primary"
@@ -444,18 +525,16 @@
             >
           </div>
         </div>
-        <p class="hint">{$tr('net.draft.banner')}</p>
-        <ul class="changes">
-          {#each draft as c (c.iface)}
-            {@const cur = ifaceMap.get(c.iface)}
-            <li>
-              <span class="mono">{c.iface}</span>: {describe(c)}
-              {#if cur}
-                <span class="muted">({$tr('net.draft.was')}: {describe(ifaceAsChange(cur))})</span>
-              {/if}
-            </li>
-          {/each}
-        </ul>
+        {#if $isPhone}
+          <details class="dchanges">
+            <summary>{$tr('mobC.net.changes', { n: draft.length })}</summary>
+            <p class="hint">{$tr('net.draft.banner')}</p>
+            {@render changeList()}
+          </details>
+        {:else}
+          <p class="hint">{$tr('net.draft.banner')}</p>
+          {@render changeList()}
+        {/if}
       </section>
     {/if}
 
@@ -471,6 +550,20 @@
         {@const change = draftByIface.get(iface.name)}
         {@const isEditing = form !== null && form.iface === iface.name}
         <article class="card iface" class:primary={iface.primary}>
+          {#if $isPhone}
+            <button class="ihead" type="button" aria-expanded={isOpen(iface, isEditing)} onclick={() => (openMap[iface.name] = !isOpen(iface, isEditing))}>
+              <span class="pc-mn">
+                <span class="pc-l1">
+                  <b class="mono">{iface.name}</b>
+                  <span class="pc-tag" class:ok={iface.state === 'UP'} class:muted={iface.state !== 'UP'}>{iface.state}</span>
+                  {#if iface.primary}<span class="pc-tag warn">{$tr('net.badge.primary')}</span>{/if}
+                  {#if change}<span class="pc-tag accent">{$tr('net.badge.inDraft')}</span>{/if}
+                </span>
+                <span class="pc-l2 ihint mono">{[iface.addresses.join(', ') || '—', speedText(iface)].filter(Boolean).join(' · ')}</span>
+              </span>
+              <span class="chev" class:up={isOpen(iface, isEditing)}><PixIcon name="chev" size={20} /></span>
+            </button>
+          {:else}
           <header class="iface-head">
             <h3 class="mono">{iface.name}</h3>
             <span class="tag" class:up={iface.state === 'UP'} class:down={iface.state === 'DOWN'}>{iface.state}</span>
@@ -482,7 +575,10 @@
               <span class="tag accent">{$tr('net.badge.inDraft')}</span>
             {/if}
           </header>
+          {/if}
 
+          {#if !$isPhone || isOpen(iface, isEditing)}
+          <div class="ibody">
           <dl class="facts">
             <div class="fact"><dt>{$tr('net.row.mac')}</dt><dd class="mono">{iface.mac || '—'}</dd></div>
             <div class="fact"><dt>{$tr('net.row.mtu')}</dt><dd>{iface.mtu}</dd></div>
@@ -606,10 +702,48 @@
               </div>
             </form>
           {/if}
+          </div>
+          {/if}
         </article>
       {/each}
     </div>
 
+    {#if $isPhone}
+      <div class="pc-sech"><h2>{$tr('net.dns.title')}</h2></div>
+      <ul class="pc-list">
+        {#each info.dns.nameservers as ns (ns)}
+          <li class="pc-li"><div class="pc-mn"><div class="pc-l1 mono">{ns}</div></div></li>
+        {/each}
+        {#each info.dns.search as d (d)}
+          <li class="pc-li">
+            <div class="pc-mn">
+              <div class="pc-l1 mono">{d}</div>
+              <div class="pc-l2">{$tr('net.dns.search')}</div>
+            </div>
+          </li>
+        {/each}
+        {#if info.dns.nameservers.length === 0 && info.dns.search.length === 0}
+          <li class="pc-li"><span class="muted">—</span></li>
+        {/if}
+      </ul>
+
+      <div class="pc-sech"><h2>{$tr('net.routes.title')}</h2></div>
+      {#if info.routes.length === 0}
+        <p class="muted">{$tr('net.routes.empty')}</p>
+      {:else}
+        <ul class="pc-list">
+          {#each info.routes as r, i (i)}
+            <li class="pc-li">
+              <div class="pc-mn">
+                <div class="pc-l1 mono"><b>{r.dst}</b></div>
+                <div class="pc-l2 mono">{r.gateway ? `via ${r.gateway} ` : ''}dev {r.dev}</div>
+              </div>
+              <span class="pc-r muted">{r.metric} · {r.protocol}</span>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    {:else}
     <div class="split">
       <section class="card stack">
         <h2>{$tr('net.dns.title')}</h2>
@@ -659,8 +793,9 @@
         {/if}
       </section>
     </div>
+    {/if}
 
-    <section class="card stack">
+    <section class="card stack psec">
       <div class="head">
         <h2>{$tr('net.config.title')}</h2>
         <div class="row">
@@ -676,55 +811,9 @@
           {/if}
         </div>
       </div>
-      {#if editingConfig}
-        <p class="small muted">{$tr(isNetplan ? 'net.config.hintNetplan' : 'net.config.hint')}</p>
-        {#if isNetplan}
-          <div class="row">
-            {#if npNew}
-              <input
-                class="input mono grow"
-                maxlength="64"
-                placeholder={$tr('net.config.newFileName')}
-                aria-label={$tr('net.config.newFileName')}
-                bind:value={newName} />
-            {:else}
-              <Select
-                size="sm"
-                value={npFile}
-                ariaLabel={$tr('net.config.file')}
-                options={npFiles.map((f) => ({ value: f.name, label: f.name }))}
-                onchange={pickFile} />
-            {/if}
-            <button class="btn" type="button" disabled={npNew} onclick={startNewFile}>{$tr('net.config.newFile')}</button>
-          </div>
-          {#if !fileNameOk}
-            <p class="error" role="alert">{$tr('net.config.fileInvalid')}</p>
-          {/if}
-          {#if npCurrent?.cloud_init}
-            <p class="banner" role="status">{$tr('net.config.cloudInit')}</p>
-          {/if}
-        {/if}
-        <textarea
-          class="input mono config-edit"
-          rows="22"
-          spellcheck="false"
-          aria-label={$tr('net.config.title')}
-          bind:value={configText}></textarea>
-        {#if actionError}
-          <p class="error" role="alert">{actionError}</p>
-        {/if}
-        <div class="row end">
-          <button class="btn" type="button" disabled={busy} onclick={() => (editingConfig = false)}
-            >{$tr('net.config.cancel')}</button
-          >
-          <button
-            class="btn primary"
-            type="button"
-            disabled={busy || !fileNameOk || configText.trim() === '' || configText.trim() === originalText.trim()}
-            onclick={() => (confirmConfig = true)}>{$tr('net.config.apply')}</button
-          >
-        </div>
-      {:else if showConfig}
+      {#if editingConfig && !$isPhone}
+        {@render configEditor()}
+      {:else if showConfig && !editingConfig}
         <pre class="config mono">{info.config_preview}</pre>
       {/if}
       {#if isNetplan}
@@ -744,6 +833,12 @@
     </section>
   {/if}
 </div>
+
+{#if editingConfig && $isPhone}
+  <Modal wide title={$tr('net.config.title')} labelId="net-cfgedit-title" onclose={() => (editingConfig = false)}>
+    {@render configEditor()}
+  </Modal>
+{/if}
 
 {#if confirmConfig}
   <Modal title={$tr('net.config.confirmTitle')} labelId="net-cfg-title" onclose={() => (confirmConfig = false)}>
@@ -916,6 +1011,10 @@
     border-color: var(--warn);
   }
 
+  .ibody {
+    display: contents;
+  }
+
   .iface-head {
     display: flex;
     flex-wrap: wrap;
@@ -1054,6 +1153,180 @@
 
     .count {
       font-size: 48px;
+    }
+  }
+
+  /* Phone: expandable interface cards, row lists, pinned draft / countdown bar, full-screen config editor. */
+  @media (max-width: 720px) {
+    .net {
+      gap: 12px;
+    }
+
+    .iface {
+      padding: 0;
+      gap: 0;
+    }
+
+    .ihead {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 56px;
+      padding: 8px 8px 8px 12px;
+      background: none;
+      color: var(--ink);
+      border: 0;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .ihead .pc-l1 b {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 400;
+    }
+
+    .chev {
+      display: grid;
+      place-items: center;
+      flex: none;
+      width: 36px;
+      height: 36px;
+    }
+
+    .chev.up {
+      transform: rotate(180deg);
+    }
+
+    .ibody {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 4px 12px 12px;
+      border-top: 2px dashed var(--seg-off);
+    }
+
+    .facts {
+      gap: 0;
+    }
+
+    .fact {
+      padding: 7px 0;
+      border-top: 2px dashed var(--seg-off);
+      font-size: 13px;
+    }
+
+    .fact:first-child {
+      border-top: 0;
+    }
+
+    .ibody > .row > .btn,
+    .iface-form .row > .btn {
+      flex: 1;
+    }
+
+    .iface-form {
+      padding-top: 10px;
+    }
+
+    .psec {
+      padding: 0;
+      background: none;
+      border: 0;
+      box-shadow: none;
+    }
+
+    .psec .head h2 {
+      font-size: 18px;
+    }
+
+    .psec .head {
+      flex-wrap: nowrap;
+    }
+
+    .psec .head .row {
+      flex-wrap: nowrap;
+    }
+
+    .config {
+      overflow-x: auto;
+    }
+
+    .config-edit {
+      flex: none;
+      height: max(320px, 55dvh);
+      resize: none;
+    }
+
+    /* The draft and the countdown stay above the bottom bar at any scroll position. */
+    .pending,
+    .draft {
+      order: 90;
+      position: sticky;
+      bottom: calc(var(--bar-h) + var(--safe-b));
+      z-index: 6;
+      margin: 0 -12px;
+      padding: 10px 12px;
+      gap: 8px;
+      border-width: 2px 0 0;
+      box-shadow: 0 -4px 0 var(--shade);
+    }
+
+    .pending-body {
+      flex-wrap: nowrap;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .countdown {
+      min-width: 0;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    .count {
+      font-size: 36px;
+    }
+
+    .unit {
+      font-size: 11px;
+    }
+
+    .pending-text {
+      flex: 1 1 0;
+      gap: 8px;
+      font-size: 12.5px;
+    }
+
+    .pending .row,
+    .draft .row {
+      flex-wrap: nowrap;
+    }
+
+    .pending .row > .btn,
+    .draft .row > .btn {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .draft .head {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .dchanges summary {
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      font-size: 12.5px;
+    }
+
+    .dchanges {
+      font-size: 12.5px;
     }
   }
 </style>

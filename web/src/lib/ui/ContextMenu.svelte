@@ -99,6 +99,7 @@
 
 <svelte:window onpointerdown={onOutside} />
 
+<div use:portal class="sheet-scrim"></div>
 <ul
   use:portal
   bind:this={el}

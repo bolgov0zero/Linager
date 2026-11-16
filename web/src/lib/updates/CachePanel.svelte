@@ -29,7 +29,7 @@
   <h3 class="upd-h">{$trans('upd.cache.title')}</h3>
 
   <div class="upd-tw">
-    <table class="upd-tbl">
+    <table class="upd-tbl upd-rows upd-cache">
       <thead>
         <tr>
           <th>{$trans('upd.cache.version')}</th>

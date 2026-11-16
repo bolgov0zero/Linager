@@ -4,6 +4,7 @@
   import { api, type RolloutMode, type UpdatesInfo } from '../api';
   import { locale, t, tr as trans } from '../i18n';
   import { showToast } from './toast';
+  import { isPhone } from './ui/viewport';
   import ServerPanel from './updates/ServerPanel.svelte';
   import CachePanel from './updates/CachePanel.svelte';
   import AgentsPanel from './updates/AgentsPanel.svelte';
@@ -229,6 +230,15 @@
 
     <div class="upd-grid">
       <HistoryPanel history={info.history} />
+      {#if $isPhone}
+        <details class="upd-panel upd-cli">
+          <summary class="upd-h">{$trans('upd.cli.title')}</summary>
+          <pre class="upd-term"><code><span class="cmd">linager update --check</span>      <span class="dim">{$trans('upd.cli.check')}</span>
+<span class="cmd">linager update</span>              <span class="dim">{$trans('upd.cli.update')}</span>
+<span class="cmd">linager agent update</span>        <span class="dim">{$trans('upd.cli.agentUpdate')}</span>
+<span class="cmd">linager agent status</span>        <span class="dim">{$trans('upd.cli.agentStatus')}</span></code></pre>
+        </details>
+      {:else}
       <section class="upd-panel">
         <h3 class="upd-h">{$trans('upd.cli.title')}</h3>
         <pre class="upd-term"><code><span class="cmd">linager update --check</span>      <span class="dim">{$trans('upd.cli.check')}</span>
@@ -236,6 +246,7 @@
 <span class="cmd">linager agent update</span>        <span class="dim">{$trans('upd.cli.agentUpdate')}</span>
 <span class="cmd">linager agent status</span>        <span class="dim">{$trans('upd.cli.agentStatus')}</span></code></pre>
       </section>
+      {/if}
     </div>
   {/if}
 </div>
@@ -620,14 +631,123 @@
     display: none;
   }
 
-  /* Phones: the update tables become lists of small blocks, so nothing scrolls sideways. */
-  @media (max-width: 600px) {
+  /* Phones: the panels are cards, the tables are rows (name and details, status at the right, progress under the row). */
+  @media (max-width: 720px) {
+    .upd-page {
+      gap: 12px;
+    }
+
+    .upd-title {
+      font-size: 24px;
+    }
+
+    :global(.upd-panel) {
+      background: var(--surface);
+      box-shadow: 3px 3px 0 var(--shade);
+      gap: 10px;
+    }
+
+    :global(.upd-h) {
+      font-size: 14px;
+    }
+
+    :global(.upd-cli > summary) {
+      cursor: pointer;
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+    }
+
+    :global(.upd-cli[open] > summary) {
+      margin-bottom: 10px;
+    }
+
+    :global(.upd-big) {
+      font-size: 28px;
+    }
+
+    :global(.upd-kv) {
+      font-size: 13px;
+      gap: 0;
+    }
+
+    :global(.upd-kv dt) {
+      padding-right: 14px;
+    }
+
+    :global(.upd-kv dt),
+    :global(.upd-kv dd) {
+      display: flex;
+      align-items: center;
+      min-height: 40px;
+      border-top: 2px dashed var(--seg-off);
+    }
+
+    :global(.upd-kv dd) {
+      justify-content: flex-end;
+    }
+
+    :global(.upd-kv dt:first-of-type),
+    :global(.upd-kv dt:first-of-type + dd) {
+      border-top: 0;
+    }
+
+    :global(.upd-acts .btn),
+    :global(.upd-bar .btn) {
+      flex: 1 1 100%;
+    }
+
+    :global(.upd-bar) {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+
+    :global(.upd-label) {
+      justify-content: space-between;
+    }
+
+    :global(.upd-check) {
+      min-height: 44px;
+      font-size: 13px;
+    }
+
+    :global(.upd-check input),
+    :global(.upd-tbl input[type='checkbox']) {
+      width: 22px;
+      height: 22px;
+    }
+
+    /* The primary "update" button of the server stays in reach at the bottom of the sheet. */
+    :global(.upd-pin) {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 3;
+      padding: 10px 12px calc(10px + var(--safe-b));
+      background: var(--surface);
+      border-top: 2px solid var(--line);
+    }
+
+    :global(.upd-pin .btn) {
+      width: 100%;
+    }
+
+    :global(.upd-page:has(.upd-pin)) {
+      padding-bottom: 64px;
+    }
+
+    :global(.upd-tw) {
+      overflow: visible;
+    }
+
     :global(.upd-tbl),
     :global(.upd-tbl tbody) {
       display: block;
     }
 
-    :global(.upd-tbl:not(.upd-agents) thead) {
+    :global(.upd-tbl thead) {
       position: absolute;
       width: 1px;
       height: 1px;
@@ -636,8 +756,18 @@
     }
 
     /* The agents header keeps only the "select all" checkbox with its label. */
+    :global(.upd-agents thead) {
+      position: static;
+      width: auto;
+      height: auto;
+      overflow: visible;
+      clip: auto;
+      display: block;
+    }
+
     :global(.upd-agents thead tr) {
       display: flex;
+      min-height: 44px;
       border-bottom: 2px solid var(--line);
     }
 
@@ -648,9 +778,10 @@
     :global(.upd-agents thead th.upd-sel) {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       width: auto;
       border-bottom: 0;
+      padding-left: 4px;
     }
 
     :global(.upd-selall-label) {
@@ -665,9 +796,14 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 6px 10px;
+      gap: 4px 10px;
+      min-height: 52px;
       padding: 8px 4px;
       border-bottom: 2px dashed var(--seg-off);
+    }
+
+    :global(.upd-tbl tbody tr:last-child) {
+      border-bottom: 0;
     }
 
     :global(.upd-tbl tbody td) {
@@ -679,19 +815,105 @@
       flex: 1 0 100%;
     }
 
+    /* Cache and history: a main line with the badge or button at the right, details on the second line. */
+    :global(.upd-rows tbody tr) {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 2px 10px;
+    }
+
+    :global(.upd-cache td:nth-child(1)) {
+      grid-column: 1 / 3;
+      grid-row: 1;
+    }
+
+    :global(.upd-cache td:nth-child(2)) {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    :global(.upd-cache td:nth-child(3)) {
+      grid-column: 2;
+      grid-row: 2;
+    }
+
+    :global(.upd-cache td:nth-child(4)) {
+      grid-column: 3;
+      grid-row: 1 / span 2;
+      justify-self: end;
+    }
+
+    :global(.upd-hist td:nth-child(3)) {
+      grid-column: 1 / 3;
+      grid-row: 1;
+    }
+
+    :global(.upd-hist td:nth-child(1)) {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    :global(.upd-hist td:nth-child(2)) {
+      grid-column: 2;
+      grid-row: 2;
+    }
+
+    :global(.upd-hist td:nth-child(4)) {
+      grid-column: 3;
+      grid-row: 1 / span 2;
+      justify-self: end;
+    }
+
+    :global(.upd-rows td[colspan]) {
+      grid-column: 1 / -1;
+      grid-row: auto;
+    }
+
+    /* Agents: a grid. Server and version at the left, status and button at the right, progress under the row. */
+    :global(.upd-agents tbody tr) {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 2px 10px;
+    }
+
     :global(.upd-agents tbody td.upd-sel) {
+      grid-column: 1;
+      grid-row: 1 / span 2;
       width: auto;
     }
 
-    /* Server name takes the rest of the first line, the progress its own line, the button sits right. */
+    :global(.upd-agents tbody td.upd-sel:empty) {
+      display: none;
+    }
+
     :global(.upd-agents tbody td:nth-child(2)) {
-      flex: 1 0 calc(100% - 44px);
+      grid-column: 2;
+      grid-row: 1;
       min-width: 0;
     }
 
+    :global(.upd-agents tbody td:nth-child(3)) {
+      grid-column: 2;
+      grid-row: 2;
+      color: var(--muted);
+      font-size: 11.5px;
+    }
+
+    :global(.upd-agents tbody td:nth-child(3))::before {
+      content: attr(data-label) ' ';
+    }
+
+    :global(.upd-agents tbody td:nth-child(4)) {
+      grid-column: 3;
+      grid-row: 1;
+      justify-self: end;
+      text-align: right;
+    }
+
     :global(.upd-agents tbody td:nth-child(5)) {
-      flex: 1 0 100%;
-      order: 5;
+      grid-column: 1 / -1;
+      grid-row: 3;
     }
 
     :global(.upd-agents tbody td:nth-child(5):has(.upd-dash)) {
@@ -699,8 +921,19 @@
     }
 
     :global(.upd-agents tbody td.upd-r) {
-      order: 6;
-      margin-left: auto;
+      grid-column: 3;
+      grid-row: 2;
+      justify-self: end;
+    }
+
+    :global(.upd-agents tbody td[colspan]) {
+      grid-column: 1 / -1;
+    }
+
+    :global(.upd-pb) {
+      width: 100%;
+      height: 12px;
+      margin: 2px 0 0;
     }
   }
 </style>

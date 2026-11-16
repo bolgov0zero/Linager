@@ -16,6 +16,10 @@
   import ServerPage from './lib/server/ServerPage.svelte';
   import TermWindows from './lib/terminal/TermWindows.svelte';
   import { closeAllTermWindows } from './lib/terminal/windows';
+  import Modal from './lib/Modal.svelte';
+  import PixIcon from './lib/ui/PixIcon.svelte';
+  import TabBar, { type TabBarItem } from './lib/ui/TabBar.svelte';
+  import { isPhone } from './lib/ui/viewport';
 
   type Theme = 'light' | 'dark';
   type Phase = 'loading' | 'login' | 'app';
@@ -56,11 +60,13 @@
   let session = $state<Session | null>(null);
   let settingsOpen = $state(false);
   let settingsSection = $state<SettingsSection>('profile');
+  let settingsList = $state(false);
   let editing = $state(false);
   let addOpen = $state(false);
   let enrollOpen = $state(false);
   let reloadKey = $state(0);
   let menuOpen = $state(false);
+  let moreOpen = $state(false);
   let lastLive = $state<Date | null>(null);
   let hash = $state(location.hash);
   let openedFromApp = false;
@@ -73,6 +79,24 @@
   const isAdmin = $derived((session?.role ?? 'admin') === 'admin');
   const clock = $derived(lastLive ? fmtClock(lastLive) : '--:--:--');
 
+  /** Phone: the bottom bar of the dashboard. The server page has its own bar. */
+  const barItems = $derived<TabBarItem[]>([
+    { id: 'servers', label: $tr('nav.servers'), icon: 'servers', current: true },
+    ...(isAdmin
+      ? [
+          { id: 'updates', label: $tr('nav.linager'), icon: 'updates', badge: updatesCount > 0 ? updatesCount : undefined },
+          { id: 'audit', label: $tr('nav.audit'), icon: 'audit' },
+        ]
+      : []),
+    { id: 'more', label: $tr('nav.more'), icon: 'gear' },
+  ]);
+
+  function onBar(id: string): void {
+    if (id === 'updates' || id === 'audit') openSettings(id);
+    else if (id === 'more') moreOpen = true;
+    else if (id === 'servers' && location.hash) location.hash = '';
+  }
+
   /** The old pages #updates and #audit are sections of the settings now; links to them keep working. */
   function openLegacyHash(): boolean {
     const name = location.hash.slice(1);
@@ -83,10 +107,12 @@
     return true;
   }
 
-  function openSettings(section: SettingsSection = settingsSection): void {
+  function openSettings(section: SettingsSection = settingsSection, list = false): void {
+    settingsList = list && isAdmin;
     settingsSection = isAdmin ? section : 'profile'; // the others only have their profile
     settingsOpen = true;
     menuOpen = false;
+    moreOpen = false;
   }
 
   function onHashChange(): void {
@@ -220,7 +246,7 @@
   });
 </script>
 
-<header class="top">
+<header class="top" class:hidden-phone={serverName !== null} class:guest={phase !== 'app'}>
   <div class="brand">
     <svg class="logo" viewBox="0 0 14 14" shape-rendering="crispEdges" aria-hidden="true">
       <rect width="14" height="14" rx="3" fill="#0f1218" />
@@ -237,6 +263,11 @@
       <p class="live mono small">
         <span class="dot" class:on={$liveConnected} aria-hidden="true"></span>{$tr('dash.live', { time: clock })}
       </p>
+    {/if}
+    {#if phase === 'app' && serverName === null && isAdmin}
+      <button class="btn primary phone-add" type="button" aria-label={$tr('servers.add')} onclick={() => (addOpen = true)}>
+        <PixIcon name="plus" />
+      </button>
     {/if}
     <button
       class="btn menu-btn"
@@ -289,7 +320,7 @@
   </div>
 </header>
 
-<main class:center={phase === 'login'}>
+<main class:center={phase === 'login'} class:bar={phase === 'app'} class:srvpage={serverName !== null}>
   {#if phase === 'loading'}
     <p class="muted">{$tr('common.loading')}</p>
   {:else if phase === 'login'}
@@ -339,6 +370,7 @@
 {#if settingsOpen && session}
   <SettingsModal
     section={settingsSection}
+    list={settingsList}
     {session}
     {updatesCount}
     onsection={(next) => (settingsSection = next)}
@@ -347,6 +379,44 @@
     onrefresh={refreshSession}
     onupdateschanged={refreshUpdatesCount}
   />
+{/if}
+
+{#if session && $isPhone && serverName === null}
+  <TabBar items={barItems} label={$tr('app.menu')} onselect={onBar} />
+{/if}
+
+{#if moreOpen && session}
+  <Modal title={$tr('more.title')} labelId="more-title" onclose={() => (moreOpen = false)} flush>
+    <div class="more">
+      <button class="act" type="button" onclick={() => openSettings(settingsSection, true)}>
+        <PixIcon name="gear" />{isAdmin ? $tr('app.settings') : $tr('app.profile')}
+        <PixIcon name="next" size={16} />
+      </button>
+      {#if isAdmin}
+        <button class="act" type="button" onclick={() => { moreOpen = false; toggleEdit(); }}>
+          <PixIcon name="cards" />{editing ? $tr('dash.done') : $tr('dash.edit')}
+          <PixIcon name="next" size={16} />
+        </button>
+      {/if}
+      <div class="act plain">
+        <span class="lab">{$tr('more.theme')}</span>
+        <div class="seg" role="group" aria-label={$tr('more.theme')}>
+          <button class="chip" type="button" aria-pressed={theme === 'light'} onclick={() => theme !== 'light' && toggleTheme()}>{$tr('theme.light')}</button>
+          <button class="chip" type="button" aria-pressed={theme === 'dark'} onclick={() => theme !== 'dark' && toggleTheme()}>{$tr('theme.dark')}</button>
+        </div>
+      </div>
+      <div class="act plain">
+        <span class="lab">{$tr('more.language')}</span>
+        <div class="seg" role="group" aria-label="language">
+          <button class="chip" type="button" aria-pressed={$locale === 'ru'} onclick={() => pickLocale('ru')}>{$tr('lang.ru')}</button>
+          <button class="chip" type="button" aria-pressed={$locale === 'en'} onclick={() => pickLocale('en')}>{$tr('lang.en')}</button>
+        </div>
+      </div>
+      <div class="act plain">
+        <button class="btn danger logout" type="button" onclick={() => { moreOpen = false; void logout(); }}>{$tr('app.logout')}</button>
+      </div>
+    </div>
+  </Modal>
 {/if}
 
 {#if session}
@@ -427,7 +497,8 @@
   }
 
   .menu-btn,
-  .scrim {
+  .scrim,
+  .phone-add {
     display: none;
   }
 
@@ -466,58 +537,62 @@
       white-space: nowrap;
     }
 
-    .menu-btn {
-      display: inline-flex;
-      align-items: center;
-      padding: 6px 10px;
-    }
-
+    /* The menu of the bar is the "More" sheet of the bottom bar now; only the sign-in screen has no bar. */
+    .menu-btn,
     .scrim {
-      display: block;
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      border: 0;
-      padding: 0;
-      background: transparent;
+      display: none;
     }
 
     .controls {
       display: none;
     }
 
-    .controls.open {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      max-height: calc(100dvh - 56px);
-      overflow-y: auto;
-      padding: 12px;
-      background: var(--surface);
-      border-bottom: 2px solid var(--line);
-      box-shadow: 3px 3px 0 var(--shade);
+    /* Sign-in has no bottom bar: the theme and language buttons stay in the top bar. */
+    .top.guest .controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
-    .controls.open :global(.btn) {
-      justify-content: center;
-      text-align: center;
+    .top.guest .controls :global(.btn),
+    .top.guest .controls :global(.chip) {
+      min-height: 36px;
+      padding: 0 8px;
     }
 
-    .seg {
-      grid-column: 1 / -1;
+    .phone-add {
+      display: inline-flex;
+      width: 44px;
+      min-height: 44px;
+      padding: 0;
     }
 
-    .seg .chip {
-      flex: 1;
+    .top {
+      padding-top: calc(5px + var(--safe-t));
     }
+
+    .top.hidden-phone {
+      display: none;
+    }
+
   }
 
   main {
     padding: 24px 16px;
+  }
+
+  @media (max-width: 720px) {
+    main {
+      padding: 12px;
+    }
+
+    main.bar {
+      padding-bottom: calc(var(--bar-h) + var(--safe-b) + 16px);
+    }
+
+    main.srvpage {
+      padding: 0;
+    }
   }
 
   /* The sign-in card sits in the middle of the free space under the top bar. */
@@ -551,5 +626,41 @@
     margin-left: 4px;
     border: 2px solid currentColor;
     text-align: center;
+  }
+
+  .more .act {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 54px;
+    padding: 0 14px;
+    background: none;
+    border: 0;
+    border-top: 2px dashed var(--seg-off);
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: 16px;
+    text-align: left;
+  }
+
+  .more .act:first-child {
+    border-top: 0;
+  }
+
+  .more button.act > :global(svg:last-child) {
+    margin-left: auto;
+  }
+
+  .more .act.plain {
+    justify-content: space-between;
+  }
+
+  .more .act .lab {
+    color: var(--muted);
+  }
+
+  .more .logout {
+    width: 100%;
   }
 </style>

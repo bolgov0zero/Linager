@@ -3,7 +3,9 @@
   import { api, ApiError, type DiskCleanItem, type DiskFS, type DiskNode, type DiskScan, type DiskState, type ServerDetail } from '../../../api';
   import { locale, t, tr as T } from '../../../i18n';
   import { showToast } from '../../toast';
+  import Modal from '../../Modal.svelte';
   import PieChart, { type PiePart } from '../../ui/PieChart.svelte';
+  import { isPhone } from '../../ui/viewport';
   import { formatBytes, formatDateTime } from '../format';
   import { unavailableKind } from './svc';
 
@@ -195,29 +197,32 @@
             {$T('disk.partition')} <span class="mono">{f.mount}</span>
             <span class="muted small sub">{f.device.replace('/dev/', '')} · {f.fs}</span>
           </h3>
-          <PieChart parts={fsParts(f)} size={150} />
-          <div class="stack">
-            <p class="small muted">
-              {formatBytes(f.used)} / {formatBytes(f.total)} · {Math.round(f.pct)}%
-              {#if f.inodes_total > 0}· {$T('disk.inodes', { pct: Math.round((f.inodes_used / f.inodes_total) * 100) })}{/if}
-            </p>
-            {#if f.history_days >= 0.5 && f.per_day !== 0}
+          <div class="fsrow">
+            <PieChart parts={fsParts(f)} size={$isPhone ? 112 : 150} legend={!$isPhone} />
+            <div class="fsinfo">
+              {#if $isPhone}<div class="pct" aria-hidden="true">{Math.round(f.pct)}%</div>{/if}
               <p class="small muted">
-                {f.per_day > 0 ? $T('disk.growth') : $T('disk.shrink')}
-                <b class="ink">{$T('disk.perDay', { size: formatBytes(Math.abs(f.per_day)) })}</b>
+                {formatBytes(f.used)} / {formatBytes(f.total)} · {Math.round(f.pct)}%
+                {#if f.inodes_total > 0}· {$T('disk.inodes', { pct: Math.round((f.inodes_used / f.inodes_total) * 100) })}{/if}
               </p>
-            {:else}
-              <p class="small muted">{$T('disk.collecting')}</p>
-            {/if}
-            {#if f.trend.length > 1}
-              <div class="spark" aria-label={$T('disk.trend')}>
-                {#each bars(f.trend) as h, i (i)}<i style:height="{h}%"></i>{/each}
-              </div>
-            {/if}
-            {#if f.days_left > 0}
-              <p class="small"><span class="badge {forecastTone(f)}">{$T('disk.fillsIn', { when: days(f.days_left) })}</span></p>
-            {/if}
+              {#if f.history_days >= 0.5 && f.per_day !== 0}
+                <p class="small muted">
+                  {f.per_day > 0 ? $T('disk.growth') : $T('disk.shrink')}
+                  <b class="ink">{$T('disk.perDay', { size: formatBytes(Math.abs(f.per_day)) })}</b>
+                </p>
+              {:else}
+                <p class="small muted">{$T('disk.collecting')}</p>
+              {/if}
+            </div>
           </div>
+          {#if f.trend.length > 1}
+            <div class="spark" aria-label={$T('disk.trend')}>
+              {#each bars(f.trend) as h, i (i)}<i style:height="{h}%"></i>{/each}
+            </div>
+          {/if}
+          {#if f.days_left > 0}
+            <p class="small"><span class="badge {forecastTone(f)}">{$T('disk.fillsIn', { when: days(f.days_left) })}</span></p>
+          {/if}
         </section>
       {/each}
     </div>
@@ -228,9 +233,9 @@
           {$T('disk.what')}
           {#if mountFs}<span class="muted small sub">{$T('disk.ofTotal', { used: formatBytes(mountFs.used), total: formatBytes(mountFs.total) })}</span>{/if}
         </h3>
-        <div class="row">
+        <div class="row scanbar">
           {#if filesystems.length > 1}
-            <div class="row" role="group" aria-label={$T('disk.partition')}>
+            <div class="row mounts" role="group" aria-label={$T('disk.partition')}>
               {#each filesystems as f (f.mount)}
                 <button class="chip" type="button" aria-pressed={mount === f.mount} onclick={() => chooseMount(f.mount)}>{f.mount}</button>
               {/each}
@@ -249,7 +254,7 @@
           {$T('disk.scannedAt', { time: formatDateTime(scanFor.scanned_at, $locale) })}
           {#if scanFor.partial}· <span class="warn">{$T('disk.partial')}</span>{/if}
         </p>
-        <PieChart parts={categoryParts} size={250} showShare />
+        <PieChart parts={categoryParts} size={$isPhone ? 150 : 250} showShare />
       {/if}
     </section>
 
@@ -308,26 +313,36 @@
           {/each}
         </div>
       {/if}
-      {#if confirm}
+      {#if confirm && !$isPhone}
         <div class="confirm stack" role="alertdialog" aria-label={$T(`disk.clean.${confirm.kind}`)}>
-          <p>{$T('disk.clean.confirm', { what: $T(`disk.clean.${confirm.kind}`), size: formatBytes(confirm.frees) })}</p>
-          <pre class="cmd mono">{command(confirm)}</pre>
-          {#if confirm.items && confirm.items.length > 0 && confirm.kind !== 'kernels'}
-            <ul class="list mono small">
-              {#each confirm.items as it (it)}<li>{it}</li>{/each}
-            </ul>
-          {/if}
-          <p class="small muted">{$T('disk.clean.note')}</p>
-          {#if cleanError}<p class="error" role="alert">{cleanError}</p>{/if}
-          <div class="row end">
-            <button class="btn" type="button" disabled={cleaning} onclick={() => (confirm = null)}>{$T('common.cancel')}</button>
-            <button class="btn danger" type="button" disabled={cleaning} onclick={() => void runClean()}>{cleaning ? $T('disk.cleaning') : $T('disk.clean.run')}</button>
-          </div>
+          {@render confirmBody(confirm)}
         </div>
       {/if}
     </section>
   {/if}
 </div>
+
+{#snippet confirmBody(c: DiskCleanItem)}
+      <p>{$T('disk.clean.confirm', { what: $T(`disk.clean.${c.kind}`), size: formatBytes(c.frees) })}</p>
+      <pre class="cmd mono">{command(c)}</pre>
+      {#if c.items && c.items.length > 0 && c.kind !== 'kernels'}
+        <ul class="list mono small">
+          {#each c.items as it (it)}<li>{it}</li>{/each}
+        </ul>
+      {/if}
+      <p class="small muted">{$T('disk.clean.note')}</p>
+      {#if cleanError}<p class="error" role="alert">{cleanError}</p>{/if}
+      <div class="row end">
+        <button class="btn" type="button" disabled={cleaning} onclick={() => (confirm = null)}>{$T('common.cancel')}</button>
+        <button class="btn danger" type="button" disabled={cleaning} onclick={() => void runClean()}>{cleaning ? $T('disk.cleaning') : $T('disk.clean.run')}</button>
+      </div>
+{/snippet}
+
+{#if confirm && $isPhone}
+  <Modal title={$T(`disk.clean.${confirm.kind}`)} labelId="disk-confirm-title" onclose={() => { if (!cleaning) confirm = null; }}>
+    {@render confirmBody(confirm)}
+  </Modal>
+{/if}
 
 <style>
   .disk {
@@ -536,9 +551,162 @@
     overflow: auto;
   }
 
-  @media (max-width: 700px) {
+  /* the wrappers around the chart and its numbers only exist for the phone layout */
+  .fsrow,
+  .fsinfo {
+    display: contents;
+  }
+
+  .pct {
+    font-family: var(--font-display);
+    font-size: 28px;
+    line-height: 1;
+  }
+
+  @media (max-width: 720px) {
+    .fss {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .fsrow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .fsinfo {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    h3 {
+      font-size: 14px;
+    }
+
+    .sub {
+      display: block;
+      margin-left: 0;
+    }
+
+    .scanbar {
+      flex: 1 1 100%;
+      flex-wrap: nowrap;
+    }
+
+    .scanbar > .btn {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .mounts {
+      flex: none;
+      flex-wrap: nowrap;
+      gap: 0;
+      border: 2px solid var(--line);
+      box-shadow: 3px 3px 0 var(--shade);
+    }
+
+    .mounts .chip {
+      border-width: 0 0 0 2px;
+      min-width: 44px;
+    }
+
+    .mounts .chip:first-child {
+      border-left-width: 0;
+    }
+
+    .crumbs {
+      flex: 1 1 100%;
+      gap: 0;
+    }
+
+    .crumbs button {
+      min-height: 44px;
+      padding: 0 8px;
+    }
+
+    .crumbs span {
+      padding: 0 2px;
+    }
+
     .drow {
-      grid-template-columns: 90px 1fr 70px;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'nm sz'
+        'track track';
+      gap: 4px 12px;
+      min-height: 44px;
+      padding: 8px;
+    }
+
+    .drow .nm {
+      grid-area: nm;
+    }
+
+    .drow .sz {
+      grid-area: sz;
+    }
+
+    .drow .track {
+      grid-area: track;
+      height: 10px;
+    }
+
+    .drow.link {
+      border-top: 2px dashed var(--seg-off);
+    }
+
+    /* every cleanup is a row: what it is and how much it frees on the left, the button on the right */
+    .clean {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0;
+      border: 2px solid var(--line);
+    }
+
+    .cc {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'name btn'
+        'size btn'
+        'text btn';
+      align-items: center;
+      gap: 2px 10px;
+      border-width: 0;
+      border-top: 2px dashed var(--seg-off);
+    }
+
+    .cc:first-child {
+      border-top-width: 0;
+    }
+
+    .cc > :nth-child(1) {
+      grid-area: name;
+    }
+
+    .cc > :nth-child(2) {
+      grid-area: size;
+    }
+
+    .cc > :nth-child(3) {
+      grid-area: text;
+    }
+
+    .cc > .row {
+      grid-area: btn;
+    }
+
+    .cc .big {
+      font-size: 20px;
+    }
+
+    .small-btn {
+      height: 44px;
+      padding: 0 14px;
+      font-size: 14px;
     }
   }
 </style>

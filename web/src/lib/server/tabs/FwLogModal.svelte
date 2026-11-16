@@ -4,8 +4,10 @@
   import { locale, tr as T } from '../../../i18n';
   import Modal from '../../Modal.svelte';
   import Select from '../../ui/Select.svelte';
+  import { isPhone } from '../../ui/viewport';
   import { formatDateTime } from '../format';
   import { canLog, ipInList, isLogged, parseRule, ruleLogId, stripLog } from './fw-view';
+  import './phone-c.css';
 
   type Chain = 'input' | 'forward' | 'output';
   interface Known {
@@ -58,6 +60,8 @@
   let note = $state<string | null>(null);
   let pickList = $state('');
   let busy = $state(false);
+  /** Phone: the filters are folded away until asked for. */
+  let filtersOpen = $state(false);
 
   const loggedRules = $derived(rules.filter((r) => isLogged(r.text)));
   const byId = $derived(new Map(rules.map((r) => [ruleLogId(r.text), r])));
@@ -230,6 +234,27 @@
   const listOptions = $derived(sets.map((s) => ({ value: s.name, label: `@${s.name}` })));
 </script>
 
+{#snippet detail(e: FwLogEvent, rn: { label: string; known: Known | null })}
+  <div class="detbox">
+    <div class="kv">
+      <span><b>{$T('fw.log.col.time')}</b>{formatDateTime(e.time, $locale)}</span>
+      <span><b>{$T('fw.log.iface')}</b>{e.iface || '—'}</span>
+      <span><b>{$T('fw.log.dst')}</b>{e.dst}{e.dport ? `:${e.dport}` : ''}</span>
+      {#if e.len}<span><b>{$T('fw.log.len')}</b>{e.len} B</span>{/if}
+      {#if e.flags}<span><b>{$T('fw.log.flags')}</b>{e.flags}</span>{/if}
+      <span><b>{$T('fw.log.col.rule')}</b>{rn.label}</span>
+    </div>
+    <div class="row" onclick={(ev) => ev.stopPropagation()} role="presentation">
+      {#if sets.length > 0}
+        <Select size="sm" value={pickList || sets[0].name} ariaLabel={$T('fw.log.pickList')} options={listOptions} onchange={(v) => (pickList = v)} />
+        <button class="btn sm" type="button" onclick={() => addList(e.src)}>{$T('fw.log.toList')}</button>
+      {/if}
+      <button class="btn sm danger" type="button" disabled={busy} onclick={() => void block(e.src)}>{$T('fw.log.block')}</button>
+      {#if rn.known}<button class="btn sm" type="button" onclick={() => onOpenRule(rn.known!.chain)}>{$T('fw.log.openRule')}</button>{/if}
+    </div>
+  </div>
+{/snippet}
+
 <Modal title={$T('fw.log.title')} labelId="fw-log-title" wide {onclose}>
   {#if !loaded}
     <p class="muted">{$T('common.loading')}</p>
@@ -263,7 +288,7 @@
     </div>
   {:else}
     <div class="row between">
-      <div class="row" role="group" aria-label={$T('fw.log.period')}>
+      <div class="row periods" role="group" aria-label={$T('fw.log.period')}>
         {#each [15, 60, 1440, 10080] as p (p)}
           <button class="chip" type="button" aria-pressed={period === p} onclick={() => { period = p; limit = 12; }}>{$T(`fw.log.p.${p}`)}</button>
         {/each}
@@ -290,7 +315,12 @@
       </div>
     </div>
 
-    <div class="filters">
+    {#if $isPhone}
+      <button class="btn ftoggle" type="button" aria-expanded={filtersOpen} onclick={() => (filtersOpen = !filtersOpen)}>
+        {$T('mobC.fw.filters')}{activeFilters > 0 ? ` (${activeFilters})` : ''}
+      </button>
+    {/if}
+    <div class="filters" class:fhide={$isPhone && !filtersOpen}>
       <div class="fg g-chain">
         <span class="lbl">{$T('fw.col.chain')}</span>
         <div class="row">
@@ -341,6 +371,39 @@
     </div>
     {#if note}<p class="small note-line" role="status">{note}</p>{/if}
 
+    {#if $isPhone}
+      {#if shownLines.length === 0}
+        <p class="muted pad">{$T('fw.log.nothing')} <button class="btn sm" type="button" onclick={reset}>{$T('fw.log.reset')}</button></p>
+      {:else}
+        <div class="pc-list">
+          {#each shownLines as l (l.key)}
+            {@const e = l.e}
+            {@const rn = ruleName(e)}
+            {@const open = openKey === l.key}
+            <button
+              class="pc-li"
+              class:bad={e.action === 'drop'}
+              class:wn={e.action === 'reject'}
+              type="button"
+              aria-expanded={open}
+              onclick={() => (openKey = open ? null : l.key)}
+            >
+              <span class="pc-mn">
+                <span class="pc-l1 mono">
+                  <span class="act {e.action}">{actLabel(e.action)}</span>
+                  <b>{e.src}</b>
+                  {#each listsOf(e.src).slice(0, 2) as n (n)}<span class="tag">@{n}</span>{/each}
+                </span>
+                <span class="pc-l2 mono">{e.proto}{e.dport ? `:${e.dport}` : ''} · {e.chain} · {group ? $T('fw.log.last', { when: ago(e.time) }) : ago(e.time)}</span>
+                <span class="pc-l2">{rn.known ? `#${rn.known.index + 1} ` : ''}{rn.label}</span>
+              </span>
+              {#if l.n > 1}<span class="pc-r">×{l.n}</span>{/if}
+            </button>
+            {#if open}<div class="detwrap">{@render detail(e, rn)}</div>{/if}
+          {/each}
+        </div>
+      {/if}
+    {:else}
     <div class="tw">
       <table class="tbl">
         <thead>
@@ -373,24 +436,7 @@
             {#if open}
               <tr class="det">
                 <td colspan="8">
-                  <div class="detbox">
-                    <div class="kv">
-                      <span><b>{$T('fw.log.col.time')}</b>{formatDateTime(e.time, $locale)}</span>
-                      <span><b>{$T('fw.log.iface')}</b>{e.iface || '—'}</span>
-                      <span><b>{$T('fw.log.dst')}</b>{e.dst}{e.dport ? `:${e.dport}` : ''}</span>
-                      {#if e.len}<span><b>{$T('fw.log.len')}</b>{e.len} B</span>{/if}
-                      {#if e.flags}<span><b>{$T('fw.log.flags')}</b>{e.flags}</span>{/if}
-                      <span><b>{$T('fw.log.col.rule')}</b>{rn.label}</span>
-                    </div>
-                    <div class="row" onclick={(ev) => ev.stopPropagation()} role="presentation">
-                      {#if sets.length > 0}
-                        <Select size="sm" value={pickList || sets[0].name} ariaLabel={$T('fw.log.pickList')} options={listOptions} onchange={(v) => (pickList = v)} />
-                        <button class="btn sm" type="button" onclick={() => addList(e.src)}>{$T('fw.log.toList')}</button>
-                      {/if}
-                      <button class="btn sm danger" type="button" disabled={busy} onclick={() => void block(e.src)}>{$T('fw.log.block')}</button>
-                      {#if rn.known}<button class="btn sm" type="button" onclick={() => onOpenRule(rn.known!.chain)}>{$T('fw.log.openRule')}</button>{/if}
-                    </div>
-                  </div>
+                  {@render detail(e, rn)}
                 </td>
               </tr>
             {/if}
@@ -400,11 +446,13 @@
         </tbody>
       </table>
     </div>
+    {/if}
     <div class="toolbar">
       <span class="small muted">{$T('fw.log.shown', { n: shownLines.length, total: lines.length })}{#if truncated} · {$T('fw.log.truncated')}{/if}</span>
       {#if shownLines.length < lines.length}<button class="btn sm" type="button" onclick={() => (limit += 15)}>{$T('fw.log.more')}</button>{/if}
     </div>
   {/if}
+  {#if $isPhone}<p class="small muted">{$T('fw.log.source')}</p>{/if}
   <div class="row end foot">
     <span class="small muted grow">{$T('fw.log.source')}</span>
     <button class="btn" type="button" onclick={onclose}>{$T('common.close')}</button>
@@ -863,6 +911,126 @@
     .g-src,
     .g-reset {
       grid-column: span 12;
+    }
+  }
+
+  .detwrap {
+    display: contents;
+  }
+
+  /* Phone: segmented periods, a folded filter block, event rows instead of the table. */
+  @media (max-width: 720px) {
+    .periods {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0;
+      width: 100%;
+      border: 2px solid var(--line);
+      box-shadow: 3px 3px 0 var(--shade);
+    }
+
+    .periods .chip {
+      justify-content: center;
+      min-width: 0;
+      padding: 0 2px;
+      border-width: 0 0 0 2px;
+      box-shadow: none;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .periods .chip:first-child {
+      border-left-width: 0;
+    }
+
+    .periods .chip.live {
+      grid-column: 1 / -1;
+      border-width: 2px 0 0;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      width: 100%;
+    }
+
+    .stat {
+      min-width: 0;
+    }
+
+    .fhide {
+      display: none;
+    }
+
+    .filters {
+      padding: 12px;
+    }
+
+    .fg .input {
+      height: 44px;
+    }
+
+    .legend {
+      flex-wrap: wrap;
+      gap: 4px 10px;
+    }
+
+    .axis {
+      flex-wrap: wrap;
+      gap: 4px 12px;
+    }
+
+    .detwrap {
+      display: block;
+      padding: 0 12px 12px;
+      background: color-mix(in srgb, var(--accent) 11%, transparent);
+      border-top: 0;
+    }
+
+    .detwrap .detbox {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .kv {
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .kv span {
+      overflow-wrap: anywhere;
+    }
+
+    .pc-l1 .act {
+      padding: 0 6px;
+      font-size: 11.5px;
+    }
+
+    .sw {
+      width: 54px;
+      height: 32px;
+    }
+
+    .sw::after {
+      width: 22px;
+      height: 22px;
+    }
+
+    .sw[aria-pressed='true']::after {
+      transform: translateX(22px);
+    }
+
+    .rules .r {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .rules .r .act {
+      grid-column: 2;
+      justify-self: start;
+    }
+
+    .foot .grow {
+      display: none;
     }
   }
 </style>

@@ -4,6 +4,8 @@
   import { t, tr } from '../../i18n';
   import { showToast } from '../toast';
   import { loadSnippets, snippets } from '../snippets';
+  import RowMenu from '../ui/RowMenu.svelte';
+  import { isPhone } from '../ui/viewport';
 
   let { onauthlost }: { onauthlost: () => void } = $props();
 
@@ -62,6 +64,16 @@
     }
   }
 
+  /** The row actions of a snippet in the sheet on phones. */
+  function menu(sn: Snippet, i: number) {
+    return [
+      { key: 'edit', label: $tr('snippets.edit'), onselect: () => edit(sn) },
+      { key: 'up', label: $tr('snippets.up'), disabled: i === 0, onselect: () => void move(i, -1) },
+      { key: 'down', label: $tr('snippets.down'), disabled: i === $snippets.length - 1, onselect: () => void move(i, 1) },
+      { key: 'delete', label: $tr('snippets.delete'), onselect: () => (deleting = sn) },
+    ];
+  }
+
   async function move(index: number, delta: number): Promise<void> {
     const list = [...$snippets];
     const j = index + delta;
@@ -112,12 +124,16 @@
             <strong>{sn.name}</strong>
             <code class="mono small">{sn.command}</code>
           </div>
+          {#if $isPhone}
+            <RowMenu label={$tr('docker.menu')} title={sn.name} items={menu(sn, i)} />
+          {:else}
           <div class="row acts">
             <button class="btn sm" type="button" aria-label={$tr('snippets.up')} title={$tr('snippets.up')} disabled={i === 0} onclick={() => void move(i, -1)}>↑</button>
             <button class="btn sm" type="button" aria-label={$tr('snippets.down')} title={$tr('snippets.down')} disabled={i === $snippets.length - 1} onclick={() => void move(i, 1)}>↓</button>
             <button class="btn sm" type="button" onclick={() => edit(sn)}>{$tr('snippets.edit')}</button>
             <button class="btn sm danger" type="button" onclick={() => (deleting = sn)}>{$tr('snippets.delete')}</button>
           </div>
+          {/if}
           {#if deleting && deleting.id === sn.id}
             <div class="confirm stack">
               <p>{$tr('snippets.confirmDelete', { name: sn.name })}</p>
@@ -200,5 +216,41 @@
     flex: 1 0 100%;
     padding: 12px;
     border: 2px solid var(--crit);
+  }
+
+  /* Phones: every snippet is a card, its actions are in a sheet, the form buttons are one under another. */
+  @media (max-width: 720px) {
+    .list {
+      gap: 12px;
+    }
+
+    .item {
+      flex-wrap: nowrap;
+      padding: 10px 6px 10px 12px;
+      background: var(--surface);
+      border: 2px solid var(--line);
+      box-shadow: 3px 3px 0 var(--shade);
+    }
+
+    .text {
+      flex: 1 1 0;
+    }
+
+    .confirm {
+      margin-right: 6px;
+    }
+
+    .item:has(.confirm) {
+      flex-wrap: wrap;
+    }
+
+    .snippets :global(.row.end) {
+      flex-direction: column-reverse;
+      align-items: stretch;
+    }
+
+    .snippets :global(.row.end > .btn) {
+      width: 100%;
+    }
   }
 </style>

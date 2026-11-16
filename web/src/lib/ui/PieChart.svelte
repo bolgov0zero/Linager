@@ -203,4 +203,33 @@
     text-align: right;
     white-space: nowrap;
   }
+
+  /* Phones: the chart is smaller and sits above its legend; the legend becomes full-width rows with room for a finger. */
+  @media (max-width: 720px) {
+    .pie-block {
+      flex-direction: column;
+      align-items: stretch;
+      flex-wrap: nowrap;
+      gap: 8px;
+    }
+
+    .piewrap {
+      align-self: center;
+      padding: 8px;
+    }
+
+    .legend {
+      flex: none;
+      width: 100%;
+      font-size: 14px;
+    }
+
+    .legend td {
+      padding: 12px 8px;
+    }
+
+    .legend tr:last-child td {
+      border-bottom: 0;
+    }
+  }
 </style>

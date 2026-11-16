@@ -12,6 +12,7 @@
 
   let {
     section,
+    list = false,
     session,
     updatesCount,
     onsection,
@@ -21,6 +22,8 @@
     onupdateschanged,
   }: {
     section: SettingsSection;
+    /** Phone: start with the list of sections instead of a section. */
+    list?: boolean;
     session: Session;
     updatesCount: number;
     onsection: (s: SettingsSection) => void;
@@ -32,14 +35,17 @@
 
   /** An operator and an auditor only have their profile. */
   const isAdmin = $derived((session.role ?? 'admin') === 'admin');
+  // Phone: the list of sections and a section are two screens, "back" returns to the list.
+  // svelte-ignore state_referenced_locally
+  let showList = $state(list);
 </script>
 
 <Modal title={isAdmin ? $tr('settings.title') : $tr('app.profile')} labelId="settings-title" {onclose} wide={isAdmin}>
-  <div class="settings" class:single={!isAdmin}>
+  <div class="settings" class:single={!isAdmin} class:list={showList && isAdmin}>
     {#if isAdmin}
     <nav class="side" aria-label={$tr('settings.nav')}>
       {#each SETTINGS_SECTIONS as s (s)}
-        <button class="nav" class:active={section === s} type="button" aria-current={section === s ? 'page' : undefined} onclick={() => onsection(s)}>
+        <button class="nav" class:active={section === s} type="button" aria-current={section === s ? 'page' : undefined} onclick={() => { showList = false; onsection(s); }}>
           {$tr(`settings.section.${s}`)}
           {#if s === 'updates' && updatesCount > 0}<span class="badge">{updatesCount}</span>{/if}
         </button>
@@ -47,6 +53,9 @@
     </nav>
     {/if}
     <div class="content">
+      {#if isAdmin}
+        <button class="btn back" type="button" onclick={() => (showList = true)}>{$tr('settings.back')}</button>
+      {/if}
       {#if section === 'profile'}
         <ProfileSection {session} {onrefresh} {onauthlost} />
       {:else if section === 'users'}
@@ -117,6 +126,11 @@
     padding: 2px 4px 8px 2px;
   }
 
+  .back {
+    display: none;
+  }
+
+  /* Phone: a list of sections, then one section on its own screen with a way back. */
   @media (max-width: 720px) {
     .settings {
       grid-template-columns: minmax(0, 1fr);
@@ -125,18 +139,27 @@
       min-height: 0;
     }
 
-    .side {
-      flex-direction: row;
-      overflow-x: auto;
-      padding-bottom: 6px;
+    .settings:not(.list) .side {
+      display: none;
+    }
+
+    .settings.list .content {
+      display: none;
     }
 
     .nav {
-      flex: none;
+      min-height: 54px;
+      font-size: 16px;
     }
 
     .content {
       max-height: none;
+      padding: 0;
+    }
+
+    .back {
+      display: inline-flex;
+      margin-bottom: 12px;
     }
   }
 </style>

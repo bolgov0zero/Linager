@@ -6,6 +6,8 @@
   import Modal from '../../Modal.svelte';
   import { closeEditorWindows, openEditorWindow } from '../../terminal/windows';
   import ContextMenu, { type MenuItem } from '../../ui/ContextMenu.svelte';
+  import PixIcon from '../../ui/PixIcon.svelte';
+  import { isPhone } from '../../ui/viewport';
   import { clip } from './files-clip';
   import { showToast } from '../../toast';
   import { formatBytes, formatDateTime } from '../format';
@@ -52,13 +54,22 @@
   /** Selected names (click, Ctrl/⌘+click, Shift+click) and the row a Shift range starts from. */
   let sel = $state<string[]>([]);
   let anchor = $state<string | null>(null);
-  let menu = $state<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  let menu = $state<{ x: number; y: number; items: MenuItem[]; label?: string } | null>(null);
   let pasting = $state(false);
   /** Full path of the entry whose properties are shown. */
   let propsPath = $state<string | null>(null);
   let conflict = $state<{ name: string; remaining: number; all: boolean; resolve: (r: { mode: FileConflictMode | null; all: boolean }) => void } | null>(null);
   let noEdit = $state<{ name: string; href: string; text: string } | null>(null);
   let treeOpen = $state(false);
+  /** Phone layout: the select mode (a check box on every row), the name filter and the path line. */
+  let selectMode = $state(false);
+  let searching = $state(false);
+  let filterText = $state('');
+  let pathEl = $state<HTMLElement | null>(null);
+  let pathClipped = $state(false);
+
+  /** 8x8 pixel icon of a file (the folder icon comes from the shared set). */
+  const FILE_ICON = ['01111100', '01000110', '01000111', '01000001', '01000001', '01000001', '01000001', '01111111'];
 
   const TREE_KEY = 'linager.files.treeWidth';
   function savedTreeWidth(): number {
@@ -99,6 +110,7 @@
     if (res.path !== path) {
       sel = [];
       anchor = null;
+      filterText = '';
     }
     path = res.path;
     listing = sortEntries(res.entries);
@@ -242,6 +254,7 @@
         if (done > 0) showToast(one ? T('files.deleted', { name: one.name }) : T('files.deletedMany', { n: done }));
         if (failed.length > 0) showToast(failed.slice(0, 3).join('; '));
         sel = [];
+        selectMode = false;
         await go(path, id);
       },
     };
@@ -402,6 +415,88 @@
     const items = menuItems(entries);
     menu = items.length > 0 ? { x, y, items } : null;
   }
+
+  // ---- phone layout ----
+
+  /** The order of the action sheet of one entry: what is needed most comes first. */
+  const SHEET_ORDER = ['open', 'dl', 'zip', 'props', 'rename', 'copy', 'cut', 'paste', 'pasteInto', 'delete'];
+
+  /** A tap on a file (or the "more" button of a folder) opens its actions as a sheet: no right click or long press. */
+  function openActions(entry: FileEntry): void {
+    sel = [entry.name];
+    anchor = entry.name;
+    const items = menuItems([entry])
+      .map((i) => (i.key === 'props' ? { ...i, label: T('files.m.rights') } : i))
+      .sort((a, b) => SHEET_ORDER.indexOf(a.key) - SHEET_ORDER.indexOf(b.key))
+      .map((i) => ({ ...i, separated: false }));
+    menu = { x: 0, y: 0, items, label: entry.name };
+  }
+
+  function openCreate(): void {
+    const lock = readOnly || !listing;
+    menu = {
+      x: 0,
+      y: 0,
+      label: T('files.m.create'),
+      items: [
+        { key: 'mkfile', label: T('files.newFile'), disabled: lock, onselect: () => (prompt = { kind: 'file', name: '', error: '', busy: false }) },
+        { key: 'mkdir', label: T('files.newFolder'), disabled: lock, onselect: () => (prompt = { kind: 'dir', name: '', error: '', busy: false }) },
+        { key: 'upload', label: T('files.upload'), disabled: lock || upload !== null, onselect: () => picker?.click() },
+        { key: 'refresh', label: T('files.refresh'), disabled: !listing, onselect: () => void go(path) },
+      ],
+    };
+  }
+
+  function phoneTap(entry: FileEntry): void {
+    if (selectMode) {
+      sel = sel.includes(entry.name) ? sel.filter((n) => n !== entry.name) : [...sel, entry.name];
+      return;
+    }
+    if (entry.type === 'dir') void go(joinPath(path, entry.name));
+    else openActions(entry);
+  }
+
+  function toggleSelectMode(): void {
+    selectMode = !selectMode;
+    sel = [];
+    anchor = null;
+  }
+
+  function copySelected(mode: 'cut' | 'copy'): void {
+    setClip(mode);
+    selectMode = false;
+    sel = [];
+  }
+
+  const shown = $derived.by(() => {
+    const q = filterText.trim().toLowerCase();
+    return q ? (listing ?? []).filter((e) => e.name.toLowerCase().includes(q)) : listing;
+  });
+
+  /** "3 nov", with the year when it is not this one. */
+  function shortDate(ts: number): string {
+    const d = new Date(ts * 1000);
+    if (Number.isNaN(d.getTime())) return '';
+    const sameYear = d.getFullYear() === new Date().getFullYear();
+    return d.toLocaleDateString($locale, sameYear ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' }).replace(/\.(?=\s|$)/g, '');
+  }
+
+  function metaLine(entry: FileEntry): string {
+    if (entry.type === 'link' && entry.link_target) return `→ ${entry.link_target}`;
+    const parts = [entry.type === 'dir' ? kindLabel('dir').toLowerCase() : formatBytes(entry.size), shortDate(entry.mtime)];
+    if (entry.type !== 'dir' && entry.owner) parts.push(entry.owner);
+    return parts.filter(Boolean).join(' · ');
+  }
+
+  // The path line shows its end: the beginning is cut off (marked with "…") when the path is long.
+  $effect(() => {
+    void [path, $isPhone, listing];
+    const el = pathEl;
+    if (!el) return;
+    el.scrollLeft = el.scrollWidth;
+    pathClipped = el.scrollWidth > el.clientWidth + 1;
+  });
+
 
   /** Right click on a row: the row joins the selection first unless it is already part of it. */
   function rowContext(event: MouseEvent, entry: FileEntry): void {
@@ -574,50 +669,79 @@
 </script>
 
 <div class="files">
-  <div class="toolbar">
-    <div class="where">
-    <nav class="crumbs" aria-label={$tStore('files.pathLabel')}>
-      <button
-        class="crumb"
-        type="button"
-        aria-current={path === '/' ? 'page' : undefined}
-        onclick={() => go('/')}>/</button
-      >
-      {#each crumbs(path) as c (c.path)}
-        <span class="sep" aria-hidden="true">›</span>
+  <input class="picker" bind:this={picker} type="file" multiple tabindex="-1" aria-hidden="true" onchange={onPick} />
+  {#if $isPhone}
+    <div class="ptools">
+      <button class="btn sm" type="button" aria-expanded={treeOpen} onclick={() => (treeOpen = true)}>
+        <PixIcon name="folder" size={16} />
+        {$tStore('files.tree')}
+      </button>
+      <button class="btn sm ico" type="button" aria-label={$tStore('files.m.search')} aria-pressed={searching} onclick={() => { searching = !searching; if (!searching) filterText = ''; }}>
+        <PixIcon name="search" size={16} />
+      </button>
+      <button class="btn sm grow" type="button" aria-pressed={selectMode} disabled={!listing} onclick={toggleSelectMode}>
+        {$tStore(selectMode ? 'files.m.done' : 'files.m.select')}
+      </button>
+      <button class="btn sm ico" type="button" aria-label={$tStore('files.m.create')} disabled={readOnly || !listing} onclick={openCreate}>
+        <PixIcon name="plus" size={16} />
+      </button>
+    </div>
+    {#if searching}
+      <input class="input" type="search" placeholder={$tStore('files.m.search')} aria-label={$tStore('files.m.search')} autocomplete="off" bind:value={filterText} />
+    {/if}
+    <div class="pathrow">
+      {#if pathClipped}<span class="muted" aria-hidden="true">…</span>{/if}
+      <nav class="pathline" aria-label={$tStore('files.pathLabel')} bind:this={pathEl}>
+        <button class="crumb" type="button" aria-current={path === '/' ? 'page' : undefined} onclick={() => go('/')}>/</button>
+        {#each crumbs(path) as c, i (c.path)}
+          {#if i > 0}<span class="sep" aria-hidden="true">/</span>{/if}
+          <button class="crumb" type="button" aria-current={c.path === path ? 'page' : undefined} onclick={() => go(c.path)}>{c.name}</button>
+        {/each}
+      </nav>
+    </div>
+  {:else}
+    <div class="toolbar">
+      <div class="where">
+      <nav class="crumbs" aria-label={$tStore('files.pathLabel')}>
         <button
           class="crumb"
           type="button"
-          aria-current={c.path === path ? 'page' : undefined}
-          onclick={() => go(c.path)}>{c.name}</button
+          aria-current={path === '/' ? 'page' : undefined}
+          onclick={() => go('/')}>/</button
         >
-      {/each}
-    </nav>
-      {#if sel.length > 1}
-        <span class="selcount small muted" role="status">{$tStore('files.selected', { n: sel.length })}</span>
-      {/if}
+        {#each crumbs(path) as c (c.path)}
+          <span class="sep" aria-hidden="true">›</span>
+          <button
+            class="crumb"
+            type="button"
+            aria-current={c.path === path ? 'page' : undefined}
+            onclick={() => go(c.path)}>{c.name}</button
+          >
+        {/each}
+      </nav>
+        {#if sel.length > 1}
+          <span class="selcount small muted" role="status">{$tStore('files.selected', { n: sel.length })}</span>
+        {/if}
+      </div>
+
+      <div class="row actions">
+        <button class="btn" type="button" disabled={path === '/' || !listing} onclick={() => go(parentPath(path))}>
+          {$tStore('files.up')}
+        </button>
+        <button class="btn" type="button" disabled={readOnly || !listing} onclick={() => (prompt = { kind: 'dir', name: '', error: '', busy: false })}>
+          {$tStore('files.newFolder')}
+        </button>
+        <button class="btn" type="button" disabled={readOnly || !listing} onclick={() => (prompt = { kind: 'file', name: '', error: '', busy: false })}>
+          {$tStore('files.newFile')}
+        </button>
+        <button class="btn" type="button" disabled={readOnly || !listing || upload !== null} onclick={() => picker?.click()}>
+          {$tStore('files.upload')}
+        </button>
+        <button class="btn" type="button" disabled={!listing} onclick={() => go(path)}>{$tStore('files.refresh')}</button>
+      </div>
     </div>
 
-    <div class="row actions">
-      <button class="btn tree-toggle" type="button" aria-expanded={treeOpen} onclick={() => (treeOpen = !treeOpen)}>
-        {$tStore('files.tree')}
-      </button>
-      <button class="btn" type="button" disabled={path === '/' || !listing} onclick={() => go(parentPath(path))}>
-        {$tStore('files.up')}
-      </button>
-      <button class="btn" type="button" disabled={readOnly || !listing} onclick={() => (prompt = { kind: 'dir', name: '', error: '', busy: false })}>
-        {$tStore('files.newFolder')}
-      </button>
-      <button class="btn" type="button" disabled={readOnly || !listing} onclick={() => (prompt = { kind: 'file', name: '', error: '', busy: false })}>
-        {$tStore('files.newFile')}
-      </button>
-      <button class="btn" type="button" disabled={readOnly || !listing || upload !== null} onclick={() => picker?.click()}>
-        {$tStore('files.upload')}
-      </button>
-      <button class="btn" type="button" disabled={!listing} onclick={() => go(path)}>{$tStore('files.refresh')}</button>
-      <input class="picker" bind:this={picker} type="file" multiple tabindex="-1" aria-hidden="true" onchange={onPick} />
-    </div>
-  </div>
+  {/if}
 
   {#if offline}
     <p class="notice" role="status">{$tStore('files.offline')}</p>
@@ -634,15 +758,149 @@
     </div>
   {/if}
 
-  <div class="panes" class:tree-open={treeOpen} style:--tree-w="{treeWidth}px" style:--panes-h="{panesH}px" bind:this={panesEl}>
-  {#if loadState !== 'offline' && loadState !== 'disabled'}
-    <aside class="treepane">
-      <FileTree {serverId} {path} entries={listing} onnavigate={navigateTree} />
-    </aside>
-    <div class="split" role="separator" aria-orientation="vertical" aria-label={$tStore('files.splitter')} onpointerdown={startSplit}></div>
+  {#if !$isPhone}
+    <div class="panes" style:--tree-w="{treeWidth}px" style:--panes-h="{panesH}px" bind:this={panesEl}>
+    {#if loadState !== 'offline' && loadState !== 'disabled'}
+      <aside class="treepane">
+        <FileTree {serverId} {path} entries={listing} onnavigate={navigateTree} />
+      </aside>
+      <div class="split" role="separator" aria-orientation="vertical" aria-label={$tStore('files.splitter')} onpointerdown={startSplit}></div>
+    {/if}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="listpane" oncontextmenu={listContext}>
+    {#if !listing || listing.length === 0}
+      {@render placeholder()}
+    {:else}
+      <div class="tablewrap">
+        <table class="grid">
+          <thead>
+            <tr>
+              <th class="kind"><span class="sr-only">{$tStore('files.col.type')}</span></th>
+              <th>{$tStore('files.col.name')}</th>
+              <th class="hide-sm">{$tStore('files.col.mode')}</th>
+              <th class="hide-sm">{$tStore('files.col.owner')}</th>
+              <th class="num">{$tStore('files.col.size')}</th>
+              <th class="hide-xs">{$tStore('files.col.mtime')}</th>
+              <th class="acts-head"><span class="sr-only">{$tStore('files.col.actions')}</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each listing as entry, i (entry.name)}
+              <tr
+                class="item"
+                class:sel={sel.includes(entry.name)}
+                class:cut={clipHere?.mode === 'cut' && clipHere.dir === path && clipHere.names.includes(entry.name)}
+                tabindex="0"
+                aria-selected={sel.includes(entry.name)}
+                onclick={(e) => rowClick(e, entry)}
+                ondblclick={(e) => !onControl(e) && openEntry(entry)}
+                onkeydown={(e) => rowKey(e, entry, i)}
+                oncontextmenu={(e) => rowContext(e, entry)}
+              >
+                <td class="kind">
+                  <span class="kind-icon kind-{entry.type}" role="img" title={kindLabel(entry.type)} aria-label={kindLabel(entry.type)}></span>
+                </td>
+                <td class="name">
+                  {#if entry.type === 'dir'}
+                    <span>{entry.name}/</span>
+                  {:else}
+                    <span>{entry.name}</span>
+                    {#if entry.type === 'link' && entry.link_target}
+                      <span class="muted small"> → {entry.link_target}</span>
+                    {/if}
+                  {/if}
+                </td>
+                <td class="hide-sm mono small">{entry.mode_str}</td>
+                <td class="hide-sm mono small">{entry.owner}:{entry.group}</td>
+                <td class="num mono">{entry.type === 'dir' ? '—' : formatBytes(entry.size)}</td>
+                <td class="hide-xs mono small">{formatDateTime(entry.mtime, $locale)}</td>
+                <td class="acts">
+                  <button class="btn more" type="button" aria-label={$tStore('files.menu.more')} onclick={(e) => moreClick(e, entry)}>⋯</button>
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {/if}
+    </div>
+    </div>
+  {:else}
+    {#if !listing || (shown && shown.length === 0 && !filterText.trim())}
+      {@render placeholder()}
+    {:else}
+      <div class="plist">
+        {#if path !== '/' && !selectMode && !filterText.trim()}
+          <button class="li" type="button" onclick={() => go(parentPath(path))}>
+            <PixIcon name="back" />
+            <span class="mn"><span class="l1"><b>..</b></span></span>
+          </button>
+        {/if}
+        {#each shown ?? [] as entry (entry.name)}
+          {@const picked = sel.includes(entry.name)}
+          <div class="li" class:picked class:cut={clipHere?.mode === 'cut' && clipHere.dir === path && clipHere.names.includes(entry.name)}>
+            <button
+              class="main"
+              type="button"
+              role={selectMode ? 'checkbox' : undefined}
+              aria-checked={selectMode ? picked : undefined}
+              onclick={() => phoneTap(entry)}
+            >
+              {#if selectMode}<span class="box" class:on={picked} aria-hidden="true"></span>{/if}
+              {#if entry.type === 'dir'}
+                <PixIcon name="folder" />
+              {:else}
+                <svg class="fileic" viewBox="0 0 8 8" width="20" height="20" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">
+                  {#each FILE_ICON as row, y (y)}{#each [...row] as cell, x (x)}{#if cell === '1'}<rect {x} {y} width="1" height="1" />{/if}{/each}{/each}
+                </svg>
+              {/if}
+              <span class="mn">
+                <span class="l1"><b>{entry.name}</b></span>
+                <span class="l2">{metaLine(entry)}</span>
+              </span>
+              {#if entry.type !== 'dir' && !selectMode}<PixIcon name="more" size={16} />{/if}
+            </button>
+            {#if entry.type === 'dir' && !selectMode}
+              <button class="more-btn" type="button" aria-label={$tStore('files.menu.more')} onclick={() => openActions(entry)}>
+                <PixIcon name="more" size={16} />
+              </button>
+            {/if}
+          </div>
+        {/each}
+        {#if shown && shown.length === 0}
+          <p class="muted empty">{$tStore('files.m.noMatch')}</p>
+        {/if}
+      </div>
+    {/if}
   {/if}
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="listpane" oncontextmenu={listContext}>
+
+  {#if $isPhone && selectMode}
+    <div class="pbar" role="toolbar" aria-label={$tStore('files.menu')}>
+      <div class="pbar-top">
+        <span role="status">{$tStore('files.selected', { n: sel.length })}</span>
+        <button class="btn sm" type="button" onclick={() => (sel = (shown ?? []).map((e) => e.name))}>{$tStore('files.m.all')}</button>
+      </div>
+      <div class="pbar-btns">
+        <button class="btn sm" type="button" disabled={readOnly || sel.length === 0} onclick={() => copySelected('copy')}>{$tStore('files.menu.copy')}</button>
+        <button class="btn sm" type="button" disabled={readOnly || sel.length === 0} onclick={() => copySelected('cut')}>{$tStore('files.menu.cut')}</button>
+        <button class="btn sm" type="button" disabled={sel.length !== 1} onclick={() => (propsPath = joinPath(path, sel[0]))}>{$tStore('files.m.rightsShort')}</button>
+        <button class="btn sm danger" type="button" disabled={readOnly || sel.length === 0} onclick={() => requestDelete(selectedEntries())}>{$tStore('files.menu.delete')}</button>
+      </div>
+    </div>
+  {:else if $isPhone && clipHere}
+    <div class="pbar" role="toolbar" aria-label={$tStore('files.menu')}>
+      <div class="pbar-top">
+        <span role="status">{$tStore('files.m.clip', { n: clipHere.names.length })}</span>
+        <button class="btn sm" type="button" onclick={() => clip.set(null)}>{$tStore('files.m.clipClear')}</button>
+      </div>
+      <div class="pbar-btns">
+        <button class="btn sm primary" type="button" disabled={readOnly || pasting} onclick={() => void paste(path)}>{$tStore('files.menu.paste')}</button>
+      </div>
+    </div>
+  {/if}
+</div>
+
+{#snippet placeholder()}
   {#if !listing}
     {#if loadState === 'error'}
       <div class="state">
@@ -654,64 +912,16 @@
     {:else if loadState === 'loading'}
       <p class="muted">{$tStore('common.loading')}</p>
     {/if}
-  {:else if listing.length === 0}
-    <p class="muted">{$tStore('files.empty')}</p>
   {:else}
-    <div class="tablewrap">
-      <table class="grid">
-        <thead>
-          <tr>
-            <th class="kind"><span class="sr-only">{$tStore('files.col.type')}</span></th>
-            <th>{$tStore('files.col.name')}</th>
-            <th class="hide-sm">{$tStore('files.col.mode')}</th>
-            <th class="hide-sm">{$tStore('files.col.owner')}</th>
-            <th class="num">{$tStore('files.col.size')}</th>
-            <th class="hide-xs">{$tStore('files.col.mtime')}</th>
-            <th class="acts-head"><span class="sr-only">{$tStore('files.col.actions')}</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each listing as entry, i (entry.name)}
-            <tr
-              class="item"
-              class:sel={sel.includes(entry.name)}
-              class:cut={clipHere?.mode === 'cut' && clipHere.dir === path && clipHere.names.includes(entry.name)}
-              tabindex="0"
-              aria-selected={sel.includes(entry.name)}
-              onclick={(e) => rowClick(e, entry)}
-              ondblclick={(e) => !onControl(e) && openEntry(entry)}
-              onkeydown={(e) => rowKey(e, entry, i)}
-              oncontextmenu={(e) => rowContext(e, entry)}
-            >
-              <td class="kind">
-                <span class="kind-icon kind-{entry.type}" role="img" title={kindLabel(entry.type)} aria-label={kindLabel(entry.type)}></span>
-              </td>
-              <td class="name">
-                {#if entry.type === 'dir'}
-                  <span>{entry.name}/</span>
-                {:else}
-                  <span>{entry.name}</span>
-                  {#if entry.type === 'link' && entry.link_target}
-                    <span class="muted small"> → {entry.link_target}</span>
-                  {/if}
-                {/if}
-              </td>
-              <td class="hide-sm mono small">{entry.mode_str}</td>
-              <td class="hide-sm mono small">{entry.owner}:{entry.group}</td>
-              <td class="num mono">{entry.type === 'dir' ? '—' : formatBytes(entry.size)}</td>
-              <td class="hide-xs mono small">{formatDateTime(entry.mtime, $locale)}</td>
-              <td class="acts">
-                <button class="btn more" type="button" aria-label={$tStore('files.menu.more')} onclick={(e) => moreClick(e, entry)}>⋯</button>
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
+    <p class="muted">{$tStore('files.empty')}</p>
   {/if}
-  </div>
-  </div>
-</div>
+{/snippet}
+
+{#if $isPhone && treeOpen}
+  <Modal title={$tStore('files.tree')} labelId="files-tree-title" flush onclose={() => (treeOpen = false)}>
+    <FileTree {serverId} {path} entries={listing} onnavigate={navigateTree} />
+  </Modal>
+{/if}
 
 {#if prompt}
   {@const p = prompt}
@@ -778,7 +988,7 @@
 {/if}
 
 {#if menu}
-  <ContextMenu x={menu.x} y={menu.y} items={menu.items} label={$tStore('files.menu')} onclose={() => (menu = null)} />
+  <ContextMenu x={menu.x} y={menu.y} items={menu.items} label={menu.label ?? $tStore('files.menu')} onclose={() => (menu = null)} />
 {/if}
 
 {#if conflict}
@@ -969,10 +1179,6 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .tree-toggle {
-    display: none;
-  }
-
   tr.item {
     cursor: default;
     user-select: none;
@@ -1109,31 +1315,217 @@
     }
   }
 
-  /* Phones: the tree is a panel above the list, opened with the "Folders" button. */
-  @media (max-width: 720px) {
-    .tree-toggle {
-      display: inline-block;
-    }
+  /* ---- Phones: one column, a list of rows, the folder tree and the actions as sheets ---- */
+  .ptools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
-    .panes,
-    .panes:not(:has(.treepane)) {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 8px;
-      height: auto;
-    }
+  .ptools .btn {
+    gap: 6px;
+    padding: 0 12px;
+  }
 
-    .listpane {
-      overflow: visible;
-    }
+  .ptools .ico {
+    flex: none;
+    width: 44px;
+    padding: 0;
+  }
 
-    .treepane,
-    .split {
-      display: none;
-    }
+  .ptools .grow {
+    flex: 1;
+    min-width: 0;
+  }
 
-    .panes.tree-open .treepane {
-      display: block;
-      max-height: 50vh;
-    }
+  .ptools .btn[aria-pressed='true'] {
+    background: var(--ink);
+    color: var(--surface);
+  }
+
+  .pathrow {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    font-size: 14px;
+  }
+
+  .pathline {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .pathline .crumb {
+    flex: none;
+    min-height: 44px;
+    padding: 0 6px;
+    overflow-wrap: normal;
+  }
+
+  .pathline .sep {
+    flex: none;
+  }
+
+  .plist {
+    background: var(--surface);
+    border: 2px solid var(--line);
+    box-shadow: 3px 3px 0 var(--shade);
+  }
+
+  .plist .li {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 56px;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-top: 2px dashed var(--seg-off);
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+  }
+
+  .plist > :first-child {
+    border-top: 0;
+  }
+
+  .plist button.li {
+    gap: 10px;
+    padding: 8px 8px 8px 12px;
+    cursor: pointer;
+  }
+
+  .plist .li.picked {
+    background: var(--seg-off);
+  }
+
+  .plist .li.cut {
+    opacity: 0.5;
+  }
+
+  .plist .main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    min-height: 56px;
+    padding: 8px 12px 8px 12px;
+    background: none;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .plist .main:has(+ .more-btn) {
+    padding-right: 0;
+  }
+
+  .plist .more-btn {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin-right: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .plist .mn {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .plist .l1 {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 14.5px;
+  }
+
+  .plist .l1 b {
+    font-weight: 400;
+  }
+
+  .plist .l2 {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--muted);
+    font-size: 11.5px;
+  }
+
+  .fileic {
+    flex: none;
+    display: block;
+  }
+
+  .box {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--line);
+    background: var(--surface);
+  }
+
+  .box.on {
+    background: var(--accent);
+    box-shadow: inset 0 0 0 3px var(--surface);
+  }
+
+  .empty {
+    padding: 14px 12px;
+  }
+
+  /* The actions of the selection (or the clipboard) stay above the bottom bar while the list scrolls. */
+  .pbar {
+    position: sticky;
+    bottom: calc(var(--bar-h) + var(--safe-b) + 8px);
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    background: var(--surface);
+    border: 2px solid var(--line);
+    box-shadow: 3px 3px 0 var(--shade);
+  }
+
+  .pbar-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-left: 4px;
+    font-size: 14px;
+  }
+
+  .pbar-btns {
+    display: flex;
+    gap: 6px;
+  }
+
+  .pbar-btns .btn {
+    flex: 1;
+    min-width: 0;
+    padding: 0 4px;
+    font-size: 13px;
   }
 </style>

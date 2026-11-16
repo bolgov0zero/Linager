@@ -460,9 +460,62 @@
   }
 
   @media (max-width: 700px) {
-    .presets,
-    .stats {
+    .presets {
       grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 720px) {
+    .stats {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .stat {
+      padding: 8px;
+      min-height: 44px;
+    }
+
+    .stat b {
+      font-size: 22px;
+    }
+
+    .stat span {
+      font-size: 11.5px;
+      line-height: 1.25;
+    }
+
+    .f2h .row {
+      width: 100%;
+      flex-wrap: nowrap;
+    }
+
+    .f2h .row > :global(.btn) {
+      flex: 1;
+      min-width: 0;
+      justify-content: center;
+    }
+
+    .manual {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .manual .input {
+      width: 100%;
+    }
+
+    .manual :global(.btn) {
+      justify-content: center;
+    }
+
+    .callout {
+      gap: 12px 20px;
+    }
+
+    .why {
+      min-width: 0;
+      flex-basis: 100%;
     }
   }
 </style>

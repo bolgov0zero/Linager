@@ -3,6 +3,7 @@
   import { api, type Snippet } from '../../api';
   import { tr } from '../../i18n';
   import { loadSnippets, snippets } from '../snippets';
+  import TermIcon from './TermIcon.svelte';
 
   /**
    * "Snippets" button with a list under it. Clicking a snippet pastes it and presses Enter; the small
@@ -83,15 +84,17 @@
   {disabled}
   onclick={() => (open ? hide() : void show())}
 >
-  {$tr('term.snippets')}
+  <span class="ic"><TermIcon name="bolt" /></span>
+  <span class="tx">{$tr('term.snippets')}</span>
   <span class="arrow" aria-hidden="true"></span>
 </button>
 
 {#if open}
+  <div use:portal class="sheet-scrim"></div>
   <ul
     use:portal
     id="{uid}-list"
-    class="list"
+    class="list sel-list"
     role="menu"
     aria-label={$tr('term.snippets')}
     style:left="{pos.left}px"
@@ -215,5 +218,66 @@
     padding: 8px 10px;
     text-align: left;
     color: var(--muted);
+  }
+
+  /* Phones: the button is an icon (the words stay for screen readers) and the list opens as a sheet from the bottom. */
+  .ic {
+    display: none;
+  }
+
+  @media (max-width: 720px) {
+    .list {
+      min-width: 0;
+      max-width: none;
+      box-shadow: 0 -4px 0 var(--shade);
+    }
+
+    .sm-btn {
+      justify-content: center;
+      width: 44px;
+      padding: 0;
+    }
+
+    .ic {
+      display: inline-flex;
+    }
+
+    .tx {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+
+    .arrow {
+      display: none;
+    }
+
+    .run,
+    .paste,
+    .manage button {
+      min-height: 50px;
+      font-size: 15px;
+    }
+
+    .paste {
+      min-width: 56px;
+      justify-content: center;
+    }
+
+    .row {
+      gap: 0;
+      width: 100%;
+    }
+
+    .manage {
+      margin-top: 0;
+      border-top: 2px dashed var(--seg-off);
+    }
+
+    .empty {
+      padding: 14px 0;
+    }
   }
 </style>

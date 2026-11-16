@@ -51,7 +51,7 @@
     display: none;
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 720px) {
     .ic {
       display: inline-flex;
     }

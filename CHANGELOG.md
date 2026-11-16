@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.55
+
+- Phone layout, redone from scratch (up to 720 px, designed for an iPhone 14 Pro Max, mockup `docs/design/next/mobile.html`): a pinned top bar and a bottom bar instead of the drop-down menu (Servers, Linager updates, Log, More; on a server page Overview, Terminal, Files, Services and "Sections" with every tab by group). Drop-down lists, action menus, context menus and all dialogs open as sheets from the bottom edge, the buttons at the end of a dialog stay in reach, and the large dialogs fill the screen. No swipes; controls are 44 px high, fields use 16 px so iOS does not zoom.
+- The viewport no longer scales the page to 0.9 and covers the notch and the home indicator (`viewport-fit=cover`, safe-area insets).
+- Dashboard on a phone: the four tiles are one strip, the filters, search and the card/map switch are one pinned row, a card is shorter (no chart) and opens the server by a tap, its terminal button opens the Terminal tab. Edit mode has 44 px buttons.
+- Server page on a phone: one header (back, section, server and state, actions), the frame around the tab is gone; every tab was adapted: tables became rows with an action sheet, the terminal and the logs fill the whole height with a row of special keys above the keyboard, the folder tree of Files is a sheet, the draft/apply/rollback bar of the firewall and the network is pinned above the bottom bar, the settings window starts with a list of sections.
+- Terminal: the floating window opens 20% larger by default (864 x 528 instead of 720 x 440); a size you set yourself is kept.
+
 ## 0.1.54
 
 - Theme: the panel no longer follows the light or dark setting of the system. The theme you pick with the button in the top bar is kept in the browser and shown after every reload; until you pick one it is dark. The colour of the browser bar on phones follows the chosen theme as well. Server only, agents need no update.

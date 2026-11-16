@@ -9,7 +9,11 @@
   import { openStream } from '../../api';
   import { tr, t } from '../../i18n';
   import { showToast } from '../toast';
+  import { get } from 'svelte/store';
+  import { isPhone } from '../ui/viewport';
   import KeyPanel from './KeyPanel.svelte';
+  import QuickKeys from './QuickKeys.svelte';
+  import { viewBox } from './vv';
   import { ctrlChar, sequenceFor } from './keys';
 
   // The xterm screen and its socket, shared by the server-page tab and the floating windows.
@@ -41,6 +45,8 @@
   let host = $state<HTMLDivElement | null>(null);
   let reason = $state<string | null>(null);
   let attempt = $state(0);
+  // The terminal has focus: on a phone that means the soft keyboard is up and the quick key row shows above it.
+  let focused = $state(false);
 
   // Non-reactive handle to the live session, used by the exported actions.
   let current: {
@@ -48,6 +54,7 @@
     copy: () => void;
     paste: () => void;
     focus: () => void;
+    blur: () => void;
     send: (data: string) => void;
     appCursor: () => boolean;
     insert: (text: string, run: boolean) => void;
@@ -73,6 +80,7 @@
   }
 
   export const focus = () => current?.focus();
+  export const blur = () => current?.blur();
   export const copy = () => current?.copy();
   export const paste = () => current?.paste();
   export const close = () => current?.close();
@@ -130,7 +138,7 @@
       const fontFamily = getComputedStyle(document.documentElement).getPropertyValue('--font-body').trim();
       const term = new Terminal({
         cursorBlink: true,
-        fontSize: 13,
+        fontSize: get(isPhone) ? 12 : 13,
         fontFamily: fontFamily || 'monospace',
         theme: TERM_THEME,
         scrollback: 2000,
@@ -229,6 +237,7 @@
       term.focus();
       current = {
         focus: () => term.focus(),
+        blur: () => term.blur(),
         close: () => socket.close(),
         send,
         appCursor: () => term.modes.applicationCursorKeysMode,
@@ -275,12 +284,32 @@
     <KeyPanel {ctrl} {alt} onkey={panelKey} ontoggle={toggleMod} />
   {/if}
   <!-- Clicking anywhere in the terminal panel (also outside the character grid) focuses the terminal. -->
-  <div class="screen" role="presentation" bind:this={host} onpointerdown={() => current?.focus()}></div>
+  <div
+    class="screen"
+    role="presentation"
+    bind:this={host}
+    onpointerdown={() => current?.focus()}
+    onfocusin={() => (focused = true)}
+    onfocusout={(e) => {
+      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) focused = false;
+    }}
+  ></div>
   {#if phase === 'closed'}
     <div class="closed">
       <p class="error" role="alert">{reason ?? $tr('term.closed')}</p>
       <button class="btn" type="button" onclick={() => attempt++}>{$tr('term.reconnect')}</button>
     </div>
+  {/if}
+  {#if $isPhone && phase === 'open' && (focused || $viewBox.kbd || keys)}
+    <QuickKeys
+      {ctrl}
+      {alt}
+      more={keys}
+      onkey={panelKey}
+      ontoggle={toggleMod}
+      onmore={() => (keys = !keys)}
+      onhide={() => current?.blur()}
+    />
   {/if}
 </div>
 
@@ -308,5 +337,34 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 12px;
+  }
+
+  /* Phones: the screen takes all the room the owner gives it, no frame; the key panel and the quick row sit under it. */
+  @media (max-width: 720px) {
+    .session {
+      gap: 0;
+    }
+
+    .session > :global(.keys) {
+      order: 2;
+      border-width: 2px 0 0;
+    }
+
+    .session > :global(.quick) {
+      order: 3;
+    }
+
+    .screen {
+      order: 1;
+      padding: 4px 6px;
+      border-width: 0;
+    }
+
+    .closed {
+      order: 1;
+      padding: 8px 12px;
+      background: var(--surface);
+      border-top: 2px solid var(--line);
+    }
   }
 </style>

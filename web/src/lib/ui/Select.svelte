@@ -188,6 +188,7 @@
 </button>
 
 {#if open}
+  <div use:portal class="sheet-scrim"></div>
   <ul
     use:portal
     id="{uid}-list"

@@ -5,6 +5,8 @@
   import { locale, tr as tStore } from '../../../i18n';
   import Modal from '../../Modal.svelte';
   import Segments from '../../ui/Segments.svelte';
+  import { isPhone } from '../../ui/viewport';
+  import '../../ui/phone-rows.css';
   import AptConsole from './AptConsole.svelte';
   import { aptRun, startAptRun, type AptMode } from './apt';
   import { unavailableKind } from './svc';
@@ -20,6 +22,9 @@
   let dismissedId = $state(0);
   /** The finished run after which the list has been reloaded. */
   let reloadedRun = $state(0);
+  /** Phones: the install run is a full sheet; "hide" closes the sheet and leaves the run going. */
+  let hiddenRunId = $state(0);
+  let filter = $state<'all' | 'security'>('all');
 
   let reqSeq = 0;
   let handledRun = 0;
@@ -54,6 +59,7 @@
   const unreachable = $derived(!server.online || loadState === 'offline' || loadState === 'disabled');
   const securityCount = $derived(apt ? apt.packages.filter((p) => p.security).length : 0);
   const total = $derived(apt?.packages.length ?? 0);
+  const shown = $derived(apt ? (filter === 'security' ? apt.packages.filter((p) => p.security) : apt.packages) : []);
 
   // An install run is shown in place of the package list, a check run in a modal.
   const installRun = $derived(run && run.mode !== 'update' ? run : null);
@@ -121,6 +127,19 @@
     wrapEl.scrollTop = Math.max(0, offset - wrapEl.clientHeight / 2);
   });
 
+  // Phones: keep the package being installed in view inside the sheet.
+  $effect(() => {
+    const current = installRun?.pkgs.find((p) => p.state === 'running')?.name;
+    if (!current || !$isPhone) return;
+    document.querySelector<HTMLElement>('.pr-li.r-running')?.scrollIntoView({ block: 'nearest' });
+  });
+
+  /** Phones: the sheet of the install run is closed while it runs (it keeps going), or the run is closed when it is over. */
+  function leaveRun() {
+    if (installRun?.active) hiddenRunId = installRun.id;
+    else closeRun();
+  }
+
   function start(mode: AptMode) {
     if (mode === 'update') {
       dismissedId = 0;
@@ -133,6 +152,7 @@
   function confirmInstall() {
     const mode = confirmMode;
     confirmMode = null;
+    hiddenRunId = 0;
     if (mode) startAptRun(server.id, mode);
   }
 
@@ -154,6 +174,28 @@
     <p class="notice" role="status">{$tStore('svc.disabled')}</p>
   {/if}
 
+  {#if $isPhone}
+    <div class="card stack">
+      <div class="row nowrap between">
+        <div class="summary">
+          {#if apt}
+            <p class="big">{total}</p>
+            <p class="muted small">{$tStore('apt.summary', { n: total, s: securityCount })}</p>
+          {:else if loadState === 'loading'}
+            <p class="muted">{$tStore('common.loading')}</p>
+          {:else if loadState === 'error'}
+            <p class="error" role="alert">{$tStore('apt.loadFailed')}</p>
+          {/if}
+        </div>
+        <button class="btn" type="button" disabled={unreachable || running} onclick={() => start('update')}>{$tStore('apt.check')}</button>
+      </div>
+      {#if apt}
+        <p class="muted small chk">
+          {#if apt.last_check > 0}{$tStore('apt.checked', { date: formatDateTime(apt.last_check, $locale) })}{:else}{$tStore('apt.never')}{/if}
+        </p>
+      {/if}
+    </div>
+  {:else}
   <div class="head">
     <div class="summary">
       {#if apt}
@@ -185,12 +227,28 @@
       </button>
     </div>
   </div>
+  {/if}
 
   {#if apt?.reboot_required}
     <p class="banner" role="status">{$tStore('apt.rebootNotice')}</p>
   {/if}
 
-  {#if installRun}
+  {#if installRun && $isPhone}
+    <div class="card stack run" role="status">
+      <span class="run-label">{installLabel}</span>
+      <Segments
+        value={!installRun.active && installRun.ok && errCount === 0 ? 100 : (installRun.progress?.pct ?? 0)}
+        plain
+        busy={installRun.active && !installRun.progress}
+      />
+      <div class="row nowrap">
+        <button class="btn grow" type="button" onclick={() => (hiddenRunId = 0)}>{$tStore('apt.mob.show')}</button>
+        {#if !installRun.active}
+          <button class="btn grow" type="button" onclick={closeRun}>{$tStore('common.close')}</button>
+        {/if}
+      </div>
+    </div>
+  {:else if installRun}
     <section class="run" aria-label={$tStore('apt.log')}>
       <div class="run-head">
         <span class="run-label" role="status">{installLabel}</span>
@@ -237,6 +295,35 @@
         </div>
       {/if}
     </section>
+  {:else if apt && $isPhone}
+    {#if apt.packages.length === 0}
+      <p class="muted">{$tStore('apt.empty')}</p>
+    {:else}
+      <div class="pr-seg" role="group" aria-label={$tStore('apt.mob.filter')}>
+        <button type="button" aria-pressed={filter === 'all'} onclick={() => (filter = 'all')}>{$tStore('apt.mob.segAll', { n: total })}</button>
+        <button type="button" aria-pressed={filter === 'security'} onclick={() => (filter = 'security')}>{$tStore('apt.mob.segSec', { n: securityCount })}</button>
+      </div>
+      <div class="pr-list">
+        {#each shown as pkg (pkg.name)}
+          <div class="pr-li">
+            <div class="pr-mn">
+              <div class="pr-l1"><b class="mono">{pkg.name}</b></div>
+              <div class="pr-l2 mono">{pkg.current} → {pkg.candidate}</div>
+            </div>
+            {#if pkg.security}<span class="pr-tag crit">{$tStore('apt.badge.security')}</span>{/if}
+            {#if pkg.reboot}<span class="pr-tag warn">{$tStore('apt.badge.reboot')}</span>{/if}
+          </div>
+        {/each}
+      </div>
+      <div class="pr-pin">
+        <button class="btn" type="button" disabled={unreachable || running || securityCount === 0} onclick={() => start('security')}>
+          {$tStore('apt.mob.install', { n: securityCount })}
+        </button>
+        <button class="btn primary" type="button" disabled={unreachable || running || total === 0} onclick={() => start('upgrade')}>
+          {$tStore('apt.mob.installAll', { n: total })}
+        </button>
+      </div>
+    {/if}
   {:else if apt}
     {#if apt.packages.length === 0}
       <p class="muted">{$tStore('apt.empty')}</p>
@@ -269,6 +356,40 @@
     {/if}
   {/if}
 </div>
+
+{#if installRun && $isPhone && hiddenRunId !== installRun.id}
+  <Modal title={$tStore('apt.mob.runTitle')} labelId="apt-run-title" onclose={leaveRun} wide>
+    {#snippet children()}
+      <div class="stack fill">
+        <span class="run-label" role="status">{installLabel}</span>
+        <Segments
+          value={!installRun.active && installRun.ok && errCount === 0 ? 100 : (installRun.progress?.pct ?? 0)}
+          plain
+          busy={installRun.active && !installRun.progress}
+        />
+        {#if installRun.pkgs.length > 0}
+          <span class="muted small">{$tStore('apt.run.counts', { done: doneCount + errCount, total: installRun.pkgs.length })}</span>
+          <div class="pr-list">
+            {#each installRun.pkgs as pkg (pkg.name)}
+              <div class="pr-li r-{pkg.state}" class:hl={pkg.state === 'running'} class:bad={pkg.state === 'error'}>
+                <div class="pr-mn">
+                  <div class="pr-l1"><b class="mono">{pkg.name}</b></div>
+                  {#if pkg.candidate}<div class="pr-l2 mono">{pkg.current} → {pkg.candidate}</div>{/if}
+                  {#if pkg.msg}<div class="pr-l2">{pkg.msg}</div>{/if}
+                </div>
+                <span class="pr-tag {pkg.state === 'done' ? 'good' : pkg.state === 'error' ? 'crit' : pkg.state === 'running' ? 'warn' : ''}">{$tStore('apt.st.' + pkg.state)}</span>
+              </div>
+            {/each}
+          </div>
+        {/if}
+        <AptConsole text={installRun.text} />
+      </div>
+      <div class="row end">
+        <button class="btn" type="button" onclick={leaveRun}>{installRun.active ? $tStore('apt.mob.hide') : $tStore('common.close')}</button>
+      </div>
+    {/snippet}
+  </Modal>
+{/if}
 
 {#if checkRun && dismissedId !== checkRun.id}
   <Modal title={$tStore('apt.checking.title')} labelId="apt-check-title" onclose={closeCheck}>
@@ -524,6 +645,38 @@
 
     .tbl td.name {
       flex: 1 0 100%;
+    }
+  }
+
+  /* Phones: the list of packages is rows (ui/phone-rows.css); the primary buttons are pinned above the bottom bar. */
+  @media (max-width: 720px) {
+    .summary .big {
+      font-size: 32px;
+    }
+
+    .chk {
+      margin: 0;
+    }
+
+    .nowrap {
+      flex-wrap: nowrap;
+    }
+
+    .between {
+      justify-content: space-between;
+    }
+
+    .grow {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .run.card {
+      gap: 10px;
+    }
+
+    .fill {
+      flex: 1 1 auto;
     }
   }
 </style>

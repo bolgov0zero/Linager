@@ -271,4 +271,38 @@
       grid-template-columns: 1fr;
     }
   }
+
+  @media (max-width: 720px) {
+    .kv {
+      grid-template-columns: 110px minmax(0, 1fr);
+    }
+
+    .chk,
+    .opt {
+      min-height: 48px;
+      align-items: center;
+    }
+
+    .foot {
+      position: sticky;
+      bottom: 0;
+      z-index: 2;
+      margin: 0 -12px calc(-12px - var(--safe-b));
+      padding: 10px 12px calc(10px + var(--safe-b));
+      background: var(--surface);
+    }
+
+    .spacer {
+      display: none;
+    }
+
+    .foot > .btn {
+      flex: 1 1 40%;
+    }
+
+    .foot > .btn.danger {
+      flex: 1 0 100%;
+      order: -1;
+    }
+  }
 </style>

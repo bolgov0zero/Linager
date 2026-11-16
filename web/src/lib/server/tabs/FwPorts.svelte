@@ -2,8 +2,10 @@
   import { untrack } from 'svelte';
   import { api, ApiError, type FwListener, type FwPorts, type FwSet } from '../../../api';
   import { tr as trs } from '../../../i18n';
+  import { isPhone } from '../../ui/viewport';
   import SourceInput from './SourceInput.svelte';
   import { buildRule, type ListRef } from './fw-rule';
+  import './phone-c.css';
 
   let {
     serverId,
@@ -143,13 +145,36 @@
       {$trs('fw.ports.summary', { n: all.length })}
       {#if counts.norule > 0}<span class="crit">{$trs('fw.ports.exposed', { n: counts.norule })}</span>{/if}
     </p>
-    <div class="row" role="group" aria-label={$trs('fw.ports.filter')}>
+    <div class="row fl" class:pc-seg={$isPhone} role="group" aria-label={$trs('fw.ports.filter')}>
       <button class="chip" type="button" aria-pressed={filter === 'all'} onclick={() => (filter = 'all')}>{$trs('fw.ports.f.all')} <span class="muted">{counts.all}</span></button>
       <button class="chip" type="button" aria-pressed={filter === 'out'} onclick={() => (filter = 'out')}>{$trs('fw.ports.f.out')} <span class="muted">{counts.out}</span></button>
       <button class="chip" type="button" aria-pressed={filter === 'local'} onclick={() => (filter = 'local')}>{$trs('fw.ports.f.local')} <span class="muted">{counts.local}</span></button>
       <button class="chip" type="button" aria-pressed={filter === 'norule'} onclick={() => (filter = 'norule')}>{$trs('fw.ports.f.norule')} <span class="muted">{counts.norule}</span></button>
     </div>
 
+    {#if $isPhone}
+      {#if rows.length === 0}
+        <p class="muted small">{$trs('fw.ports.none')}</p>
+      {:else}
+        <div class="pc-list">
+          {#each rows as l (l.proto + l.port + l.scope + l.process + addrText(l))}
+            <div class="pc-li" class:wn={l.firewall === 'open'}>
+              <div class="pc-mn">
+                <div class="pc-l1">
+                  <b class="mono">{l.port}/{l.proto}</b>
+                  <span class="badge {badgeClass(l)}">{badgeText(l)}</span>
+                </div>
+                <div class="pc-l2">{l.process || '—'}{#if l.pid} ({l.pid}){/if} · {l.proto === 'tcp' ? $trs('mobC.fw.conns', { n: l.conns }) : '—'}</div>
+                <div class="pc-l2 mono">{addrText(l)}</div>
+              </div>
+              {#if l.firewall === 'open'}
+                <button class="btn sm" type="button" onclick={() => startPlan(l)}>{$trs(l.risky ? 'fw.ports.close' : 'fw.ports.restrict')}</button>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {/if}
+    {:else}
     <div class="tw">
       <table class="tbl">
         <thead>
@@ -182,6 +207,7 @@
         </tbody>
       </table>
     </div>
+    {/if}
 
     {#if plan}
       <div class="plan stack">
@@ -217,7 +243,19 @@
     <div class="grid2">
       <div class="stack">
         <h3 class="sect">{$trs('fw.ports.top')}</h3>
-        {#if data.remotes.length}
+        {#if data.remotes.length && $isPhone}
+          <div class="pc-list">
+            {#each data.remotes as r (r.addr + r.port)}
+              <div class="pc-li">
+                <div class="pc-mn">
+                  <div class="pc-l1 mono"><b>{r.addr}</b></div>
+                  <div class="pc-l2">{$trs('fw.ports.col.port')} {r.port}</div>
+                </div>
+                <span class="pc-r">{r.conns}</span>
+              </div>
+            {/each}
+          </div>
+        {:else if data.remotes.length}
           <div class="tw">
             <table class="tbl">
               <thead><tr><th>{$trs('fw.ports.col.remote')}</th><th>{$trs('fw.ports.col.port')}</th><th class="r">{$trs('fw.ports.col.conns')}</th></tr></thead>
@@ -395,6 +433,46 @@
   @media (max-width: 800px) {
     .grid2 {
       grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 720px) {
+    .fl.pc-seg {
+      gap: 0;
+    }
+
+    .fl .chip {
+      justify-content: center;
+      flex: 1;
+      min-width: 0;
+      padding: 0 2px;
+      border-width: 0 0 0 2px;
+      box-shadow: none;
+      font-size: 12.5px;
+      line-height: 1.15;
+      text-align: center;
+      white-space: normal;
+    }
+
+    .fl .chip:first-child {
+      border-left-width: 0;
+    }
+
+    .fl .chip .muted {
+      margin-left: 3px;
+    }
+
+    .pc-l1 .badge {
+      font-size: 11.5px;
+    }
+
+    .plan :global(.input) {
+      height: 44px;
+    }
+
+    .plan :global(.src) {
+      display: flex;
+      width: 100%;
     }
   }
 </style>

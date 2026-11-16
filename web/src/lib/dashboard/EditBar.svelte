@@ -56,4 +56,11 @@
     line-height: 1;
     box-shadow: 2px 2px 0 var(--shade);
   }
+
+  @media (max-width: 720px) {
+    .sm {
+      width: 44px;
+      height: 44px;
+    }
+  }
 </style>

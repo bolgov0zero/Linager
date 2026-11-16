@@ -8,6 +8,7 @@
   import EditBar from './EditBar.svelte';
   import { fmtAgo, fmtPct, fmtRate, fmtUptime, type Units } from './format';
   import Tags from './Tags.svelte';
+  import { isPhone } from '../ui/viewport';
   import { levelOf, tagsOf, type AgentFlag } from './status';
 
   let {
@@ -50,6 +51,33 @@
   });
 </script>
 
+{#if $isPhone && !editing}
+  <!-- Phone: the whole card opens the server, the terminal opens its tab; the rest is shorter than on a desktop. -->
+  <article class="card srv pc {level}">
+    <button class="hit" type="button" aria-label={card.name} onclick={() => onopen(card.name)}></button>
+    <div class="head">
+      <h3 class="name"><span class="sq" aria-hidden="true"></span>{card.name}</h3>
+      <button class="btn ic term" type="button" title={$tr('dash.terminal')} aria-label={$tr('dash.terminal')} disabled={!card.online} onclick={() => onopen(card.name, 'terminal')}><CardIcon name="terminal" /></button>
+    </div>
+    <p class="sub mono muted small">{card.address} · {card.os} · {$tr('dash.agent')} {card.agent_version}</p>
+    {#if card.online}
+      <div class="pm">
+        {#each [['dash.cpu', cpu], ['dash.ram', ram], ['dash.disk', disk]] as [key, v] (key)}
+          <div>
+            <span class="pl"><span class="lbl">{$tr(String(key))}</span><span class="mono">{fmtPct(v as number | null)}</span></span>
+            <Segments value={v as number | null} segments={10} />
+          </div>
+        {/each}
+      </div>
+    {:else}
+      <p class="muted small mono off-note">{footText}</p>
+    {/if}
+    <div class="pft">
+      <Tags {tags} />
+      {#if card.online}<span class="mono small muted net2">↓ {fmtRate(sample?.rx_bps)} ↑ {fmtRate(sample?.tx_bps)}</span>{/if}
+    </div>
+  </article>
+{:else}
 <article class="card srv {level}">
   <div class="head">
     <h3 class="name"><span class="sq" aria-hidden="true"></span>{card.name}</h3>
@@ -99,6 +127,7 @@
     </div>
   </footer>
 </article>
+{/if}
 
 <style>
   .srv {
@@ -237,5 +266,105 @@
   .foot .btn.del:hover:not(:disabled) {
     color: var(--crit);
     border-color: var(--crit);
+  }
+
+  /* Phone, edit mode (the plain card keeps the desktop structure): no chart, tighter blocks. */
+  @media (max-width: 720px) {
+    .srv:not(.pc) .chart,
+    .srv:not(.pc) .cap {
+      display: none;
+    }
+
+    .srv:not(.pc) {
+      padding: 10px 12px 0;
+    }
+
+    .srv:not(.pc) .foot {
+      margin: auto -12px 0;
+      padding: 8px 12px 10px;
+    }
+
+    .srv:not(.pc) .foot .btn.ic {
+      width: 44px;
+      padding: 0;
+    }
+  }
+
+  /* Phone card */
+  .pc {
+    position: relative;
+    padding: 10px 12px;
+    border-top-width: 2px;
+    border-left: 5px solid var(--strip);
+  }
+
+  .pc.ok {
+    --strip: var(--good);
+  }
+
+  .pc .hit {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    padding: 0;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .pc .head {
+    gap: 8px;
+  }
+
+  .pc .name {
+    flex: 1;
+    font-size: 21px;
+  }
+
+  .pc .term {
+    position: relative;
+    z-index: 2;
+    width: 44px;
+    padding: 0;
+  }
+
+  .pc .sub {
+    margin: 0 0 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pm {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .pl {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+
+  .pm :global(i) {
+    height: 8px;
+  }
+
+  .pft {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    margin-top: 8px;
+  }
+
+  .net2 {
+    margin-left: auto;
+  }
+
+  .off-note {
+    margin: 4px 0 0;
   }
 </style>

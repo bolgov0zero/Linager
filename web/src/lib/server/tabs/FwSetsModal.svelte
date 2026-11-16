@@ -350,4 +350,65 @@
       grid-template-columns: minmax(0, 1fr);
     }
   }
+
+  /* Phone: no nested scroll areas, 44 px targets, addresses as rows. */
+  @media (max-width: 720px) {
+    .sets {
+      min-height: 0;
+    }
+
+    .list {
+      max-height: none;
+      overflow: visible;
+      box-shadow: 3px 3px 0 var(--shade);
+    }
+
+    .item {
+      align-items: center;
+      min-height: 52px;
+      padding: 8px 12px;
+    }
+
+    .new :global(.sel),
+    .addrow .input,
+    .addrow :global(.btn),
+    .new .input,
+    .new :global(.btn),
+    .head :global(.btn) {
+      height: 44px;
+    }
+
+    .chips {
+      flex-direction: column;
+      flex-wrap: nowrap;
+      gap: 0;
+      max-height: none;
+      overflow: visible;
+      padding: 0;
+      border: 2px solid var(--line);
+      box-shadow: 3px 3px 0 var(--shade);
+    }
+
+    .chip2 {
+      justify-content: space-between;
+      min-height: 48px;
+      padding: 0 0 0 12px;
+      border: 0;
+      border-top: 2px dashed var(--seg-off);
+      font-size: 14px;
+      overflow-wrap: anywhere;
+    }
+
+    .chip2:first-child {
+      border-top: 0;
+    }
+
+    .chip2 button {
+      flex: none;
+      width: 48px;
+      height: 48px;
+      padding: 0;
+      font-size: 20px;
+    }
+  }
 </style>

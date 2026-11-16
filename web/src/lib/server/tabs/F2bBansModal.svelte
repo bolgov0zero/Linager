@@ -3,6 +3,8 @@
   import { api, ApiError, type F2bBan, type F2bEvent } from '../../../api';
   import { locale, t, tr as T } from '../../../i18n';
   import { showToast } from '../../toast';
+  import { isPhone } from '../../ui/viewport';
+  import './phone-c.css';
   import Modal from '../../Modal.svelte';
   import { formatDateTime } from '../format';
 
@@ -122,7 +124,7 @@
 
 <Modal title={$T('sec.f2b.bansTitle')} labelId="f2b-bans-title" wide {onclose}>
   <div class="bar">
-    <div class="row" role="group" aria-label={$T('sec.f2b.bansTitle')}>
+    <div class="row tabs2" class:pc-seg={$isPhone} role="group" aria-label={$T('sec.f2b.bansTitle')}>
       <button class="chip" type="button" aria-pressed={tab === 'now'} onclick={() => (tab = 'now')}>{$T('sec.f2b.bans.now')} <span class="muted cnt">{bans.length}</span></button>
       <button class="chip" type="button" aria-pressed={tab === 'hist'} onclick={() => (tab = 'hist')}>{$T('sec.f2b.bans.hist')} {#if histLoaded}<span class="muted cnt">{total}</span>{/if}</button>
     </div>
@@ -133,6 +135,21 @@
     {#if shownBans.length === 0}
       <p class="muted">{bans.length === 0 ? $T('sec.f2b.bans.none') : $T('sec.f2b.bans.nothing')}</p>
     {:else}
+      {#if $isPhone}
+        <div class="pc-list">
+          {#each shownBans as b (b.jail + b.ip)}
+            <div class="pc-li">
+              <input type="checkbox" aria-label={b.ip} checked={selected.includes(b.ip)} onchange={() => toggle(b.ip)} />
+              <div class="pc-mn">
+                <div class="pc-l1"><b class="mono">{b.ip}</b></div>
+                <div class="pc-l2">{[b.jail, b.attempts ? $T('sec.col.attempts') + ': ' + b.attempts.toLocaleString($locale) : ''].filter(Boolean).join(' · ')}</div>
+                <div class="pc-l2">{[b.banned_at ? formatDateTime(b.banned_at, $locale) : '', $T('sec.f2b.bans.until') + ': ' + until(b)].filter(Boolean).join(' · ')}</div>
+              </div>
+              <button class="btn sm" type="button" disabled={busy} onclick={() => void unban({ ips: [b.ip] }, 'sec.f2b.unbanned', 1)}>{$T('sec.f2b.unban')}</button>
+            </div>
+          {/each}
+        </div>
+      {:else}
       <div class="tw">
         <table class="tbl">
           <thead>
@@ -161,6 +178,7 @@
           </tbody>
         </table>
       </div>
+      {/if}
       <div class="foot">
         <span class="small muted">{$T('sec.f2b.bans.selected', { n: selected.length })}</span>
         <div class="row">
@@ -185,6 +203,21 @@
   {:else if shownEvents.length === 0}
     <p class="muted">{$T('sec.f2b.hist.none')}</p>
   {:else}
+    {#if $isPhone}
+      <div class="pc-list">
+        {#each shownEvents as e, i (i)}
+          <div class="pc-li">
+            <div class="pc-mn">
+              <div class="pc-l1"><b class="mono">{e.ip}</b><span class="badge {e.event === 'ban' ? 'crit' : 'ok'}">{$T(e.event === 'ban' ? 'sec.f2b.hist.ban' : 'sec.f2b.hist.unban')}</span></div>
+              <div class="pc-l2">{formatDateTime(e.time, $locale)} · {e.jail}{e.event === 'ban' ? ' · ' + $T(eventState(e)) : ''}</div>
+            </div>
+            {#if e.event !== 'ban' && !bannedSet.has(e.ip)}
+              <button class="btn sm" type="button" disabled={busy} onclick={() => void banAgain(e.ip)}>{$T('sec.f2b.hist.again')}</button>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    {:else}
     <div class="tw">
       <table class="tbl">
         <thead>
@@ -215,10 +248,12 @@
         </tbody>
       </table>
     </div>
+    {/if}
     <p class="small muted">{$T('sec.f2b.hist.shown', { n: shownEvents.length, total, path: logPath })}</p>
   {/if}
 
   {#if error}<p class="error" role="alert">{error}</p>{/if}
+  {#if $isPhone}<p class="small muted">{$T('sec.f2b.bans.audit')}</p>{/if}
   <div class="row end">
     <span class="small muted grow">{$T('sec.f2b.bans.audit')}</span>
     <button class="btn" type="button" onclick={onclose}>{$T('common.close')}</button>
@@ -347,5 +382,57 @@
     height: 1px;
     overflow: hidden;
     clip: rect(0 0 0 0);
+  }
+
+  /* Phone: segmented tabs, rows instead of tables, no nested scrolling. */
+  @media (max-width: 720px) {
+    .bar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .bar .input {
+      width: 100%;
+      height: 44px;
+    }
+
+    .tabs2.pc-seg {
+      gap: 0;
+    }
+
+    .tabs2 .chip {
+      flex: 1;
+      justify-content: center;
+      min-width: 0;
+      padding: 0 4px;
+      border-width: 0 0 0 2px;
+      box-shadow: none;
+    }
+
+    .tabs2 .chip:first-child {
+      border-left-width: 0;
+    }
+
+    .pc-li input[type='checkbox'] {
+      flex: none;
+    }
+
+    .pc-l1 .badge {
+      font-size: 11.5px;
+    }
+
+    .foot .row {
+      width: 100%;
+      flex-wrap: nowrap;
+    }
+
+    .foot .row > .btn {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .row.end > .grow {
+      display: none;
+    }
   }
 </style>

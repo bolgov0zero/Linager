@@ -95,4 +95,21 @@
     flex: 1 1 200px;
     min-width: 0;
   }
+
+  @media (max-width: 720px) {
+    .stack > :global(.row.end:last-child) {
+      position: sticky;
+      bottom: 0;
+      z-index: 2;
+      flex-wrap: nowrap;
+      margin: 0 -12px calc(-12px - var(--safe-b));
+      padding: 10px 12px calc(10px + var(--safe-b));
+      background: var(--surface);
+      border-top: 2px solid var(--line);
+    }
+
+    .stack > :global(.row.end:last-child > .btn) {
+      flex: 1;
+    }
+  }
 </style>

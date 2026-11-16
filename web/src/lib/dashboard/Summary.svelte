@@ -94,14 +94,50 @@
     background: var(--warn);
   }
 
+  /* Phone: one strip of four cells instead of four cards. */
   @media (max-width: 720px) {
     .tiles {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0;
+      border: 2px solid var(--line);
+      box-shadow: 3px 3px 0 var(--shade);
+      background: var(--surface);
+    }
+
+    .tile.card {
+      gap: 0;
+      padding: 7px 8px 6px;
+      border: 0;
+      border-left: 2px solid var(--line);
+      box-shadow: none;
+    }
+
+    .tile.card:first-child {
+      border-left: 0;
+    }
+
+    .label {
+      font-size: 10px;
+      letter-spacing: 0.04em;
     }
 
     .val {
-      font-size: 28px;
+      margin-top: 0;
+      font-size: 22px;
+    }
+
+    .hint {
+      overflow: hidden;
+      font-size: 10px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .flag {
+      top: 0;
+      right: 0;
+      width: 7px;
+      height: 7px;
     }
   }
 </style>

@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { AuditItem } from '../../api';
   import { locale, tr as translate } from '../../i18n';
+  import { isPhone } from '../ui/viewport';
+  import '../ui/phone-rows.css';
   import { KNOWN_ACTIONS } from './actions';
 
   let { items }: { items: AuditItem[] } = $props();
@@ -23,6 +25,16 @@
     });
   }
 
+  /** Phones: a short time, "16 нояб., 10:12". */
+  function shortTime(ts: number, lang: string): string {
+    return new Date(ts * 1000).toLocaleString(lang === 'en' ? 'en-GB' : 'ru-RU', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
   function actionText(action: string): string {
     return KNOWN_ACTIONS.has(action) ? $translate(`audit.action.${action}`) : action;
   }
@@ -40,6 +52,48 @@
   }
 </script>
 
+{#if $isPhone}
+  <div class="pr-list">
+    {#each items as item (item.id)}
+      {@const isOpen = !!expanded[item.id]}
+      {@const rc = resultClass(item.result)}
+      <div class="pr-it">
+        <button
+          class="pr-li"
+          class:bad={rc === 'failed'}
+          class:wn={rc === 'other'}
+          type="button"
+          aria-expanded={isOpen}
+          onclick={() => toggle(item.id)}
+        >
+          <div class="pr-mn">
+            <div class="pr-l1">
+              <b>{actionText(item.action)}</b>
+              {#if rc !== 'ok'}<span class="pr-tag {rc === 'failed' ? 'crit' : 'warn'}">{resultText(item.result)}</span>{/if}
+            </div>
+            <div class="pr-l2">{item.actor || '—'}{#if item.target_name} · {item.target_name}{/if} · {shortTime(item.ts, $locale)}</div>
+          </div>
+          <span class="chev" class:open={isOpen} aria-hidden="true"></span>
+        </button>
+        {#if isOpen}
+          <div class="pr-more">
+            <div class="pr-kv"><span>{$translate('audit.col.time')}</span><span class="mono">{formatTime(item.ts, $locale)}</span></div>
+            {#if item.target_type}
+              <div class="pr-kv"><span>{$translate('audit.col.target')}</span><span>{item.target_type}{#if item.target_name} · {item.target_name}{/if}</span></div>
+            {/if}
+            <div class="pr-kv">
+              <span>{$translate('audit.col.ip')}</span>
+              <span class="mono">
+                {item.client_ip || '—'}{#if item.remote_addr && item.remote_addr !== item.client_ip} <span class="muted">({item.remote_addr})</span>{/if}
+              </span>
+            </div>
+            {#if item.details}<pre class="json">{JSON.stringify(item.details, null, 2)}</pre>{/if}
+          </div>
+        {/if}
+      </div>
+    {/each}
+  </div>
+{:else}
 <div class="table-wrap">
   <table>
     <thead>
@@ -102,6 +156,7 @@
     </tbody>
   </table>
 </div>
+{/if}
 
 <style>
   .table-wrap {
@@ -214,5 +269,24 @@
     line-height: 1.5;
     overflow-x: auto;
     white-space: pre;
+  }
+
+  .chev {
+    flex: none;
+    width: 0;
+    height: 0;
+    margin: 0 6px;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid var(--muted);
+    transition: transform 0.15s;
+  }
+
+  .chev.open {
+    transform: rotate(180deg);
+  }
+
+  .pr-more .json {
+    margin-top: 8px;
   }
 </style>

@@ -152,4 +152,11 @@
   .cm-host :global(.cm-editor) {
     height: 100%;
   }
+
+  /* Phones: the editor window is full screen, so the frame around the text would only cost width. */
+  @media (max-width: 720px) {
+    .cm-host {
+      border-width: 2px 0;
+    }
+  }
 </style>

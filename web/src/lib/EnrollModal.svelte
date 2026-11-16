@@ -219,4 +219,29 @@
     font-size: 18px;
     letter-spacing: 0.15em;
   }
+
+  /* Phones: one column, the buttons of a request are full width (approve on top). */
+  @media (max-width: 720px) {
+    .items {
+      gap: 12px;
+    }
+
+    .meta {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2px;
+    }
+
+    .meta dd {
+      margin-bottom: 6px;
+    }
+
+    .item .row.end {
+      flex-direction: column-reverse;
+      align-items: stretch;
+    }
+
+    .item .row.end > .btn {
+      width: 100%;
+    }
+  }
 </style>

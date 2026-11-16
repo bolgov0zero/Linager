@@ -423,6 +423,13 @@
     }
   }
 
+  /* Phones: the bottom bar and its "Sections" sheet replace the menu. */
+  @media (max-width: 720px) {
+    .side {
+      display: none;
+    }
+  }
+
   /* narrow screens: the menu is a drop-down with the current section on top */
   @media (max-width: 860px) {
     .side {

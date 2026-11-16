@@ -1,6 +1,8 @@
 <script lang="ts">
   import { get } from 'svelte/store';
   import Select from '../../ui/Select.svelte';
+  import Segments from '../../ui/Segments.svelte';
+  import { isPhone } from '../../ui/viewport';
   import { api, ApiError, type ProcessInfo, type ServerDetail } from '../../../api';
   import { tr } from '../../../i18n';
   import Modal from '../../Modal.svelte';
@@ -22,6 +24,9 @@
   let victim = $state<ProcessInfo | null>(null);
   let force = $state(false);
   let killing = $state(false);
+  // Phones: the row that was tapped, its action sheet is open. The list stops refreshing meanwhile, so the rows do
+  // not move under the finger.
+  let sheet = $state<ProcessInfo | null>(null);
 
   // Polls the top list; restarts when the server, sort or count changes.
   $effect(() => {
@@ -43,7 +48,7 @@
       try {
         const list = await api.processes(id, s, n);
         if (!active) return;
-        rows = list.processes;
+        if (!sheet) rows = list.processes;
         problem = null;
       } catch (e) {
         if (!active) return;
@@ -63,6 +68,15 @@
       clearInterval(timer);
     };
   });
+
+  function ask(target: ProcessInfo, hard: boolean): void {
+    sheet = null;
+    force = hard;
+    victim = target;
+  }
+
+  /** The figure a phone row shows and draws: the one the list is sorted by. */
+  const metric = (p: ProcessInfo): number => (sort === 'cpu' ? p.cpu : p.mem_pct);
 
   function closeKill(): void {
     if (!killing) victim = null;
@@ -91,20 +105,32 @@
   {:else if problem === 'disabled'}
     <p class="note">{$tr('proc.disabled')}</p>
   {:else}
-    <div class="bar">
-      <div class="row">
+    <div class="bar" class:pbar={$isPhone}>
+      <div class="row sorts">
         <button class="chip" type="button" aria-pressed={sort === 'cpu'} onclick={() => (sort = 'cpu')}>
           {$tr('proc.sort.cpu')}
         </button>
         <button class="chip" type="button" aria-pressed={sort === 'mem'} onclick={() => (sort = 'mem')}>
           {$tr('proc.sort.mem')}
         </button>
-        <label class="count">
-          <span class="muted small">{$tr('proc.show')}</span>
-          <Select bind:value={count} width="auto" options={[10, 20, 50].map((n) => ({ value: n, label: String(n) }))} />
-        </label>
+        {#if !$isPhone}
+          <label class="count">
+            <span class="muted small">{$tr('proc.show')}</span>
+            <Select bind:value={count} width="auto" options={[10, 20, 50].map((n) => ({ value: n, label: String(n) }))} />
+          </label>
+        {/if}
       </div>
-      <p class="muted small">{$tr('proc.refresh', { n: count })}</p>
+      {#if $isPhone}
+        <div class="meta">
+          <p class="muted small">{$tr('proc.refresh', { n: count })}</p>
+          <label class="count">
+            <span class="muted small">{$tr('proc.show')}</span>
+            <Select bind:value={count} width="auto" ariaLabel={$tr('proc.show')} options={[10, 20, 50].map((n) => ({ value: n, label: String(n) }))} />
+          </label>
+        </div>
+      {:else}
+        <p class="muted small">{$tr('proc.refresh', { n: count })}</p>
+      {/if}
     </div>
 
     {#if problem === 'error'}
@@ -112,6 +138,24 @@
     {:else if loaded && rows.length === 0}
       <p class="muted">{$tr('proc.empty')}</p>
     {:else}
+      {#if $isPhone}
+        <ul class="plist">
+          {#each rows as p (p.pid)}
+            <li>
+              <button class="li" type="button" onclick={() => (sheet = p)}>
+                <span class="mn">
+                  <b class="l1" title={p.cmd}>{p.cmd}</b>
+                  <span class="l2">{p.user} · PID {p.pid}{sort === 'mem' ? ` · ${formatBytes(p.rss)}` : ''}</span>
+                </span>
+                <span class="gauge">
+                  <span class="val">{metric(p).toFixed(metric(p) < 10 ? 1 : 0)}%</span>
+                  <Segments value={metric(p)} segments={10} />
+                </span>
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {:else}
       <div class="table-wrap">
         <table>
           <thead>
@@ -145,9 +189,18 @@
           </tbody>
         </table>
       </div>
+      {/if}
     {/if}
   {/if}
 </div>
+
+{#if sheet}
+  {@const target = sheet}
+  <Modal title={`${target.cmd.length > 30 ? `${target.cmd.slice(0, 29)}…` : target.cmd} · PID ${target.pid}`} labelId="proc-act-title" flush onclose={() => (sheet = null)}>
+    <button class="act" type="button" onclick={() => ask(target, false)}>{$tr('m.proc.term')}</button>
+    <button class="act dng" type="button" onclick={() => ask(target, true)}>{$tr('m.proc.kill')}</button>
+  </Modal>
+{/if}
 
 {#if victim}
   {@const target = victim}
@@ -280,65 +333,131 @@
     accent-color: var(--accent);
   }
 
-  @media (max-width: 600px) {
-    .ellipsis {
-      max-width: 180px;
-    }
+  .plist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 
-  /* Phones: the command on its own line, the numbers and the button below it. */
-  @media (max-width: 600px) {
-    table,
-    tbody {
-      display: block;
+  /* Phones: a segmented sort control, then rows (command, user and PID, the figure with a bar); a tap opens the
+     action sheet. */
+  @media (max-width: 720px) {
+    .bar.pbar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
     }
 
-    thead {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip: rect(0 0 0 0);
-    }
-
-    tr {
+    .sorts {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
+      gap: 0;
+    }
+
+    .sorts .chip {
+      flex: 1;
+      box-shadow: none;
+      border-left-width: 0;
+    }
+
+    .sorts .chip:first-child {
+      border-left-width: 2px;
+    }
+
+    .meta {
+      display: flex;
       align-items: center;
-      gap: 4px 12px;
-      padding: 8px 4px;
-      border-bottom: 1px dashed var(--seg-off);
+      justify-content: space-between;
+      gap: 8px;
     }
 
-    td {
-      padding: 0;
+    .meta p {
+      margin: 0;
+    }
+
+    .plist {
+      background: var(--surface);
+      border: 2px solid var(--line);
+      box-shadow: 3px 3px 0 var(--shade);
+    }
+
+    .plist li + li {
+      border-top: 2px dashed var(--seg-off);
+    }
+
+    .li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      min-height: 56px;
+      padding: 8px 12px;
+      background: none;
       border: 0;
-    }
-
-    td.cmd {
-      order: -1;
-      flex: 1 0 100%;
-      width: auto;
-      max-width: none;
-      min-width: 0;
-    }
-
-    td.num {
+      color: inherit;
+      font: inherit;
       text-align: left;
+      cursor: pointer;
     }
 
-    td[data-label]::before {
-      content: attr(data-label) ' ';
+    .mn {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-width: 0;
+      gap: 2px;
+    }
+
+    .l1 {
+      overflow: hidden;
+      font-weight: 400;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .l2 {
+      overflow: hidden;
       color: var(--muted);
-      font-size: 11px;
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    td.action {
-      margin-left: auto;
+    .gauge {
+      display: flex;
+      flex: none;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      width: 92px;
     }
 
-    .ellipsis {
-      max-width: none;
+    .gauge .val {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .act {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 52px;
+      padding: 0 14px;
+      background: none;
+      border: 0;
+      border-top: 2px dashed var(--seg-off);
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .act:first-child {
+      border-top: 0;
+    }
+
+    .act.dng {
+      color: var(--crit);
     }
   }
 </style>

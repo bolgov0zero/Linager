@@ -14,6 +14,8 @@
   } from '../../../api';
   import { locale, t, tr as trs } from '../../../i18n';
   import Modal from '../../Modal.svelte';
+  import PixIcon from '../../ui/PixIcon.svelte';
+  import { isPhone } from '../../ui/viewport';
   import { showToast } from '../../toast';
   import { applyFirewall } from './fw-api';
   import FwPorts from './FwPorts.svelte';
@@ -22,6 +24,7 @@
   import FwLogModal from './FwLogModal.svelte';
   import { canLog, isSystemRule, parseRule, setLogged, type RuleView } from './fw-view';
   import { buildRule, normalizeRule, type ListRef, type RuleAction, type RuleProto } from './fw-rule';
+  import './phone-c.css';
 
   type ChainName = FwChain['name'];
   type Policy = FwChain['policy'];
@@ -75,6 +78,15 @@
   let logOpen = $state(false);
   /** Packets the marked rules blocked in the last hour (null: not loaded or no rule is marked). */
   let logBadge = $state<number | null>(null);
+
+  // Phone: the section under the segmented control, the rule sheet and the "add rule" sheet.
+  type Section = 'rules' | 'ports' | 'sets' | 'log';
+  let section = $state<Section>('rules');
+  let ruleSheet = $state<{ chain: ChainName; index: number } | null>(null);
+  let ruleText = $state('');
+  let ruleError = $state<string | null>(null);
+  let ruleBusy = $state(false);
+  let addOpen = $state(false);
 
   let now = $state(Date.now() / 1000);
   let pendingBusy = $state(false);
@@ -458,6 +470,85 @@
     return () => clearInterval(timer);
   });
 
+  function sheetRule(): { chain: ChainName; index: number; text: string; last: number } | null {
+    const sheet = ruleSheet;
+    if (!sheet) return null;
+    const chain = shown?.chains.find((c) => c.name === sheet.chain);
+    const rule = chain?.rules[sheet.index];
+    return rule && chain ? { chain: sheet.chain, index: sheet.index, text: rule.text, last: chain.rules.length - 1 } : null;
+  }
+
+  function openRule(row: RuleRow): void {
+    ruleSheet = { chain: row.chain, index: row.index };
+    ruleText = row.text;
+    ruleError = null;
+  }
+
+  function moveInSheet(delta: -1 | 1): void {
+    const r = sheetRule();
+    if (!r) return;
+    moveRule(r.chain, r.index, delta);
+    ruleSheet = { chain: r.chain, index: r.index + delta };
+  }
+
+  function toggleLogInSheet(on: boolean): void {
+    const r = sheetRule();
+    if (!r) return;
+    toggleLog(r.chain, r.index, on);
+    ruleText = sheetRule()?.text ?? ruleText;
+  }
+
+  function deleteInSheet(): void {
+    const r = sheetRule();
+    if (!r) return;
+    removeRule(r.chain, r.index);
+    ruleSheet = null;
+  }
+
+  /** Replaces the text of the open rule after the same check an added rule goes through. */
+  async function saveSheetRule(): Promise<void> {
+    const r = sheetRule();
+    if (!r || ruleBusy) return;
+    const text = normalizeRule(ruleText);
+    if (text === r.text) {
+      ruleSheet = null;
+      return;
+    }
+    if (!text) {
+      ruleError = tx('fw.add.errEmpty');
+      return;
+    }
+    if (isSystemRule(text)) {
+      ruleError = tx('fw.add.systemRule');
+      return;
+    }
+    const next = mapChain(base(), r.chain, (c) => ({ ...c, rules: c.rules.map((x, i) => (i === r.index ? { text } : x)) }));
+    ruleBusy = true;
+    try {
+      const res = await api.firewallValidate(serverId, next);
+      if (!res.ok) {
+        ruleError = res.error || tx('fw.add.invalid');
+        return;
+      }
+      commit(next);
+      ruleSheet = null;
+    } catch (e) {
+      ruleError = errorText(e);
+    } finally {
+      ruleBusy = false;
+    }
+  }
+
+  async function addAndClose(): Promise<void> {
+    await addFromForm();
+    if (!formError) addOpen = false;
+  }
+
+  async function addRawAndClose(): Promise<void> {
+    await addRaw();
+    if (!rawError && !rawText) addOpen = false;
+  }
+
   async function addRaw(): Promise<void> {
     const text = normalizeRule(rawText);
     if (!text || addBusy) return;
@@ -551,6 +642,16 @@
   }
 </script>
 
+{#snippet changeList()}
+  {#if changes.length}
+    <ul class="changes">
+      {#each changes as change, i (i)}
+        <li class="mono small">{$trs(change.key, change.vars)}</li>
+      {/each}
+    </ul>
+  {/if}
+{/snippet}
+
 {#if loadError && !info}
   <p class="card error" role="alert">{$trs('fw.loadError')}</p>
 {:else if !info}
@@ -565,6 +666,7 @@
       <p class="warn" role="status">{$trs('fw.ufwWarning')}</p>
     {/if}
 
+    <div class="docks">
     {#if pending}
       <section class="pending" class:expired aria-live="polite">
         <h3>{$trs('fw.pending.title')}</h3>
@@ -578,6 +680,9 @@
         </div>
         {#if connLost}
           <p class="warn">{$trs('fw.pending.lost')}</p>
+        {/if}
+        {#if $isPhone}
+          <div class="pc-pbar" aria-hidden="true"><i style:width="{Math.min(100, (remaining / 30) * 100)}%"></i></div>
         {/if}
         <div class="row">
           <button class="btn primary" type="button" disabled={pendingBusy || expired} onclick={confirmPending}>
@@ -596,13 +701,15 @@
     {#if draft}
       <section class="draft" aria-live="polite">
         <h3>{$trs('fw.draft.title')}</h3>
-        <p class="muted small">{$trs('fw.draft.hint')}</p>
-        {#if changes.length}
-          <ul class="changes">
-            {#each changes as change, i (i)}
-              <li class="mono small">{$trs(change.key, change.vars)}</li>
-            {/each}
-          </ul>
+        {#if $isPhone}
+          <details class="dchanges">
+            <summary>{$trs('mobC.fw.changes', { n: changes.length })}</summary>
+            <p class="muted small">{$trs('fw.draft.hint')}</p>
+            {@render changeList()}
+          </details>
+        {:else}
+          <p class="muted small">{$trs('fw.draft.hint')}</p>
+          {@render changeList()}
         {/if}
         <div class="row">
           <button class="btn primary" type="button" disabled={applying || hasPending} onclick={() => apply(false)}>
@@ -618,10 +725,129 @@
         {/if}
       </section>
     {/if}
+    </div>
 
     {#if !info.available}
       <p class="card">{$trs('fw.notAvailable')}</p>
     {:else}
+      {#if $isPhone}
+        <div class="pc-seg sm" role="group" aria-label={$trs('mobC.fw.sections')}>
+          <button type="button" aria-pressed={section === 'rules'} onclick={() => (section = 'rules')}>{$trs('mobC.fw.rules')}</button>
+          <button type="button" aria-pressed={section === 'ports'} onclick={() => (section = 'ports')}>{$trs('mobC.fw.ports')}</button>
+          <button type="button" aria-pressed={section === 'sets'} onclick={() => (section = 'sets')}>{$trs('mobC.fw.sets')}</button>
+          <button type="button" aria-pressed={section === 'log'} onclick={() => (section = 'log')}>
+            {$trs('fw.log.open')}{#if logBadge !== null && logBadge > 0}<span class="cnt">{logBadge}</span>{/if}
+          </button>
+        </div>
+
+        {#if section === 'rules'}
+          <div class="pc-seg" role="group" aria-label={$trs('fw.chains.tabs')}>
+            <button type="button" aria-pressed={activeChain === 'all'} onclick={() => (activeChain = 'all')}>
+              {$trs('fw.chains.all')}<span class="cnt">{allRows.length}</span>
+            </button>
+            {#each CHAIN_NAMES as name (name)}
+              {@const count = shown?.chains.find((c) => c.name === name)?.rules.length ?? 0}
+              <button
+                type="button"
+                aria-pressed={activeChain === name}
+                onclick={() => {
+                  activeChain = name;
+                  addChain = name;
+                }}>{name}<span class="cnt">{count}</span></button
+              >
+            {/each}
+          </div>
+
+          {#if activeChain !== 'all'}
+            {@const chain = shown?.chains.find((c) => c.name === activeChain)}
+            {#if chain}
+              <label class="field">
+                <span class="label">{$trs('fw.chain.policyLabel')}</span>
+                <Select
+                  ariaLabel={$trs('fw.chain.policyLabel')}
+                  value={chain.policy}
+                  onchange={(v) => setPolicy(chain.name, v)}
+                  options={[
+                    { value: 'accept' as Policy, label: 'accept' },
+                    { value: 'drop' as Policy, label: 'drop' },
+                  ]}
+                />
+              </label>
+            {/if}
+          {/if}
+
+          {@const phoneRows =
+            activeChain === 'all'
+              ? allRows
+              : (shown?.chains.find((c) => c.name === activeChain)?.rules ?? []).map((r, index, all) => ({ chain: activeChain as ChainName, index, text: r.text, last: all.length - 1 }))}
+          {#if phoneRows.length === 0}
+            <p class="muted pc-empty">{$trs('fw.chain.empty')}</p>
+          {:else}
+            <div class="pc-list">
+              {#each phoneRows as row (row.chain + ':' + row.index + ':' + row.text)}
+                {@const v = parseRule(row.text)}
+                {@const live = countersOf(row.chain, row.text)}
+                <button class="pc-li" class:bad={v.action === 'drop'} class:wn={v.action === 'reject'} type="button" onclick={() => openRule(row)}>
+                  <span class="pc-n">{row.index + 1}</span>
+                  <span class="pc-mn">
+                    <span class="pc-l1 mono rtext">{row.text}</span>
+                    <span class="pc-l2">
+                      {#if activeChain === 'all'}{row.chain} · {/if}{#if v.comment}{v.comment} · {/if}{live?.packets === undefined ? '—' : $trs('mobC.fw.packets', { n: live.packets })}
+                    </span>
+                  </span>
+                  {#if v.logged}<span class="pc-tag warn">{$trs('mobC.fw.logTag')}</span>{/if}
+                  <PixIcon name="more" size={20} />
+                </button>
+              {/each}
+            </div>
+          {/if}
+          <p class="small muted lock">{$trs('fw.chain.established')}</p>
+
+          <button class="btn" type="button" onclick={() => (addOpen = true)}>
+            <PixIcon name="plus" size={16} />&nbsp;{$trs('fw.add.title')}
+          </button>
+          <button class="btn" type="button" aria-expanded={showRuleset} onclick={() => (showRuleset = !showRuleset)}>
+            {$trs('fw.ruleset.title')}: {showRuleset ? $trs('fw.ruleset.hide') : $trs('fw.ruleset.show')}
+          </button>
+          {#if showRuleset}
+            <pre class="ruleset mono">{info.ruleset}</pre>
+          {/if}
+          {#if info.other_tables.length}
+            <p class="hint">{$trs('fw.otherTables', { tables: info.other_tables.join(', ') })}</p>
+          {/if}
+        {:else if section === 'ports'}
+          <FwPorts serverId={serverId} lists={shownSets} onrules={addInputRules} />
+        {:else if section === 'sets'}
+          {#if shownSets.length === 0}
+            <p class="muted pc-empty">{$trs('mobC.fw.noSets')}</p>
+          {:else}
+            <div class="pc-list">
+              {#each shownSets as set (set.name)}
+                <button class="pc-li" type="button" onclick={() => (setsOpen = true)}>
+                  <span class="pc-mn">
+                    <span class="pc-l1 mono"><b>@{set.name}</b></span>
+                    <span class="pc-l2">{set.family} · {$trs('mobC.fw.elements', { n: set.elements.length })}</span>
+                  </span>
+                  <PixIcon name="chev" size={20} />
+                </button>
+              {/each}
+            </div>
+          {/if}
+          <button class="btn" type="button" onclick={() => (setsOpen = true)}>{$trs('fw.sets.open')}</button>
+        {:else}
+          <div class="pc-list">
+            <button class="pc-li" type="button" onclick={() => (logOpen = true)}>
+              <span class="pc-mn">
+                <span class="pc-l1"><b>{$trs('fw.log.title')}</b></span>
+                <span class="pc-l2">{$trs('mobC.fw.logMarked', { n: loggedCount })}</span>
+              </span>
+              {#if logBadge !== null && logBadge > 0}<span class="pc-tag crit">{logBadge}</span>{/if}
+              <PixIcon name="chev" size={20} />
+            </button>
+          </div>
+          <button class="btn" type="button" onclick={() => (logOpen = true)}>{$trs('fw.log.open')}</button>
+        {/if}
+      {:else}
       <div class="tabsrow">
         <div class="row" role="group" aria-label={$trs('fw.chains.tabs')}>
           <button class="chip" type="button" aria-pressed={activeChain === 'all'} onclick={() => (activeChain = 'all')}>
@@ -861,12 +1087,14 @@
           <p class="errt" aria-live="polite">{rawError ?? ''}</p>
         {/if}
       </section>
+      {/if}
     {/if}
 
-    {#if info.available}
+    {#if info.available && !$isPhone}
       <FwPorts serverId={serverId} lists={shownSets} onrules={addInputRules} />
     {/if}
 
+    {#if !$isPhone}
     <section class="ruleset-block">
       <div class="ruleset-head">
         <h3 class="sect">{$trs('fw.ruleset.title')}</h3>
@@ -881,6 +1109,7 @@
         <p class="hint">{$trs('fw.otherTables', { tables: info.other_tables.join(', ') })}</p>
       {/if}
     </section>
+    {/if}
   </div>
 {/if}
 
@@ -904,6 +1133,128 @@
     }}
     onclose={() => (logOpen = false)}
   />
+{/if}
+
+{#if ruleSheet && $isPhone}
+  {@const sr = sheetRule()}
+  {#if sr}
+    {@const sv = parseRule(sr.text)}
+    <Modal title={$trs('mobC.fw.ruleTitle', { n: sr.index + 1 })} labelId="fw-rule-title" onclose={() => (ruleSheet = null)}>
+      <form
+        class="stack"
+        onsubmit={(event) => {
+          event.preventDefault();
+          void saveSheetRule();
+        }}
+      >
+        <label class="field">
+          <span class="label">{$trs('mobC.fw.ruleText')} <span class="muted">· {sr.chain}</span></span>
+          <input
+            class="input mono"
+            type="text"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            bind:value={ruleText}
+            oninput={() => (ruleError = null)}
+          />
+        </label>
+        {#if ruleError}<p class="error small" role="alert">{ruleError}</p>{/if}
+        <label class="check">
+          <input type="checkbox" checked={sv.logged} disabled={!canLog(sr.text)} onchange={(e) => toggleLogInSheet(e.currentTarget.checked)} />
+          <span>{$trs('mobC.fw.logRule')}</span>
+        </label>
+        <div class="pc-list">
+          <button class="pc-act" type="button" disabled={sr.index === 0} onclick={() => moveInSheet(-1)}>▲ {$trs('mobC.fw.up')}</button>
+          <button class="pc-act" type="button" disabled={sr.index === sr.last} onclick={() => moveInSheet(1)}>▼ {$trs('mobC.fw.down')}</button>
+          <button class="pc-act dng" type="button" onclick={deleteInSheet}>{$trs('fw.rule.delete')}</button>
+        </div>
+        <div class="row end">
+          <button class="btn" type="button" onclick={() => (ruleSheet = null)}>{$trs('common.cancel')}</button>
+          <button class="btn primary" type="submit" disabled={ruleBusy}>{$trs('mobC.fw.toDraft')}</button>
+        </div>
+      </form>
+    </Modal>
+  {/if}
+{/if}
+
+{#if addOpen && $isPhone}
+  <Modal wide title={$trs('fw.add.title')} labelId="fw-add-title" onclose={() => (addOpen = false)}>
+    <form
+      class="stack addm"
+      onsubmit={(event) => {
+        event.preventDefault();
+        void addAndClose();
+      }}
+    >
+      <div class="field">
+        <span class="label">{$trs('fw.add.chain')}</span>
+        <Select bind:value={addChain} ariaLabel={$trs('fw.add.chain')} options={CHAIN_NAMES.map((c) => ({ value: c, label: c }))} />
+      </div>
+      <div class="field">
+        <span class="label">{$trs('fw.add.action')}</span>
+        <Select
+          bind:value={addAction}
+          ariaLabel={$trs('fw.add.action')}
+          options={(['accept', 'drop', 'reject'] as RuleAction[]).map((a) => ({ value: a, label: a }))}
+        />
+      </div>
+      <div class="field">
+        <span class="label">{$trs('fw.add.proto')}</span>
+        <Select
+          bind:value={addProto}
+          ariaLabel={$trs('fw.add.proto')}
+          options={[
+            ...(['tcp', 'udp', 'icmp'] as RuleProto[]).map((p) => ({ value: p, label: p as string })),
+            { value: 'any' as RuleProto, label: $trs('fw.add.protoAny') },
+          ]}
+        />
+      </div>
+      <label class="field">
+        <span class="label">{$trs('fw.add.port')}</span>
+        <input class="input mono" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" bind:value={addPort} oninput={() => (formError = null)} />
+      </label>
+      <label class="field">
+        <span class="label">{$trs('fw.add.source')}</span>
+        <SourceInput cls="input mono" lists={shownSets} ariaLabel={$trs('fw.add.source')} bind:value={addSource} oninput={() => (formError = null)} />
+      </label>
+      <label class="field">
+        <span class="label">{$trs('fw.add.comment')}</span>
+        <input class="input" type="text" autocomplete="off" bind:value={addComment} oninput={() => (formError = null)} />
+      </label>
+      {#if formError}<p class="error small" role="alert">{formError}</p>{/if}
+
+      <button class="link" type="button" aria-expanded={rawOpen} onclick={() => (rawOpen = !rawOpen)}>{$trs('fw.add.rawToggle')}</button>
+      {#if rawOpen}
+        <div class="field">
+          <input
+            class="input mono"
+            type="text"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            placeholder={$trs('fw.add.rawPlaceholder')}
+            aria-label={$trs('fw.add.rawToggle')}
+            bind:value={rawText}
+            oninput={() => (rawError = null)}
+            onkeydown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                void addRawAndClose();
+              }
+            }}
+          />
+          <button class="btn" type="button" disabled={addBusy || !rawText.trim()} onclick={() => void addRawAndClose()}>{$trs('mobC.fw.addRaw')}</button>
+          {#if rawError}<p class="error small" role="alert">{rawError}</p>{/if}
+        </div>
+      {/if}
+
+      <div class="row end">
+        <button class="btn" type="button" onclick={() => (addOpen = false)}>{$trs('common.cancel')}</button>
+        <button class="btn primary" type="submit" disabled={addBusy}>{addBusy ? $trs('fw.add.checking') : $trs('fw.add.submit')}</button>
+      </div>
+    </form>
+  </Modal>
 {/if}
 
 {#if warnOpen}
@@ -1328,5 +1679,117 @@
     font-size: 12px;
     line-height: 1.5;
     white-space: pre;
+  }
+
+  .docks {
+    display: contents;
+  }
+
+  /* Phone: rows instead of the table, the draft / countdown pinned above the bottom bar. */
+  @media (max-width: 720px) {
+    .fw {
+      gap: 12px;
+    }
+
+    .rtext {
+      font-size: 13.5px;
+      overflow-wrap: anywhere;
+    }
+
+    .pc-empty {
+      margin: 0;
+    }
+
+    .lock {
+      margin: 0;
+    }
+
+    .ruleset {
+      max-height: none;
+    }
+
+    .addm {
+      min-height: 100%;
+    }
+
+    .addm > :global(.row.end) {
+      margin-top: auto !important;
+    }
+
+    .addm :global(.src) {
+      display: flex;
+      width: 100%;
+    }
+
+    .addm :global(.input) {
+      width: 100%;
+    }
+
+    .link {
+      min-height: 44px;
+      font-size: 14px;
+    }
+
+    .docks {
+      order: 90;
+      position: sticky;
+      bottom: calc(var(--bar-h) + var(--safe-b));
+      z-index: 6;
+      display: flex;
+      flex-direction: column;
+      margin: 0 -12px;
+      background: var(--surface);
+      border-top: 2px solid var(--warn);
+      box-shadow: 0 -4px 0 var(--shade);
+    }
+
+    .docks:not(:has(*)) {
+      display: none;
+    }
+
+    .pending,
+    .draft {
+      padding: 10px 12px;
+      gap: 8px;
+      border-width: 0;
+      box-shadow: none;
+    }
+
+    .pending + .draft {
+      border-top: 2px dashed var(--seg-off);
+    }
+
+    .pending h3,
+    .draft h3 {
+      font-size: 16px;
+    }
+
+    .pending p,
+    .draft p {
+      font-size: 12px;
+    }
+
+    .countdown {
+      font-size: 28px;
+    }
+
+    .pending .row,
+    .draft .row {
+      flex-wrap: nowrap;
+    }
+
+    .pending .row > .btn,
+    .draft .row > .btn {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .dchanges summary {
+      display: flex;
+      align-items: center;
+      min-height: 32px;
+      font-size: 12.5px;
+      cursor: pointer;
+    }
   }
 </style>

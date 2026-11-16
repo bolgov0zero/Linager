@@ -3,6 +3,7 @@
   import { openStream, type StreamKind } from '../../../api';
   import { tr } from '../../../i18n';
   import Modal from '../../Modal.svelte';
+  import { isPhone } from '../../ui/viewport';
   import { attachStream, createBatcher, LINE_LIMIT, type StreamLine, type StreamState } from './docker-util';
 
   let {
@@ -55,7 +56,7 @@
 </script>
 
 <div class="wide">
-  <Modal {title} labelId="stream-modal-title" {onclose}>
+  <Modal {title} labelId="stream-modal-title" {onclose} wide={$isPhone}>
     <p class="small muted">{$tr(`docker.stream.${phase}`)}</p>
     <div class="logpanel mono" bind:this={box} role="log">
       {#each lines as line, i (i)}
@@ -97,5 +98,18 @@
 
   .ln.error {
     color: #ff8a80;
+  }
+
+  /* Phones: the output fills the sheet. */
+  @media (max-width: 720px) {
+    .wide :global(.dialog) {
+      max-width: none;
+    }
+
+    .logpanel {
+      flex: 1 1 auto;
+      height: auto;
+      min-height: 50dvh;
+    }
   }
 </style>

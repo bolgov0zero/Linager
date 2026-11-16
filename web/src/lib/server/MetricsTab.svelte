@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api, type History, type HistoryPoint, type MetricStats, type Period } from '../../api';
   import { locale, tr } from '../../i18n';
+  import { isPhone } from '../ui/viewport';
   import TimeChart from './TimeChart.svelte';
   import MetricsExtras from './MetricsExtras.svelte';
   import { formatDateTime, formatPct, formatRate, formatStep, formatTick } from './format';
@@ -75,7 +76,7 @@
 </script>
 
 {#snippet statLine(s: MetricStats, fmt: (v: number) => string, prefix = '')}
-  <p class="stats small">
+  <p class="stats small" class:pref={!!prefix}>
     {#if prefix}<span class="muted">{prefix}</span>{/if}
     <span>{$tr('srv.stat.min')} <b>{fmt(s.min)}</b></span>
     <span>{$tr('srv.stat.avg')} <b>{fmt(s.avg)}</b></span>
@@ -84,18 +85,24 @@
   </p>
 {/snippet}
 
+{#snippet syncCheck()}
+  <label class="check sync">
+    <input type="checkbox" checked={sync} onchange={(e) => setSync(e.currentTarget.checked)} />
+    <span>{$tr('srv.metrics.sync')}</span>
+  </label>
+{/snippet}
+
 <div class="metrics">
   <div class="toolbar">
     <div class="row">
-      {#each PERIODS as p (p)}
-        <button class="chip" type="button" aria-pressed={period === p} onclick={() => (period = p)}>
-          {$tr(`srv.period.${p}`)}
-        </button>
-      {/each}
-      <label class="check sync">
-        <input type="checkbox" checked={sync} onchange={(e) => setSync(e.currentTarget.checked)} />
-        <span>{$tr('srv.metrics.sync')}</span>
-      </label>
+      <div class="periods" role="group" aria-label={$tr('m.metrics.period')}>
+        {#each PERIODS as p (p)}
+          <button class="chip" type="button" aria-pressed={period === p} onclick={() => (period = p)}>
+            {$tr(`srv.period.${p}`)}
+          </button>
+        {/each}
+      </div>
+      {#if !$isPhone}{@render syncCheck()}{/if}
     </div>
     <div class="row end">
       {#if data}
@@ -197,6 +204,8 @@
       </article>
     </div>
 
+    {#if $isPhone}{@render syncCheck()}{/if}
+
     <MetricsExtras events={h.events} />
   {:else}
     <p class="muted">{$tr('srv.loading')}</p>
@@ -264,10 +273,90 @@
     font-weight: 400;
   }
 
+  .periods {
+    display: contents;
+  }
+
   .state {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+  }
+
+  /* Phones: one segmented period control pinned under the header, full-width charts, stats as four cells. */
+  @media (max-width: 720px) {
+    .metrics {
+      gap: 12px;
+    }
+
+    .toolbar,
+    .toolbar > .row:first-child {
+      display: contents;
+    }
+
+    .periods {
+      position: sticky;
+      top: var(--top-h);
+      z-index: 9;
+      display: flex;
+      margin: 0 -12px;
+      padding: 8px 12px;
+      background: var(--bg);
+    }
+
+    .periods .chip {
+      flex: 1;
+      min-width: 0;
+      padding: 0 2px;
+      font-size: 13px;
+      box-shadow: none;
+      border-left-width: 0;
+    }
+
+    .periods .chip:first-child {
+      border-left-width: 2px;
+    }
+
+    .toolbar > .row.end {
+      justify-content: space-between;
+      flex-wrap: nowrap;
+      gap: 8px;
+    }
+
+    .chart-card {
+      gap: 8px;
+    }
+
+    .chart-card h3 {
+      font-size: 14px;
+      text-transform: uppercase;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .stats.pref {
+      grid-template-columns: 14px repeat(4, minmax(0, 1fr));
+    }
+
+    .stats span {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .stats b {
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .sync {
+      align-self: flex-start;
+    }
   }
 </style>

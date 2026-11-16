@@ -282,4 +282,29 @@
       grid-template-columns: minmax(0, 1fr);
     }
   }
+
+  @media (max-width: 720px) {
+    .ipchip {
+      min-height: 44px;
+      padding: 0 0 0 10px;
+      overflow-wrap: anywhere;
+    }
+
+    .ipchip button {
+      min-width: 44px;
+      min-height: 44px;
+      padding: 0;
+      font-size: 20px;
+    }
+
+    .input.num {
+      width: 96px;
+    }
+
+    summary {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+    }
+  }
 </style>

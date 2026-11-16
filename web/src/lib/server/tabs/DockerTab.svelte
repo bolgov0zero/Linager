@@ -5,6 +5,9 @@
   import { locale, t, tr as tStore, type Vars } from '../../../i18n';
   import Modal from '../../Modal.svelte';
   import ActionMenu from '../../ui/ActionMenu.svelte';
+  import RowMenu from '../../ui/RowMenu.svelte';
+  import { isPhone } from '../../ui/viewport';
+  import '../../ui/phone-rows.css';
   import { showToast } from '../../toast';
   import { formatBytes, formatDateTime } from '../format';
   import {
@@ -28,7 +31,7 @@
   let { server }: { server: ServerDetail } = $props();
 
   type ContainerAction = 'start' | 'stop' | 'restart' | 'remove';
-  type Section = 'containers' | 'images';
+  type Section = 'containers' | 'images' | 'compose';
   type LoadState = 'loading' | 'ready' | 'offline' | 'disabled' | 'error';
 
   interface StreamView {
@@ -77,11 +80,14 @@
   let detach: (() => void) | null = null;
   let batcher: ReturnType<typeof createBatcher> | null = null;
 
+  /** The Compose list exists on phones only (a desktop shows the projects as groups of the containers). */
+  const sec = $derived<Section>(section === 'compose' && !$isPhone ? 'containers' : section);
   const containers = $derived<DockerContainer[]>(info?.containers ?? []);
   const images = $derived<DockerImage[]>(info?.images ?? []);
   const runningCount = $derived(containers.filter(isRunning).length);
   const groups = $derived(groupContainers(containers));
   const hasProjects = $derived(groups.some((g) => g.key !== ''));
+  const projects = $derived(groups.filter((g) => g.key !== ''));
   const updatable = $derived(containers.filter((c) => c.upd === 'new'));
   const offline = $derived(loadState === 'offline' || !server.online);
   const readOnly = $derived(offline || loadState === 'disabled');
@@ -318,6 +324,21 @@
     ];
   }
 
+  /** Items of the actions menu of a compose project (phones). */
+  function projectMenu(g: ContainerGroup) {
+    const gb = readOnly || busy === `group:${g.key}`;
+    const items = [{ key: 'update', label: $tStore('docker.grp.update'), disabled: readOnly, onselect: () => requestUpdateProject(g) }];
+    if (g.running > 0) items.push({ key: 'restart', label: $tStore('docker.grp.restart'), disabled: gb, onselect: () => void projectAction(g, 'restart') });
+    if (g.running < g.items.length) items.push({ key: 'start', label: $tStore('docker.grp.start'), disabled: gb, onselect: () => void projectAction(g, 'start') });
+    items.push({ key: 'logs', label: $tStore('docker.grp.logs'), disabled: readOnly, onselect: () => openProjectLogs(g) });
+    return items;
+  }
+
+  /** CPU and memory on one line of a phone row. */
+  function usageText(c: DockerContainer): string {
+    return isRunning(c) ? `${cpuText(c)} · ${formatBytes(c.mem_used)}` : '—';
+  }
+
   /** An image in use cannot be removed (the item is disabled). */
   function imageMenu(image: DockerImage) {
     return [{ key: 'remove', label: $tStore('docker.act.remove'), disabled: readOnly || image.used, onselect: () => requestImageRemove(image) }];
@@ -366,6 +387,29 @@
 </script>
 
 <div class="docker">
+  {#if $isPhone}
+    <div class="pr-seg" role="group" aria-label={$tStore('docker.sectionsLabel')}>
+      <button type="button" aria-pressed={sec === 'containers'} onclick={() => (section = 'containers')}>{$tStore('docker.tabs.containers')} {containers.length}</button>
+      <button type="button" aria-pressed={sec === 'images'} onclick={() => (section = 'images')}>{$tStore('docker.tabs.images')} {images.length}</button>
+      <button type="button" aria-pressed={sec === 'compose'} onclick={() => (section = 'compose')}>{$tStore('docker.tabs.compose')} {projects.length}</button>
+    </div>
+    {#if info?.available && sec === 'containers'}
+      <div class="card stack mchk">
+        <span class="small muted" title={$tStore('docker.check.help')}>
+          {checkedText(info.checked_at)}{#if info.checked_at && updatable.length > 0}
+            · {$tStore('docker.check.avail', { n: updatable.length })}{/if}
+        </span>
+        <div class="row nowrap">
+          <button class="btn grow" type="button" disabled={readOnly || checking} onclick={() => void checkImages()}>
+            {checking ? $tStore('docker.check.busy') : $tStore('docker.check.btn')}
+          </button>
+          <button class="btn primary grow" type="button" disabled={readOnly || updatable.length === 0} onclick={requestUpdateMarked}>
+            {$tStore('docker.updateMarked')}
+          </button>
+        </div>
+      </div>
+    {/if}
+  {:else}
   <div class="toolbar">
     <div class="row" role="group" aria-label={$tStore('docker.sectionsLabel')}>
       <button class="chip" type="button" aria-pressed={section === 'containers'} onclick={() => (section = 'containers')}>
@@ -377,7 +421,7 @@
     </div>
     {#if info?.available}
       <div class="row checkbar">
-        {#if section === 'containers'}
+        {#if sec === 'containers'}
           <span class="small muted" title={$tStore('docker.check.help')}>
             {checkedText(info.checked_at)}{#if info.checked_at && updatable.length > 0}
               · {$tStore('docker.check.avail', { n: updatable.length })}{/if}
@@ -394,6 +438,7 @@
       </div>
     {/if}
   </div>
+  {/if}
 
   {#if offline}
     <p class="notice" role="status">{$tStore('docker.offline')}</p>
@@ -416,6 +461,80 @@
     {/if}
   {:else if !info.available}
     <p class="muted">{$tStore('docker.unavailable')}</p>
+  {:else if $isPhone}
+    {#if sec === 'containers'}
+      {#if containers.length === 0}
+        <p class="muted">{$tStore('docker.noContainers')}</p>
+      {:else}
+        <div class="pr-list">
+          {#each containers as c (c.id)}
+            {@const running = isRunning(c)}
+            <div class="pr-li" class:bad={stateTone(c.state) === 'crit'} class:wn={c.state === 'restarting'} class:hl={c.upd === 'new'}>
+              <div class="pr-mn">
+                <div class="pr-l1">
+                  <b>{c.name}</b>
+                  <span class="pr-tag {stateTone(c.state)}">{c.state}</span>
+                  {#if c.upd === 'new'}<span class="pr-tag warn">{$tStore('docker.upd.new')}</span>{/if}
+                </div>
+                <div class="pr-l2 mono">{c.image}</div>
+                <div class="pr-l2">{usageText(c)} · {$tStore('docker.mob.ports')} {c.ports.length ? c.ports.join(', ') : '—'}</div>
+                <div class="pr-l2">
+                  {c.status}
+                  {#if c.upd === 'current'}· {$tStore('docker.upd.current')}
+                  {:else if c.upd === 'unknown'}· {$tStore('docker.upd.unknown')}
+                  {:else if c.upd === 'new' && c.upd_local && c.upd_remote}· <span class="mono">{c.upd_local} → {c.upd_remote}</span>{/if}
+                  {#if c.project}· compose: {c.project}{/if}
+                </div>
+              </div>
+              <RowMenu label={$tStore('docker.menu')} title={c.name} items={containerMenu(c, running)} disabled={readOnly} />
+            </div>
+          {/each}
+        </div>
+      {/if}
+    {:else if sec === 'images'}
+      {#if images.length === 0}
+        <p class="muted">{$tStore('docker.noImages')}</p>
+      {:else}
+        <div class="pr-list">
+          {#each images as img (img.id)}
+            {@const tags = img.repo_tags ?? []}
+            <div class="pr-li">
+              <div class="pr-mn">
+                <div class="pr-l1">
+                  <b class="mono">{imageTitle(img)}</b>
+                  {#if img.used}<span class="pr-tag acc">{$tStore('docker.used')}</span>{/if}
+                </div>
+                {#if tags.length > 1}<div class="pr-l2 mono">{tags.slice(1).join(', ')}</div>{/if}
+                <div class="pr-l2"><span class="mono">{shortId(img.id)}</span> · {formatBytes(img.size)}{#if img.created} · {formatDateTime(img.created, $locale)}{/if}</div>
+              </div>
+              <RowMenu label={$tStore('docker.menu')} title={imageTitle(img)} items={imageMenu(img)} disabled={readOnly} />
+            </div>
+          {/each}
+        </div>
+      {/if}
+      <div class="card">{@render pullForm()}</div>
+    {:else if projects.length === 0}
+      <p class="muted">{$tStore('docker.mob.noCompose')}</p>
+    {:else}
+      <div class="pr-list">
+        {#each projects as g (g.key)}
+          <div class="pr-li" class:hl={g.updatable > 0}>
+            <div class="pr-mn">
+              <div class="pr-l1">
+                <b>{g.key}</b>
+                {#if g.updatable > 0}<span class="pr-tag warn">{$tStore('docker.grp.updatable', { n: g.updatable })}</span>{/if}
+              </div>
+              <div class="pr-l2">
+                {$tStore('docker.grp.count', { n: g.items.length })} ·
+                {g.running === g.items.length ? $tStore('docker.grp.allRunning') : $tStore('docker.grp.running', { running: g.running, total: g.items.length })}
+              </div>
+              {#if g.file}<div class="pr-l2 mono">{g.file}</div>{/if}
+            </div>
+            <RowMenu label={$tStore('docker.menu')} title={g.key} items={projectMenu(g)} disabled={readOnly} />
+          </div>
+        {/each}
+      </div>
+    {/if}
   {:else if section === 'containers'}
     {#if containers.length === 0}
       <p class="muted">{$tStore('docker.noContainers')}</p>
@@ -503,6 +622,11 @@
       </div>
     {/if}
 
+    {@render pullForm()}
+  {/if}
+</div>
+
+{#snippet pullForm()}
     <form
       class="pull"
       onsubmit={(e) => {
@@ -527,8 +651,7 @@
         <p class="error" role="alert">{pullError}</p>
       {/if}
     </form>
-  {/if}
-</div>
+{/snippet}
 
 {#snippet containerTable(list: DockerContainer[])}
   <div class="tablewrap">
@@ -585,7 +708,7 @@
 {#if stream}
   {@const s = stream}
   <div class="wide">
-    <Modal title={s.title} labelId="docker-stream-title" onclose={closeStream}>
+    <Modal title={s.title} labelId="docker-stream-title" onclose={closeStream} wide={$isPhone}>
       <div class="row between">
         <span class="small muted">{$tStore(`docker.stream.${s.state}`)}</span>
         {#if s.kind === 'logs'}
@@ -966,6 +1089,42 @@
       flex: none;
       width: auto;
       margin-left: auto;
+    }
+  }
+
+  /* Phones: the lists are rows (see ui/phone-rows.css); logs fill the sheet. */
+  @media (max-width: 720px) {
+    .mchk {
+      gap: 8px;
+    }
+
+    .nowrap {
+      flex-wrap: nowrap;
+    }
+
+    .grow {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .pull {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .pull-field {
+      flex: none;
+    }
+
+    .wide :global(.dialog) {
+      max-width: none;
+    }
+
+    .logpanel {
+      flex: 1 1 auto;
+      height: auto;
+      min-height: 55dvh;
+      font-size: 11.5px;
     }
   }
 </style>

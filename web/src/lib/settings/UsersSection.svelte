@@ -5,6 +5,8 @@
   import { showToast } from '../toast';
   import { formatDateTime } from '../server/format';
   import AccessEditor from './AccessEditor.svelte';
+  import RowMenu from '../ui/RowMenu.svelte';
+  import { isPhone } from '../ui/viewport';
 
   let { onauthlost }: { onauthlost: () => void } = $props();
 
@@ -104,6 +106,16 @@
       : t('users.accessSummaryAud', undefined, { n });
   }
 
+  /** The row actions of a user in the sheet on phones. */
+  function menu(u: UserRow) {
+    return [
+      { key: 'access', label: $tr('users.access'), onselect: () => startEdit(u) },
+      { key: 'password', label: $tr('users.reset'), onselect: () => ask('password', u) },
+      { key: 'reset2fa', label: $tr('users.reset2fa'), disabled: !u.totp_enabled && u.passkeys === 0, onselect: () => ask('reset2fa', u) },
+      { key: 'delete', label: $tr('users.delete'), onselect: () => ask('delete', u) },
+    ];
+  }
+
   function ask(kind: Action['kind'], user: UserRow): void {
     editing = null;
     action = { kind, user };
@@ -182,7 +194,9 @@
             {#if u.passkeys > 0}<span class="badge good">{$tr('users.passkeys', { n: u.passkeys })}</span>{/if}
             <span class="muted small">{$tr('users.created', { date: formatDateTime(u.created_at, $locale) })}</span>
           </div>
-          {#if !u.current}
+          {#if !u.current && $isPhone}
+            <RowMenu label={$tr('docker.menu')} title={u.login} items={menu(u)} />
+          {:else if !u.current}
             <div class="row acts">
               <button class="btn sm" type="button" onclick={() => startEdit(u)}>{$tr('users.access')}</button>
               <button class="btn sm" type="button" onclick={() => ask('password', u)}>{$tr('users.reset')}</button>
@@ -305,5 +319,37 @@
     flex: 1 0 100%;
     padding: 12px;
     border: 2px solid var(--line);
+  }
+
+  /* Phones: every account is a card, its actions are in a sheet, the form buttons are one under another. */
+  @media (max-width: 720px) {
+    .list {
+      gap: 12px;
+    }
+
+    .user {
+      flex-wrap: wrap;
+      padding: 10px 6px 10px 12px;
+      background: var(--surface);
+      border: 2px solid var(--line);
+      box-shadow: 3px 3px 0 var(--shade);
+    }
+
+    .info {
+      flex: 1 1 0;
+    }
+
+    .confirm {
+      margin-right: 6px;
+    }
+
+    .users :global(.row.end) {
+      flex-direction: column-reverse;
+      align-items: stretch;
+    }
+
+    .users :global(.row.end > .btn) {
+      width: 100%;
+    }
   }
 </style>

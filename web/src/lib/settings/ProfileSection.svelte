@@ -481,4 +481,43 @@
     flex: 1;
     min-width: 0;
   }
+
+  /* Phones: one column of cards, full-width buttons one under another. */
+  @media (max-width: 720px) {
+    .profile {
+      gap: 12px;
+    }
+
+    .who {
+      font-size: 20px;
+    }
+
+    .profile .row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .profile .row > .btn {
+      width: 100%;
+    }
+
+    .add .input,
+    .add .btn {
+      height: auto;
+      min-height: 44px;
+    }
+
+    .pk {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .pk .btn {
+      width: 100%;
+    }
+
+    .codes {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
 </style>

@@ -2,6 +2,7 @@
   import type { UpdateStep, UpdatesInfo } from '../../api';
   import Select from '../ui/Select.svelte';
   import Modal from '../Modal.svelte';
+  import { isPhone } from '../ui/viewport';
   import { locale, tr as trans } from '../../i18n';
   import { RUN_VISIBLE_SEC, SERVER_STEPS, fmtDateTime } from './format';
 
@@ -101,12 +102,19 @@
     <button class="btn sm" type="button" disabled={busy || checking} onclick={oncheck}>
       {checking ? $trans('upd.srv.checking') : $trans('upd.srv.check')}
     </button>
-    {#if canUpdate}
+    {#if canUpdate && !$isPhone}
       <button class="btn sm primary" type="button" disabled={busy} onclick={() => (confirmOpen = true)}>
         {$trans('upd.srv.update', { version: available ?? '' })}
       </button>
     {/if}
   </div>
+  {#if canUpdate && $isPhone}
+    <div class="upd-pin">
+      <button class="btn primary" type="button" disabled={busy} onclick={() => (confirmOpen = true)}>
+        {$trans('upd.srv.update', { version: available ?? '' })}
+      </button>
+    </div>
+  {/if}
   {#if noUpdater}
     <p class="upd-hint">{$trans('upd.srv.noUpdater')}</p>
   {/if}
@@ -145,7 +153,7 @@
     <p class="upd-modal-text">{$trans('upd.confirm.text1')}</p>
     <p class="upd-modal-text">{$trans('upd.confirm.text2')}</p>
     <p class="upd-modal-text">{$trans('upd.confirm.text3')}</p>
-    <div class="upd-acts upd-acts-end">
+    <div class="upd-acts upd-acts-end row end">
       <button class="btn" type="button" onclick={() => (confirmOpen = false)}>{$trans('upd.cancel')}</button>
       <button class="btn primary" type="button" onclick={confirmUpdate}>{$trans('upd.confirm.ok')}</button>
     </div>

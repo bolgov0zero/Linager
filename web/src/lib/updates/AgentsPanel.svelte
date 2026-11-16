@@ -156,7 +156,7 @@
               <div class="upd-name">{agent.name}</div>
               <div class="upd-sub">{agent.os} · {agent.address}</div>
             </td>
-            <td class="upd-mono">{agent.version}</td>
+            <td class="upd-mono" data-label={$trans('upd.agents.colVersion')}>{agent.version}</td>
             <td>
               {#if agent.status === 'current'}
                 <span class="upd-badge ok">{$trans('upd.ag.current')}</span>

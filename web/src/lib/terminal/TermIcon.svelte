@@ -1,6 +1,6 @@
 <script lang="ts">
   /** Pixel icons for the terminal buttons on phones, drawn on a 16x16 grid like the logo. */
-  let { name }: { name: 'copy' | 'paste' | 'window' | 'close' } = $props();
+  let { name }: { name: 'copy' | 'paste' | 'window' | 'close' | 'bolt' } = $props();
 </script>
 
 <svg viewBox="0 0 16 16" width="18" height="18" shape-rendering="crispEdges" fill="currentColor" aria-hidden="true">
@@ -26,6 +26,14 @@
     <rect x="1" y="2" width="2" height="12" />
     <rect x="13" y="2" width="2" height="12" />
     <rect x="1" y="12" width="14" height="2" />
+  {:else if name === 'bolt'}
+    <rect x="9" y="1" width="3" height="2" />
+    <rect x="8" y="3" width="3" height="2" />
+    <rect x="7" y="5" width="3" height="2" />
+    <rect x="4" y="7" width="8" height="2" />
+    <rect x="6" y="9" width="3" height="2" />
+    <rect x="5" y="11" width="3" height="2" />
+    <rect x="4" y="13" width="3" height="2" />
   {:else}
     <rect x="3" y="3" width="2" height="2" />
     <rect x="5" y="5" width="2" height="2" />

@@ -2,6 +2,7 @@
   import { tr } from '../../i18n';
   import EditorWindowView from './EditorWindowView.svelte';
   import TermWindowView from './TermWindowView.svelte';
+  import { viewBox } from './vv';
   import { focusTermWindow, termWindows, updateTermWindow } from './windows';
 
   /** The administrator, or an operator who was given the Users module, may pick the account of a shell. */
@@ -35,7 +36,7 @@
 <svelte:window onresize={clampAll} />
 
 {#if $termWindows.length > 0}
-  <div class="layer">
+  <div class="layer" class:idle={topKey === null} class:kbd={$viewBox.kbd}>
     {#each $termWindows as win (win.key)}
       {#if win.kind === 'editor'}
         <EditorWindowView {win} top={win.key === topKey} />
@@ -91,5 +92,43 @@
 
   .btn.off {
     color: var(--muted);
+  }
+
+  /* Phones: the dock is a strip along the bottom edge, under the full-screen windows (above the bar while every
+     window is minimized, so the bar stays reachable) and hidden while the keyboard is up. */
+  .layer {
+    --dock-h: calc(52px + var(--safe-b));
+  }
+
+  @media (max-width: 720px) {
+    .dock {
+      left: 0;
+      right: 0;
+      bottom: 0;
+      flex-wrap: nowrap;
+      gap: 4px;
+      max-width: none;
+      overflow-x: auto;
+      padding: 4px 6px calc(4px + var(--safe-b));
+      background: var(--surface);
+      border-top: 2px solid var(--line);
+    }
+
+    .layer.idle .dock {
+      bottom: calc(var(--bar-h) + var(--safe-b));
+    }
+
+    .layer.kbd .dock {
+      display: none;
+    }
+
+    .btn.sm {
+      flex: 1 1 0;
+      max-width: none;
+      min-width: 96px;
+      padding: 0 8px;
+      font-size: 13px;
+      box-shadow: none;
+    }
   }
 </style>

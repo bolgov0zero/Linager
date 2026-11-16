@@ -4,6 +4,9 @@
   import { tr as tStore } from '../../../i18n';
   import Modal from '../../Modal.svelte';
   import ActionMenu from '../../ui/ActionMenu.svelte';
+  import ContextMenu, { type MenuItem } from '../../ui/ContextMenu.svelte';
+  import PixIcon from '../../ui/PixIcon.svelte';
+  import { isPhone } from '../../ui/viewport';
   import { showToast } from '../../toast';
   import {
     confirmText,
@@ -43,6 +46,8 @@
   let query = $state('');
   let busy = $state<string | null>(null);
   let ask = $state<{ unit: string; action: ServiceAction } | null>(null);
+  /** Phone layout: the action sheet of one service. */
+  let sheet = $state<{ label: string; items: MenuItem[] } | null>(null);
 
   let reqSeq = 0;
 
@@ -152,19 +157,40 @@
       },
     ];
   }
+
+  function openSheet(unit: ServiceUnit, kind: StateKind): void {
+    sheet = {
+      label: unit.name,
+      items: menuItems(unit, kind).map((i) => ({ ...i, danger: i.key === 'stop' })),
+    };
+  }
 </script>
 
 <div class="svc">
-  <div class="toolbar">
-    <div class="filters" role="group" aria-label={$tStore('svc.filter.all')}>
-      {#each FILTERS as f (f)}
-        <button class="chip" type="button" aria-pressed={filter === f} onclick={() => (filter = f)}>
-          {$tStore(FILTER_KEYS[f])} <span class="count">{counts[f]}</span>
-        </button>
-      {/each}
+  {#if $isPhone}
+    <div class="stick">
+      <input class="input" type="search" placeholder={$tStore('svc.search')} aria-label={$tStore('svc.search')} bind:value={query} />
+      <div class="seg" role="group" aria-label={$tStore('svc.filter.all')}>
+        {#each FILTERS as f (f)}
+          <button type="button" aria-pressed={filter === f} onclick={() => (filter = f)}>
+            {$tStore(FILTER_KEYS[f])} {counts[f]}
+          </button>
+        {/each}
+      </div>
     </div>
-    <input class="input search" type="search" placeholder={$tStore('svc.search')} aria-label={$tStore('svc.search')} bind:value={query} />
-  </div>
+  {:else}
+    <div class="toolbar">
+      <div class="filters" role="group" aria-label={$tStore('svc.filter.all')}>
+        {#each FILTERS as f (f)}
+          <button class="chip" type="button" aria-pressed={filter === f} onclick={() => (filter = f)}>
+            {$tStore(FILTER_KEYS[f])} <span class="count">{counts[f]}</span>
+          </button>
+        {/each}
+      </div>
+      <input class="input search" type="search" placeholder={$tStore('svc.search')} aria-label={$tStore('svc.search')} bind:value={query} />
+    </div>
+
+  {/if}
 
   {#if loadState === 'offline'}
     <p class="notice" role="status">{$tStore('svc.offline')}</p>
@@ -184,52 +210,85 @@
   {:else if units.length === 0 && loadState === 'ready'}
     <p class="muted">{$tStore('svc.empty')}</p>
   {:else}
-    <p class="meta muted small">{$tStore('svc.count', { n: units.length })}</p>
+    {#if !$isPhone}<p class="meta muted small">{$tStore('svc.count', { n: units.length })}</p>{/if}
 
     {#if shown.length === 0}
       <p class="muted">{$tStore('svc.noMatch')}</p>
     {:else}
-      <div class="table-wrap">
-        <table class="tbl">
-          <thead>
-            <tr>
-              <th scope="col">{$tStore('svc.col.name')}</th>
-              <th scope="col">{$tStore('svc.col.state')}</th>
-              <th scope="col">{$tStore('svc.col.autostart')}</th>
-              <th scope="col" class="right">{$tStore('svc.col.actions')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each shown as unit (unit.name)}
-              {@const kind = stateKind(unit)}
-              {@const isIgnored = ignored.includes(unit.name)}
-              <tr class:failed={kind === 'failed' && !isIgnored}>
-                <td>
-                  <div class="name">
-                    <span class="unit mono">{unit.name}</span>
-                    {#if unit.description}<span class="desc muted small">{unit.description}</span>{/if}
-                  </div>
-                </td>
-                <td>
-                  <span class="badge state {kind}">{stateLabel(unit)}</span>
-                  {#if isIgnored}<span class="badge state other" title={$tStore('svc.ignoreHint')}>{$tStore('svc.badge.ignored')}</span>{/if}
-                </td>
-                <td>
-                  <span class="badge auto {unit.enabled === 'enabled' ? 'on' : unit.enabled === 'masked' ? 'warn' : 'off'}">
-                    {autoLabel(unit.enabled)}
-                  </span>
-                </td>
-                <td class="actions">
-                  <ActionMenu label={$tStore('svc.menu')} items={menuItems(unit, kind)} disabled={busy !== null} />
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
+      {#if $isPhone}
+      <div class="list">
+        {#each shown as unit (unit.name)}
+          {@const kind = stateKind(unit)}
+          {@const isIgnored = ignored.includes(unit.name)}
+          {@const fail = kind === 'failed' && !isIgnored}
+          <div class="li" class:bad={fail}>
+            <div class="mn">
+              <div class="l1"><b>{unit.name}</b></div>
+              {#if unit.description}<div class="l2">{unit.description}</div>{/if}
+              {#if unit.enabled !== 'enabled' && unit.enabled !== 'static'}
+                <div class="l2">{$tStore('svc.col.autostart')}: {autoLabel(unit.enabled)}</div>
+              {/if}
+            </div>
+            <span class="badge state {kind}">{stateLabel(unit)}</span>
+            {#if isIgnored}<span class="badge state other">{$tStore('svc.badge.ignored')}</span>{/if}
+            <button class="more" type="button" aria-label="{$tStore('svc.menu')}: {unit.name}" disabled={busy !== null} onclick={() => openSheet(unit, kind)}>
+              <PixIcon name="more" size={18} />
+            </button>
+            {#if fail}
+              <button class="btn restart" type="button" disabled={unreachable || busy !== null} onclick={() => request(unit.name, 'restart')}>
+                {$tStore('svc.act.restart')}
+              </button>
+            {/if}
+          </div>
+        {/each}
       </div>
+      {:else}
+        <div class="table-wrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th scope="col">{$tStore('svc.col.name')}</th>
+                <th scope="col">{$tStore('svc.col.state')}</th>
+                <th scope="col">{$tStore('svc.col.autostart')}</th>
+                <th scope="col" class="right">{$tStore('svc.col.actions')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each shown as unit (unit.name)}
+                {@const kind = stateKind(unit)}
+                {@const isIgnored = ignored.includes(unit.name)}
+                <tr class:failed={kind === 'failed' && !isIgnored}>
+                  <td>
+                    <div class="name">
+                      <span class="unit mono">{unit.name}</span>
+                      {#if unit.description}<span class="desc muted small">{unit.description}</span>{/if}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge state {kind}">{stateLabel(unit)}</span>
+                    {#if isIgnored}<span class="badge state other" title={$tStore('svc.ignoreHint')}>{$tStore('svc.badge.ignored')}</span>{/if}
+                  </td>
+                  <td>
+                    <span class="badge auto {unit.enabled === 'enabled' ? 'on' : unit.enabled === 'masked' ? 'warn' : 'off'}">
+                      {autoLabel(unit.enabled)}
+                    </span>
+                  </td>
+                  <td class="actions">
+                    <ActionMenu label={$tStore('svc.menu')} items={menuItems(unit, kind)} disabled={busy !== null} />
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {/if}
     {/if}
   {/if}
 </div>
+
+{#if sheet}
+  <ContextMenu x={0} y={0} items={sheet.items} label={sheet.label} onclose={() => (sheet = null)} />
+{/if}
 
 {#if ask}
   {@const pending = ask}
@@ -402,67 +461,125 @@
     margin: 0;
   }
 
-  @media (max-width: 600px) {
-    .search {
-      max-width: none;
-      width: 100%;
-    }
+  /* ---- Phones: search and filter pinned under the header, one row per service ---- */
+  .stick {
+    position: sticky;
+    top: calc(var(--top-h) - 8px);
+    z-index: 9;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 0;
+    background: var(--bg);
   }
 
-  /* Phones: every service becomes a small block instead of a wide table. */
-  @media (max-width: 600px) {
-    .tbl {
-      min-width: 0;
-    }
+  .seg {
+    display: flex;
+    background: var(--surface);
+    border: 2px solid var(--line);
+    box-shadow: 3px 3px 0 var(--shade);
+  }
 
-    .tbl thead {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip: rect(0 0 0 0);
-    }
+  .seg button {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    padding: 0 2px;
+    overflow: hidden;
+    background: none;
+    border: 0;
+    border-left: 2px solid var(--line);
+    color: var(--ink);
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: 12.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-    .tbl,
-    .tbl tbody {
-      display: block;
-    }
+  .seg button:first-child {
+    border-left: 0;
+  }
 
-    .tbl tr {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 6px 8px;
-      padding: 8px 4px;
-      border-bottom: 1px dashed var(--seg-off);
-    }
+  .seg button[aria-pressed='true'] {
+    background: var(--ink);
+    color: var(--surface);
+  }
 
-    .tbl td {
-      padding: 0;
-      border: 0;
-    }
+  .list {
+    background: var(--surface);
+    border: 2px solid var(--line);
+    box-shadow: 3px 3px 0 var(--shade);
+  }
 
-    .tbl td:first-child {
-      flex: 1 0 100%;
-      min-width: 0;
-    }
+  .li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    min-height: 56px;
+    padding: 6px 4px 6px 12px;
+    border-top: 2px dashed var(--seg-off);
+  }
 
-    .tbl td.actions {
-      flex: none;
-      width: auto;
-      margin-left: auto;
-    }
+  .li:first-child {
+    border-top: 0;
+  }
 
-    .tbl tr.failed {
-      background: color-mix(in srgb, var(--crit) 8%, transparent);
-    }
+  .li.bad {
+    box-shadow: inset 4px 0 0 var(--crit);
+  }
 
-    .tbl tr.failed td {
-      background: none;
-    }
+  .li .mn {
+    flex: 1;
+    min-width: 0;
+  }
 
-    .name {
-      min-width: 0;
-    }
+  .li .l1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .li .l1 b {
+    font-weight: 400;
+    font-size: 14.5px;
+  }
+
+  .li .l2 {
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 11.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .li .badge {
+    flex: none;
+  }
+
+  .more {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    background: var(--surface);
+    border: 2px solid var(--line);
+    box-shadow: 2px 2px 0 var(--shade);
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .more:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .restart {
+    flex: 1 0 100%;
+    margin: 0 4px 4px 0;
   }
 </style>

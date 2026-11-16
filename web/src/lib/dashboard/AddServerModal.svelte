@@ -3,6 +3,7 @@
   import { api, ApiError, isUnauthorized, type AvailableServer, type ConnectInfo } from '../../api';
   import { t, tr } from '../../i18n';
   import Modal from '../Modal.svelte';
+  import { isPhone } from '../ui/viewport';
   import { showToast } from '../toast';
 
   let {
@@ -103,7 +104,7 @@
   });
 </script>
 
-<Modal title={$tr('dash.addServer')} labelId="add-server-title" {onclose}>
+<Modal title={$tr('dash.addServer')} labelId="add-server-title" {onclose} wide={$isPhone}>
   <section class="block">
     <h3 class="section-title">{$tr('dash.available')}</h3>
     {#if !loaded}
@@ -225,5 +226,30 @@
   .pairing {
     border-top: 2px dashed var(--seg-off);
     padding-top: 16px;
+  }
+
+  /* Phones: a full sheet, the buttons of the sections are across the full width. */
+  @media (max-width: 720px) {
+    .item .btn {
+      font-size: 14px;
+    }
+
+    .pairing > .row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .pairing > .row > .btn {
+      width: 100%;
+    }
+
+    .kv {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2px;
+    }
+
+    .kv dd {
+      margin-bottom: 6px;
+    }
   }
 </style>

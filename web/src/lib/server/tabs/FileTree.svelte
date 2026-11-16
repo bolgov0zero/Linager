@@ -98,7 +98,7 @@
       aria-selected={row.path === path}
       aria-expanded={leaf ? undefined : open}
       class:current={row.path === path}
-      style:padding-left="{row.depth * 14}px"
+      style:--depth={row.depth}
     >
       <button
         class="twist"
@@ -128,6 +128,7 @@
     display: flex;
     align-items: center;
     min-width: 0;
+    padding-left: calc(var(--depth) * 14px);
     white-space: nowrap;
   }
 
@@ -185,5 +186,39 @@
   .text {
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* Phones (a list in a sheet): every folder is a full-width row of at least 46 px, indented by its depth. */
+  @media (max-width: 720px) {
+    .tree {
+      font-size: 15px;
+    }
+
+    li {
+      min-height: 46px;
+      padding-left: calc(4px + var(--depth) * 18px);
+      border-top: 2px dashed var(--seg-off);
+    }
+
+    li:first-child {
+      border-top: 0;
+    }
+
+    .twist {
+      width: 36px;
+      height: 44px;
+      font-size: 16px;
+    }
+
+    .label {
+      flex: 1;
+      min-height: 44px;
+      padding: 0 8px;
+    }
+
+    .icon {
+      width: 12px;
+      height: 12px;
+    }
   }
 </style>

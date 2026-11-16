@@ -34,6 +34,9 @@
   --c4: #1e8a4b;
   --c5: #1f8aa0;
   --c6: #6b7488;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+  --bar-h: 64px;
   --font-display: "Medeo Pixel", "Medeo Mono", ui-monospace, Menlo, Consolas, monospace;
   --font-body: "Medeo Mono", ui-monospace, Menlo, Consolas, monospace;
   font-variation-settings: "ELSH" 1;
@@ -294,4 +297,100 @@ input[type='checkbox']:focus-visible {
   color: var(--surface);
   border: 2px solid var(--line);
   box-shadow: 3px 3px 0 var(--shade);
+}
+
+/* ── Phone layout (up to 720 px; the same breakpoint as PHONE_MAX in lib/ui/viewport.ts) ──
+   One column, a pinned top bar and a bottom bar, touch-sized controls (44 px), 16 px fields so iOS does not zoom,
+   menus and dialogs as sheets from the bottom edge. */
+.sheet-scrim {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  :root {
+    --top-h: calc(56px + var(--safe-t));
+  }
+
+  .btn,
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 14px;
+  }
+
+  .input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  input[type='checkbox'] {
+    width: 22px;
+    height: 22px;
+  }
+
+  .check {
+    min-height: 44px;
+  }
+
+  .card {
+    padding: 12px;
+    box-shadow: 3px 3px 0 var(--shade);
+  }
+
+  .toast {
+    left: 12px;
+    right: 12px;
+    bottom: calc(var(--bar-h) + var(--safe-b) + 12px);
+    max-width: none;
+  }
+
+  /* Drop-down lists (Select, the action menus, context menus) open as a sheet from the bottom edge. */
+  .sheet-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 59;
+    background: color-mix(in srgb, var(--ink) 50%, transparent);
+  }
+
+  .sel-list {
+    position: fixed !important;
+    inset: auto 0 0 0 !important;
+    z-index: 60 !important;
+    width: auto !important;
+    max-height: 72dvh !important;
+    margin: 0 !important;
+    padding: 0 0 var(--safe-b) !important;
+    transform: none !important;
+    border-width: 2px 0 0;
+    box-shadow: 0 -4px 0 var(--shade);
+    font-size: 15px !important;
+  }
+
+  .sel-list[aria-label]::before {
+    content: attr(aria-label);
+    position: sticky;
+    top: 0;
+    display: block;
+    padding: 12px 14px;
+    background: var(--surface);
+    border-bottom: 2px solid var(--line);
+    font-family: var(--font-display);
+    font-size: 18px;
+  }
+
+  .sel-list li {
+    display: flex;
+    align-items: center;
+    min-height: 50px;
+    padding: 0 14px !important;
+    border-top: 2px dashed var(--seg-off);
+    white-space: normal !important;
+  }
+
+  .sel-list li:first-child {
+    border-top: 0;
+  }
 }

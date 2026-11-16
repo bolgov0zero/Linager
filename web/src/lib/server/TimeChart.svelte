@@ -10,6 +10,7 @@
 
 <script lang="ts">
   import { tr } from '../../i18n';
+  import { isPhone } from '../ui/viewport';
   import type { ChartEvent } from './model';
 
   // Time-series chart for the metrics tab. The x axis always covers the whole selected period
@@ -54,10 +55,10 @@
     onhover?: (ts: number | null) => void;
   } = $props();
 
-  const H = 180;
+  const H = $derived($isPhone ? 150 : 180);
   const PAD_T = 8;
   const PAD_B = 34; // x labels and event markers
-  const Y1 = H - PAD_B;
+  const Y1 = $derived(H - PAD_B);
 
   let width = $state(600);
   let hover = $state<number | null>(null); // index into `times`
@@ -187,7 +188,9 @@
     onhover?.(hover === null ? null : times[hover]);
   }
 
-  function onLeave(): void {
+  function onLeave(event?: PointerEvent): void {
+    // A finger lifted: the values stay until the next touch (the tip is the only way to read them on a phone).
+    if (event?.pointerType === 'touch') return;
     hover = null;
     onhover?.(null);
   }
@@ -213,6 +216,7 @@
       role="img"
       aria-label={label}
       onpointermove={onMove}
+      onpointerdown={(e) => e.pointerType === 'touch' && onMove(e)}
       onpointerleave={onLeave}
     >
       {#each scale.ticks as tv (tv)}

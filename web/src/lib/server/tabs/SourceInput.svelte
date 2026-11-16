@@ -156,4 +156,16 @@
     color: inherit;
     opacity: 0.8;
   }
+
+  @media (max-width: 720px) {
+    .src {
+      display: flex;
+      width: 100%;
+    }
+
+    .opt {
+      min-height: 44px;
+      align-items: center;
+    }
+  }
 </style>

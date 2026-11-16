@@ -25,13 +25,23 @@ import enSec from './locales/en.sec.json';
 import enDisk from './locales/en.disk.json';
 import ruUsers from './locales/ru.users.json';
 import enUsers from './locales/en.users.json';
+import ruMobA from './locales/ru.mobA.json';
+import enMobA from './locales/en.mobA.json';
+import ruMobB from './locales/ru.mobB.json';
+import enMobB from './locales/en.mobB.json';
+import ruMobC from './locales/ru.mobC.json';
+import enMobC from './locales/en.mobC.json';
+import ruMobD from './locales/ru.mobD.json';
+import enMobD from './locales/en.mobD.json';
+import ruMobile from './locales/ru.mobile.json';
+import enMobile from './locales/en.mobile.json';
 
 export type Locale = 'ru' | 'en';
 export type Vars = Record<string, string | number>;
 
 const dictionaries: Record<Locale, Record<string, string>> = {
-  ru: { ...ru, ...ruServer, ...ruTerm, ...ruMgmt, ...ruFiles, ...ruNet, ...ruFw, ...ruUpd, ...ruAudit, ...ruSettings, ...ruSec, ...ruDisk, ...ruUsers },
-  en: { ...en, ...enServer, ...enTerm, ...enMgmt, ...enFiles, ...enNet, ...enFw, ...enUpd, ...enAudit, ...enSettings, ...enSec, ...enDisk, ...enUsers },
+  ru: { ...ru, ...ruServer, ...ruTerm, ...ruMgmt, ...ruFiles, ...ruNet, ...ruFw, ...ruUpd, ...ruAudit, ...ruSettings, ...ruSec, ...ruDisk, ...ruUsers, ...ruMobile, ...ruMobA, ...ruMobB, ...ruMobC, ...ruMobD },
+  en: { ...en, ...enServer, ...enTerm, ...enMgmt, ...enFiles, ...enNet, ...enFw, ...enUpd, ...enAudit, ...enSettings, ...enSec, ...enDisk, ...enUsers, ...enMobile, ...enMobA, ...enMobB, ...enMobC, ...enMobD },
 };
 const STORAGE_KEY = 'linager.lang';
 const DEFAULT_LOCALE: Locale = 'ru';

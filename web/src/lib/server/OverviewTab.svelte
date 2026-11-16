@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Sample, ServerDetail } from '../../api';
   import { locale, tr } from '../../i18n';
+  import { isPhone } from '../ui/viewport';
   import Segments from '../ui/Segments.svelte';
   import MiniBars from './MiniBars.svelte';
   import { formatBytes, formatDateTime, formatLoad, formatPct, formatRate, formatUptime } from './format';
@@ -47,27 +48,45 @@
     <section class="card panel">
       <h3>{$tr('srv.ov.cpu')}</h3>
       <p class="big">{formatPct(sample?.cpu)}</p>
-      <MiniBars values={live.map((s) => s.cpu)} max={100} />
+      {#if $isPhone}
+        <Segments value={sample?.cpu ?? null} />
+      {:else}
+        <MiniBars values={live.map((s) => s.cpu)} max={100} />
+      {/if}
       <p class="small muted">{$tr('srv.ov.load', { values: sample ? formatLoad(sample.load) : '—' })}</p>
     </section>
 
     <section class="card panel">
       <h3>{$tr('srv.ov.ram')}</h3>
       <p class="big">{formatPct(sample?.mem_pct)} <span class="unit">· {formatBytes(sample?.mem_used)}</span></p>
-      <MiniBars values={live.map((s) => s.mem)} max={100} />
+      {#if $isPhone}
+        <Segments value={sample?.mem_pct ?? null} />
+      {:else}
+        <MiniBars values={live.map((s) => s.mem)} max={100} />
+      {/if}
       <p class="small muted">
         {$tr('srv.ov.memTotal', { total: formatBytes(sample?.mem_total), swap: formatBytes(sample?.swap_total) })}
       </p>
     </section>
 
     <section class="card panel">
-      <h3>{$tr('srv.ov.net')}</h3>
+      <h3>{$isPhone ? $tr('m.ov.rx') : $tr('srv.ov.net')}</h3>
       <p class="big">{formatRate(sample?.rx_bps)}</p>
       <MiniBars values={live.map((s) => s.rx)} max={netMax} />
-      <p class="small muted">{$tr('srv.ov.netOut', { rate: formatRate(sample?.tx_bps) })}</p>
+      {#if !$isPhone}
+        <p class="small muted">{$tr('srv.ov.netOut', { rate: formatRate(sample?.tx_bps) })}</p>
+      {/if}
     </section>
 
-    <section class="card panel">
+    {#if $isPhone}
+      <section class="card panel">
+        <h3>{$tr('m.ov.tx')}</h3>
+        <p class="big">{formatRate(sample?.tx_bps)}</p>
+        <MiniBars values={live.map((s) => s.tx)} max={netMax} color="var(--series-2, var(--accent))" />
+      </section>
+    {/if}
+
+    <section class="card panel disks">
       <h3>{$tr('srv.ov.disks')}</h3>
       {#each disks as d (d.mount)}
         <div class="disk">
@@ -87,7 +106,22 @@
   <div class="grid-bottom">
     <section class="card panel">
       <h3>{$tr('srv.ov.interfaces')}</h3>
-      {#if sample && sample.net.length > 0}
+      {#if sample && sample.net.length > 0 && $isPhone}
+        <ul class="nic-list">
+          {#each sample.net as nic (nic.iface)}
+            <li>
+              <div class="nic-main">
+                <b class="mono">{nic.iface}</b>
+                <span class="small muted mono">{nic.ip || '—'}{nic.up ? '' : ' · DOWN'}</span>
+              </div>
+              <div class="nic-rate small">
+                <span>↓ {formatRate(nic.rx_bps)}</span>
+                <span>↑ {formatRate(nic.tx_bps)}</span>
+              </div>
+            </li>
+          {/each}
+        </ul>
+      {:else if sample && sample.net.length > 0}
         <div class="table-wrap">
           <div class="grid-table" role="table">
             <div class="nrow head" role="row">
@@ -267,32 +301,95 @@
     overflow-wrap: anywhere;
   }
 
-  /* Phones: the four metric cards sit two by two and are much smaller. */
-  @media (max-width: 600px) {
+  /* Phones: the metric tiles sit two by two, disks and interfaces take the full width, "System" is a plain key/value list. */
+  .nic-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @media (max-width: 720px) {
+    .overview {
+      gap: 12px;
+    }
+
+    .grid-top,
+    .grid-bottom {
+      gap: 12px;
+    }
+
     .grid-top {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
     }
 
     .panel.card {
-      gap: 6px;
-      padding: 10px;
+      gap: 8px;
+    }
+
+    .panel.disks {
+      grid-column: 1 / -1;
+      gap: 8px;
+    }
+
+    .disk {
+      gap: 2px;
     }
 
     .panel h3 {
-      font-size: 12px;
+      font-size: 14px;
     }
 
     .big {
-      font-size: 20px;
+      font-size: 26px;
     }
 
     .unit {
-      font-size: 11px;
+      font-size: 12px;
     }
 
     .panel :global(.mini) {
-      height: 24px;
+      height: 32px;
+    }
+
+    .nic-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 52px;
+      padding: 6px 0;
+      border-top: 2px dashed var(--seg-off);
+    }
+
+    .nic-list li:first-child {
+      border-top: 0;
+    }
+
+    .nic-main,
+    .nic-rate {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .nic-rate {
+      align-items: flex-end;
+      white-space: nowrap;
+    }
+
+    .info {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+
+    .info > div {
+      min-height: 40px;
+      align-items: center;
+      border-top: 2px dashed var(--seg-off);
+    }
+
+    .info > div:first-child {
+      border-top: 0;
     }
   }
 </style>

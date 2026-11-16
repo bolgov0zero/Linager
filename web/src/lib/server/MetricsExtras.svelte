@@ -1,9 +1,15 @@
 <script lang="ts">
   import type { HistoryEvent, Period } from '../../api';
   import { locale, tr } from '../../i18n';
+  import { isPhone } from '../ui/viewport';
   import { formatDateTime, formatStep } from './format';
 
   let { events }: { events: HistoryEvent[] } = $props();
+
+  // On phones the list shows five entries and grows in place (no inner scroll).
+  const PHONE_ROWS = 5;
+  let expanded = $state(false);
+  const shown = $derived($isPhone && !expanded ? events.slice(0, PHONE_ROWS) : events);
 
   // Retention policy from the UI spec: precision per period.
   const POLICY: { periods: Period[]; step: number }[] = [
@@ -22,7 +28,7 @@
       <p class="small muted">{$tr('srv.events.none')}</p>
     {:else}
       <ul class="events">
-        {#each events as ev, i (i)}
+        {#each shown as ev, i (i)}
           <li>
             <time class="mono">{formatDateTime(ev.ts, $locale)}</time>
             <span class="tag" class:crit={ev.kind === 'reboot'}>{$tr(`srv.event.${ev.kind}`)}</span>
@@ -30,6 +36,11 @@
           </li>
         {/each}
       </ul>
+      {#if $isPhone && events.length > PHONE_ROWS}
+        <button class="btn more" type="button" aria-expanded={expanded} onclick={() => (expanded = !expanded)}>
+          {expanded ? $tr('m.events.less') : $tr('m.events.all', { n: events.length })}
+        </button>
+      {/if}
     {/if}
     <p class="hint">{$tr('srv.events.legend')}</p>
   </section>
@@ -139,5 +150,26 @@
     margin: 0;
     color: var(--muted);
     font-size: 12px;
+  }
+
+  @media (max-width: 720px) {
+    .extras {
+      gap: 12px;
+    }
+
+    .events {
+      max-height: none;
+      overflow: visible;
+      padding: 0;
+    }
+
+    .events li {
+      min-height: 44px;
+      border-bottom: 2px dashed var(--seg-off);
+    }
+
+    .more {
+      width: 100%;
+    }
   }
 </style>

@@ -113,4 +113,16 @@
     height: 36px;
     padding-block: 0;
   }
+
+  @media (max-width: 720px) {
+    .row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .row :global(.btn) {
+      height: auto;
+      min-height: 44px;
+    }
+  }
 </style>

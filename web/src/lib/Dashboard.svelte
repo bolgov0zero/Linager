@@ -12,7 +12,9 @@
   import ContextMenu, { type MenuItem } from './ui/ContextMenu.svelte';
   import DeleteServerModal from './DeleteServerModal.svelte';
   import Segments from './ui/Segments.svelte';
+  import PixIcon from './ui/PixIcon.svelte';
   import Select from './ui/Select.svelte';
+  import { isPhone } from './ui/viewport';
   import { openTermWindow } from './terminal/windows';
   import { showToast } from './toast';
 
@@ -87,6 +89,7 @@
   let loadFailed = $state(false);
   let filter = $state<Filter>('all');
   let query = $state('');
+  let searchOpen = $state(false);
   let view = $state<View>(readView());
   let now = $state(Date.now());
   /** A card removed from the dashboard whose API call waits for the undo window. */
@@ -474,10 +477,35 @@
   {:else if loadFailed && items.length === 0}
     <p class="error" role="alert">{$tr('dash.loadFailed')}</p>
   {:else}
-    <p class="muted small count">{countLabel}</p>
+    <div class="countrow">
+      <p class="muted small count">{countLabel}</p>
+      {#if $isPhone}
+        <button class="chip manage" type="button" onclick={() => (groupsOpen = true)}>{$tr('dash.group.manage')}</button>
+      {/if}
+    </div>
 
     <Summary summary={totals} />
 
+    {#if $isPhone}
+      <!-- Phone: one pinned row (filters, search, view); the group picker only when groups exist. -->
+      <div class="ptool">
+        <div class="prow">
+          <div class="pseg" role="group" aria-label={$tr('dash.filters')}>
+            <button class="chip" type="button" aria-pressed={filter === 'all'} onclick={() => (filter = 'all')}>{$tr('dash.filter.all')}</button>
+            <button class="chip" type="button" aria-pressed={filter === 'problems'} onclick={() => (filter = 'problems')}>{$tr('dash.filter.problems')}</button>
+            <button class="chip" type="button" aria-pressed={filter === 'offline'} onclick={() => (filter = 'offline')}>{$tr('dash.filter.offline')}</button>
+          </div>
+          <button class="btn ic" type="button" aria-label={$tr('dash.searchOpen')} aria-pressed={searchOpen || query !== ''} onclick={() => (searchOpen = !searchOpen)}><PixIcon name="search" /></button>
+          <button class="btn ic" type="button" aria-label={$tr('dash.viewToggle')} onclick={() => setView(view === 'cards' ? 'map' : 'cards')}><PixIcon name={view === 'cards' ? 'map' : 'cards'} /></button>
+        </div>
+        {#if searchOpen || query !== ''}
+          <input class="input search" type="search" placeholder={$tr('dash.search')} aria-label={$tr('dash.search')} bind:value={query} />
+        {/if}
+        {#if groups.length > 0}
+          <Select value={groupFilter} options={groupOptions} ariaLabel={$tr('dash.group.label')} onchange={pickGroup} />
+        {/if}
+      </div>
+    {:else}
     <div class="toolbar">
       <div class="group" role="group" aria-label={$tr('dash.filters')}>
         <button class="chip" type="button" aria-pressed={filter === 'all'} onclick={() => (filter = 'all')}
@@ -511,6 +539,7 @@
         />
       </div>
     </div>
+    {/if}
 
     {#if items.length === 0 && !pending}
       <p class="card muted">{$tr('dash.noServers')}</p>
@@ -667,6 +696,13 @@
     max-width: 100%;
     height: 36px;
     padding: 0 10px;
+  }
+
+  @media (max-width: 720px) {
+    .search {
+      width: 100%;
+      height: 44px;
+    }
   }
 
   /* On wide screens the list scrolls inside; the padding keeps the cards' offset shadows from being clipped.
@@ -890,6 +926,94 @@
     display: flex;
     align-items: center;
     gap: 12px;
+  }
+
+  .countrow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .manage {
+    min-height: 36px !important;
+    padding: 0 10px !important;
+    font-size: 13px;
+  }
+
+  /* Phone toolbar: pinned under the top bar, its background hides the cards that pass under it. */
+  .ptool {
+    position: sticky;
+    top: var(--top-h);
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 4px -12px 8px;
+    padding: 8px 12px;
+    background: var(--bg);
+  }
+
+  .prow {
+    display: flex;
+    gap: 8px;
+  }
+
+  .pseg {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    border: 2px solid var(--line);
+    background: var(--surface);
+    box-shadow: 3px 3px 0 var(--shade);
+  }
+
+  .pseg .chip {
+    flex: 1;
+    min-width: 0;
+    padding: 0 4px;
+    overflow: hidden;
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border: 0;
+    border-left: 2px solid var(--line);
+    box-shadow: none;
+  }
+
+  .pseg .chip:first-child {
+    border-left: 0;
+  }
+
+  .prow .btn.ic {
+    flex: none;
+    width: 44px;
+    padding: 0;
+  }
+
+  .prow .btn.ic[aria-pressed='true'] {
+    background: var(--ink);
+    color: var(--surface);
+  }
+
+  @media (max-width: 720px) {
+    .count {
+      margin: 0;
+    }
+
+    .countrow {
+      margin-bottom: 8px;
+    }
+
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    .undo {
+      left: 12px;
+      right: 12px;
+    }
   }
 
   @media (max-width: 560px) {

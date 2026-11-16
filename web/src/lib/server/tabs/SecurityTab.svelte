@@ -3,10 +3,14 @@
   import { api, ApiError, type SecState, type ServerDetail } from '../../../api';
   import { locale, t, tr as T } from '../../../i18n';
   import { showToast } from '../../toast';
+  import Modal from '../../Modal.svelte';
+  import { isPhone } from '../../ui/viewport';
   import { formatDateTime } from '../format';
   import F2bCard from './F2bCard.svelte';
+  import SecAcc from './SecAcc.svelte';
   import { barHeights, keyLabel, postureChecks, worstTone } from './sec-util';
   import { unavailableKind } from './svc';
+  import './phone-c.css';
 
   let { server }: { server: ServerDetail } = $props();
 
@@ -134,6 +138,15 @@
 
   const checks = $derived(sec ? postureChecks(sec, server.sample) : []);
   const tone = $derived(worstTone(checks));
+  // Phone: the marks with the worst first, and the accordion sections (all closed at the start).
+  const TONE_RANK = { crit: 0, warn: 1, muted: 2, ok: 3 } as const;
+  const sortedChecks = $derived([...checks].sort((a, b) => TONE_RANK[a.tone] - TONE_RANK[b.tone]));
+  const issues = $derived(checks.filter((c) => c.tone === 'crit' || c.tone === 'warn').length);
+  let accOpen = $state({ sessions: false, logins: false, failures: false, f2b: false, keys: false });
+  const f2bMeta = $derived(
+    !sec ? '' : !sec.fail2ban.installed ? $T('sec.f2b.notInstalled') : !sec.fail2ban.active ? $T('sec.f2b.stoppedBadge') : $T('sec.f2b.running'),
+  );
+  const f2bTone = $derived<'ok' | 'warn'>(sec?.fail2ban.installed && sec.fail2ban.active ? 'ok' : 'warn');
   const heights = $derived(sec ? barHeights(sec.failures.by_day) : []);
   const unreachable = $derived(!server.online || loadState === 'offline' || loadState === 'disabled');
 
@@ -151,68 +164,27 @@
   };
 </script>
 
-<div class="sec">
-  {#if unreachable}
-    <p class="notice" role="status">{$T(loadState === 'disabled' ? 'svc.disabled' : 'svc.offline')}</p>
-  {/if}
-
-  <div class="head">
-    <div>
-      <p class="muted small">
-        {$T('sec.period', { days: sec?.period_days ?? 7 })}
-        {#if sec}· {$T('sec.updated', { time: formatDateTime(sec.generated_at, $locale) })}{/if}
-      </p>
-    </div>
-    <button class="btn" type="button" disabled={busy || unreachable} onclick={() => void load(server.id)}>
-      {$T('sec.refresh')}
-    </button>
-  </div>
-
-  {#if loadState === 'loading'}
-    <p class="muted">{$T('common.loading')}</p>
-  {:else if loadState === 'error'}
-    <p class="error" role="alert">{$T('sec.loadFailed')}</p>
-  {/if}
-
-  {#if sec}
-    {#if !sec.ssh.installed}
-      <p class="notice" role="status">{$T('sec.noSsh')}</p>
-    {/if}
-    {#if sec.journal.source === 'none'}
-      <p class="notice" role="status">{$T('sec.noLog')}</p>
-    {:else}
-      {#if !sec.journal.covers_period}
-        <p class="notice" role="status">
-          {sec.journal.oldest > 0
-            ? $T('sec.shortLog', { date: formatDateTime(sec.journal.oldest, $locale) })
-            : $T('sec.shortLogUnknown')}
-        </p>
-      {/if}
-      {#if sec.journal.truncated}
-        <p class="notice" role="status">{$T('sec.truncated')}</p>
-      {/if}
-    {/if}
-
-    <section class="card stack" aria-labelledby="sec-state">
-      <h3 id="sec-state">
-        {$T('sec.state')}
-        <span class="badge tone-{tone}">{$T(`sec.verdict.${tone}`)}</span>
-      </h3>
-      <ul class="checks">
-        {#each checks as c (c.id)}
-          <li>
-            <span class="clabel">{$T(c.label)}</span>
-            <span class="cval tone-{c.tone}"><i class="dot" aria-hidden="true"></i>{$T(c.value, c.vars)}</span>
-          </li>
-        {/each}
-      </ul>
-    </section>
-
+{#snippet sessionsBlock(sec: SecState)}
     <section class="card stack" aria-labelledby="sec-sessions">
       <h3 id="sec-sessions">{$T('sec.sessions')}</h3>
       {#if sec.sessions.length === 0}
         <p class="muted">{$T('sec.sessions.none')}</p>
       {:else}
+        {#if $isPhone}
+          <ul class="pc-list">
+            {#each sec.sessions as s (s.id)}
+              <li class="pc-li">
+                <div class="pc-mn">
+                  <div class="pc-l1"><b class="mono">{s.user}</b></div>
+                  <div class="pc-l2 mono">{[s.ip || '—', s.since ? formatDateTime(s.since, $locale) : ''].filter(Boolean).join(' · ')}</div>
+                </div>
+                <button class="btn sm" type="button" disabled={unreachable} onclick={() => { ending = { kind: 'session', id: s.id, user: s.user, ip: s.ip }; endError = null; }}>
+                  {$T('sec.end')}
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {:else}
         <ul class="plain">
           {#each sec.sessions as s (s.id)}
             <li class="sess">
@@ -226,12 +198,13 @@
             </li>
           {/each}
         </ul>
+        {/if}
         {#each multiUsers as m (m.user)}
           <button class="btn small-btn all" type="button" disabled={unreachable} onclick={() => { ending = { kind: 'user', user: m.user, count: m.count }; endError = null; }}>
             {$T('sec.endAll', { user: m.user, n: m.count })}
           </button>
         {/each}
-        {#if ending}
+        {#if ending && !$isPhone}
           <div class="confirm stack" role="alertdialog" aria-label={$T('sec.end')}>
             <p>
               {ending.kind === 'session'
@@ -248,9 +221,9 @@
         {/if}
       {/if}
     </section>
+{/snippet}
 
-    <F2bCard serverId={server.id} {sec} {unreachable} onchanged={() => load(server.id)} />
-
+{#snippet failuresBlock(sec: SecState)}
     <section class="card stack" aria-labelledby="sec-fail">
       <h3 id="sec-fail">{$T('sec.failures')}</h3>
       <div class="fail-top">
@@ -274,6 +247,38 @@
       {#if sec.failures.total === 0}
         <p class="muted">{$T('sec.failures.none')}</p>
       {:else}
+        {#if $isPhone}
+          <div class="pc-sech"><h4>{$T('sec.col.ip')}</h4></div>
+          <ul class="pc-list">
+            {#each sec.failures.top_ips as r (r.ip)}
+              <li class="pc-li">
+                <div class="pc-mn">
+                  <div class="pc-l1"><b class="mono">{r.ip}</b></div>
+                  <div class="pc-l2">{$T('sec.col.attempts')}: {r.count.toLocaleString($locale)} · {$T('sec.col.usersTried')}: {r.users}</div>
+                  <div class="pc-l2">{formatDateTime(r.last, $locale)}</div>
+                </div>
+                {#if canBan}
+                  {#if bannedIps.has(r.ip)}
+                    <span class="pill">{$T('sec.f2b.bannedPill')}</span>
+                  {:else if r.ip !== sec.self_ip}
+                    <button class="btn sm" type="button" disabled={unreachable || banning !== null} onclick={() => void banFromList(r.ip)}>{$T('sec.f2b.ban')}</button>
+                  {/if}
+                {/if}
+              </li>
+            {/each}
+          </ul>
+          <div class="pc-sech"><h4>{$T('sec.col.user')}</h4></div>
+          <ul class="pc-list">
+            {#each sec.failures.top_users as r (r.user)}
+              <li class="pc-li">
+                <div class="pc-mn">
+                  <div class="pc-l1"><b class="mono">{r.user || '—'}</b>{#if r.invalid}<span class="badge tone-muted">{$T('sec.badge.noUser')}</span>{/if}</div>
+                </div>
+                <span class="pc-r">{r.count.toLocaleString($locale)}</span>
+              </li>
+            {/each}
+          </ul>
+        {:else}
         <div class="two">
           <div class="table-wrap">
             <table class="tbl">
@@ -328,14 +333,32 @@
             </table>
           </div>
         </div>
+        {/if}
       {/if}
     </section>
+{/snippet}
 
+{#snippet loginsBlock(sec: SecState)}
     <section class="card stack" aria-labelledby="sec-logins">
       <h3 id="sec-logins">{$T('sec.logins')}</h3>
       {#if sec.logins.length === 0}
         <p class="muted">{$T('sec.logins.none')}</p>
       {:else}
+        {#if $isPhone}
+          <ul class="pc-list">
+            {#each sec.logins as l, i (i)}
+              <li class="pc-li">
+                <div class="pc-mn">
+                  <div class="pc-l1"><b class="mono">{l.user}</b> <span class="mono">{l.ip}</span></div>
+                  <div class="pc-l2">{formatDateTime(l.time, $locale)} · {method(l.method)}</div>
+                </div>
+                {#if l.prior_failures > 0}
+                  <span class="badge tone-warn">{$T('sec.badge.prior', { n: l.prior_failures })}</span>
+                {/if}
+              </li>
+            {/each}
+          </ul>
+        {:else}
         <div class="table-wrap scroll">
           <table class="tbl">
             <thead>
@@ -364,15 +387,37 @@
             </tbody>
           </table>
         </div>
+        {/if}
       {/if}
     </section>
+{/snippet}
 
+{#snippet keysBlock(sec: SecState)}
     <section class="card stack" aria-labelledby="sec-keys">
       <h3 id="sec-keys">{$T('sec.keys')}</h3>
       <p class="muted small">{$T('sec.keys.hint')}</p>
       {#if sec.keys.length === 0}
         <p class="muted">{$T('sec.keys.none')}</p>
       {:else}
+        {#if $isPhone}
+          <ul class="pc-list">
+            {#each sec.keys as k, i (i)}
+              <li class="pc-li">
+                <div class="pc-mn">
+                  <div class="pc-l1">
+                    <b class="mono">{k.user}</b>
+                    <span>{keyLabel(k.type, k.bits)}</span>
+                    {#if k.weak}<span class="badge tone-crit">{$T('sec.badge.weak')}</span>{/if}
+                    {#if k.restricted}<span class="badge tone-muted">{$T('sec.badge.restricted')}</span>{/if}
+                  </div>
+                  <div class="pc-l2 mono">{k.fingerprint}</div>
+                  <div class="pc-l2">{[k.comment || '—', k.mtime ? formatDateTime(k.mtime, $locale) : ''].filter(Boolean).join(' · ')}</div>
+                </div>
+                <button class="btn sm" type="button" disabled={unreachable} onclick={() => { removing = k; rmError = null; }}>{$T('sec.keys.remove')}</button>
+              </li>
+            {/each}
+          </ul>
+        {:else}
         <div class="table-wrap">
           <table class="tbl">
             <thead>
@@ -405,7 +450,8 @@
             </tbody>
           </table>
         </div>
-        {#if removing}
+        {/if}
+        {#if removing && !$isPhone}
           <div class="confirm stack" role="alertdialog" aria-label={$T('sec.keys.remove')}>
             <p>{$T('sec.keys.removeText', { user: removing.user, fp: removing.fingerprint })}</p>
             {#if rmWarn}<p class="error">{$T(rmWarn, { user: removing.user })}</p>{/if}
@@ -419,8 +465,146 @@
         {/if}
       {/if}
     </section>
+{/snippet}
+
+<div class="sec">
+  {#if unreachable}
+    <p class="notice" role="status">{$T(loadState === 'disabled' ? 'svc.disabled' : 'svc.offline')}</p>
+  {/if}
+
+  {#if !$isPhone}
+  <div class="head">
+    <div>
+      <p class="muted small">
+        {$T('sec.period', { days: sec?.period_days ?? 7 })}
+        {#if sec}· {$T('sec.updated', { time: formatDateTime(sec.generated_at, $locale) })}{/if}
+      </p>
+    </div>
+    <button class="btn" type="button" disabled={busy || unreachable} onclick={() => void load(server.id)}>
+      {$T('sec.refresh')}
+    </button>
+  </div>
+  {/if}
+
+  {#if loadState === 'loading'}
+    <p class="muted">{$T('common.loading')}</p>
+  {:else if loadState === 'error'}
+    <p class="error" role="alert">{$T('sec.loadFailed')}</p>
+  {/if}
+
+  {#if sec}
+    {#if !sec.ssh.installed}
+      <p class="notice" role="status">{$T('sec.noSsh')}</p>
+    {/if}
+    {#if sec.journal.source === 'none'}
+      <p class="notice" role="status">{$T('sec.noLog')}</p>
+    {:else}
+      {#if !sec.journal.covers_period}
+        <p class="notice" role="status">
+          {sec.journal.oldest > 0
+            ? $T('sec.shortLog', { date: formatDateTime(sec.journal.oldest, $locale) })
+            : $T('sec.shortLogUnknown')}
+        </p>
+      {/if}
+      {#if sec.journal.truncated}
+        <p class="notice" role="status">{$T('sec.truncated')}</p>
+      {/if}
+    {/if}
+
+    {#if $isPhone}
+      <div class="card sumcard tone-{tone}">
+        <div class="srow">
+          <div class="smain">
+            <div class="verdict tone-{tone}">{$T(`sec.verdict.${tone}`)}</div>
+            <div class="muted small">
+              {[issues > 0 ? $T('mobC.sec.issues', { n: issues }) : '', $T('sec.period', { days: sec.period_days ?? 7 }), $T('sec.updated', { time: formatDateTime(sec.generated_at, $locale) })].filter(Boolean).join(' · ')}
+            </div>
+          </div>
+          <button class="btn" type="button" disabled={busy || unreachable} onclick={() => void load(server.id)}>{$T('sec.refresh')}</button>
+        </div>
+      </div>
+      <ul class="pc-list">
+        {#each sortedChecks as c (c.id)}
+          <li class="pc-li marks">
+            <span class="pc-dot tone-{c.tone}" aria-hidden="true"></span>
+            <div class="pc-mn"><div class="pc-l1">{$T(c.label)}</div></div>
+            <span class="pc-r tone-{c.tone}">{$T(c.value, c.vars)}</span>
+          </li>
+        {/each}
+      </ul>
+
+      <SecAcc title={$T('sec.sessions')} meta={String(sec.sessions.length)} tone={sec.sessions.length > 0 ? 'warn' : 'muted'} bind:open={accOpen.sessions}>
+        {@render sessionsBlock(sec)}
+      </SecAcc>
+      <SecAcc title={$T('sec.logins')} meta={String(sec.logins.length)} bind:open={accOpen.logins}>
+        {@render loginsBlock(sec)}
+      </SecAcc>
+      <SecAcc title={$T('sec.failures')} meta={sec.failures.total.toLocaleString($locale)} tone={sec.failures.total > 0 ? 'warn' : 'muted'} bind:open={accOpen.failures}>
+        {@render failuresBlock(sec)}
+      </SecAcc>
+      <SecAcc title="fail2ban" meta={f2bMeta} tone={f2bTone} bind:open={accOpen.f2b}>
+        <F2bCard serverId={server.id} {sec} {unreachable} onchanged={() => load(server.id)} />
+      </SecAcc>
+      <SecAcc title={$T('sec.keys')} meta={String(sec.keys.length)} bind:open={accOpen.keys}>
+        {@render keysBlock(sec)}
+      </SecAcc>
+    {:else}
+    <section class="card stack" aria-labelledby="sec-state">
+      <h3 id="sec-state">
+        {$T('sec.state')}
+        <span class="badge tone-{tone}">{$T(`sec.verdict.${tone}`)}</span>
+      </h3>
+      <ul class="checks">
+        {#each checks as c (c.id)}
+          <li>
+            <span class="clabel">{$T(c.label)}</span>
+            <span class="cval tone-{c.tone}"><i class="dot" aria-hidden="true"></i>{$T(c.value, c.vars)}</span>
+          </li>
+        {/each}
+      </ul>
+    </section>
+
+    {@render sessionsBlock(sec)}
+
+    <F2bCard serverId={server.id} {sec} {unreachable} onchanged={() => load(server.id)} />
+
+    {@render failuresBlock(sec)}
+
+    {@render loginsBlock(sec)}
+
+    {@render keysBlock(sec)}
+    {/if}
   {/if}
 </div>
+
+{#if ending && $isPhone}
+  <Modal title={$T('mobC.sec.endTitle')} labelId="sec-end-title" onclose={() => (ending = null)}>
+    <p>
+      {ending.kind === 'session'
+        ? $T('sec.end.confirm', { user: ending.user, ip: ending.ip || '—' })
+        : $T('sec.end.confirmUser', { user: ending.user, n: ending.count })}
+    </p>
+    <p class="muted small">{$T('sec.end.hint')}</p>
+    {#if endError}<p class="error" role="alert">{endError}</p>{/if}
+    <div class="row end">
+      <button class="btn" type="button" disabled={endBusy} onclick={() => (ending = null)}>{$T('common.cancel')}</button>
+      <button class="btn danger" type="button" disabled={endBusy} onclick={() => void confirmEnd()}>{$T('sec.end')}</button>
+    </div>
+  </Modal>
+{/if}
+
+{#if removing && $isPhone}
+  <Modal title={$T('sec.keys.remove')} labelId="sec-rm-title" onclose={() => (removing = null)}>
+    <p>{$T('sec.keys.removeText', { user: removing.user, fp: removing.fingerprint })}</p>
+    {#if rmWarn}<p class="error">{$T(rmWarn, { user: removing.user })}</p>{/if}
+    <p class="muted small">{$T('sec.keys.removeNote')}</p>
+    {#if rmError}<p class="error" role="alert">{rmError}</p>{/if}
+    <div class="row end">
+      <button class="btn" type="button" disabled={rmBusy} onclick={() => (removing = null)}>{$T('common.cancel')}</button>
+      <button class="btn danger" type="button" disabled={rmBusy} onclick={() => void confirmRemove()}>{$T('sec.keys.removeGo')}</button>
+    </div>
+  </Modal>
+{/if}
 
 <style>
   .sec {
@@ -729,6 +913,73 @@
 
     .num {
       text-align: left;
+    }
+  }
+
+  /* Phone: a summary card, the marks as rows, accordion sections. */
+  @media (max-width: 720px) {
+    .sec {
+      gap: 12px;
+    }
+
+    .sumcard {
+      padding: 12px 12px 12px 14px;
+      border-left-width: 5px;
+    }
+
+    .sumcard.tone-ok {
+      border-left-color: var(--good);
+    }
+
+    .sumcard.tone-warn {
+      border-left-color: var(--warn);
+    }
+
+    .sumcard.tone-crit {
+      border-left-color: var(--crit);
+    }
+
+    .srow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .smain {
+      min-width: 0;
+    }
+
+    .verdict {
+      font-family: var(--font-display);
+      font-size: 22px;
+      line-height: 1.15;
+    }
+
+    .marks {
+      min-height: 48px;
+    }
+
+    .pc-r {
+      max-width: 55%;
+    }
+
+    h4 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .pc-l1 .badge {
+      font-size: 11.5px;
+    }
+
+    .pill {
+      height: 28px;
     }
   }
 </style>

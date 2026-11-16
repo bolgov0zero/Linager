@@ -16,7 +16,7 @@
   <h3 class="upd-h">{$trans('upd.hist.title')}</h3>
 
   <div class="upd-tw">
-    <table class="upd-tbl">
+    <table class="upd-tbl upd-rows upd-hist">
       <thead>
         <tr>
           <th>{$trans('upd.hist.time')}</th>

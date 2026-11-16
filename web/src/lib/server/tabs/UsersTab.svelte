@@ -3,7 +3,10 @@
   import { api, ApiError, type HostUser, type HostUsersState, type ServerDetail } from '../../../api';
   import { locale, t, tr as T } from '../../../i18n';
   import { openTermWindow } from '../../terminal/windows';
+  import Modal from '../../Modal.svelte';
   import ActionMenu from '../../ui/ActionMenu.svelte';
+  import PixIcon from '../../ui/PixIcon.svelte';
+  import { isPhone } from '../../ui/viewport';
   import { showToast } from '../../toast';
   import { formatDateTime } from '../format';
   import UserAddModal from './UserAddModal.svelte';
@@ -13,6 +16,7 @@
   import UserPasswordModal from './UserPasswordModal.svelte';
   import { errorText, unavailableKind } from './svc';
   import { filterUsers, HOT_GROUPS, lastAdmin, sudoTone } from './users-util';
+  import './phone-c.css';
 
   let { server, canTerminal = false, canWrite = true }: { server: ServerDetail; canTerminal?: boolean; canWrite?: boolean } = $props();
 
@@ -70,6 +74,8 @@
   let adding = $state(false);
   let deleting = $state<HostUser | null>(null);
   let password = $state<HostUser | null>(null);
+  /** Phone: the user whose action sheet is open. */
+  let actionUser = $state<HostUser | null>(null);
   let confirm = $state<{ kind: 'lock' | 'unlock' | 'kill'; user: HostUser } | null>(null);
 
   const tx = (k: string, v?: Record<string, string | number>) => t(k, undefined, v);
@@ -127,6 +133,41 @@
       <div class="sum"><b>{sums.locked}</b><span class="muted small">{$T('usr.sum.locked')}</span></div>
     </div>
 
+    {#if $isPhone}
+      <div class="tools ptools">
+        <input class="input search" type="search" bind:value={q} placeholder={$T('usr.search')} aria-label={$T('usr.search')} />
+        <div class="pc-seg sm" role="group" aria-label={$T('usr.search')}>
+          <button type="button" aria-pressed={fHuman} onclick={() => (fHuman = !fHuman)}>{$T('usr.f.human')}</button>
+          <button type="button" aria-pressed={fSystem} onclick={() => (fSystem = !fSystem)}>{$T('usr.f.system')}</button>
+          <button type="button" aria-pressed={fSudo} onclick={() => (fSudo = !fSudo)}>{$T('usr.f.sudo')}</button>
+          <button type="button" aria-pressed={fOnline} onclick={() => (fOnline = !fOnline)}>{$T('usr.f.online')}</button>
+        </div>
+        <button class="btn primary add" type="button" disabled={unavailable || !canWrite} onclick={() => (adding = true)}>{$T('usr.add')}</button>
+      </div>
+
+      {#if rows.length === 0}
+        <p class="muted empty">{$T('usr.empty')}</p>
+      {:else}
+        <div class="pc-list">
+          {#each rows as u (u.name)}
+            <button class="pc-li" type="button" onclick={() => (actionUser = u)}>
+              <span class="pc-mn">
+                <span class="pc-l1">
+                  <b>{u.name}</b>
+                  {#if u.sudo !== 'none'}<span class="pc-tag {sudoTone(u.sudo) === 'crit' ? 'crit' : 'warn'}">{sudoLabel(u.sudo)}</span>{/if}
+                  {#if u.locked && u.human}<span class="pc-tag crit">{$T('usr.badge.locked')}</span>{/if}
+                  {#if u.protected}<span class="pc-tag muted">{$T('usr.badge.protected')}</span>{/if}
+                  {#if u.sessions > 0}<span class="pc-tag ok">{$T('usr.sessionsN', { n: u.sessions })}</span>{/if}
+                </span>
+                <span class="pc-l2 mono">{[u.uid, u.shell, u.human ? u.home : ''].filter((x) => x !== '').join(' · ')}</span>
+                {#if u.gecos}<span class="pc-l2">{u.gecos}</span>{/if}
+              </span>
+              <PixIcon name="more" size={20} />
+            </button>
+          {/each}
+        </div>
+      {/if}
+    {:else}
     <div class="tools">
       <input class="input search" type="search" bind:value={q} placeholder={$T('usr.search')} aria-label={$T('usr.search')} />
       <button class="chip" type="button" aria-pressed={fHuman} onclick={() => (fHuman = !fHuman)}>{$T('usr.f.human')}</button>
@@ -195,9 +236,39 @@
         </tbody>
       </table>
     </div>
+    {/if}
     <p class="muted small">{$T('usr.legend', { shown: rows.length, total: data.users.length })}</p>
   {/if}
 </div>
+
+{#if actionUser && $isPhone}
+  {@const au = actionUser}
+  <Modal flush title={au.name} labelId="usr-act" onclose={() => (actionUser = null)}>
+    {#if canTerminal}
+      <button
+        class="pc-act"
+        type="button"
+        disabled={au.no_shell || !server.online}
+        onclick={() => {
+          actionUser = null;
+          terminal(au);
+        }}>{$T('mobC.usr.termAs', { user: au.name })}</button
+      >
+    {/if}
+    {#each menu(au) as it (it.key)}
+      <button
+        class="pc-act"
+        class:dng={it.key === 'del' || it.key === 'kill'}
+        type="button"
+        disabled={it.disabled}
+        onclick={() => {
+          actionUser = null;
+          it.onselect();
+        }}>{it.label}</button
+      >
+    {/each}
+  </Modal>
+{/if}
 
 {#if editing && data}
   <UserModal
@@ -418,6 +489,51 @@
   @media (max-width: 860px) {
     .sums {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 720px) {
+    .sums {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .sum {
+      padding: 8px 10px;
+      background: var(--surface);
+      box-shadow: 3px 3px 0 var(--shade);
+    }
+
+    .sum b {
+      font-size: 22px;
+    }
+
+    .ptools {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+
+    .ptools .search {
+      flex: none;
+      max-width: none;
+      width: 100%;
+      height: auto;
+    }
+
+    .ptools .add {
+      margin-left: 0;
+      width: 100%;
+    }
+
+    .pc-l1 b {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 400;
+    }
+
+    .pc-l2 {
+      display: block;
     }
   }
 </style>

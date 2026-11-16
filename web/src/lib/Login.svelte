@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api, ApiError, isTotpRequired, type Session } from '../api';
   import { t, tr } from '../i18n';
+  import { isPhone } from './ui/viewport';
   import { getPasskey, passkeyCancelled, passkeysSupported } from './webauthn';
 
   let { onlogin }: { onlogin: (session: Session) => void } = $props();
@@ -98,6 +99,23 @@
 
 <section class="card auth">
   <h2>{$tr('login.title')}</h2>
+  {#if $isPhone}
+    <p class="muted sub">{$tr('login.mob.subtitle')}</p>
+    {#if step === 'password'}
+      <div class="stack pk">
+        <button
+          class="btn blk"
+          type="button"
+          disabled={busy || !passkeyOk}
+          title={passkeyOk ? undefined : $tr('login.passkeyUnavailable')}
+          onclick={() => void passkeyLogin()}
+        >
+          {$tr('login.passkey')}
+        </button>
+        <p class="muted small or">{$tr('login.mob.or')}</p>
+      </div>
+    {/if}
+  {/if}
   <form class="stack" method="post" action="#" bind:this={formEl} onsubmit={submit}>
     <div class="stack" hidden={step === 'totp'}>
       <label class="field">
@@ -160,10 +178,10 @@
       <p class="error" role="alert">{error}</p>
     {/if}
 
-    <div class="row end buttons">
+    <div class="row end buttons" class:phone={$isPhone}>
       {#if step === 'totp'}
         <button class="btn" type="button" disabled={busy} onclick={back}>{$tr('login.back')}</button>
-      {:else}
+      {:else if !$isPhone}
         <button
           class="btn"
           type="button"
@@ -220,5 +238,61 @@
     letter-spacing: 0.3em;
     text-align: center;
     font-size: 20px;
+  }
+
+  .sub,
+  .or {
+    margin: 0;
+  }
+
+  /* Phones: no frame, the form is at the top of the free area (the keyboard does not cover it), full-width buttons. */
+  @media (max-width: 720px) {
+    .auth {
+      align-self: flex-start;
+      padding: 12px 0 0;
+      background: none;
+      border: 0;
+      box-shadow: none;
+    }
+
+    .auth h2 {
+      margin: 0 0 4px;
+      font-size: 28px;
+    }
+
+    .sub {
+      margin-bottom: 16px;
+    }
+
+    .pk {
+      margin-bottom: 16px;
+      gap: 10px;
+    }
+
+    .or {
+      text-align: center;
+    }
+
+    .blk {
+      width: 100%;
+    }
+
+    .buttons {
+      flex-direction: column-reverse;
+      align-items: stretch;
+    }
+
+    .buttons .btn {
+      width: 100%;
+    }
+
+    .linkbtn {
+      min-height: 44px;
+      font-size: 14px;
+    }
+
+    .code {
+      font-size: 24px;
+    }
   }
 </style>

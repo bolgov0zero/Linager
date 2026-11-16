@@ -166,4 +166,20 @@
   .text {
     margin: 0;
   }
+
+  /* Phones: a card with the button across its full width. */
+  @media (max-width: 720px) {
+    .banner {
+      background: var(--surface);
+      box-shadow: 3px 3px 0 var(--shade);
+    }
+
+    .msg {
+      flex: 1 1 100%;
+    }
+
+    .banner .btn {
+      flex: 1 1 100%;
+    }
+  }
 </style>

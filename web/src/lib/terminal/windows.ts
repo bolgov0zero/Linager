@@ -36,8 +36,8 @@ let topZ = 1;
 /** Open editor windows allowed at once. */
 const EDITOR_LIMIT = 8;
 
-const DEFAULT_W = 720;
-const DEFAULT_H = 440;
+const DEFAULT_W = 864; // 720 + 20%
+const DEFAULT_H = 528; // 440 + 20%
 const CASCADE = 28;
 
 /**

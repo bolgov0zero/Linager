@@ -98,7 +98,7 @@
       <p class="muted">{$tr('acc.servers.none')}</p>
     {/each}
   </div>
-  <div class="row between">
+  <div class="row between bar">
     <span class="small muted">{$tr('acc.servers.total', { n: total })}</span>
     <div class="row">
       <button class="btn" type="button" onclick={onclose}>{$tr('common.cancel')}</button>
@@ -201,5 +201,45 @@
 
   p {
     margin: 0;
+  }
+
+  /* Phones: the sheet scrolls as a whole, the switches get a bigger tap area, the buttons stay at the bottom. */
+  @media (max-width: 720px) {
+    .blocks,
+    .list {
+      max-height: none;
+      overflow: visible;
+    }
+
+    .sw::before {
+      content: '';
+      position: absolute;
+      inset: -11px -6px;
+    }
+
+    .bar {
+      position: sticky;
+      bottom: 0;
+      z-index: 2;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      margin: 0 -12px calc(-12px - var(--safe-b));
+      padding: 10px 12px calc(10px + var(--safe-b));
+      background: var(--surface);
+      border-top: 2px solid var(--line);
+    }
+
+    .bar > .row {
+      flex-wrap: nowrap;
+    }
+
+    .bar > .row > .btn {
+      flex: 1;
+    }
+
+    .srv {
+      min-height: 48px;
+    }
   }
 </style>

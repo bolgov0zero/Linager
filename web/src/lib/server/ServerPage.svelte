@@ -22,6 +22,10 @@
   import { formatDateTime } from './format';
   import AgentUpdateBanner from './AgentUpdateBanner.svelte';
   import SideNav from './SideNav.svelte';
+  import SectionsSheet from './SectionsSheet.svelte';
+  import Modal from '../Modal.svelte';
+  import PixIcon from '../ui/PixIcon.svelte';
+  import TabBar, { type TabBarItem } from '../ui/TabBar.svelte';
   import { groupTabs, HISTORY_LIMIT, visibleTabs, type LiveSample, type TabId } from './model';
 
   let {
@@ -50,6 +54,8 @@
   let live = $state<LiveSample[]>([]);
   let deleteOpen = $state(false);
   let attempt = $state(0);
+  let sectionsOpen = $state(false);
+  let menuOpen = $state(false);
 
   const serverId = $derived(detail?.id ?? null);
   const sample = $derived<Sample | null>(detail?.sample ?? null);
@@ -61,6 +67,35 @@
   const tab = $derived<TabId>(tabs.find((x) => x.id === requestedTab)?.id ?? 'overview');
   const currentTabKey = $derived(tabs.find((x) => x.id === tab)?.key ?? 'srv.tab.overview');
   const currentGroupKey = $derived(groupTabs(tabs).find((g) => g.tabs.some((x) => x.id === tab))?.key ?? 'srv.group.general');
+
+  /** Phone: the tabs that sit in the bottom bar; everything else is under "Sections". */
+  const PINNED: TabId[] = ['overview', 'terminal', 'files', 'services'];
+  const barTabs = $derived.by(() => {
+    const ids = tabs.map((x) => x.id);
+    const picked = PINNED.filter((id) => ids.includes(id));
+    for (const id of ids) if (picked.length < 4 && !picked.includes(id)) picked.push(id);
+    return picked.slice(0, 4);
+  });
+  const badges = $derived<Partial<Record<TabId, { text: string; tone: 'warn' | 'crit' }>>>({
+    ...((sample?.updates ?? 0) > 0 ? { updates: { text: String(sample?.updates), tone: (sample?.security_updates ?? 0) > 0 ? 'crit' : 'warn' } } : {}),
+    ...((sample?.failed_services ?? 0) > 0 ? { services: { text: String(sample?.failed_services), tone: 'crit' } } : {}),
+  } as Partial<Record<TabId, { text: string; tone: 'warn' | 'crit' }>>);
+  const barItems = $derived<TabBarItem[]>([
+    ...barTabs.map((id) => ({
+      id,
+      label: $tr(tabs.find((x) => x.id === id)?.key ?? ''),
+      icon: id,
+      current: tab === id,
+      badge: badges[id]?.text,
+      tone: badges[id]?.tone,
+    })),
+    { id: '#sections', label: $tr('nav.sections'), icon: 'more', current: !barTabs.includes(tab) },
+  ]);
+
+  function onBar(id: string): void {
+    if (id === '#sections') sectionsOpen = true;
+    else ontab?.(id as TabId);
+  }
 
   // Resolve the server by name, then load its detail. Reruns on name change or retry.
   $effect(() => {
@@ -121,7 +156,20 @@
   });
 </script>
 
-<section class="srv">
+<section class="srv" data-tab={tab}>
+  <!-- Phone header: back, the section as a title, server and its state under it, the actions in a sheet. -->
+  <header class="phead">
+    <button class="btn ic" type="button" aria-label={$tr('srv.back')} onclick={onBack}><PixIcon name="back" /></button>
+    <div class="pt">
+      <h1>{detail ? $tr(currentTabKey) : name}</h1>
+      <p class="mono">
+        {#if detail}<span class="sq" class:online aria-hidden="true"></span>{detail.name} · {detail.address} · {online ? $tr('srv.online') : $tr('srv.offline')}{:else}{name}{/if}
+      </p>
+    </div>
+    {#if detail && isAdmin}
+      <button class="btn ic" type="button" aria-label={$tr('srv.menu')} onclick={() => (menuOpen = true)}><PixIcon name="more" /></button>
+    {/if}
+  </header>
   <header class="titlebar">
     <div class="title-row">
       <button class="btn" type="button" onclick={onBack}>{$tr('srv.back')}</button>
@@ -225,6 +273,29 @@
     </div>
   {/if}
 </section>
+
+{#if detail}
+  <TabBar items={barItems} label={$tr('srv.tabsLabel')} onselect={onBar} />
+{/if}
+
+{#if sectionsOpen}
+  <SectionsSheet
+    {tabs}
+    current={tab}
+    {badges}
+    onclose={() => (sectionsOpen = false)}
+    onselect={(id) => {
+      sectionsOpen = false;
+      ontab?.(id);
+    }} />
+{/if}
+
+{#if menuOpen && detail}
+  <Modal title={detail.name} labelId="srv-menu-title" onclose={() => (menuOpen = false)}>
+    <RebootButton server={detail} />
+    <button class="btn danger" type="button" onclick={() => { menuOpen = false; deleteOpen = true; }}>{$tr('srv.delete')}</button>
+  </Modal>
+{/if}
 
 {#if deleteOpen && detail}
   <DeleteServerModal
@@ -367,6 +438,10 @@
     font-size: 20px;
   }
 
+  .phead {
+    display: none;
+  }
+
   @media (max-width: 860px) {
     .body {
       flex-direction: column;
@@ -375,13 +450,97 @@
     }
   }
 
-  @media (max-width: 600px) {
-    .titlebar h1 {
-      font-size: 24px;
+  @media (max-width: 720px) {
+    .srv {
+      gap: 12px;
+      padding-bottom: calc(var(--bar-h) + var(--safe-b) + 16px);
     }
 
+    /* One header (the global bar is hidden on a server page); the side menu became the bottom bar. */
+    .titlebar,
+    .crumb,
+    .page-title {
+      display: none;
+    }
+
+    .phead {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 56px;
+      padding: 5px 12px 5px 8px;
+      padding-top: calc(5px + var(--safe-t));
+      background: var(--surface);
+      border-bottom: 2px solid var(--line);
+    }
+
+    .phead .btn {
+      flex: none;
+      width: 44px;
+      padding: 0;
+    }
+
+    .phead .btn:first-child {
+      border-color: transparent;
+      box-shadow: none;
+      background: none;
+    }
+
+    .pt {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .pt h1 {
+      overflow: hidden;
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 22px;
+      line-height: 1.15;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .pt p {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow: hidden;
+      margin: 0;
+      color: var(--muted);
+      font-size: 11.5px;
+      white-space: nowrap;
+    }
+
+    .pt .sq {
+      flex: none;
+      width: 9px;
+      height: 9px;
+      background: var(--muted);
+    }
+
+    .pt .sq.online {
+      background: var(--good);
+    }
+
+    .srv > :global(:not(.phead)) {
+      margin-left: 12px;
+      margin-right: 12px;
+    }
+
+    .body {
+      margin-top: 0;
+    }
+
+    /* No frame around the tab: its blocks are the cards, so the width is not spent twice. */
     .tabpanel {
-      padding: 12px;
+      padding: 0;
+      background: none;
+      border: 0;
+      box-shadow: none;
     }
   }
 </style>

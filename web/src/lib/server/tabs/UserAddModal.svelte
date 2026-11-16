@@ -2,6 +2,8 @@
   import { api, ApiError, type HostUsersState } from '../../../api';
   import { t, tr } from '../../../i18n';
   import { showToast } from '../../toast';
+  import { isPhone } from '../../ui/viewport';
+  import './phone-c.css';
   import Modal from '../../Modal.svelte';
   import Select from '../../ui/Select.svelte';
   import { errorText } from './svc';
@@ -75,8 +77,8 @@
   }
 </script>
 
-<Modal title={$tr('usr.add.title')} labelId="usr-add" medium {onclose}>
-  <form class="stack" onsubmit={(e) => { e.preventDefault(); void create(); }}>
+<Modal title={$tr('usr.add.title')} labelId="usr-add" wide={$isPhone} medium={!$isPhone} {onclose}>
+  <form class="stack uform" onsubmit={(e) => { e.preventDefault(); void create(); }}>
     <div class="cols">
       <div class="col">
         <div class="two">
@@ -102,7 +104,7 @@
         </div>
         <div class="field">
           <span class="label">{$tr('usr.props.sudo')}</span>
-          <div class="row">
+          <div class="row" class:pc-seg={$isPhone}>
             <button class="chip" type="button" aria-pressed={sudo === 'none'} onclick={() => (sudo = 'none')}>{$tr('usr.sudo.none')}</button>
             <button class="chip" type="button" aria-pressed={sudo === 'pw'} onclick={() => (sudo = 'pw')}>{$tr('usr.sudo.pw')}</button>
             <button class="chip" type="button" aria-pressed={sudo === 'nopw'} onclick={() => (sudo = 'nopw')}>{$tr('usr.sudo.nopw')}</button>
@@ -111,11 +113,23 @@
         </div>
         <div class="field">
           <span class="label">{$tr('usr.props.groups')}</span>
+          {#if $isPhone}
+            <div class="pc-list">
+              {#each info.groups as g (g)}
+                <label class="pc-li gl">
+                  <input type="checkbox" checked={groups.includes(g)} onchange={() => toggleGroup(g)} />
+                  <span class="pc-mn">{g}</span>
+                  {#if HOT_GROUPS.includes(g)}<span class="pc-tag warn">⚠</span>{/if}
+                </label>
+              {/each}
+            </div>
+          {:else}
           <div class="row">
             {#each info.groups as g (g)}
               <button class="chip" type="button" aria-pressed={groups.includes(g)} onclick={() => toggleGroup(g)}>{g}{HOT_GROUPS.includes(g) ? ' ⚠' : ''}</button>
             {/each}
           </div>
+          {/if}
         </div>
       </div>
 
@@ -231,6 +245,42 @@
     .cols,
     .two {
       grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .uform {
+      min-height: 100%;
+    }
+
+    .uform > :global(.row.end) {
+      margin-top: auto !important;
+    }
+
+    .uform .pc-seg .chip {
+      flex: 1;
+      min-width: 0;
+      justify-content: center;
+      padding: 0 4px;
+      border-width: 0 0 0 2px;
+      box-shadow: none;
+      font-size: 13px;
+      line-height: 1.15;
+      text-align: center;
+    }
+
+    .uform .pc-seg .chip:first-child {
+      border-left-width: 0;
+    }
+
+    .gl {
+      cursor: pointer;
+      min-height: 48px;
+    }
+
+    .opt {
+      min-height: 48px;
+      align-items: center;
     }
   }
 </style>

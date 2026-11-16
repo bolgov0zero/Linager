@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { tr } from '../../i18n';
+  import { viewBox } from './vv';
   import { closeTermWindow, focusTermWindow, updateTermWindow, type TermWindow } from './windows';
 
   /**
@@ -33,7 +34,7 @@
   const MIN_H = 220;
 
   const key = $derived(win.key);
-  const narrow = () => window.matchMedia('(max-width: 600px)').matches;
+  const narrow = () => window.matchMedia('(max-width: 720px)').matches;
 
   type Edge = 'move' | 'e' | 's' | 'se';
 
@@ -91,6 +92,8 @@
   style:width="{win.w}px"
   style:height="{win.h}px"
   style:z-index={win.z}
+  style:--vv-top={$viewBox.kbd ? `${$viewBox.top}px` : undefined}
+  style:--vv-h={$viewBox.kbd ? `${$viewBox.height}px` : undefined}
   aria-label={ariaLabel}
   aria-hidden={win.minimized}
   onpointerdowncapture={() => focusTermWindow(key)}
@@ -99,15 +102,16 @@
     <p class="name">{@render title()}</p>
     <div class="tools">
       {@render tools?.()}
-      <button class="btn sm icon" type="button" title={$tr('termwin.minimize')} aria-label={$tr('termwin.minimize')}
+      <button class="btn sm icon wbtn" type="button" title={$tr('termwin.minimize')} aria-label={$tr('termwin.minimize')}
         onclick={() => updateTermWindow(key, { minimized: true })}>_</button>
       <button class="btn sm icon wide" type="button"
         title={win.maximized ? $tr('termwin.restore') : $tr('termwin.maximize')}
         aria-label={win.maximized ? $tr('termwin.restore') : $tr('termwin.maximize')}
         onclick={toggleMax}>{win.maximized ? '▭' : '□'}</button>
-      <button class="btn sm icon" type="button" title={$tr('termwin.close')} aria-label={$tr('termwin.close')}
+      <button class="btn sm icon wbtn" type="button" title={$tr('termwin.close')} aria-label={$tr('termwin.close')}
         onclick={() => (onclose ? onclose() : closeTermWindow(key))}>×</button>
     </div>
+    <span class="brk" aria-hidden="true"></span>
   </header>
   <div class="body">
     {@render children()}
@@ -249,17 +253,63 @@
     cursor: nwse-resize;
   }
 
-  /* Phones: every window is full screen, no dragging or resizing. */
-  @media (max-width: 600px) {
-    .win {
+  .brk {
+    display: none;
+  }
+
+  /* Phones: every window is full screen above the page (no dragging or resizing), with the dock strip under it; while
+     the keyboard is up the window is exactly the visible part of the screen. The header has two rows: the name with
+     minimize and close, then the tools. */
+  @media (max-width: 720px) {
+    .win,
+    .win.max {
       left: 0 !important;
-      top: 0 !important;
+      top: var(--vv-top, 0px) !important;
       width: 100% !important;
-      height: calc(100% - 48px) !important;
+      height: var(--vv-h, calc(100% - var(--dock-h, 52px))) !important;
+      border-width: 0;
+      box-shadow: none;
     }
 
     .bar {
+      flex-wrap: wrap;
+      gap: 0 4px;
+      padding: calc(2px + var(--safe-t)) 6px 2px 12px;
       cursor: default;
+    }
+
+    .name {
+      flex: 1 1 0;
+      min-height: 44px;
+    }
+
+    .tools {
+      display: contents;
+    }
+
+    .tools > :global(*) {
+      order: 2;
+    }
+
+    .tools > :global(.wbtn) {
+      order: 1;
+    }
+
+    .brk {
+      display: block;
+      order: 1;
+      flex: 0 0 100%;
+      height: 0;
+    }
+
+    .tools :global(.btn.sm),
+    .tools :global(.btn.icon) {
+      min-width: 44px;
+      font-size: 13px;
+    }
+
+    .tools :global(.btn.sm) {
+      box-shadow: none;
     }
 
     .grip,
@@ -269,6 +319,11 @@
 
     .name :global(.status) {
       display: none;
+    }
+
+    .body {
+      padding: 0;
+      overflow: hidden;
     }
   }
 </style>

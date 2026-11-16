@@ -3,6 +3,9 @@
   import Select from './ui/Select.svelte';
   import { api, type AuditItem } from '../api';
   import { tr } from '../i18n';
+  import Modal from './Modal.svelte';
+  import { isPhone } from './ui/viewport';
+  import './ui/phone-rows.css';
   import AuditTable from './audit/AuditTable.svelte';
   import { ACTION_GROUPS, RESULT_OPTIONS } from './audit/actions';
 
@@ -60,6 +63,23 @@
     }
   }
 
+  // Phones: the filters are in a sheet, the active ones are shown as chips.
+  let filtersOpen = $state(false);
+  const resultLabel = $derived(RESULT_OPTIONS.find((o) => o.value === result));
+  const groupLabel = $derived(ACTION_GROUPS.find((o) => o.value === group));
+  const activeCount = $derived((result ? 1 : 0) + (group ? 1 : 0) + (appliedSearch ? 1 : 0) + (appliedActor ? 1 : 0));
+
+  function resetFilters(): void {
+    clearTimeout(textTimer);
+    result = '';
+    group = '';
+    search = '';
+    actor = '';
+    appliedSearch = '';
+    appliedActor = '';
+    void load(true);
+  }
+
   function onTextInput(): void {
     clearTimeout(textTimer);
     textTimer = setTimeout(() => {
@@ -95,6 +115,48 @@
   </div>
 
   <section class="card stack">
+    {#if $isPhone}
+      <div class="row nowrap">
+        <button class="btn grow" type="button" onclick={() => (filtersOpen = true)}>
+          {$tr('audit.mob.filters')}{#if activeCount > 0} ({activeCount}){/if}
+        </button>
+        <button class="btn" type="button" disabled={loading} onclick={() => load(true)}>{$tr('audit.refresh')}</button>
+      </div>
+      {#if activeCount > 0}
+        <div class="row">
+          {#if resultLabel && result}<span class="pr-tag">{$tr(resultLabel.key)}</span>{/if}
+          {#if groupLabel && group}<span class="pr-tag">{$tr(groupLabel.key)}</span>{/if}
+          {#if appliedSearch}<span class="pr-tag">{appliedSearch}</span>{/if}
+          {#if appliedActor}<span class="pr-tag">{appliedActor}</span>{/if}
+        </div>
+      {/if}
+    {:else}
+{@render filterFields()}
+    {/if}
+
+    {#if failed}
+      <p class="error">{$tr('audit.loadFailed')}</p>
+    {/if}
+
+    {#if !loaded}
+      <p class="note muted">{$tr('audit.loading')}</p>
+    {:else if items.length === 0}
+      <p class="note muted">{failed ? '' : $tr('audit.empty')}</p>
+    {:else}
+      <AuditTable {items} />
+    {/if}
+
+    {#if nextBefore > 0}
+      <div class="row end">
+        <button class="btn" type="button" disabled={loading} onclick={() => load(false)}>
+          {$tr('audit.more')}
+        </button>
+      </div>
+    {/if}
+  </section>
+</div>
+
+{#snippet filterFields()}
     <div class="filters row">
       <label class="field">
         <span class="label small">{$tr('audit.filter.result')}</span>
@@ -153,27 +215,17 @@
       </button>
     </div>
 
-    {#if failed}
-      <p class="error">{$tr('audit.loadFailed')}</p>
-    {/if}
+{/snippet}
 
-    {#if !loaded}
-      <p class="note muted">{$tr('audit.loading')}</p>
-    {:else if items.length === 0}
-      <p class="note muted">{failed ? '' : $tr('audit.empty')}</p>
-    {:else}
-      <AuditTable {items} />
-    {/if}
-
-    {#if nextBefore > 0}
-      <div class="row end">
-        <button class="btn" type="button" disabled={loading} onclick={() => load(false)}>
-          {$tr('audit.more')}
-        </button>
-      </div>
-    {/if}
-  </section>
-</div>
+{#if filtersOpen}
+  <Modal title={$tr('audit.mob.filtersTitle')} labelId="audit-filter-title" onclose={() => (filtersOpen = false)}>
+    <div class="stack">{@render filterFields()}</div>
+    <div class="row end">
+      <button class="btn" type="button" onclick={resetFilters}>{$tr('audit.mob.reset')}</button>
+      <button class="btn primary" type="button" onclick={() => (filtersOpen = false)}>{$tr('audit.mob.show')}</button>
+    </div>
+  </Modal>
+{/if}
 
 <style>
   .audit {
@@ -218,5 +270,37 @@
   }
   .emb {
     margin: 0;
+  }
+
+  .nowrap {
+    flex-wrap: nowrap;
+  }
+
+  .grow {
+    flex: 1;
+  }
+
+  /* Phones: no card around the list (the list is its own card), the filters are a sheet. */
+  @media (max-width: 720px) {
+    .audit > .card {
+      padding: 0;
+      border: 0;
+      background: none;
+      box-shadow: none;
+    }
+
+    .filters {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .filters > .btn {
+      display: none;
+    }
+
+    .field,
+    .field.grow {
+      flex: none;
+    }
   }
 </style>

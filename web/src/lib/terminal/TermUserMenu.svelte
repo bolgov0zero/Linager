@@ -93,15 +93,17 @@
   {disabled}
   onclick={() => (open ? hide() : void show())}
 >
-  {$tr('term.user')}
+  <span class="long">{$tr('term.user')}</span>
+  <span class="short">{current || 'root'}</span>
   <span class="arrow" aria-hidden="true"></span>
 </button>
 
 {#if open}
+  <div use:portal class="sheet-scrim"></div>
   <ul
     use:portal
     id="{uid}-list"
-    class="list"
+    class="list sel-list"
     role="menu"
     aria-label={$tr('term.user')}
     style:left="{pos.left}px"
@@ -200,5 +202,41 @@
     padding: 8px 10px;
     color: var(--muted);
     font-size: 13px;
+  }
+
+  /* Phones: the button shows the account the shell runs as, the list opens as a sheet from the bottom. */
+  .short {
+    display: none;
+  }
+
+  @media (max-width: 720px) {
+    .list {
+      min-width: 0;
+      max-width: none;
+      box-shadow: 0 -4px 0 var(--shade);
+    }
+
+    .long {
+      display: none;
+    }
+
+    .short {
+      display: inline;
+      max-width: 96px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .item {
+      min-height: 50px;
+      align-items: center;
+      padding: 0;
+      font-size: 15px;
+    }
+
+    .empty {
+      padding: 14px 0;
+    }
   }
 </style>

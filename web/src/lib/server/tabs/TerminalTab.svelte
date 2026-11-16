@@ -7,6 +7,8 @@
   import { requestSettings } from '../../settings/request';
   import TermIcon from '../../terminal/TermIcon.svelte';
   import { openTermWindow } from '../../terminal/windows';
+  import { viewBox } from '../../terminal/vv';
+  import { isPhone } from '../../ui/viewport';
 
   let { server }: { server: ServerDetail } = $props();
 
@@ -29,16 +31,19 @@
     requestSettings('snippets');
   }
 
+  // On a phone with the keyboard up the terminal covers the visible part of the screen (header and bottom bar included).
+  const kbd = $derived($isPhone && $viewBox.kbd);
+
   const statusText = $derived(
     phase === 'connecting' ? $tr('term.connecting') : phase === 'open' ? $tr('term.open') : $tr('term.closed'),
   );
 </script>
 
-<div class="term">
+<div class="term" class:kbd style:top={kbd ? `${$viewBox.top}px` : undefined} style:height={kbd ? `${$viewBox.height}px` : undefined}>
   <div class="head">
     <p class="meta">
       <span class="dot" class:on={server.online && phase === 'open'} aria-hidden="true"></span>
-      <span>{$tr('term.header', { name: server.name })}</span>
+      <span class="hdr">{$tr('term.header', { name: server.name })}</span>
       {#if server.online}
         <span class="muted">· {statusText}</span>
       {/if}
@@ -70,12 +75,13 @@
     display: none;
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 720px) {
     .actions .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 6px 12px;
+      width: 44px;
+      padding: 0;
     }
 
     .ic {
@@ -146,9 +152,88 @@
     color: var(--muted);
   }
 
-  @media (max-width: 600px) {
+  /* Phones: no frame and no height of its own. The terminal fills everything between the page header and the bottom
+     bar (the whole visible area while the keyboard is up); the toolbar is one slim row above it. */
+  @media (max-width: 720px) {
+    .term {
+      position: fixed;
+      inset: var(--top-h) 0 calc(var(--bar-h) + var(--safe-b)) 0;
+      z-index: 12;
+      gap: 0;
+      background: var(--bg);
+    }
+
+    .term.kbd {
+      bottom: auto;
+      z-index: 16;
+      padding-top: 0;
+    }
+
+    .head {
+      flex: none;
+      flex-wrap: nowrap;
+      gap: 4px;
+      padding: 2px 6px 2px 12px;
+      border-bottom: 2px solid var(--line);
+      background: var(--surface);
+    }
+
+    .meta {
+      flex: 1;
+      flex-wrap: nowrap;
+      min-width: 0;
+      gap: 6px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .hdr {
+      display: none;
+    }
+
+    .meta span:not(.dot) {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .actions {
+      flex: none;
+      flex-wrap: nowrap;
+      gap: 4px;
+    }
+
+    .actions .btn,
+    .actions :global(.btn) {
+      box-shadow: none;
+      border-color: transparent;
+      background: none;
+    }
+
+    .actions .btn.ink {
+      border-color: var(--line);
+      background: var(--ink);
+    }
+
+    .box {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .box :global(.session) {
+      flex: 1;
+      height: auto;
+      min-height: 0;
+    }
+
     .box :global(.screen) {
-      height: 320px;
+      flex: 1;
+      height: auto;
+    }
+
+    .note {
+      padding: 24px 12px;
     }
   }
 </style>

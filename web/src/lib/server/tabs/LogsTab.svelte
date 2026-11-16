@@ -1,6 +1,8 @@
 <script lang="ts">
   import { openStream, type ServerDetail } from '../../../api';
   import Select from '../../ui/Select.svelte';
+  import PixIcon from '../../ui/PixIcon.svelte';
+  import { isPhone } from '../../ui/viewport';
   import { tr } from '../../../i18n';
   import { LOG_LIMIT, LogLines, logTone, type LogTone } from './logs-lines';
 
@@ -131,6 +133,17 @@
     };
   });
 
+  // Phones have no autoscroll switch: scrolling up stops following the stream, the arrow (or scrolling down) resumes.
+  function onLogScroll(): void {
+    if (!$isPhone || !box) return;
+    autoscroll = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  }
+
+  function toEnd(): void {
+    autoscroll = true;
+    if (box) box.scrollTop = box.scrollHeight;
+  }
+
   // Keep the newest line in view when autoscroll is on.
   $effect(() => {
     void rows;
@@ -142,6 +155,71 @@
   {#if !server.online}
     <p class="note">{$tr('logs.offline')}</p>
   {:else}
+    {#if $isPhone}
+      <div class="pbar">
+        <div class="pick">
+          <Select
+            value={source}
+            onchange={pickSource}
+            ariaLabel={$tr('logs.source')}
+            options={[
+              { value: 'all', label: $tr('logs.source.all') },
+              { value: 'kernel', label: $tr('logs.source.kernel') },
+              { value: 'ssh', label: 'ssh' },
+              { value: 'cron', label: 'cron' },
+              { value: 'nginx', label: 'nginx' },
+              { value: 'docker', label: 'docker' },
+              { value: 'custom', label: $tr('logs.source.custom') },
+            ]}
+          />
+        </div>
+        <div class="prio">
+          <Select
+            bind:value={priority}
+            ariaLabel={$tr('logs.priority')}
+            options={[
+              { value: '7', label: $tr('logs.priority.all') },
+              { value: '3', label: $tr('logs.priority.err') },
+              { value: '4', label: $tr('logs.priority.warn') },
+              { value: '6', label: $tr('logs.priority.info') },
+            ]}
+          />
+        </div>
+        <button class="btn ib" type="button" aria-pressed={paused} aria-label={paused ? $tr('logs.resume') : $tr('logs.pause')} onclick={togglePause}>
+          <svg viewBox="0 0 16 16" width="16" height="16" shape-rendering="crispEdges" fill="currentColor" aria-hidden="true">
+            {#if paused}
+              <rect x="4" y="2" width="2" height="12" />
+              <rect x="6" y="3" width="2" height="10" />
+              <rect x="8" y="4" width="2" height="8" />
+              <rect x="10" y="5" width="2" height="6" />
+              <rect x="12" y="6" width="1" height="4" />
+            {:else}
+              <rect x="4" y="2" width="3" height="12" />
+              <rect x="9" y="2" width="3" height="12" />
+            {/if}
+          </svg>
+        </button>
+        <button class="btn ib" type="button" aria-label={$tr('logs.clear')} onclick={clearLines}><PixIcon name="x" size={16} /></button>
+      </div>
+      {#if source === 'custom'}
+        <div class="unitrow">
+          <input
+            class="input"
+            type="text"
+            placeholder={$tr('logs.unitPlaceholder')}
+            aria-label={$tr('logs.unit')}
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            bind:value={unitDraft}
+            onchange={commitUnit}
+            onkeydown={(e) => {
+              if (e.key === 'Enter') commitUnit();
+            }}
+          />
+        </div>
+      {/if}
+    {:else}
     <div class="controls">
       <div class="group">
         <label class="ctl">
@@ -204,14 +282,19 @@
     {#if paused}
       <p class="hint">{$tr('logs.pausedHint')}</p>
     {/if}
+    {/if}
 
-    <div class="log" bind:this={box} role="log" aria-live="off">
+    <div class="log" bind:this={box} role="log" aria-live="off" onscroll={onLogScroll}>
       {#each rows as row (row.id)}
         <div class="line {row.tone}">{row.text}</div>
       {:else}
         <div class="line muted-line">{$tr('logs.empty')}</div>
       {/each}
     </div>
+
+    {#if $isPhone && !autoscroll}
+      <button class="btn toend" type="button" onclick={toEnd}>↓ {$tr('m.logs.toEnd')}</button>
+    {/if}
 
     {#if streamState === 'closed'}
       <div class="closed">
@@ -309,15 +392,87 @@
     gap: 12px;
   }
 
-  @media (max-width: 600px) {
-    .log {
-      height: 320px;
+  /* Phones: the log is the only scrolling thing and takes everything between the header and the bottom bar; the
+     source, priority, pause and clear sit in one bar above it. */
+  @media (max-width: 720px) {
+    .logs {
+      position: fixed;
+      inset: var(--top-h) 0 calc(var(--bar-h) + var(--safe-b)) 0;
+      z-index: 12;
+      gap: 0;
+      background: var(--bg);
     }
 
-    .ctl,
-    .ctl .input {
+    .pbar {
+      display: flex;
+      flex: none;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--surface);
+      border-bottom: 2px solid var(--line);
+    }
+
+    .pick {
+      flex: 1;
       min-width: 0;
+    }
+
+    .prio {
+      flex: none;
+      width: 104px;
+    }
+
+    .pbar :global(.sel) {
       width: 100%;
+      min-height: 44px;
+      font-size: 14px;
+    }
+
+    .ib {
+      flex: none;
+      width: 44px;
+      padding: 0;
+    }
+
+    .unitrow {
+      flex: none;
+      padding: 6px 12px;
+      background: var(--surface);
+      border-bottom: 2px solid var(--line);
+    }
+
+    .hint {
+      flex: none;
+      padding: 4px 12px;
+      background: var(--surface);
+    }
+
+    .log {
+      flex: 1;
+      height: auto;
+      min-height: 0;
+      padding: 8px 12px;
+      border-width: 0;
+      font-size: 11.5px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .toend {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+    }
+
+    .closed {
+      flex: none;
+      padding: 8px 12px;
+      background: var(--surface);
+      border-top: 2px solid var(--line);
+    }
+
+    .note {
+      padding: 24px 12px;
     }
   }
 </style>

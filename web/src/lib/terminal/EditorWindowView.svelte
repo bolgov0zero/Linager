@@ -146,7 +146,7 @@
     display: none;
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 720px) {
     .wrapic {
       display: inline-flex;
     }
@@ -178,5 +178,20 @@
 
   .strip p {
     margin: 0;
+  }
+
+  @media (max-width: 720px) {
+    .ed {
+      gap: 0;
+    }
+
+    .strip {
+      margin: 8px;
+    }
+
+    .ed > :global(span.small) {
+      padding: 4px 12px;
+      border-top: 2px solid var(--line);
+    }
   }
 </style>

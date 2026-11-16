@@ -128,4 +128,19 @@
   .error {
     margin: 0;
   }
+
+  /* Phones: the name takes its own line, the buttons share the next one. */
+  @media (max-width: 720px) {
+    .list .grow {
+      flex: 1 1 100%;
+    }
+
+    .list .btn {
+      flex: 1;
+    }
+
+    .list {
+      gap: 14px;
+    }
+  }
 </style>
