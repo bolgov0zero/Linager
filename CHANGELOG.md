@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.51-beta.1
+## 0.1.51
 
 - Releases: `manifest.json` now has an `assets` map with the binary of every architecture (name, SHA-256, size); the top-level `sha256` and `size` still describe the amd64 binary, so agents of earlier releases keep updating. The server downloads, verifies and caches every binary of a release and gives an agent the one for its own architecture (`/v1/release/<ver>/binary?arch=`; an agent that sends none gets amd64). The agent checks the downloaded file against its own entry of the signed manifest. First step of arm64 support for agents.
 - Build and release: `make build` produces `linager_linux_amd64` and `linager_linux_arm64` (`ARCHES=amd64` builds one), a release carries both binaries and one `.deb` per architecture (`linager_amd64.deb`, `linager_arm64.deb`), `SHA256SUMS` lists all of them and `manifest.json` has a checksum for each. CI runs the tests on an arm64 runner as well. 
