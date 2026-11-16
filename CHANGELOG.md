@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.67
+
+- Security: the "State" block is folded by default (its header shows the verdict, for example "4 things need attention"), and fail2ban moved to the first place, before "State" and "Now in the system". Same order on a phone.
+
 ## 0.1.66
 
 - Updates, "Linager server": the notes of a release are shown in a dialog instead of a list inside the block. After a check that finds a newer release the dialog opens by itself (with a button to update right away), and the new button "Release notes" opens it any time. When the server is up to date the button shows the notes of the latest release. `GET /api/updates` now fills `server.notes` for the latest known release also when no update is available, and adds `server.notes_version`.

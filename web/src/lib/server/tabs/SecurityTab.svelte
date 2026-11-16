@@ -146,7 +146,7 @@
   );
   // The folding sections (an accordion on a phone, a card with a header on a desktop), all closed at the start.
   const Section = $derived($isPhone ? SecAcc : Fold);
-  let accOpen = $state({ sessions: false, logins: false, failures: false, f2b: false, keys: false });
+  let accOpen = $state({ state: false, sessions: false, logins: false, failures: false, f2b: false, keys: false });
   const f2bMeta = $derived(
     !sec ? '' : !sec.fail2ban.installed ? $T('sec.f2b.notInstalled') : !sec.fail2ban.active ? $T('sec.f2b.stoppedBadge') : $T('sec.f2b.running'),
   );
@@ -490,10 +490,7 @@
   </li>
 {/snippet}
 
-{#snippet stateBlock()}
-  <section class="card stack" aria-labelledby="sec-state">
-    <h3 id="sec-state">{$T('sec.state')}</h3>
-    <p class="verdict tone-{tone}" role="status">{verdictText}</p>
+{#snippet stateBody()}
     {#if groups.ssh.length > 0}
       <h4 class="grp">{$T('sec.state.groupSsh')}</h4>
       <ul class="checks">
@@ -506,7 +503,6 @@
         {#each groups.system as c (c.id)}{@render checkRow(c)}{/each}
       </ul>
     {/if}
-  </section>
 {/snippet}
 
 <div class="sec">
@@ -564,18 +560,24 @@
       </div>
     {/if}
 
-    {@render stateBlock()}
+    {#if $isPhone}
+      <SecAcc title="fail2ban" meta={f2bMeta} tone={f2bTone} bind:open={accOpen.f2b}>
+        <F2bCard serverId={server.id} {sec} {unreachable} onchanged={() => load(server.id)} />
+      </SecAcc>
+    {:else}
+      <F2bCard serverId={server.id} {sec} {unreachable} onchanged={() => load(server.id)} />
+    {/if}
+
+    <Section title={$T('sec.state')} meta={verdictText} {tone} bind:open={accOpen.state}>
+      {#if $isPhone}<section class="card stack">{@render stateBody()}</section>{:else}{@render stateBody()}{/if}
+    </Section>
 
     {#if $isPhone}
       <SecAcc title={$T('sec.sessions')} meta={String(sec.sessions.length)} tone={sec.sessions.length > 0 ? 'warn' : 'muted'} bind:open={accOpen.sessions}>
         {@render sessionsBlock(sec)}
       </SecAcc>
-      <SecAcc title="fail2ban" meta={f2bMeta} tone={f2bTone} bind:open={accOpen.f2b}>
-        <F2bCard serverId={server.id} {sec} {unreachable} onchanged={() => load(server.id)} />
-      </SecAcc>
     {:else}
       {@render sessionsBlock(sec)}
-      <F2bCard serverId={server.id} {sec} {unreachable} onchanged={() => load(server.id)} />
     {/if}
 
     <Section title={$T('sec.failures')} meta={sec.failures.total.toLocaleString($locale)} tone={sec.failures.total > 0 ? 'warn' : 'muted'} bind:open={accOpen.failures}>
@@ -681,13 +683,6 @@
 
   .tone-muted {
     color: var(--muted);
-  }
-
-  .verdict {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: 22px;
-    line-height: 1.15;
   }
 
   .grp {
