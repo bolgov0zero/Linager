@@ -31,9 +31,9 @@ func detectArch(t *testing.T, uname, dpkgArch string) (string, int) {
 	if dpkgArch != "" {
 		stub("dpkg", `echo `+dpkgArch)
 	}
-	// the stubs come first; the system directories supply sh and the rest, and have no dpkg on macOS
+	// only the stubs are on the PATH, so a real dpkg of the machine running the test never shows up
 	cmd := exec.Command("/bin/sh", "-c", string(fn)+"\ndetect_arch") //nolint:gosec // the script text comes from the repository's install.sh
-	cmd.Env = []string{"PATH=" + dir + ":/usr/bin:/bin"}
+	cmd.Env = []string{"PATH=" + dir}
 	out, err := cmd.Output()
 	code := 0
 	var ee *exec.ExitError
@@ -46,9 +46,6 @@ func detectArch(t *testing.T, uname, dpkgArch string) (string, int) {
 }
 
 func TestInstallScriptDetectsArchitecture(t *testing.T) {
-	if _, err := exec.LookPath("dpkg"); err == nil {
-		t.Log("a real dpkg exists on this machine; the stub is placed before it")
-	}
 	cases := []struct {
 		name, uname, dpkg string
 		want              string
