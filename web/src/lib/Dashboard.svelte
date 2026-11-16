@@ -1011,8 +1011,9 @@
       grid-row: 1;
     }
 
+    /* The summary strip already shows the number of servers. */
     .count {
-      margin: 0 0 8px;
+      display: none;
     }
 
     .grid {

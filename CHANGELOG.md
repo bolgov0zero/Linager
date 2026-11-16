@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.60
+
+- Phone: the line with the number of servers above the summary is gone (the summary strip already shows it).
+
 ## 0.1.59
 
 - Phone: the buttons in the header of a terminal window (user, snippets, keys, copy, paste) stand next to each other on the left instead of being spread over the whole width.
