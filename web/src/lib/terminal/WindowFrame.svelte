@@ -273,8 +273,9 @@
 
     .bar {
       flex-wrap: wrap;
-      gap: 0 4px;
-      padding: calc(2px + var(--safe-t)) 6px 2px 12px;
+      justify-content: flex-start;
+      gap: 0 6px;
+      padding: calc(2px + var(--safe-t)) 8px 6px 12px;
       cursor: default;
     }
 

@@ -183,6 +183,15 @@
       padding-top: 0;
     }
 
+    /* The area under the key row (the keyboard and its translucent accessory bar) must not show the page. */
+    .term.kbd::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background: var(--surface);
+    }
+
     .head {
       flex: none;
       flex-wrap: nowrap;

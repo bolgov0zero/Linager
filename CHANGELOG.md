@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.59
+
+- Phone: the buttons in the header of a terminal window (user, snippets, keys, copy, paste) stand next to each other on the left instead of being spread over the whole width.
+- Phone: with the keyboard open, the terminal (the tab and the floating windows) no longer shows the page through the gap between its key row and the keyboard. That strip, where the translucent keyboard and its accessory bar of newer iOS sit, is filled with a solid background behind the terminal.
+
 ## 0.1.58
 
 - Phone: the lightning bolt of the snippets button was redrawn (a clean pixel bolt). Everything at the bottom edge (the tab bar, the button bars of dialogs, the dock of terminal windows) is lifted by at least 16 px above the rounded screen corners and the bars keep a margin at their sides; the fill of the bars still reaches the edge.

@@ -139,6 +139,17 @@
       display: none;
     }
 
+    /* While the keyboard is up a window only covers the visible area; the strip the keyboard and its accessory bar
+       (translucent on newer iOS) leave over the page must not show the page. */
+    .layer.kbd:not(.idle)::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: var(--surface);
+      pointer-events: auto;
+    }
+
     .btn.sm {
       flex: 1 1 0;
       max-width: none;
