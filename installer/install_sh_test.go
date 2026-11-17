@@ -93,3 +93,31 @@ func TestRaspberryPiOSIsSupported(t *testing.T) {
 		t.Error("Raspbian (32-bit) must not be supported")
 	}
 }
+
+// TestInstallScriptOpensTheMenuAfterTheWizard: after a successful install in a terminal the script shows the menu
+// (what `linager` shows), after the summary has been read; automation and failures end the script without it.
+func TestInstallScriptOpensTheMenuAfterTheWizard(t *testing.T) {
+	src, err := os.ReadFile("../install.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(src)
+	for _, must := range []string{
+		`[ "$rc" -eq 0 ] || exit "$rc"`,         // a failed install does not open the menu
+		`*" --no-tui "*) exit 0`,                // nor does automation
+		"read -r _ </dev/tty",                   // the summary is read first
+		"exec /usr/local/bin/linager </dev/tty", // then the menu
+	} {
+		if !strings.Contains(s, must) {
+			t.Errorf("install.sh lacks %q", must)
+		}
+	}
+	if strings.Contains(s, "exec /usr/local/bin/linager install") {
+		t.Error("the wizard must not be exec'd: the script has to go on to the menu")
+	}
+	if sh, err := exec.LookPath("sh"); err == nil {
+		if out, err := exec.Command(sh, "-n", "../install.sh").CombinedOutput(); err != nil { //nolint:gosec // syntax check of the repository script
+			t.Errorf("install.sh is not valid shell: %v\n%s", err, out)
+		}
+	}
+}

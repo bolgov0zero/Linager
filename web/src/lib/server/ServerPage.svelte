@@ -196,7 +196,7 @@
             type="button"
             aria-label={$tr('srv.note.open')}
             title={$tr('srv.note.open')}
-            onclick={() => (noteOpen = true)}><PixIcon name="note" size={18} /></button>
+            onclick={() => (noteOpen = true)}><PixIcon name="note" size={20} /></button>
           {#if isAdmin}
             <RebootButton server={detail} />
             <button class="btn danger" type="button" onclick={() => (deleteOpen = true)}>{$tr('srv.delete')}</button>
@@ -385,7 +385,10 @@
   /* The note button is only an icon; a small square in the corner says that the server has a note. */
   .btn.note {
     position: relative;
-    padding: 0 10px;
+    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .btn.note.has::after {

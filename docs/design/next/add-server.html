@@ -329,8 +329,8 @@ $('#p-confirm').addEventListener('click',function(e){
 /* ---- tab 2: install by a link ---- */
 var LK={ttl:'1 час',uses:'1',auto:false,nets:'',group:'',open:false};
 function newToken(){var c='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789',s='';for(var i=0;i<4;i++)s+=c[Math.floor(Math.random()*c.length)];return 'lk_'+s+'…'+c[Math.floor(Math.random()*c.length)]+c[Math.floor(Math.random()*c.length)]}
-function curlCmd(host,tok){return "curl -fsSk --pinnedpubkey '"+PIN+"' https://"+host+':'+PORT+'/v1/join/'+tok+' | sudo sh'}
-function scriptText(tok){return '#!/bin/sh\n# Linager: установка агента по ссылке (токен '+tok+'). Скрипт отдаёт ваш сервер.\nset -eu\nSERVER="'+HOST_LOC+':'+PORT+'"   # сервер подставляет адрес, по которому вы к нему обратились\nFP="'+FP+'"\n[ "$(id -u)" -eq 0 ] || { echo "запустите от root: sudo sh"; exit 1; }\narch=$(dpkg --print-architecture)          # amd64 или arm64\ntmp=$(mktemp -d); trap \'rm -rf "$tmp"\' EXIT\ncurl -fsSk --pinnedpubkey \''+PIN+'\' -o "$tmp/linager" "https://$SERVER/v1/join/'+tok+'/binary?arch=$arch"\nchmod 0755 "$tmp/linager"\n"$tmp/linager" install agent --server "$SERVER" --fingerprint "$FP" --join-token "'+tok+'"\n'}
+function curlCmd(host,tok){return "wget -nv -O- --no-check-certificate --pinnedpubkey '"+PIN+"' https://"+host+':'+PORT+'/v1/join/'+tok+' | sh'}
+function scriptText(tok){return '#!/bin/sh\n# Linager: установка агента по ссылке (токен '+tok+'). Скрипт отдаёт ваш сервер.\nset -eu\nSERVER="'+HOST_LOC+':'+PORT+'"   # сервер подставляет адрес, по которому вы к нему обратились\nFP="'+FP+'"\n[ "$(id -u)" -eq 0 ] || { echo "запустите от root"; exit 1; }\narch=$(dpkg --print-architecture)          # amd64 или arm64\ntmp=$(mktemp -d); trap \'rm -rf "$tmp"\' EXIT\nwget -nv --no-check-certificate --pinnedpubkey \''+PIN+'\' -O "$tmp/linager" "https://$SERVER/v1/join/'+tok+'/binary?arch=$arch"\nchmod 0755 "$tmp/linager"\n"$tmp/linager" install agent --server "$SERVER" --fingerprint "$FP" --join-token "'+tok+'"\n'}
 function sw(on,id,title,hint){return '<div class="switch'+(on?' on':'')+'" role="switch" aria-checked="'+on+'" tabindex="0" data-sw="'+id+'"><i></i><span>'+title+'<small>'+hint+'</small></span></div>'}
 function grp(sel){return ['','Production','Infrastructure'].map(function(g){return '<option value="'+g+'"'+(g===sel?' selected':'')+'>'+(g||'Без группы')+'</option>'}).join('')}
 function opts(list,sel){return list.map(function(o){return '<option'+(o===sel?' selected':'')+'>'+o+'</option>'}).join('')}
@@ -355,7 +355,7 @@ function renderLink(){
      +'<div><div class="row between"><b>Локальная ссылка</b><button class="btn sm" data-a="cp" data-h="'+HOST_LOC+'">Копировать</button></div><p class="muted small">Для серверов в одной сети с панелью: быстрее и не выходит наружу.</p><pre class="cmd">'+esc(curlCmd(HOST_LOC,t))+'</pre></div>'
      +'<div class="row between"><button class="btn sm" data-a="script">'+(S.showScript?'Скрыть скрипт':'Показать скрипт')+'</button><span class="muted small">Прочитайте скрипт до запуска: его можно открыть по этой же ссылке.</span></div>'
      +(S.showScript?'<pre class="cmd code">'+esc(scriptText(t))+'</pre>':'')
-     +'<p class="infobox"><b>Зачем <span class="mono">-k</span> и <span class="mono">--pinnedpubkey</span>.</b> У сервера собственный сертификат, поэтому обычная проверка цепочки не подходит. Вместо неё команда проверяет, что отвечает именно ваш сервер: хеш его ключа зашит в команду. Подмена скрипта по пути невозможна.</p>'
+     +'<p class="infobox"><b>Зачем <span class="mono">--no-check-certificate</span> и <span class="mono">--pinnedpubkey</span>.</b> У сервера собственный сертификат, поэтому обычная проверка цепочки не подходит. Вместо неё команда проверяет, что отвечает именно ваш сервер: хеш его ключа зашит в команду. Подмена скрипта по пути невозможна.</p>'
      +'</div></div>';
   }
   h+='<div class="fold'+(LK.open?' open':'')+'"><button class="fh" type="button" data-fold="links" aria-expanded="'+!!LK.open+'"><h4>Действующие ссылки</h4><span class="meta">'+S.links.length+'</span><span class="chev" aria-hidden="true">▾</span></button><div class="fbody">';
@@ -540,7 +540,7 @@ async function runInstall(){
     await play(id,0,600,'действует 10 минут, один сервер');L('токен создан (в вывод не попадает)');
     // download with progress
     var t=Date.now();ctl.set(1,'running',{note:'0,0 из 18,4 МБ',bar:0});
-    L('$ curl -fsSk --pinnedpubkey sha256//3b1T… https://'+host+':'+PORT+'/v1/join/••••/binary?arch=amd64','c');
+    L('$ wget -nv --no-check-certificate --pinnedpubkey sha256//3b1T… https://'+host+':'+PORT+'/v1/join/••••/binary?arch=amd64','c');
     for(var p=1;p<=10;p++){await sleep(330);chk(id);ctl.set(1,'running',{note:(p*1.84).toFixed(1).replace('.',',')+' из 18,4 МБ',bar:p/10})}
     ctl.set(1,'done',{dur:Date.now()-t,note:'18,4 МБ с '+host,bar:1});L('получено 19 300 000 байт','g');
     L('$ sha256sum linager','c');await play(id,2,600,'совпадает с подписанным манифестом 0.1.77');L('контрольная сумма и подпись совпали','g');

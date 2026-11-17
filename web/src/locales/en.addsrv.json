@@ -5,7 +5,6 @@
   "asv.tab.link": "Install by a link",
   "asv.tab.ssh": "Install over SSH",
   "asv.group.none": "No group",
-
   "asv.confirm.pending": "Waiting for confirmation",
   "asv.confirm.empty": "No connection requests. Install the agent on a new server: by a link, over SSH, or by hand with the data below.",
   "asv.confirm.badgeLink": "by a link",
@@ -36,7 +35,6 @@
   "asv.connect.fingerprint": "Fingerprint",
   "asv.connect.other": "Other addresses of the server: {list}",
   "asv.connect.copy": "Copy address:port",
-
   "asv.link.lead": "Create a link and run the command on the new server as root. The agent downloads the release from this server (from its cache, not from GitHub), connects by itself and shows up in the Confirmations tab. The agent reports the server name itself.",
   "asv.link.new": "New link",
   "asv.link.ttl": "Valid for",
@@ -67,7 +65,7 @@
   "asv.link.showScript": "Show script",
   "asv.link.hideScript": "Hide script",
   "asv.link.scriptHint": "Read the script before you run it: it can be opened at the same link.",
-  "asv.link.whyTitle": "Why -k and --pinnedpubkey.",
+  "asv.link.whyTitle": "Why --no-check-certificate and --pinnedpubkey.",
   "asv.link.why": "The server has its own certificate, so the usual check of the certificate chain does not fit. Instead, the command checks that it is your server that answers: the hash of its key is built into the command. The script cannot be swapped on the way.",
   "asv.link.list": "Active links",
   "asv.link.listEmpty": "No links.",
@@ -89,7 +87,6 @@
   "asv.link.dur.m": "{m} min",
   "asv.link.revoke": "Revoke",
   "asv.link.revoked": "Link revoked",
-
   "asv.ssh.lead": "The panel connects to the server over SSH, checks it and installs the agent. You do not need to confirm the request afterwards: logging in over SSH has already proved the server is yours.",
   "asv.ssh.where": "Where to connect",
   "asv.ssh.host": "Server address",
@@ -113,7 +110,6 @@
   "asv.ssh.installTitle": "Installing on {host}",
   "asv.ssh.stagesCheck": "Stages of the check",
   "asv.ssh.stagesInstall": "Stages of the install",
-
   "asv.ssh.step.connect": "SSH connection",
   "asv.ssh.step.hostkey": "Host key",
   "asv.ssh.step.auth": "Sign-in",
@@ -129,7 +125,6 @@
   "asv.ssh.step.bind": "Binding to the server",
   "asv.ssh.step.online": "First connection of the agent",
   "asv.ssh.step.rollback": "Rollback: the service is stopped, the agent is removed from the host",
-
   "asv.ssh.note.authPassword": "by password",
   "asv.ssh.note.authKey": "by key",
   "asv.ssh.note.hostkeyAsk": "Compare the fingerprint with the server console or the hosting panel",
@@ -146,7 +141,6 @@
   "asv.ssh.note.hash": "hash {hash}…",
   "asv.ssh.note.server": "server {name}",
   "asv.ssh.note.of": "{done} of {total}",
-
   "asv.ssh.gate.hostkeyTitle": "Host key",
   "asv.ssh.gate.hostkeyText": "The panel connects to this host for the first time. Key fingerprint ({type}):",
   "asv.ssh.gate.hostkeyWarn": "If the key is not the right one, someone may be intercepting the connection, and the password would go to a server that is not yours.",
@@ -165,7 +159,6 @@
   "asv.ssh.gate.reinstallTitle": "The host already has an agent",
   "asv.ssh.gate.reinstallText": "The previous agent will be replaced: it stops reporting to the old server.",
   "asv.ssh.gate.reinstallCheck": "Reinstall and connect to this server",
-
   "asv.ssh.ready": "Everything is ready for the install.",
   "asv.ssh.readyHost": "Server",
   "asv.ssh.readyAgent": "The agent will connect to",
@@ -193,7 +186,6 @@
   "asv.ssh.again": "Add another",
   "asv.ssh.installFailed": "The install failed.",
   "asv.ssh.checkFailed": "The check failed.",
-
   "asv.ssh.err.cancelled": "The check was cancelled.",
   "asv.ssh.err.connect_failed": "Could not connect to the host over SSH. Check the address and the port, that sshd is running and that the port is not blocked by a firewall.",
   "asv.ssh.err.hostkey_rejected": "You did not trust the host key, the connection was dropped.",
@@ -209,11 +201,11 @@
   "asv.ssh.err.port_unreachable": "The host could not reach the server. The agent connects to the server by itself, so the port must be open on the side of the host (firewall, NAT, cloud rules).",
   "asv.ssh.err.token_failed": "Could not issue a one-time token for the install. Try again.",
   "asv.ssh.err.release_missing": "The server has no release of the agent for this system. Put it into the cache on the updates page.",
-  "asv.ssh.err.curl_failed": "curl could not run on the host or could not find the server. Install curl and check the connection from the host to the server.",
   "asv.ssh.err.download_failed": "Could not download the agent from the server. Check the connection from the host to the server and try again.",
   "asv.ssh.err.checksum_mismatch": "The hash or the signature of the downloaded file does not match the signed manifest. The file was not installed: it may have been damaged on the way.",
   "asv.ssh.err.install_failed": "The installer of the agent on the host failed. The details are in the output below.",
   "asv.ssh.err.not_bound": "The agent started, but the server did not accept its binding request. The install was cancelled.",
   "asv.ssh.err.not_connected": "The agent is installed but did not connect to the server within 60 seconds. Most likely the outgoing port is blocked by the firewall of the host, or the server address is not reachable from it. The install was cancelled, and the host is as it was.",
-  "asv.ssh.err.unknown": "Error: {code}."
+  "asv.ssh.err.unknown": "Error: {code}.",
+  "asv.ssh.err.wget_failed": "wget could not run on the host or could not find the server. Install wget and check the connection from the host to the server."
 }

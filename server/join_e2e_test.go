@@ -117,7 +117,7 @@ func TestInstallLinks(t *testing.T) {
 	}
 	pin, _ := server.SPKIPin(keys.TLSDER)
 	if kinds["external"].Host != "203.0.113.5" || kinds["local"].Host != "10.9.9.9" ||
-		!strings.Contains(kinds["external"].Command, pin) || !strings.Contains(kinds["local"].Command, "/v1/join/"+l1.Token) || !strings.HasSuffix(kinds["local"].Command, "| sudo sh") {
+		!strings.Contains(kinds["external"].Command, pin) || !strings.Contains(kinds["local"].Command, "/v1/join/"+l1.Token) || !strings.HasPrefix(kinds["local"].Command, "wget -nv -O- --no-check-certificate --pinnedpubkey ") || strings.Contains(kinds["local"].Command, "sudo") || !strings.HasSuffix(kinds["local"].Command, " | sh") {
 		t.Fatalf("commands: %+v", l1.Commands)
 	}
 	var list []struct {

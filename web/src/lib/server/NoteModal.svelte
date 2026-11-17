@@ -93,7 +93,7 @@
   {#snippet actions()}
     {#if canEdit && !editing}
       <button class="btn pencil" type="button" aria-label={$tr('srv.note.edit')} title={$tr('srv.note.edit')} onclick={startEdit}>
-        <PixIcon name="pencil" size={16} />
+        <PixIcon name="pencil" size={20} />
       </button>
     {/if}
   {/snippet}
@@ -121,7 +121,7 @@
     </div>
   {:else if note.trim() === ''}
     <p class="muted empty">
-      {$tr('srv.note.empty')}{#if canEdit} {$tr('srv.note.emptyEdit')}{/if}
+      {$tr('srv.note.empty')}{#if canEdit}{' '}{$tr('srv.note.emptyEdit')}{/if}
     </p>
   {:else}
     <div class="md">{@html html}</div>
@@ -135,7 +135,10 @@
 
 <style>
   .pencil {
-    padding: 0 10px;
+    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .field {

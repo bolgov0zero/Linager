@@ -89,7 +89,24 @@ trap - EXIT INT TERM
 
 # With `curl ... | sh` stdin is the pipe, not the keyboard: give the wizard the terminal back.
 # Without a terminal (automation) the wizard runs non-interactively and needs its flags.
+rc=0
 if [ ! -t 0 ] && [ -t 1 ] && (: </dev/tty) 2>/dev/null; then
-  exec /usr/local/bin/linager install "$@" </dev/tty
+  /usr/local/bin/linager install "$@" </dev/tty || rc=$?
+else
+  /usr/local/bin/linager install "$@" || rc=$?
 fi
-exec /usr/local/bin/linager install "$@"
+[ "$rc" -eq 0 ] || exit "$rc"
+
+# A person at a terminal gets the menu next, as if they had typed `linager`. The wizard has printed its summary
+# (addresses, the administrator password): the menu waits for Enter, so the summary can be read first.
+# Automation (--no-tui) and runs without a terminal end here.
+case " $* " in *" --no-tui "*) exit 0 ;; esac
+if [ -t 1 ] && (: </dev/tty) 2>/dev/null; then
+  case "${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}" in
+    ru*) hint='Готово. Нажмите Enter, чтобы открыть меню Linager (то же самое откроет команда linager)...' ;;
+    *) hint='Done. Press Enter to open the Linager menu (the same as typing linager)...' ;;
+  esac
+  printf '\n%s ' "$hint"
+  read -r _ </dev/tty || exit 0
+  exec /usr/local/bin/linager </dev/tty
+fi

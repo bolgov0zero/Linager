@@ -139,7 +139,7 @@ func (h *fakeHost) handle(cmd, stdin string) (string, int) {
 		if id == "alpine" {
 			ver, name, arch = "3.20", "Alpine Linux v3.20", ""
 		}
-		return "ID=" + id + "\nVER=" + ver + "\nNAME=" + name + "\nARCH=" + arch + "\nCURL=yes\nSYSTEMD=yes\nFREE=4200\n", 0
+		return "ID=" + id + "\nVER=" + ver + "\nNAME=" + name + "\nARCH=" + arch + "\nWGET=yes\nSYSTEMD=yes\nFREE=4200\n", 0
 	case cmd == "id -u":
 		if h.root {
 			return "0\n", 0
@@ -174,7 +174,7 @@ func (h *fakeHost) handle(cmd, stdin string) (string, int) {
 		return "", 0
 	case strings.Contains(inner, "/var/lib/linager-agent/state.json") && strings.Contains(inner, "echo yes"):
 		return "no\n", 0
-	case strings.Contains(inner, "curl -fsSk"):
+	case strings.Contains(inner, "wget -nv"):
 		return "", 0
 	case strings.Contains(inner, " install agent"):
 		if h.failCmd == "install" {

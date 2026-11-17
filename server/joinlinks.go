@@ -50,7 +50,7 @@ func joinHash(secret string) []byte {
 	return h[:]
 }
 
-// spkiPin is the value of curl's --pinnedpubkey for the certificate: the SHA-256 of its public key.
+// spkiPin is the value of the --pinnedpubkey option of wget and curl for the certificate: the SHA-256 of its public key.
 func spkiPin(der []byte) (string, error) {
 	c, err := x509.ParseCertificate(der)
 	if err != nil {
@@ -195,7 +195,7 @@ func (a *AgentPort) serverAddr(r *http.Request) string {
 
 func shq(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'" }
 
-// joinScriptText is what `curl ... | sudo sh` runs on the new host. It checks the system, takes the binary from
+// joinScriptText is what `wget ... | sh` runs on the new host. It checks the system, takes the binary from
 // this server over the pinned connection, compares it with the signed manifest and starts the installer, which
 // pairs the agent with the token.
 func joinScriptText(server, fp, pin, token string, hashes map[string]string) string {
@@ -217,8 +217,8 @@ TOKEN=%s
 
 die() { printf 'Error: %%s\n' "$*" >&2; exit 1; }
 
-[ "$(id -u)" -eq 0 ] || die "run as root: the command ends with | sudo sh"
-command -v curl >/dev/null 2>&1 || die "curl is required"
+[ "$(id -u)" -eq 0 ] || die "run as root"
+command -v wget >/dev/null 2>&1 || die "wget is required"
 [ -r /etc/os-release ] || die "cannot detect the OS"
 os_id=$(. /etc/os-release && printf '%%s' "${ID:-}")
 os_ver=$(. /etc/os-release && printf '%%s' "${VERSION_ID:-}")
@@ -237,7 +237,7 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT INT TERM
 
 printf 'Downloading the agent from %%s ...\n' "$SERVER"
-curl -fsSk --pinnedpubkey "$PIN" -o "$tmp/linager" "https://$SERVER/v1/join/$TOKEN/binary?arch=$arch" || die "download failed"
+wget -nv --no-check-certificate --pinnedpubkey "$PIN" -O "$tmp/linager" "https://$SERVER/v1/join/$TOKEN/binary?arch=$arch" || die "download failed"
 if [ -n "$want" ]; then
   got=$(sha256sum "$tmp/linager" | cut -d' ' -f1)
   [ "$got" = "$want" ] || die "the binary does not match the signed release"
@@ -245,6 +245,23 @@ fi
 chmod 0755 "$tmp/linager"
 
 "$tmp/linager" install agent --no-tui --server "$SERVER" --fingerprint "$FP" --join-token "$TOKEN"
+
+# The downloaded copy is no longer needed (the installer put the binary into /usr/local/bin); exec skips the trap.
+cd /
+rm -rf "$tmp"
+trap - EXIT INT TERM
+
+# A person at a terminal gets the menu next, as if they had typed linager. With "| sh" the standard input is the
+# pipe, so the keyboard is taken from /dev/tty. Automation without a terminal ends here.
+if [ -t 1 ] && (: </dev/tty) 2>/dev/null; then
+  case "${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}" in
+    ru*) hint='Готово. Нажмите Enter, чтобы открыть меню Linager (то же самое откроет команда linager)...' ;;
+    *) hint='Done. Press Enter to open the Linager menu (the same as typing linager)...' ;;
+  esac
+  printf '\n%%s ' "$hint"
+  read -r _ </dev/tty || exit 0
+  exec /usr/local/bin/linager </dev/tty
+fi
 `, shq(server), shq(fp), shq(pin), shq(token), sums.String())
 }
 

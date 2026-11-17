@@ -83,9 +83,10 @@ type joinCreated struct {
 	Commands []joinCommand `json:"commands"`
 }
 
-// installCommand is the line a person runs on the new host.
+// installCommand is the line a person runs on the new host, as root. It uses wget (the base system of Debian has
+// it, curl is an extra): -nv keeps the errors visible, because an empty script piped into sh would end silently.
 func installCommand(host, port, pin, secret string) string {
-	return "curl -fsSk --pinnedpubkey " + shq(pin) + " " + shq("https://"+net.JoinHostPort(host, port)+"/v1/join/"+secret) + " | sudo sh"
+	return "wget -nv -O- --no-check-certificate --pinnedpubkey " + shq(pin) + " " + shq("https://"+net.JoinHostPort(host, port)+"/v1/join/"+secret) + " | sh"
 }
 
 func (a *Admin) joinCreate(w http.ResponseWriter, r *http.Request, u *store.User) {

@@ -200,7 +200,7 @@ type sshSession struct {
 	server   string // host:port that the new agent will use
 	mode     string // root, nopass or password
 	arch     string
-	hasCurl  bool
+	hasWget  bool
 	reinst   bool
 	hostFP   string
 	extra    string
@@ -705,7 +705,7 @@ var supportedOS = map[string]bool{"debian:12": true, "debian:13": true, "ubuntu:
 const probeCmd = `. /etc/os-release 2>/dev/null
 printf 'ID=%s\nVER=%s\nNAME=%s\n' "$ID" "$VERSION_ID" "$PRETTY_NAME"
 printf 'ARCH=%s\n' "$(dpkg --print-architecture 2>/dev/null)"
-if command -v curl >/dev/null 2>&1; then echo CURL=yes; else echo CURL=no; fi
+if command -v wget >/dev/null 2>&1; then echo WGET=yes; else echo WGET=no; fi
 if [ -d /run/systemd/system ]; then echo SYSTEMD=yes; else echo SYSTEMD=no; fi
 echo FREE=$(df -Pk /usr/local/bin 2>/dev/null | awk 'NR==2{print int($4/1024)}')`
 
@@ -764,7 +764,7 @@ func (s *sshSession) runCheck() {
 		return
 	}
 	s.mu.Lock()
-	s.arch, s.hasCurl = kv["ARCH"], kv["CURL"] == "yes"
+	s.arch, s.hasWget = kv["ARCH"], kv["WGET"] == "yes"
 	s.mu.Unlock()
 	s.setStep(3, "done", name+" · "+kv["ARCH"], "")
 	s.setStep(4, "running", "", "")
@@ -1025,7 +1025,7 @@ func (s *sshSession) runInstall() {
 	}
 	s.mu.Lock()
 	s.tokenID, s.mask = tid, secret
-	arch, addr, reinst, hasCurl := s.arch, s.server, s.reinst, s.hasCurl
+	arch, addr, reinst, hasWget := s.arch, s.server, s.reinst, s.hasWget
 	s.mu.Unlock()
 	s.setStep(base, "done", "", "")
 	assets, err := deps.Assets(ctx)
@@ -1047,16 +1047,16 @@ func (s *sshSession) runInstall() {
 	// 2. download
 	s.setStep(base+1, "running", "", "")
 	s.setProgress(base+1, 0, asset.Size)
-	if !hasCurl {
-		s.logf("curl is missing on the host: installing it")
-		if _, c, err := s.priv(ctx, "DEBIAN_FRONTEND=noninteractive apt-get install -y curl ca-certificates", 5*time.Minute, nil); err != nil || c != 0 {
-			s.fail(base+1, "curl_failed", "")
+	if !hasWget {
+		s.logf("wget is missing on the host: installing it")
+		if _, c, err := s.priv(ctx, "DEBIAN_FRONTEND=noninteractive apt-get install -y wget ca-certificates", 5*time.Minute, nil); err != nil || c != 0 {
+			s.fail(base+1, "wget_failed", "")
 			finish(false)
 			return
 		}
 	}
 	url := "https://" + addr + "/v1/join/" + secret + "/binary?arch=" + arch
-	dl := "curl -fsSk --pinnedpubkey " + shq(deps.Pin) + " -o " + shq(tmp+"/linager") + " " + shq(url)
+	dl := "wget -nv --no-check-certificate --pinnedpubkey " + shq(deps.Pin) + " -O " + shq(tmp+"/linager") + " " + shq(url)
 	s.logf("$ %s", strings.ReplaceAll(dl, shq(url), shq("https://"+addr+"/v1/join/••••/binary?arch="+arch)))
 	pctx, stopProgress := context.WithCancel(ctx)
 	go func() {

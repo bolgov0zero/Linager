@@ -10,6 +10,8 @@ curl -fsSL https://raw.githubusercontent.com/bolgov0zero/linager/main/install.sh
 
 Run the command as root, otherwise the installer stops with an error.
 
+**After the install the Linager menu opens** (the same as the `linager` command without arguments shows, see [menu.md](menu.md)): when the wizard ends and prints its summary (the addresses, the administrator password), the script asks for Enter and opens the menu. The install by a link (below) does the same. The menu does not open when the install failed, when there is no terminal (automation) or when `--no-tui` is given.
+
 ## Safe option: download, verify, run
 
 ```bash
@@ -47,17 +49,17 @@ Questions: the server address `host:client-port` and confirmation of the fingerp
 Two ways to skip the wizard and the key: install by a link and install over SSH (below).
 
 ### Install by a link
-In "+ Server" → "Install by a link" make a link: its lifetime (15 minutes, 1 hour, 24 hours, 7 days), the number of servers (1, 5, 10, 25 or unlimited), and optionally a group and the allowed networks. The panel shows **two commands**: an external one (by the address that the server has on the internet) and a local one (by its address in your network). Run the one you need on the new server:
+In "+ Server" → "Install by a link" make a link: its lifetime (15 minutes, 1 hour, 24 hours, 7 days), the number of servers (1, 5, 10, 25 or unlimited), and optionally a group and the allowed networks. The panel shows **two commands**: an external one (by the address that the server has on the internet) and a local one (by its address in your network). Run the one you need on the new server as root (without `sudo`: some systems do not have it; `wget` is needed, it is part of the base system of Debian and Ubuntu):
 
 ```bash
-curl -fsSk --pinnedpubkey 'sha256//…' 'https://panel.example.com:9443/v1/join/lk_…' | sudo sh
+wget -nv -O- --no-check-certificate --pinnedpubkey 'sha256//…' 'https://panel.example.com:9443/v1/join/lk_…' | sh
 ```
 
 The script finds out the OS and the architecture, takes the binary **from your server** (from its cache of signed releases, no GitHub), compares it with the signed manifest and runs `linager install agent --join-token …`. The server appears in the "Confirmations" tab marked "by a link": no key to type, just press "Confirm". When the link has "Approve servers automatically" on, the server is added at once. The agent reports its own name.
 
-- The server in the command is checked by key pinning (`--pinnedpubkey`), so `-k` does not open a way to substitute it: only your server can answer.
+- The server in the command is checked by key pinning (`--pinnedpubkey`), so `--no-check-certificate` does not open a way to substitute it: only your server can answer.
 - The token is shown **once**, when it is made. The panel keeps only its hash. A link can be revoked in the "Active links" block.
-- The script can be read before it runs: the "Show script" button, or the same `curl` command without `| sudo sh`.
+- The script can be read before it runs: the "Show script" button, or the same `wget` command without `| sh`.
 - A link whose lifetime is over or whose uses are spent stops working by itself. The network limit checks the address from which the host talks to the server.
 - The addresses of the commands come from `agents.hosts` in `server.yaml` (the names and addresses of the client-port certificate) and from the address you opened the panel with.
 - By hand: `sudo linager install agent --server host:port --fingerprint SHA256:… --join-token lk_…` and `linager agent enroll … --join-token …`.
