@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.70
+
+- Admin access: the white and black lists accept host names next to addresses, for a connection without a fixed public address (DDNS, for example `home.example.duckdns.org`). The server resolves the names once a minute and judges by the addresses they point to (IPv4 and IPv6); the list shows them with the time of the last check and a "Refresh" button. A name is added only when DNS knows it. When DNS stops answering, the last known address stays in force (it is stored and survives a restart) for 24 hours. A name that has no address blocks saving, like locking yourself out. Names are not allowed among the trusted proxies. New `POST /api/access/resolve`; `GET /api/access` and `POST /api/access/check` carry `hosts`.
+- Tests: the restriction is in force from the first request after a start (a regression test).
+
 ## 0.1.69
 
 - New settings section "Admin access" (Settings → Admin access): restricts who may open the admin panel. Three modes: off, white list (whatever is not listed is refused) and black list (whatever is not listed is allowed), a separate list for each, judged by the real client address. A checkbox "Only through trusted proxies" refuses direct connections to the port. "Check an address" shows what the server would do with an address, and the panel tells what happens to you before anything is saved. The restriction applies to the admin panel port only; the agent port is not affected.

@@ -5,10 +5,12 @@
     isUnauthorized,
     type AccessCheck,
     type AccessConfig,
+    type AccessHost,
     type AccessLogFilter,
     type AccessLogRow,
     type AccessRule,
     type AccessState,
+    ApiError,
   } from '../../api';
   import { locale, t, tr as trans } from '../../i18n';
   import { showToast } from '../toast';
@@ -42,6 +44,10 @@
   let testIp = $state('');
   let testHow = $state('proxy');
 
+  let hostBusy = $state(false);
+  let refreshTick = $state(0); // a name was refreshed: ask the server about the draft again
+  let now = $state(Date.now()); // the "N min ago" of the host names
+
   let filter = $state<AccessLogFilter>('all');
   let rows = $state<AccessLogRow[]>([]);
   let moreRows = $state(false);
@@ -52,6 +58,8 @@
   const dirty = $derived(!!srv && !!draft && JSON.stringify(draft) !== JSON.stringify(srv.config));
   const problems = $derived(check?.problems ?? []);
   const trustAll = $derived(!!draft && draft.proxies.some((p) => p.cidr.endsWith('/0')));
+  const hosts = $derived<Record<string, AccessHost>>({ ...(srv?.hosts ?? {}), ...(check?.hosts ?? {}) });
+  const hasHosts = $derived(list.some((r) => isHostRule(r)));
 
   function fail(e: unknown): void {
     if (isUnauthorized(e)) onauthlost();
@@ -87,6 +95,19 @@
     }
     if (ip4(addr) === null || (bits !== undefined && !(/^\d{1,2}$/.test(bits) && Number(bits) <= 32))) return null;
     return `${addr}/${bits ?? 32}`;
+  }
+
+  /** A valid host name in the form the server stores (lower case, no final dot), or null. A name has a dot and does not end in a number. */
+  function hostName(raw: string): string | null {
+    const s = raw.trim().replace(/\.$/, '').toLowerCase();
+    if (!s || s.length > 253 || !s.includes('.')) return null;
+    const labels = s.split('.');
+    if (!labels.every((l) => /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/.test(l))) return null;
+    return /^\d/.test(labels[labels.length - 1]) ? null : s;
+  }
+
+  function isHostRule(rule: AccessRule): boolean {
+    return normalize(rule.cidr) === null && hostName(rule.cidr) !== null;
   }
 
   /** Whether the network of a list holds the address (IPv4; other families only on an exact match). */
@@ -135,13 +156,18 @@
     }
   }
 
-  onMount(() => void load());
+  onMount(() => {
+    void load();
+    const timer = setInterval(() => (now = Date.now()), 15000);
+    return () => clearInterval(timer);
+  });
 
   // The server judges the draft (what happens to you, whether it may be applied, what happens to the tested address).
   let seq = 0;
   $effect(() => {
     if (!draft) return;
     const body = $state.snapshot(draft);
+    void refreshTick;
     const ip = testIp.trim();
     const test = ip ? { ip, proxy: testHow === 'proxy' } : undefined;
     const timer = setTimeout(async () => {
@@ -163,9 +189,30 @@
     addErr = '';
   }
 
-  function addRule(event: SubmitEvent): void {
+  async function addRule(event: SubmitEvent): Promise<void> {
     event.preventDefault();
-    if (!draft) return;
+    if (!draft || hostBusy) return;
+    const host = normalize(newAddr) === null ? hostName(newAddr) : null;
+    if (host) {
+      // a name is added only when DNS knows it: the server looks it up
+      if (draft[listKey].some((r) => r.cidr === host)) {
+        addErr = t('access.err.dupHost');
+        return;
+      }
+      hostBusy = true;
+      try {
+        await api.accessResolve(host);
+      } catch (e) {
+        if (isUnauthorized(e)) onauthlost();
+        else addErr = e instanceof ApiError && e.status === 422 ? t('access.err.unresolved', $locale, { host }) : t('access.failed');
+        return;
+      } finally {
+        hostBusy = false;
+      }
+      draft[listKey].push({ cidr: host, note: newNote.trim() });
+      addErr = newAddr = newNote = '';
+      return;
+    }
     const res = addTo(draft[listKey], newAddr, newNote);
     addErr = res ? t(`access.err.${res}`) : '';
     if (!res) {
@@ -183,11 +230,32 @@
     draft?.[listKey].splice(index, 1);
   }
 
+  /** Looks the name up again at once (the server also does it every minute). */
+  async function refreshHost(host: string): Promise<void> {
+    if (hostBusy) return;
+    hostBusy = true;
+    try {
+      const res = await api.accessResolve(host);
+      refreshTick++;
+      if (srv) srv.hosts[host] = res.status;
+      showToast(res.status.failing ? t('access.host.stillDown', $locale, { host }) : t('access.host.refreshed', $locale, { host, ips: res.status.ips.join(', ') }));
+    } catch (e) {
+      if (isUnauthorized(e)) onauthlost();
+      else showToast(t('access.err.unresolved', $locale, { host }));
+    } finally {
+      hostBusy = false;
+    }
+  }
+
   function addProxy(event: SubmitEvent): void {
     event.preventDefault();
     if (!draft) return;
     if (normalize(newProxy)?.endsWith('/0')) {
       proxyErr = t('access.proxy.err.all');
+      return;
+    }
+    if (normalize(newProxy) === null && hostName(newProxy)) {
+      proxyErr = t('access.proxy.err.host');
       return;
     }
     const res = addTo(draft.proxies, newProxy, newProxyNote);
@@ -259,8 +327,24 @@
     return t(`access.reason.${code}`);
   }
 
-  function problemText(p: { code: string; ip?: string; reason?: string }): string {
-    return t(`access.problem.${p.code}`, $locale, { ip: p.ip ?? '', reason: p.reason ? reasonText(p.reason) : '' });
+  function problemText(p: { code: string; ip?: string; reason?: string; host?: string }): string {
+    return t(`access.problem.${p.code}`, $locale, { ip: p.ip ?? '', host: p.host ?? '', reason: p.reason ? reasonText(p.reason) : '' });
+  }
+
+  function ago(ts: number): string {
+    const s = Math.max(0, Math.round((now - ts * 1000) / 1000));
+    if (s < 60) return t('access.ago.s', $locale, { n: s });
+    if (s < 3600) return t('access.ago.m', $locale, { n: Math.floor(s / 60) });
+    return t('access.ago.h', $locale, { n: Math.floor(s / 3600) });
+  }
+
+  /** The line under the addresses of a name: when they were checked, or what is wrong. */
+  function hostLine(h: AccessHost | undefined): { text: string; tone: 'ok' | 'warn' } {
+    if (!h || !h.checked_at) return { text: t('access.host.never'), tone: 'warn' };
+    if (h.expired) return { text: t('access.host.expired', $locale, { ago: ago(h.checked_at) }), tone: 'warn' };
+    if (h.failing) return { text: t('access.host.failing', $locale, { ago: ago(h.checked_at) }), tone: 'warn' };
+    if (now - h.checked_at * 1000 < 5000) return { text: t('access.host.okNow'), tone: 'ok' };
+    return { text: t('access.host.ok', $locale, { ago: ago(h.checked_at) }), tone: 'ok' };
   }
 
   function formatTime(ts: number): string {
@@ -316,25 +400,40 @@
           {#if list.length}
             <div class="wrap">
               <table class="tbl">
-                <thead><tr><th>{$trans('access.col.addr')}</th><th>{$trans('access.col.note')}</th><th></th></tr></thead>
+                <thead><tr><th>{$trans('access.col.addrHost')}</th><th>{$trans('access.col.now')}</th><th>{$trans('access.col.note')}</th><th></th></tr></thead>
                 <tbody>
                   {#each list as rule, i (rule.cidr)}
+                    {@const host = isHostRule(rule)}
+                    {@const info = hosts[rule.cidr]}
+                    {@const line = host ? hostLine(info) : null}
                     <tr>
-                      <td class="nw mono">{rule.cidr}</td>
+                      <td class="nw mono">{rule.cidr}{#if host}<span class="ddns" title={$trans('access.host.badgeHint')}>DDNS</span>{/if}</td>
+                      <td>
+                        {#if host && line}
+                          <div class="ips mono">{#each info?.ips ?? [] as ip (ip)}<div>{ip}</div>{/each}</div>
+                          <div class="small {line.tone}">{line.text}</div>
+                        {:else}
+                          <span class="muted">—</span>
+                        {/if}
+                      </td>
                       <td>{rule.note || '—'}</td>
-                      <td class="end"><button class="btn sm" type="button" aria-label={`${$trans('access.remove')} ${rule.cidr}`} onclick={() => removeRule(i)}>{$trans('access.remove')}</button></td>
+                      <td class="end nw">
+                        {#if host}<button class="btn sm" type="button" disabled={hostBusy} aria-label={`${$trans('access.host.refresh')} ${rule.cidr}`} onclick={() => void refreshHost(rule.cidr)}>{$trans('access.host.refresh')}</button>{' '}{/if}
+                        <button class="btn sm" type="button" aria-label={`${$trans('access.remove')} ${rule.cidr}`} onclick={() => removeRule(i)}>{$trans('access.remove')}</button>
+                      </td>
                     </tr>
                   {/each}
                 </tbody>
               </table>
             </div>
+            {#if hasHosts}<div class="box info"><span>{$trans('access.host.note')}</span></div>{/if}
           {:else}
             <p class="muted small">{$trans('access.empty')}</p>
           {/if}
           <form class="row add" autocomplete="off" onsubmit={addRule}>
-            <input class="input grow" placeholder={$trans('access.addr.ph')} aria-label={$trans('access.addr.aria')} bind:value={newAddr} />
+            <input class="input grow addr" placeholder={$trans('access.addr.ph')} aria-label={$trans('access.addr.aria')} bind:value={newAddr} />
             <input class="input grow" placeholder={$trans('access.note.ph')} aria-label={$trans('access.note.ph')} maxlength="100" bind:value={newNote} />
-            <button class="btn primary" type="submit">{$trans('access.add')}</button>
+            <button class="btn primary" type="submit" disabled={hostBusy}>{$trans('access.add')}</button>
             {#if draft.mode === 'white'}<button class="btn" type="button" onclick={addRfc}>{$trans('access.rfc')}</button>{/if}
           </form>
           {#if addErr}<p class="error small" role="alert">{addErr}</p>{/if}
@@ -488,7 +587,7 @@
           <div class="msg">
             {#if problems.length}
               <span class="crit">{$trans('access.cannotApply')}</span>
-              {#each problems as p (p.code)}<br />{problemText(p)}{/each}
+              {#each problems as p (p.code + (p.host ?? ''))}<br />{problemText(p)}{/each}
             {:else}
               {$trans('access.dirty')}
             {/if}
@@ -522,6 +621,26 @@
   .grow {
     flex: 1 1 160px;
     min-width: 0;
+  }
+
+  .grow.addr {
+    flex: 2 1 280px;
+  }
+
+  .ddns {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 0 5px;
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    font-size: 11px;
+    line-height: 1.3;
+    vertical-align: middle;
+  }
+
+  .ips {
+    font-size: 12px;
+    line-height: 1.5;
   }
 
   .radios {

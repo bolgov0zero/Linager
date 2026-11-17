@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/netip"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -66,6 +67,8 @@ type accessRules struct {
 	whiteN, blackN  int
 	proxiesN        int
 	trustAllProxies bool
+	hosts           []string // the host names of both lists, sorted
+	unresolved      []string // the host names that have no address in force
 }
 
 // ParseAccessRule reads "203.0.113.7", "203.0.113.0/24" or an IPv6 form and returns the normalised rule.
@@ -89,37 +92,73 @@ func ParseAccessRule(r AccessRule) (AccessRule, netip.Prefix, error) {
 		a = a.Unmap()
 		p = netip.PrefixFrom(a, a.BitLen())
 	}
-	note := strings.TrimSpace(r.Note)
-	if utf8.RuneCountInString(note) > maxRuleNote {
-		return r, p, errors.New("comment is too long")
+	note, err := cleanNote(r.Note)
+	if err != nil {
+		return r, p, err
 	}
 	return AccessRule{CIDR: p.String(), Note: note}, p, nil
 }
 
-func compileRules(in []AccessRule, limit int) ([]AccessRule, []netip.Prefix, error) {
+func cleanNote(s string) (string, error) {
+	note := strings.TrimSpace(s)
+	if utf8.RuneCountInString(note) > maxRuleNote {
+		return "", errors.New("comment is too long")
+	}
+	return note, nil
+}
+
+// compileRules normalises a list. With allowHosts an entry that is not an address may be a host name; the names come
+// back separately (their addresses are known only to the guard), the networks are the listed addresses.
+func compileRules(in []AccessRule, limit int, allowHosts bool) ([]AccessRule, []netip.Prefix, []string, error) {
 	if len(in) > limit {
-		return nil, nil, errors.New("too many entries")
+		return nil, nil, nil, errors.New("too many entries")
 	}
 	rules := make([]AccessRule, 0, len(in))
 	nets := make([]netip.Prefix, 0, len(in))
+	var hosts []string
 	seen := map[string]bool{}
 	for _, r := range in {
 		nr, p, err := ParseAccessRule(r)
+		isHost := false
 		if err != nil {
-			return nil, nil, err
+			h, ok := normalizeHost(r.CIDR)
+			if !ok {
+				return nil, nil, nil, err
+			}
+			if !allowHosts {
+				return nil, nil, nil, errors.New("a host name is not allowed here, give an address")
+			}
+			note, nerr := cleanNote(r.Note)
+			if nerr != nil {
+				return nil, nil, nil, nerr
+			}
+			nr, isHost = AccessRule{CIDR: h, Note: note}, true
 		}
 		if seen[nr.CIDR] {
 			continue
 		}
 		seen[nr.CIDR] = true
 		rules = append(rules, nr)
-		nets = append(nets, p)
+		if isHost {
+			hosts = append(hosts, nr.CIDR)
+		} else {
+			nets = append(nets, p)
+		}
 	}
-	return rules, nets, nil
+	return rules, nets, hosts, nil
 }
 
-// compileAccess validates and normalises a config.
-func compileAccess(cfg AccessConfig) (AccessConfig, *accessRules, error) {
+func hostPrefixes(addrs []netip.Addr) []netip.Prefix {
+	out := make([]netip.Prefix, 0, len(addrs))
+	for _, a := range addrs {
+		out = append(out, netip.PrefixFrom(a, a.BitLen()))
+	}
+	return out
+}
+
+// compileAccess validates and normalises a config. hosts holds the addresses in force for the host names of the
+// lists (nil: none are known, which is fine for validation only).
+func compileAccess(cfg AccessConfig, hosts hostAddrs) (AccessConfig, *accessRules, error) {
 	switch cfg.Mode {
 	case AccessOff, AccessWhite, AccessBlack:
 	default:
@@ -133,14 +172,37 @@ func compileAccess(cfg AccessConfig) (AccessConfig, *accessRules, error) {
 	}
 	var err error
 	ar := &accessRules{mode: cfg.Mode, onlyProxy: cfg.OnlyProxy}
-	if cfg.White, ar.white, err = compileRules(cfg.White, maxAccessRules); err != nil {
+	var whiteHosts, blackHosts []string
+	if cfg.White, ar.white, whiteHosts, err = compileRules(cfg.White, maxAccessRules, true); err != nil {
 		return cfg, nil, err
 	}
-	if cfg.Black, ar.black, err = compileRules(cfg.Black, maxAccessRules); err != nil {
+	if cfg.Black, ar.black, blackHosts, err = compileRules(cfg.Black, maxAccessRules, true); err != nil {
 		return cfg, nil, err
 	}
-	if cfg.Proxies, ar.proxies, err = compileRules(cfg.Proxies, maxAccessProxies); err != nil {
+	if cfg.Proxies, ar.proxies, _, err = compileRules(cfg.Proxies, maxAccessProxies, false); err != nil {
 		return cfg, nil, err
+	}
+	all := map[string]bool{}
+	for _, h := range append(append([]string{}, whiteHosts...), blackHosts...) {
+		all[h] = true
+	}
+	if len(all) > maxAccessHosts {
+		return cfg, nil, errors.New("too many host names")
+	}
+	for h := range all {
+		ar.hosts = append(ar.hosts, h)
+	}
+	sort.Strings(ar.hosts)
+	for _, h := range ar.hosts {
+		if len(hosts[h]) == 0 {
+			ar.unresolved = append(ar.unresolved, h)
+		}
+	}
+	for _, h := range whiteHosts {
+		ar.white = append(ar.white, hostPrefixes(hosts[h])...)
+	}
+	for _, h := range blackHosts {
+		ar.black = append(ar.black, hostPrefixes(hosts[h])...)
 	}
 	ar.whiteN, ar.blackN, ar.proxiesN = len(cfg.White), len(cfg.Black), len(cfg.Proxies)
 	for _, p := range ar.proxies {
@@ -220,6 +282,7 @@ type accessProblem struct {
 	Code   string `json:"code"`
 	IP     string `json:"ip,omitempty"`
 	Reason string `json:"reason,omitempty"`
+	Host   string `json:"host,omitempty"`
 }
 
 // Problem codes.
@@ -228,6 +291,7 @@ const (
 	problemProxyUnknown = "proxy_unlisted"
 	problemWhiteEmpty   = "white_empty"
 	problemLockout      = "lockout"
+	problemHostNoAddr   = "host_unresolved"
 )
 
 // problems lists what is wrong with enabling the config for the request that is changing it. An empty answer
@@ -245,6 +309,9 @@ func (ar *accessRules) problems(peer netip.Addr, xff string) []accessProblem {
 	}
 	if ar.mode == AccessWhite && ar.whiteN == 0 {
 		out = append(out, accessProblem{Code: problemWhiteEmpty})
+	}
+	for _, h := range ar.unresolved {
+		out = append(out, accessProblem{Code: problemHostNoAddr, Host: h})
 	}
 	if v := ar.decide(peer, xff); !v.Allowed {
 		out = append(out, accessProblem{Code: problemLockout, IP: v.IP, Reason: v.Reason})
@@ -270,10 +337,17 @@ type AccessGuard struct {
 	mu       sync.Mutex
 	lastPage map[string]time.Time
 	lastDeny map[string]time.Time
+
+	applyMu sync.Mutex // the snapshot is replaced by one writer at a time
+
+	hmu          sync.Mutex // the host names: what is known about each, and what was stored last
+	hosts        map[string]*hostEntry
+	persistedKey string
+	persistedAt  time.Time
 }
 
 func newAccessGuard(db *store.Store, trust *ProxyTrust, yamlProxies []string, log *slog.Logger) *AccessGuard {
-	g := &AccessGuard{db: db, log: log, trust: trust, yaml: yamlProxies, lastPage: map[string]time.Time{}, lastDeny: map[string]time.Time{}}
+	g := &AccessGuard{db: db, log: log, trust: trust, yaml: yamlProxies, lastPage: map[string]time.Time{}, lastDeny: map[string]time.Time{}, hosts: map[string]*hostEntry{}}
 	g.apply(g.defaults(), false)
 	return g
 }
@@ -288,15 +362,30 @@ func (g *AccessGuard) defaults() AccessConfig {
 }
 
 func (g *AccessGuard) apply(cfg AccessConfig, configured bool) {
-	norm, rules, err := compileAccess(cfg)
+	g.applyMu.Lock()
+	defer g.applyMu.Unlock()
+	g.applyLocked(cfg, configured)
+}
+
+func (g *AccessGuard) applyLocked(cfg AccessConfig, configured bool) {
+	hosts := g.addrs()
+	norm, rules, err := compileAccess(cfg, hosts)
 	if err != nil {
 		// a damaged stored value must not lock everybody out: fall back to no restriction and say so
 		g.log.Error("access restriction: stored settings are invalid, the restriction is off", "err", err)
-		norm, rules, _ = compileAccess(g.defaults())
+		norm, rules, _ = compileAccess(g.defaults(), hosts)
 		configured = false
 	}
 	g.trust.Set(rules.proxies)
 	g.snap.Store(&accessSnapshot{cfg: norm, rules: rules, configured: configured})
+}
+
+// reapply compiles the config in force again, for the new addresses of its host names.
+func (g *AccessGuard) reapply() {
+	g.applyMu.Lock()
+	defer g.applyMu.Unlock()
+	s := g.snap.Load()
+	g.applyLocked(s.cfg, s.configured)
 }
 
 // Load reads the stored restriction.
@@ -317,7 +406,7 @@ func (g *AccessGuard) Load(ctx context.Context) {
 
 // Save stores a validated config and puts it in force.
 func (g *AccessGuard) Save(ctx context.Context, cfg AccessConfig) error {
-	norm, _, err := compileAccess(cfg)
+	norm, _, err := compileAccess(cfg, nil)
 	if err != nil {
 		return err
 	}
@@ -329,6 +418,7 @@ func (g *AccessGuard) Save(ctx context.Context, cfg AccessConfig) error {
 		return err
 	}
 	g.apply(norm, true)
+	g.persistHosts(ctx, g.snap.Load().rules.hosts)
 	return nil
 }
 
@@ -341,6 +431,7 @@ func (g *AccessGuard) Current() (AccessConfig, bool) {
 // Run reloads the restriction every few seconds (so that `linager access reset` takes effect without a restart)
 // and removes the old journal rows.
 func (g *AccessGuard) Run(ctx context.Context) {
+	go g.hostLoop(ctx)
 	reload := time.NewTicker(reloadEvery)
 	purge := time.NewTicker(10 * time.Minute)
 	defer reload.Stop()
@@ -379,7 +470,7 @@ func ResetAccess(ctx context.Context, db *store.Store) (bool, error) {
 	}
 	changed := (cfg.Mode != AccessOff && cfg.Mode != "") || cfg.OnlyProxy
 	cfg.Mode, cfg.OnlyProxy = AccessOff, false
-	norm, _, err := compileAccess(cfg)
+	norm, _, err := compileAccess(cfg, nil)
 	if err != nil {
 		return false, err
 	}

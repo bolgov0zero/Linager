@@ -12,7 +12,23 @@ Settings → **Admin access** restricts who may open the admin panel and shows a
 | White list | Whatever is not listed is refused. Good when you know where you sign in from. |
 | Black list | Whatever is not listed is allowed. Closes only the addresses you know are unwanted. |
 
-Each mode has its own list of addresses and networks (`203.0.113.7` or `203.0.113.0/24`, IPv6 too) with a comment. The button "+ Private networks (RFC 1918)" adds `10.0.0.0/8`, `172.16.0.0/12` and `192.168.0.0/16` to the white list. "Check an address" tells what the server would do with an address, through a trusted proxy or directly.
+Each mode has its own list of addresses, networks (`203.0.113.7` or `203.0.113.0/24`, IPv6 too) and host names (see "Host names and DDNS") with a comment. The button "+ Private networks (RFC 1918)" adds `10.0.0.0/8`, `172.16.0.0/12` and `192.168.0.0/16` to the white list. "Check an address" tells what the server would do with an address, through a trusted proxy or directly.
+
+## Host names and DDNS
+
+If you have no fixed public address but you have a DDNS name (for example `home.example.duckdns.org`), put the name into the list instead of an address. It carries the tag `DDNS`, and the column "Points to now" shows the addresses the name resolved to (IPv4 and IPv6) and when it was last checked.
+
+- The server reads the names again in the background once a minute and puts new addresses in force at once. The button "Refresh" does it immediately. A name is added only when DNS knows it.
+- When DNS stops answering, the last known address stays in force (it is kept in the database and survives a restart of the server). If there has been no answer for more than a day, the address stops counting: a name that has been gone for long must not keep an address open for ever. So after a long DNS outage a white list may lock you out as well; `linager access reset` helps then.
+- Names are allowed in the white and black lists only. They cannot be trusted proxies: DNS would let `X-Forwarded-For` be forged. A name needs a dot and the Latin form (an IDN is written as `xn--...`); a list holds at most 20 names.
+
+::: warning What to know about DDNS
+- **A delay after the address changes.** From the moment the provider changes your address until the DDNS record and the server catch up (up to a minute plus the TTL of the record), the old address stays allowed. Another subscriber of the provider may get it.
+- **CGNAT.** If the provider shares one public address between many subscribers, a white list by such an address protects little: any of them can get in.
+- **Trust in DNS.** Whoever can change the DDNS record (for example by stealing the password of the service account) gets into the panel. Turn on two-factor sign-in for the DDNS account.
+
+The most reliable way is to come in through a VPN (WireGuard, Tailscale) and let only its address into the panel.
+:::
 
 ## Trusted proxies
 
@@ -35,7 +51,8 @@ The panel checks every change and refuses to apply it when:
 - it would lock you out (your own address would be refused);
 - everybody is trusted (`0.0.0.0/0`);
 - a proxy sends `X-Forwarded-For` but is not in the trusted list;
-- the white list is empty.
+- the white list is empty;
+- a host name of a list does not resolve to an address (DNS does not know it).
 
 Applying asks for a confirmation and is written to the audit log (`access.update`).
 

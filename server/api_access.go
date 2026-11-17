@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 	"net/netip"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -25,6 +26,8 @@ type accessState struct {
 	Configured bool         `json:"configured"` // false: the proxies are still the ones of server.yaml
 	You        accessYou    `json:"you"`
 	Denied24h  int          `json:"denied_24h"`
+	// Hosts describes the host names of the lists (what each points to now).
+	Hosts map[string]HostStatus `json:"hosts"`
 }
 
 func (a *Admin) accessYou(r *http.Request, ar *accessRules) accessYou {
@@ -36,7 +39,7 @@ func (a *Admin) accessYou(r *http.Request, ar *accessRules) accessYou {
 func (a *Admin) accessState(r *http.Request) accessState {
 	snap := a.Access.snap.Load()
 	n, _ := a.DB.AccessDeniedSince(r.Context(), time.Now().Add(-24*time.Hour))
-	return accessState{Config: snap.cfg, Configured: snap.configured, You: a.accessYou(r, snap.rules), Denied24h: n}
+	return accessState{Config: snap.cfg, Configured: snap.configured, You: a.accessYou(r, snap.rules), Denied24h: n, Hosts: a.Access.hostStatuses(snap.rules.hosts)}
 }
 
 func (a *Admin) accessGet(w http.ResponseWriter, r *http.Request, _ *store.User) {
@@ -52,9 +55,10 @@ type accessCheckReq struct {
 }
 
 type accessCheckResp struct {
-	Problems []accessProblem `json:"problems"`
-	You      verdict         `json:"you"`
-	Test     *verdict        `json:"test,omitempty"`
+	Problems []accessProblem       `json:"problems"`
+	You      verdict               `json:"you"`
+	Test     *verdict              `json:"test,omitempty"`
+	Hosts    map[string]HostStatus `json:"hosts"`
 }
 
 // check judges a draft config for the request that sends it: what would happen to the caller, whether it may be
@@ -63,12 +67,18 @@ func (a *Admin) check(r *http.Request, cfg AccessConfig, test *struct {
 	IP    string `json:"ip"`
 	Proxy bool   `json:"proxy"`
 }) (AccessConfig, accessCheckResp, error) {
-	norm, ar, err := compileAccess(cfg)
+	_, first, err := compileAccess(cfg, nil)
+	if err != nil {
+		return cfg, accessCheckResp{}, err
+	}
+	// the host names of the draft are looked up (a name that was asked about a moment ago is not asked again)
+	a.Access.lookupHosts(r.Context(), first.hosts, hostCheckMaxAge)
+	norm, ar, err := compileAccess(cfg, a.Access.addrs())
 	if err != nil {
 		return cfg, accessCheckResp{}, err
 	}
 	peer, xff := remoteAddr(r), r.Header.Get("X-Forwarded-For")
-	resp := accessCheckResp{Problems: ar.problems(peer, xff), You: ar.decide(peer, xff)}
+	resp := accessCheckResp{Problems: ar.problems(peer, xff), You: ar.decide(peer, xff), Hosts: a.Access.hostStatuses(ar.hosts)}
 	if test != nil {
 		if ip, err := netip.ParseAddr(strings.TrimSpace(test.IP)); err == nil {
 			ip = ip.Unmap()
@@ -166,4 +176,33 @@ func (a *Admin) accessLog(w http.ResponseWriter, r *http.Request, _ *store.User)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"rows": rows})
+}
+
+// accessResolve looks a host name up right now (the interface asks when a name is added and by the button that
+// refreshes it). A name that is already in a list gets its new address in force at once.
+func (a *Admin) accessResolve(w http.ResponseWriter, r *http.Request, _ *store.User) {
+	var req struct {
+		Host string `json:"host"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	h, ok := normalizeHost(req.Host)
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_host"})
+		return
+	}
+	g := a.Access
+	g.lookupHosts(r.Context(), []string{h}, 0)
+	tracked := slices.Contains(g.snap.Load().rules.hosts, h)
+	if tracked {
+		g.reapply()
+		g.persistHosts(r.Context(), g.snap.Load().rules.hosts)
+	}
+	st := g.hostStatuses([]string{h})[h]
+	if len(st.IPs) == 0 {
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "unresolved", "host": h})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"host": h, "status": st})
 }

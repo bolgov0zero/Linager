@@ -7,7 +7,7 @@ import (
 
 func mustRules(t *testing.T, cfg AccessConfig) *accessRules {
 	t.Helper()
-	_, ar, err := compileAccess(cfg)
+	_, ar, err := compileAccess(cfg, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,14 +52,14 @@ func TestParseAccessRule(t *testing.T) {
 }
 
 func TestCompileAccessDedupesAndValidates(t *testing.T) {
-	cfg, _, err := compileAccess(AccessConfig{Mode: AccessWhite, White: rules("10.0.0.1", "10.0.0.1/32", "10.0.0.2")})
+	cfg, _, err := compileAccess(AccessConfig{Mode: AccessWhite, White: rules("10.0.0.1", "10.0.0.1/32", "10.0.0.2")}, nil)
 	if err != nil || len(cfg.White) != 2 || cfg.Retention != defaultAccessRetention {
 		t.Fatalf("got %+v err %v", cfg, err)
 	}
-	if _, _, err := compileAccess(AccessConfig{Mode: "allow-all"}); err == nil {
+	if _, _, err := compileAccess(AccessConfig{Mode: "allow-all"}, nil); err == nil {
 		t.Error("unknown mode must be refused")
 	}
-	if _, _, err := compileAccess(AccessConfig{Mode: AccessOff, Retention: 1000}); err == nil {
+	if _, _, err := compileAccess(AccessConfig{Mode: AccessOff, Retention: 1000}, nil); err == nil {
 		t.Error("retention above a year must be refused")
 	}
 }

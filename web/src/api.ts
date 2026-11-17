@@ -93,10 +93,12 @@ export interface AccessConfig {
   mode: AccessMode; only_proxy: boolean; white: AccessRule[]; black: AccessRule[]; proxies: AccessRule[]; retention_days: number;
 }
 export interface AccessYou { ip: string; remote_addr: string; forwarded_for: string; via_proxy: boolean; peer_trusted: boolean }
-export interface AccessState { config: AccessConfig; configured: boolean; you: AccessYou; denied_24h: number }
-export interface AccessProblem { code: string; ip?: string; reason?: string }
+/** What a host name of a list points to now (checked_at: unix time of the last good lookup, 0 when there was none). */
+export interface AccessHost { ips: string[]; checked_at: number; failing: boolean; expired: boolean }
+export interface AccessState { config: AccessConfig; configured: boolean; you: AccessYou; denied_24h: number; hosts: Record<string, AccessHost> }
+export interface AccessProblem { code: string; ip?: string; reason?: string; host?: string }
 export interface AccessVerdict { ip: string; allowed: boolean; reason: string; via_proxy: boolean; ignored_xff: boolean }
-export interface AccessCheck { problems: AccessProblem[]; you: AccessVerdict; test?: AccessVerdict }
+export interface AccessCheck { problems: AccessProblem[]; you: AccessVerdict; test?: AccessVerdict; hosts: Record<string, AccessHost> }
 export type AccessLogFilter = 'all' | 'denied' | 'login' | 'fail' | 'proxy' | 'direct';
 export interface AccessLogRow {
   id: number; ts: number; client_ip: string; remote_addr: string; via_proxy: boolean; proxy_trusted: boolean;
@@ -494,6 +496,8 @@ export const api = {
   accessSave: (config: AccessConfig) => request<AccessState>('PUT', 'api/access', config),
   accessCheck: (config: AccessConfig, test?: { ip: string; proxy: boolean }) =>
     request<AccessCheck>('POST', 'api/access/check', { config, test }),
+  /** Looks a host name up now; a name that is already in a list gets its new address in force. 422 "unresolved" when it has none. */
+  accessResolve: (host: string) => request<{ host: string; status: AccessHost }>('POST', 'api/access/resolve', { host }),
   accessRetention: (days: number) => request<AccessState>('PUT', 'api/access/retention', { days }),
   accessLog: (filter: AccessLogFilter, before = 0) =>
     request<{ rows: AccessLogRow[] }>('GET', `api/access/log?filter=${filter}&limit=50${before ? `&before=${before}` : ''}`),

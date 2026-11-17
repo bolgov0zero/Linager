@@ -2,10 +2,14 @@ package server_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/bolgov0zero/linager/internal/config"
@@ -214,5 +218,124 @@ func TestAccessRestrictionAppliesAtStart(t *testing.T) {
 	}
 	if got := rawStatus(t, ts.URL, "127.0.0.1"); got != http.StatusUnauthorized {
 		t.Fatalf("a listed address must pass: %d", got)
+	}
+}
+
+// dnsTable is a resolver the test controls.
+type dnsTable struct {
+	mu   sync.Mutex
+	m    map[string][]string
+	fail bool
+}
+
+func (d *dnsTable) set(host string, ips ...string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.m[host] = ips
+}
+
+func (d *dnsTable) setFail(v bool) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.fail = v
+}
+
+func (d *dnsTable) LookupNetIP(_ context.Context, _, host string) ([]netip.Addr, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	ips, ok := d.m[host]
+	if d.fail || !ok {
+		return nil, errors.New("no such host")
+	}
+	var out []netip.Addr
+	for _, s := range ips {
+		out = append(out, netip.MustParseAddr(s))
+	}
+	return out, nil
+}
+
+// A host name (DDNS) in the white list stands for the addresses it points to now: a new address takes effect when the
+// name is refreshed, a DNS outage keeps the last known address, and the last known address survives a restart.
+func TestAccessRestrictionHostNames(t *testing.T) {
+	dns := &dnsTable{m: map[string][]string{"home.example.org": {"203.0.113.50"}}}
+	server.SetHostResolver(dns)
+	t.Cleanup(func() { server.SetHostResolver(nil) })
+	base, db := startAccountsServer(t)
+	admin := mustLogin(t, base, "admin", "a-long-test-password")
+
+	type resolved struct {
+		Host   string            `json:"host"`
+		Status server.HostStatus `json:"status"`
+		Error  string            `json:"error"`
+	}
+	var rs resolved
+	if c := admin.do("POST", "/api/access/resolve", map[string]string{"host": "nx.example.org"}, &rs); c != http.StatusUnprocessableEntity || rs.Error != "unresolved" {
+		t.Fatalf("a name that does not exist: %d %+v", c, rs)
+	}
+	if c := admin.do("POST", "/api/access/resolve", map[string]string{"host": "not a name"}, nil); c != http.StatusBadRequest {
+		t.Fatalf("a bad name: %d", c)
+	}
+	if c := admin.do("POST", "/api/access/resolve", map[string]string{"host": "Home.Example.org"}, &rs); c != 200 || rs.Host != "home.example.org" || len(rs.Status.IPs) != 1 || rs.Status.IPs[0] != "203.0.113.50" {
+		t.Fatalf("resolve: %d %+v", c, rs)
+	}
+
+	// a name that does not resolve must not be applied; the check says which one
+	var pr accessProblems
+	cfg := server.AccessConfig{Mode: "white", White: []server.AccessRule{{CIDR: "127.0.0.1"}, {CIDR: "nx.example.org"}}, Proxies: []server.AccessRule{{CIDR: "127.0.0.1"}}}
+	if c := admin.do("PUT", "/api/access", cfg, &pr); c != http.StatusUnprocessableEntity || len(pr.Problems) != 1 || pr.Problems[0].Code != "host_unresolved" {
+		t.Fatalf("unresolved name: %d %+v", c, pr)
+	}
+	// a name among the trusted proxies is refused
+	if c := admin.do("PUT", "/api/access", server.AccessConfig{Mode: "off", Proxies: []server.AccessRule{{CIDR: "home.example.org"}}}, nil); c != http.StatusBadRequest {
+		t.Fatalf("a name as a proxy: %d", c)
+	}
+
+	var st struct {
+		Config server.AccessConfig          `json:"config"`
+		Hosts  map[string]server.HostStatus `json:"hosts"`
+	}
+	cfg.White[1] = server.AccessRule{CIDR: "Home.Example.org", Note: "my home"}
+	if c := admin.do("PUT", "/api/access", cfg, &st); c != 200 || st.Config.White[1].CIDR != "home.example.org" || len(st.Hosts["home.example.org"].IPs) != 1 {
+		t.Fatalf("apply: %d %+v", c, st)
+	}
+	if rawStatus(t, base, "203.0.113.50") != http.StatusUnauthorized {
+		t.Fatal("the address of the name must pass")
+	}
+	if rawStatus(t, base, "203.0.113.51") != http.StatusForbidden {
+		t.Fatal("another address must be refused")
+	}
+	if raw := db.SettingRaw(context.Background(), "access_hosts"); !strings.Contains(string(raw), "203.0.113.50") {
+		t.Fatalf("the answer must be stored: %s", raw)
+	}
+
+	// DNS is down: the last known address stays in force and the status says so
+	dns.setFail(true)
+	if c := admin.do("POST", "/api/access/resolve", map[string]string{"host": "home.example.org"}, &rs); c != 200 || !rs.Status.Failing || len(rs.Status.IPs) != 1 {
+		t.Fatalf("outage: %d %+v", c, rs)
+	}
+	if rawStatus(t, base, "203.0.113.50") != http.StatusUnauthorized {
+		t.Fatal("the last known address must stay in force")
+	}
+
+	// a restarted server (DNS still down) knows the last address from the database
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	adm, err := server.NewAdmin(db, nil, nil, nil, nil, nil, &config.Server{}, nil, log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(adm.Handler())
+	t.Cleanup(ts.Close)
+	if rawStatus(t, ts.URL, "203.0.113.50") != http.StatusUnauthorized || rawStatus(t, ts.URL, "203.0.113.51") != http.StatusForbidden {
+		t.Fatal("a restarted server must judge by the stored address")
+	}
+
+	// the provider gave the home a new address; refreshing the name puts it in force at once
+	dns.setFail(false)
+	dns.set("home.example.org", "203.0.113.51")
+	if c := admin.do("POST", "/api/access/resolve", map[string]string{"host": "home.example.org"}, &rs); c != 200 || rs.Status.IPs[0] != "203.0.113.51" || rs.Status.Failing {
+		t.Fatalf("refresh: %d %+v", c, rs)
+	}
+	if rawStatus(t, base, "203.0.113.51") != http.StatusUnauthorized || rawStatus(t, base, "203.0.113.50") != http.StatusForbidden {
+		t.Fatal("the new address must replace the old one")
 	}
 }

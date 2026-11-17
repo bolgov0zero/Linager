@@ -65,6 +65,7 @@ func NewAdmin(db *store.Store, keys *Keys, hub *Hub, live *Live, metrics *Metric
 		return nil, err
 	}
 	guard := newAccessGuard(db, trust, cfg.Admin.TrustedProxies, log)
+	guard.loadHosts(context.Background()) // the last known addresses of host names, before the first request
 	guard.Load(context.Background())
 	return &Admin{DB: db, Keys: keys, Hub: hub, Live: live, Metrics: metrics, Updates: updates, Log: log, Cfg: cfg, Trust: trust, Access: guard, Static: static, loginL: newLimiter(max(cfg.Admin.LoginRate, 10), time.Minute), terms: map[string]int{}, cers: map[string]*ceremony{}}, nil
 }
@@ -131,6 +132,7 @@ func (a *Admin) Handler() http.Handler {
 	a.route(mux, "GET /api/access", "admin", a.accessGet)
 	a.route(mux, "PUT /api/access", "admin", a.accessPut)
 	a.route(mux, "POST /api/access/check", "admin", a.accessCheck)
+	a.route(mux, "POST /api/access/resolve", "admin", a.accessResolve)
 	a.route(mux, "PUT /api/access/retention", "admin", a.accessRetention)
 	a.route(mux, "GET /api/access/log", "admin", a.accessLog)
 	a.route(mux, "GET /api/servers/{id}/services", "srv:services", a.servicesList)
