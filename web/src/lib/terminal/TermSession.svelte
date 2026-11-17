@@ -287,13 +287,16 @@
   <div
     class="screen"
     role="presentation"
-    bind:this={host}
     onpointerdown={() => current?.focus()}
     onfocusin={() => (focused = true)}
     onfocusout={(e) => {
       if (!e.currentTarget.contains(e.relatedTarget as Node | null)) focused = false;
     }}
-  ></div>
+  >
+    <!-- The frame and padding are on .screen: fit() takes the height of the element xterm sits in, and a
+         border-box host with padding would make it count rows that do not fit (the last line was cut off). -->
+    <div class="grid" bind:this={host}></div>
+  </div>
   {#if phase === 'closed'}
     <div class="closed">
       <p class="error" role="alert">{reason ?? $tr('term.closed')}</p>
@@ -326,10 +329,18 @@
     flex: 1;
     min-height: 0;
     min-width: 0;
+    display: flex;
     padding: 8px;
     overflow: hidden;
     background: #0f1218;
     border: 2px solid var(--line);
+  }
+
+  .grid {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .closed {

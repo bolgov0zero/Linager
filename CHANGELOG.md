@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.74
+
+- Fix: the last line of the terminal window (the prompt) was cut off by the bottom edge. The terminal fits its rows to the height of the element it sits in, and that element had padding and a frame that were counted as free room. The frame and padding are now on an outer block and xterm sits in an inner one without them.
+
 ## 0.1.73
 
 - Fix: a server update rolled back with "the new version did not become healthy: admin panel answered 403 Forbidden" whenever the admin access restriction was on and did not list 127.0.0.1 (or "only through trusted proxies" was ticked). The health probe of the updater (a plain GET of the panel root from the server itself, without `X-Forwarded-For` and without `text/html` in `Accept`) is now let through the restriction by the server; every other request is judged as before. The fix is on the server side because the update is run by the updater of the version being replaced, so it works for the update to this version too. Test: the guard lets the local probe in and refuses a browser, a proxied request, other paths, writes and other hosts.
