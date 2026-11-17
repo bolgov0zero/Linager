@@ -2,9 +2,13 @@ package server_test
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/bolgov0zero/linager/internal/config"
 	"github.com/bolgov0zero/linager/server"
 )
 
@@ -184,5 +188,31 @@ func TestAccessRestriction(t *testing.T) {
 	waitFor(t, "the server applies the reset", func() bool { return rawStatus(t, base, "198.51.100.9") == http.StatusUnauthorized })
 	if changed, _ := server.ResetAccess(context.Background(), db); changed {
 		t.Fatal("a second reset has nothing to change")
+	}
+}
+
+// A restriction stored in the database must be in force from the very first request of a fresh server: there is no
+// window after the start in which the panel is open (the guard used to be loaded only by the periodic reload).
+func TestAccessRestrictionAppliesAtStart(t *testing.T) {
+	base, db := startAccountsServer(t)
+	admin := mustLogin(t, base, "admin", "a-long-test-password")
+	cfg := server.AccessConfig{Mode: "white", White: []server.AccessRule{{CIDR: "127.0.0.1"}}, Proxies: []server.AccessRule{{CIDR: "127.0.0.1"}}}
+	if c := admin.do("PUT", "/api/access", cfg, nil); c != 200 {
+		t.Fatalf("enable white list: %d", c)
+	}
+
+	// a second server over the same database, as after a restart; its reload loop is never started
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	adm, err := server.NewAdmin(db, nil, nil, nil, nil, nil, &config.Server{}, nil, log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(adm.Handler())
+	t.Cleanup(ts.Close)
+	if got := rawStatus(t, ts.URL, "198.51.100.9"); got != http.StatusForbidden {
+		t.Fatalf("an unlisted address must be refused from the first request: %d", got)
+	}
+	if got := rawStatus(t, ts.URL, "127.0.0.1"); got != http.StatusUnauthorized {
+		t.Fatalf("a listed address must pass: %d", got)
 	}
 }
