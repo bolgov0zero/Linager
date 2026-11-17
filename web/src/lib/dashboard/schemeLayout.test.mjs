@@ -57,8 +57,9 @@ function segments(d) {
 }
 
 test('right-angle links: every link is axis-aligned and none crosses another node', () => {
-  for (const n of [3, 10, ROUTE_MAX]) {
-    const l = autoLayout(n);
+  for (const n of [3, 10, 16, 24, 40]) {
+    const l = autoLayout(n, true);
+    assert.ok(!overlaps(l.pos, l.nw, l.nh, 0), `${n}: the nodes with lanes touch`);
     const nodes = l.pos.map((p, i) => ({ id: 's' + i, x: p.x, y: p.y }));
     const bounds = [Math.min(...nodes.map((q) => q.x)) - l.nw, Math.min(...nodes.map((q) => q.y)) - l.nh, Math.max(...nodes.map((q) => q.x)) + l.nw, Math.max(...nodes.map((q) => q.y)) + l.nh];
     const routed = routeLinks(nodes, l.nw, l.nh, { x: 0, y: 0 }, bounds);
@@ -80,6 +81,7 @@ test('right-angle links: every link is axis-aligned and none crosses another nod
       }
     }
     assert.ok(found >= nodes.length - 1, `${n}: at most one link may fall back, got ${nodes.length - found}`);
+    assert.ok(n <= ROUTE_MAX);
   }
 });
 

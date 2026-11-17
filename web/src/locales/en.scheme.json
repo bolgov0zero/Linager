@@ -38,5 +38,6 @@
   "scheme.links.bus": "Tracks",
   "scheme.links.bus.title": "Right-angle links on shared tracks around the panel",
   "scheme.links.route": "Around",
-  "scheme.links.route.title": "Right-angle links that go around servers and each other where possible (up to 16 servers; tracks above that)"
+  "scheme.links.route.title": "Right-angle links that go around servers and each other where possible (up to 60 servers; tracks above that). The nodes are spread out so that there are corridors between them",
+  "scheme.links.routeLimit": "Around works up to {n} servers; tracks are used now"
 }

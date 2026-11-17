@@ -139,7 +139,7 @@
   );
   const count = $derived(sorted.length);
   // Depends on the number of nodes only, so that a metrics tick never moves anything.
-  const autoL = $derived(autoLayout(count));
+  const autoL = $derived(autoLayout(count, linkStyle === 'route'));
   const auto = $derived.by(() => {
     const m: Record<string, Pt> = {};
     sorted.forEach((c, i) => {
@@ -562,6 +562,9 @@
           <button type="button" class="chip" aria-pressed={linkStyle === st} title={$tr(`scheme.links.${st}.title`)} onclick={() => setLinks(st)}
             >{$tr(`scheme.links.${st}`)}</button>
         {/each}
+        {#if linkStyle === 'route' && count > ROUTE_MAX}
+          <span class="lbl warn" role="status">{$tr('scheme.links.routeLimit', { n: ROUTE_MAX })}</span>
+        {/if}
       </div>
     {/if}
     {#if isManual && showPlane}
@@ -1051,6 +1054,10 @@
   .lsw .lbl {
     font-size: 12px;
     color: var(--muted);
+  }
+
+  .lsw .lbl.warn {
+    color: var(--warn);
   }
 
   .lsw .chip {

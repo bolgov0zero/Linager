@@ -63,16 +63,21 @@ export function overlaps(pos: Pt[], nw: number, nh: number, m: number): boolean 
   return false;
 }
 
-/** Places n servers on rings around the panel. The rings are made larger until no two nodes touch. */
-export function autoLayout(n: number): AutoLayout {
+/**
+ * Places n servers on rings around the panel. The rings are made larger until no two nodes touch. With lanes the nodes
+ * keep wider gaps (about 50 px) so that right-angle links have corridors to go through: without them the compact
+ * rings are packed so close that the panel is walled in and the router finds no way at all.
+ */
+export function autoLayout(n: number, lanes = false): AutoLayout {
   const full = n <= FULL_MAX;
   const nw = full ? 160 : 118;
   const nh = full ? 58 : 30;
   const rings = full ? 1 : Math.min(8, Math.ceil(n / 18));
   const rx0 = PANEL_W / 2 + nw / 2 + 50;
   const ry0 = PANEL_H / 2 + nh / 2 + 50;
-  const sx = nw + 34;
-  const sy = nh + 34;
+  const sx = nw + (lanes ? 60 : 34);
+  const sy = nh + (lanes ? 60 : 34);
+  const margin = lanes ? 26 : 8;
   let pos: Pt[] = [];
   // A few full nodes start on a wider ring so that the frames of the groups do not run into each other.
   for (let s = full ? 1.7 : 1; s < 200; s *= 1.05) {
@@ -99,7 +104,7 @@ export function autoLayout(n: number): AutoLayout {
         pos.push({ x: Math.round((rx0 + k * sx) * s * Math.cos(a)), y: Math.round((ry0 + k * sy) * s * Math.sin(a)) });
       }
     }
-    if (!overlaps(pos, nw, nh, 8)) break;
+    if (!overlaps(pos, nw, nh, margin)) break;
   }
   return { mode: full ? 'full' : 'compact', nw, nh, pos };
 }
@@ -125,11 +130,11 @@ export function zoomAround(v: View, px: number, py: number, factor: number): Vie
 export type LinkStyle = 'straight' | 'bus' | 'route';
 export const LINK_STYLES: readonly LinkStyle[] = ['straight', 'bus', 'route'];
 /**
- * The router is a preference for a readable picture. It is used while the nodes are shown in full: the rings of the
- * compact form are packed so close that the panel is walled in and most links would have no way through, so above
- * this many servers the tracks of busPath are used.
+ * The router is a preference for a readable picture and it costs time (about 0.2 s for 60 servers, 0.7 s for 100), so
+ * above this many servers the tracks of busPath are used and the panel says so. It needs the layout with lanes
+ * (autoLayout(n, true)): the compact rings of the plain layout are packed so close that the panel is walled in.
  */
-export const ROUTE_MAX = FULL_MAX;
+export const ROUTE_MAX = 60;
 
 /**
  * A link with right-angle bends drawn like a bus on a circuit board: out of the node along the longer axis to one of
