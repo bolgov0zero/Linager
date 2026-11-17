@@ -169,6 +169,7 @@ Details and known limits: [docs/en/security.md](docs/en/security.md). To report 
 | Admin panel access | [access](docs/en/access.md) | [доступ к админке](docs/ru/access.md) |
 | Agent modules and configuration | [modules](docs/en/modules.md) | [модули](docs/ru/modules.md) |
 | Updates, backups, rollback | [updates](docs/en/updates.md) | [обновления](docs/ru/updates.md) |
+| Terminal menu (`linager`) | [menu](docs/en/menu.md) | [меню](docs/ru/menu.md) |
 | Security | [security](docs/en/security.md) | [безопасность](docs/ru/security.md) |
 | Architecture | [architecture](docs/en/architecture.md) | [архитектура](docs/architecture.md) |
 

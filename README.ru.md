@@ -169,6 +169,7 @@ flowchart LR
 | Доступ к админке | [доступ к админке](docs/ru/access.md) | [access](docs/en/access.md) |
 | Модули агента и конфигурация | [модули](docs/ru/modules.md) | [modules](docs/en/modules.md) |
 | Обновления, бэкапы, откат | [обновления](docs/ru/updates.md) | [updates](docs/en/updates.md) |
+| Меню в терминале (`linager`) | [меню](docs/ru/menu.md) | [menu](docs/en/menu.md) |
 | Безопасность | [безопасность](docs/ru/security.md) | [security](docs/en/security.md) |
 | Архитектура | [архитектура](docs/architecture.md) | [architecture](docs/en/architecture.md) |
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"io/fs"
 	"log/slog"
 	"net"
@@ -32,6 +33,31 @@ func CreateAdmin(ctx context.Context, db *store.Store, login, password string) e
 	}
 	_, err = db.CreateAdmin(ctx, login, hash)
 	return err
+}
+
+// ResetPassword sets a new password for an existing user, clears the lock-out and signs the user out everywhere.
+// It is the way back when the administrator has lost the password: `linager server reset-password` on the server.
+func ResetPassword(ctx context.Context, db *store.Store, login, password string) error {
+	login = strings.ToLower(strings.TrimSpace(login))
+	u, err := db.UserByLogin(ctx, login)
+	if err != nil {
+		return fmt.Errorf("user %q: %w", login, err)
+	}
+	hash, err := HashPassword(password)
+	if err != nil {
+		return err
+	}
+	if err := db.SetPassword(ctx, u.ID, hash); err != nil {
+		return err
+	}
+	if err := db.RecordLoginSuccess(ctx, u.ID); err != nil {
+		return err
+	}
+	if _, err := db.Pool.Exec(ctx, `DELETE FROM sessions WHERE user_id=$1`, u.ID); err != nil {
+		return err
+	}
+	_ = db.WriteAudit(ctx, store.Audit{Actor: "cli", Action: "user.password_reset", TargetType: "user", TargetName: login, Result: "ok"})
+	return nil
 }
 
 // Run starts the admin and agent listeners and blocks until ctx is cancelled.

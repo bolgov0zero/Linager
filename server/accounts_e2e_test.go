@@ -489,3 +489,27 @@ func TestPasskeySignIn(t *testing.T) {
 		t.Fatalf("passkeys must be refused on an IP host: %d", code)
 	}
 }
+
+// TestResetPasswordCLI is `linager server reset-password`: the new password works, the old one and the old
+// sessions do not, and a lock-out is lifted.
+func TestResetPasswordCLI(t *testing.T) {
+	base, db := startAccountsServer(t)
+	old := mustLogin(t, base, "admin", "a-long-test-password")
+	ctx := context.Background()
+	if err := db.RecordLoginFailure(ctx, 1, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	if err := server.ResetPassword(ctx, db, " Admin ", "brand-new-long-password"); err != nil {
+		t.Fatal(err)
+	}
+	if c := old.do("GET", "/api/me", nil, nil); c != http.StatusUnauthorized {
+		t.Fatalf("the old session must end, got %d", c)
+	}
+	if code, _ := newClient(t, base).login("admin", "a-long-test-password", nil); code == 200 {
+		t.Fatal("the old password still works")
+	}
+	mustLogin(t, base, "admin", "brand-new-long-password")
+	if err := server.ResetPassword(ctx, db, "nobody", "brand-new-long-password"); err == nil {
+		t.Fatal("an unknown user must be refused")
+	}
+}

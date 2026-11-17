@@ -83,6 +83,37 @@ func newServerCmd() *cobra.Command {
 	_ = create.MarkFlagRequired("login")
 	_ = create.MarkFlagRequired("password-file")
 	cmd.AddCommand(create)
+
+	var rLogin, rPwFile string
+	reset := &cobra.Command{
+		Use:   "reset-password",
+		Short: "Set a new password for an existing administrator (also lifts a lock-out and signs the user out)",
+		RunE: func(c *cobra.Command, _ []string) error {
+			cfg, err := config.LoadServer(cfgPath)
+			if err != nil {
+				return err
+			}
+			pw, err := readSecretFile(rPwFile)
+			if err != nil {
+				return err
+			}
+			db, err := store.Open(c.Context(), cfg.Database.DSN)
+			if err != nil {
+				return err
+			}
+			defer db.Close()
+			if err := server.ResetPassword(c.Context(), db, rLogin, pw); err != nil {
+				return err
+			}
+			_, err = fmt.Fprintln(c.OutOrStdout(), "The password was changed.")
+			return err
+		},
+	}
+	reset.Flags().StringVar(&rLogin, "login", "", "login of the user")
+	reset.Flags().StringVar(&rPwFile, "password-file", "", "file with the new password ('-' for stdin)")
+	_ = reset.MarkFlagRequired("login")
+	_ = reset.MarkFlagRequired("password-file")
+	cmd.AddCommand(reset)
 	return cmd
 }
 

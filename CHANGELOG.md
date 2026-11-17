@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.76
+
+- New: `linager` without arguments in a terminal opens an interactive menu (the logo, the state and numbered actions). The mode is found on its own: the server menu, the agent menu, a picker with two cards when the host has both, or an offer to install when there is neither. The state refreshes every 5 seconds. Server items: update, backup, restore (a list of archives), the administrator password, turning off the access restriction, the server fingerprint with the enrollment command, restart, logs. Agent items: enroll, update, restart, logs, remove. The items run the usual subcommands (through `sudo` for a user that is not root), dangerous ones need a confirmation, and the server actions are written to the audit journal as "CLI". Without a terminal `linager` still prints the help. Docs: `docs/ru/menu.md`, `docs/en/menu.md` (also on the site). Tests: detecting the roles, navigation, the confirmation, the password form, the dictionaries.
+- New: `linager server reset-password --login L --password-file F` sets a new password for an existing user, lifts a sign-in lock-out and ends the user's sessions (until now `create-admin` worked only on an empty database). It writes an audit entry.
+
 ## 0.1.75
 
 - Fix: on the dashboard the server group picker was lower than the filter buttons next to it. The items of the toolbar groups now stretch to the height of their row.
