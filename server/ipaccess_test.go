@@ -1,8 +1,14 @@
 package server
 
 import (
+	"io"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"net/netip"
 	"testing"
+
+	"github.com/bolgov0zero/linager/internal/config"
 )
 
 func mustRules(t *testing.T, cfg AccessConfig) *accessRules {
@@ -129,5 +135,49 @@ func TestProblems(t *testing.T) {
 		if got := codes(mustRules(t, c.cfg), c.peer, c.xff); got != c.want {
 			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
 		}
+	}
+}
+
+func TestGuardLetsTheLocalHealthProbeIn(t *testing.T) {
+	g := newAccessGuard(nil, &ProxyTrust{}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	g.apply(AccessConfig{Mode: AccessWhite, White: rules("203.0.113.7"), OnlyProxy: true, Retention: 7}, true)
+	a := &Admin{Cfg: &config.Server{}, Access: g}
+	h := a.accessGuard(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }))
+
+	cases := []struct {
+		name, method, path, remote, xff, accept string
+		want                                    int
+	}{
+		{"the updater probe from this host", "GET", "/", "127.0.0.1:50000", "", "", 200},
+		{"the probe over IPv6 loopback", "GET", "/", "[::1]:50000", "", "", 200},
+		{"a browser on this host is judged like anybody", "GET", "/", "127.0.0.1:50000", "", "text/html,application/xhtml+xml", 403},
+		{"a request that came through a proxy is judged", "GET", "/", "127.0.0.1:50000", "198.51.100.9", "", 403},
+		{"another path is guarded", "GET", "/api/servers", "127.0.0.1:50000", "", "", 403},
+		{"a write is guarded", "POST", "/", "127.0.0.1:50000", "", "", 403},
+		{"a probe from another host is refused", "GET", "/", "192.0.2.10:50000", "", "", 403},
+	}
+	for _, c := range cases {
+		req := httptest.NewRequest(c.method, c.path, nil)
+		req.RemoteAddr = c.remote
+		if c.xff != "" {
+			req.Header.Set("X-Forwarded-For", c.xff)
+		}
+		if c.accept != "" {
+			req.Header.Set("Accept", c.accept)
+		}
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if rec.Code != c.want {
+			t.Errorf("%s: got %d, want %d", c.name, rec.Code, c.want)
+		}
+	}
+
+	a.Cfg.Admin.BasePath = "/panel"
+	req := httptest.NewRequest("GET", "/panel/", nil)
+	req.RemoteAddr = "127.0.0.1:50000"
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Errorf("probe under a base path: got %d, want 200", rec.Code)
 	}
 }

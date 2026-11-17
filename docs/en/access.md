@@ -62,6 +62,10 @@ Applying asks for a confirmation and is written to the audit log (`access.update
 
 The journal records page opens, sign-ins (good and failed) and refused requests with the client address and the proxy they came through. Filters: all, refused, sign-ins, failed sign-ins, through a proxy, direct. "To white list" / "to black list" puts an address into the list in one click. Retention is 7, 30 or 90 days. Background requests of the interface are not written.
 
+## Server update and the restriction
+
+After an update the server checks that the new version came up: the updater asks the panel root from the server itself (directly, without `X-Forwarded-For` and not as a browser). This request is let through the restriction, so 127.0.0.1 does not have to be in a list. Every other address and path, and a browser on the server itself, are judged by the rules as usual.
+
 ## If you lock yourself out
 
 On the server:

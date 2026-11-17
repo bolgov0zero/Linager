@@ -485,6 +485,9 @@ func ResetAccess(ctx context.Context, db *store.Store) (bool, error) {
 // ---- the journal ----
 
 func (g *AccessGuard) record(r *http.Request, v verdict, peer netip.Addr, event, login, reason string) {
+	if g.db == nil { // tests of the guard alone
+		return
+	}
 	row := store.AccessLogRow{ClientIP: v.IP, RemoteAddr: peer.String(), ViaProxy: r.Header.Get("X-Forwarded-For") != "", ProxyTrusted: v.ViaProxy,
 		Event: event, Login: login, Path: r.URL.Path, UserAgent: r.UserAgent(), Reason: reason}
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 3*time.Second)
@@ -536,10 +539,30 @@ func (a *Admin) isPageOpen(r *http.Request) bool {
 	return (p == "" || p == "/" || p == "/index.html") && strings.Contains(r.Header.Get("Accept"), "text/html")
 }
 
+// isLocalProbe tells the health probe of the updater: a plain GET of the panel root made from this very host,
+// directly (no X-Forwarded-For) and not by a browser (no text/html in Accept). The updater of the running
+// version, which may be an older one, asks the new server this way whether it came up; without the exception
+// every restriction that does not list 127.0.0.1 would make the update roll back with "403 Forbidden". The
+// answer is the static page shell, nothing else is reachable this way, and every other path stays guarded.
+func (a *Admin) isLocalProbe(r *http.Request, peer netip.Addr) bool {
+	if (r.Method != http.MethodGet && r.Method != http.MethodHead) || !peer.IsValid() || !peer.Unmap().IsLoopback() {
+		return false
+	}
+	if r.Header.Get("X-Forwarded-For") != "" || strings.Contains(r.Header.Get("Accept"), "text/html") {
+		return false
+	}
+	base := strings.TrimRight(a.Cfg.Admin.BasePath, "/")
+	return r.URL.Path == base+"/" || (base != "" && r.URL.Path == base)
+}
+
 func (a *Admin) accessGuard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		g := a.Access
 		peer, xff := remoteAddr(r), r.Header.Get("X-Forwarded-For")
+		if a.isLocalProbe(r, peer) {
+			next.ServeHTTP(w, r)
+			return
+		}
 		v := g.snap.Load().rules.decide(peer, xff)
 		if !v.Allowed {
 			if g.due(g.lastDeny, v.IP, denyLogEvery) {
