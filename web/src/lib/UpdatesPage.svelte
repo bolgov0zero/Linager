@@ -556,6 +556,33 @@
     color: var(--crit);
   }
 
+  :global(.upd-step.unknown) {
+    color: var(--accent);
+  }
+
+  :global(.upd-dots) {
+    animation: upd-pulse 1.2s ease-in-out infinite;
+  }
+
+  :global(.upd-dur) {
+    margin-left: auto;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  @keyframes -global-upd-pulse {
+    50% {
+      opacity: 0.25;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(.upd-dots),
+    :global(.upd-spin) {
+      animation: none;
+    }
+  }
+
   :global(.upd-ico) {
     display: inline-flex;
     justify-content: center;

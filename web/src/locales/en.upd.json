@@ -5,13 +5,16 @@
   "upd.loading": "Loading…",
   "upd.loadError": "No connection to the server",
   "upd.restarting": "Server is restarting…",
+  "upd.restart.elapsed": "{n} s elapsed.",
+  "upd.restart.note": "The service is stopped while the binary is replaced and the migrations run, so the panel does not answer for a few seconds. The steps that had not finished at the last answer are going on now; the result of each and how long it took appear when the server is back.",
+  "upd.dur.s": "{n} s",
+  "upd.dur.min": "{m} min {s} s",
   "upd.today": "today",
   "upd.cancel": "Cancel",
   "upd.unit.b": "B",
   "upd.unit.kb": "KB",
   "upd.unit.mb": "MB",
   "upd.unit.gb": "GB",
-
   "upd.srv.title": "Linager server",
   "upd.srv.current": "up to date",
   "upd.srv.available": "available {version}",
@@ -48,7 +51,6 @@
   "upd.confirm.text2": "The panel is unavailable for about a minute.",
   "upd.confirm.text3": "If something fails, the previous version is restored automatically.",
   "upd.confirm.ok": "Update",
-
   "upd.cache.title": "Release cache on the server",
   "upd.cache.version": "Version",
   "upd.cache.size": "Size",
@@ -60,7 +62,6 @@
   "upd.cache.prefetching": "Downloading…",
   "upd.cache.empty": "No releases in the cache",
   "upd.cache.note": "The signature is checked with the public key built into the binary.",
-
   "upd.agents.title": "Agents",
   "upd.agents.metaNeed": "to update: {n}",
   "upd.agents.metaOk": "all up to date",
@@ -98,7 +99,6 @@
   "upd.agstep.backup": "Backup",
   "upd.agstep.replace": "Replace",
   "upd.agstep.restart": "Restart",
-
   "upd.hist.title": "Update history",
   "upd.hist.time": "Time",
   "upd.hist.what": "What",
@@ -110,13 +110,11 @@
   "upd.hist.failed": "failed",
   "upd.hist.rolledBack": "rolled back",
   "upd.hist.empty": "No updates yet",
-
   "upd.cli.title": "Same from the terminal",
   "upd.cli.check": "# check the server for updates",
   "upd.cli.update": "# update the server: DB backup, migrations, rollback on failure",
   "upd.cli.agentUpdate": "# update the agent on this server",
   "upd.cli.agentStatus": "# agent version and connection state",
-
   "upd.toast.found": "Version {version} found",
   "upd.toast.none": "No new versions",
   "upd.err.request": "Request failed: {error}",

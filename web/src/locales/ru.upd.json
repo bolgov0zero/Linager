@@ -5,13 +5,16 @@
   "upd.loading": "Загрузка…",
   "upd.loadError": "Нет связи с сервером",
   "upd.restarting": "Сервер перезапускается…",
+  "upd.restart.elapsed": "Прошло {n} с.",
+  "upd.restart.note": "На время замены бинарника и миграций служба остановлена, поэтому панель несколько секунд не отвечает. Шаги, которые не успели завершиться при последнем ответе, выполняются сейчас; результат каждого и его время появятся, когда сервер вернётся.",
+  "upd.dur.s": "{n} с",
+  "upd.dur.min": "{m} мин {s} с",
   "upd.today": "сегодня",
   "upd.cancel": "Отмена",
   "upd.unit.b": "Б",
   "upd.unit.kb": "КБ",
   "upd.unit.mb": "МБ",
   "upd.unit.gb": "ГБ",
-
   "upd.srv.title": "Сервер Linager",
   "upd.srv.current": "актуальная версия",
   "upd.srv.available": "доступна {version}",
@@ -48,7 +51,6 @@
   "upd.confirm.text2": "Панель будет недоступна около минуты.",
   "upd.confirm.text3": "Если что-то пойдёт не так, выполнится автоматический откат на предыдущую версию.",
   "upd.confirm.ok": "Обновить",
-
   "upd.cache.title": "Кэш релизов на сервере",
   "upd.cache.version": "Версия",
   "upd.cache.size": "Размер",
@@ -60,7 +62,6 @@
   "upd.cache.prefetching": "Загрузка…",
   "upd.cache.empty": "В кэше нет релизов",
   "upd.cache.note": "Подпись проверяется встроенным в бинарник публичным ключом.",
-
   "upd.agents.title": "Агенты",
   "upd.agents.metaNeed": "нужно обновить: {n}",
   "upd.agents.metaOk": "все актуальны",
@@ -98,7 +99,6 @@
   "upd.agstep.backup": "Резервная копия",
   "upd.agstep.replace": "Замена",
   "upd.agstep.restart": "Перезапуск",
-
   "upd.hist.title": "История обновлений",
   "upd.hist.time": "Время",
   "upd.hist.what": "Что",
@@ -110,13 +110,11 @@
   "upd.hist.failed": "ошибка",
   "upd.hist.rolledBack": "откат",
   "upd.hist.empty": "Обновлений пока не было",
-
   "upd.cli.title": "То же из терминала",
   "upd.cli.check": "# проверить обновления сервера",
   "upd.cli.update": "# обновить сервер: бэкап БД, миграции, откат при сбое",
   "upd.cli.agentUpdate": "# обновить агента на этом сервере",
   "upd.cli.agentStatus": "# версия агента и состояние связи",
-
   "upd.toast.found": "Найдена версия {version}",
   "upd.toast.none": "Новых версий нет",
   "upd.err.request": "Не удалось выполнить: {error}",

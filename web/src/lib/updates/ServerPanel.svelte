@@ -4,7 +4,7 @@
   import Modal from '../Modal.svelte';
   import { isPhone } from '../ui/viewport';
   import { locale, tr as trans } from '../../i18n';
-  import { SERVER_STEPS, fmtDateTime } from './format';
+  import { SERVER_STEPS, fmtDateTime, fmtDuration } from './format';
 
   let {
     info,
@@ -71,6 +71,36 @@
   function stepState(id: UpdateStep['id']): UpdateStep['state'] {
     if (!freshRun) return 'pending';
     return run.steps?.find((step) => step.id === id)?.state ?? 'pending';
+  }
+
+  // The panel is served by the service that the update stops for a few seconds, so for that time nothing can tell which
+  // step is going on. The dialog says so instead of standing still on the last step it saw: the steps that were not
+  // finished at that moment are shown as "going on", and the real result (with the time of every step) appears when the
+  // service is back.
+  let now = $state(Date.now());
+  let restartSince = $state(0);
+  $effect(() => {
+    if (!restarting) {
+      restartSince = 0;
+      return;
+    }
+    restartSince = now = Date.now();
+    const timer = setInterval(() => (now = Date.now()), 1000);
+    return () => clearInterval(timer);
+  });
+  const waiting = $derived(restarting && freshRun && !finished);
+  const waitedSec = $derived(restartSince ? Math.max(0, Math.round((now - restartSince) / 1000)) : 0);
+
+  function shownState(id: UpdateStep['id']): UpdateStep['state'] | 'unknown' {
+    const st = stepState(id);
+    return waiting && st !== 'done' && st !== 'failed' ? 'unknown' : st;
+  }
+
+  /** How long a finished step took ("" while it has not finished or the times are not known). */
+  function took(id: UpdateStep['id']): string {
+    const step = freshRun ? run.steps?.find((s) => s.id === id) : undefined;
+    if (!step || (step.state !== 'done' && step.state !== 'failed') || !step.started_ms || !step.finished_ms) return '';
+    return fmtDuration(step.finished_ms - step.started_ms, $trans, $locale);
   }
 
   const notes = $derived(srv.notes ?? []);
@@ -155,17 +185,22 @@
 {#if statusOpen}
   <Modal title={$trans('upd.status.title')} labelId="upd-status-title" onclose={closeStatus}>
     <div class="upd-run" aria-label={$trans('upd.srv.progressAria')}>
-      {#if restarting}
+      {#if waiting}
+        <p class="upd-hint" role="status">{$trans('upd.restarting')} {$trans('upd.restart.elapsed', { n: waitedSec })}</p>
+        <p class="upd-hint">{$trans('upd.restart.note')}</p>
+      {:else if restarting}
         <p class="upd-hint">{$trans('upd.restarting')}</p>
       {/if}
       <ol class="upd-steps">
         {#each SERVER_STEPS as id (id)}
-          {@const st = stepState(id)}
+          {@const st = shownState(id)}
+          {@const dur = took(id)}
           <li class="upd-step {st}">
             <span class="upd-ico" aria-hidden="true">
-              {#if st === 'done'}✓{:else if st === 'running'}<span class="upd-spin"></span>{:else if st === 'failed'}✗{:else}○{/if}
+              {#if st === 'done'}✓{:else if st === 'running'}<span class="upd-spin"></span>{:else if st === 'unknown'}<span class="upd-dots">…</span>{:else if st === 'failed'}✗{:else}○{/if}
             </span>
             <span>{$trans(`upd.srvstep.${id}`)}</span>
+            {#if dur}<span class="upd-dur">{dur}</span>{/if}
           </li>
         {/each}
       </ol>

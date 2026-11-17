@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bolgov0zero/linager/internal/release"
 	"github.com/bolgov0zero/linager/server/store"
@@ -78,6 +79,8 @@ func (e *env) binary() string { b, _ := os.ReadFile(e.d.BinPath); return string(
 
 func TestUpdateSucceeds(t *testing.T) {
 	e := newEnv(t)
+	clock := time.Unix(1_700_000_000, 0)
+	e.d.Now = func() time.Time { clock = clock.Add(250 * time.Millisecond); return clock }
 	e.cache("v0.2.0", "NEW")
 	if err := ServerUpdate(context.Background(), e.d, "v0.2.0", "stable"); err != nil {
 		t.Fatal(err)
@@ -96,10 +99,16 @@ func TestUpdateSucceeds(t *testing.T) {
 	if st.State != "done" || st.To != "v0.2.0" {
 		t.Fatalf("%+v", st)
 	}
+	var prevEnd int64
 	for _, s := range st.Steps {
 		if s.State != "done" {
 			t.Fatalf("step %s is %s", s.ID, s.State)
 		}
+		// every step carries when it began and ended, and the steps follow one another
+		if s.StartedMs == 0 || s.FinishedMs <= s.StartedMs || s.StartedMs < prevEnd {
+			t.Fatalf("step %s has odd times: %+v (previous ended %d)", s.ID, s, prevEnd)
+		}
+		prevEnd = s.FinishedMs
 	}
 	if len(e.runs) != 1 || e.runs[0].Status != "success" {
 		t.Fatalf("history: %+v", e.runs)
@@ -156,6 +165,19 @@ func TestBackupFailureTouchesNothing(t *testing.T) {
 	}
 	if e.binary() != "OLD" || len(e.calls) != 0 {
 		t.Fatalf("nothing may change when the backup fails: bin=%s calls=%v", e.binary(), e.calls)
+	}
+	// the failed step is closed with its time, the steps after it were never started
+	for _, s := range ReadStatus(e.d.StatusPath).Steps {
+		switch s.ID {
+		case StepBackup:
+			if s.State != "failed" || s.StartedMs == 0 || s.FinishedMs < s.StartedMs {
+				t.Fatalf("failed step: %+v", s)
+			}
+		case StepStop, StepReplace, StepMigrate, StepStart:
+			if s.State != "pending" || s.StartedMs != 0 {
+				t.Fatalf("step %s must stay untouched: %+v", s.ID, s)
+			}
+		}
 	}
 }
 

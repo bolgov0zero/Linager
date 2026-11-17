@@ -286,7 +286,11 @@ export interface DockerInfo { available: boolean; containers: DockerContainer[];
 export interface DockerCheckResult { checked_at: number; new: number; current: number; unknown: number }
 
 // ---- updates and audit (stage 6) ----
-export interface UpdateStep { id: 'verify' | 'backup' | 'stop' | 'replace' | 'migrate' | 'start'; state: 'pending' | 'running' | 'done' | 'failed' }
+export interface UpdateStep {
+  id: 'verify' | 'backup' | 'stop' | 'replace' | 'migrate' | 'start'; state: 'pending' | 'running' | 'done' | 'failed';
+  /** Unix milliseconds; the panel often learns about the steps only after they are over, so it shows how long each took. */
+  started_ms?: number; finished_ms?: number;
+}
 export interface ServerUpdateRun {
   run_id: string; state: 'idle' | 'running' | 'done' | 'failed' | 'rolled_back';
   steps: UpdateStep[]; from: string; to: string; error?: string; started_at: number; finished_at: number;

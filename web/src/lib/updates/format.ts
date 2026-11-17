@@ -26,6 +26,18 @@ export function fmtDate(ts: number, locale: Locale): string {
   return new Date(ts * 1000).toLocaleDateString(bcp47(locale), { day: 'numeric', month: 'short' });
 }
 
+/** "0,3 с", "12 с", "1 мин 5 с" for a duration in milliseconds. */
+export function fmtDuration(ms: number, tr: Tr, locale: Locale): string {
+  const sec = Math.max(ms, 0) / 1000;
+  if (sec < 10) {
+    const n = new Intl.NumberFormat(bcp47(locale), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.max(sec, 0.1));
+    return tr('upd.dur.s', { n });
+  }
+  const whole = Math.round(sec);
+  if (whole < 60) return tr('upd.dur.s', { n: whole });
+  return tr('upd.dur.min', { m: Math.floor(whole / 60), s: whole % 60 });
+}
+
 export function fmtBytes(bytes: number, tr: Tr): string {
   if (bytes <= 0) return '—';
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} ${tr('upd.unit.kb')}`;

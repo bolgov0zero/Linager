@@ -41,6 +41,10 @@ var stepOrder = []string{StepVerify, StepBackup, StepStop, StepReplace, StepMigr
 type Step struct {
 	ID    string `json:"id"`
 	State string `json:"state"` // pending | running | done | failed
+	// StartedMs and FinishedMs are unix milliseconds. The panel is served by the very service that is stopped in the
+	// middle of an update, so it often learns about the steps only afterwards: the times let it show how long each took.
+	StartedMs  int64 `json:"started_ms,omitempty"`
+	FinishedMs int64 `json:"finished_ms,omitempty"`
 }
 
 // Status is written to the status file after every step; the panel reads it.
@@ -121,9 +125,21 @@ func (r *runner) save() {
 }
 
 func (r *runner) set(id, state string) {
+	ms := r.now().UnixMilli()
 	for i := range r.st.Steps {
-		if r.st.Steps[i].ID == id {
-			r.st.Steps[i].State = state
+		if r.st.Steps[i].ID != id {
+			continue
+		}
+		s := &r.st.Steps[i]
+		s.State = state
+		switch state {
+		case "running":
+			s.StartedMs, s.FinishedMs = ms, 0
+		case "done", "failed":
+			if s.StartedMs == 0 {
+				s.StartedMs = ms
+			}
+			s.FinishedMs = ms
 		}
 	}
 	r.save()

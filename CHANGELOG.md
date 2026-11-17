@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.71
+
+- Server update, progress dialog: it no longer freezes on the first step and then ticks everything at once. The panel is served by the service that the update stops (from "Stopping the service" to "Start and check"), so for a few seconds it cannot learn the progress. The dialog now says so: the steps that had not finished at its last answer are shown as going on, with a seconds counter and an explanation, and when the server is back it shows the real result. The updater records when every step began and ended (`started_ms`, `finished_ms` in `update-status.json`), and the dialog shows how long each step took.
+
 ## 0.1.70
 
 - Admin access: the white and black lists accept host names next to addresses, for a connection without a fixed public address (DDNS, for example `home.example.duckdns.org`). The server resolves the names once a minute and judges by the addresses they point to (IPv4 and IPv6); the list shows them with the time of the last check and a "Refresh" button. A name is added only when DNS knows it. When DNS stops answering, the last known address stays in force (it is stored and survives a restart) for 24 hours. A name that has no address blocks saving, like locking yourself out. Names are not allowed among the trusted proxies. New `POST /api/access/resolve`; `GET /api/access` and `POST /api/access/check` carry `hosts`.
