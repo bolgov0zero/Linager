@@ -185,7 +185,7 @@ function any(list,ip){return list.some(function(r){return match(ip,r.cidr)})}
 var S={
   scenario:'ok',me:'proxy',
   saved:null,draft:null,
-  open:{access:true,proxy:true,log:true},
+  open:{access:true,proxy:false,log:false},
   filter:'all',retention:30,ttest:{ip:'198.51.100.20',how:'proxy'}
 };
 function proxiesFor(sc){return sc==='ok'?[{cidr:PEER+'/32',note:'Nginx Proxy Manager'}]:sc==='trustall'?[{cidr:'0.0.0.0/0',note:'по умолчанию'},{cidr:'::/0',note:'по умолчанию'}]:[]}

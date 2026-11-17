@@ -31,8 +31,8 @@
   let error = $state('');
 
   let openAccess = $state(true);
-  let openProxy = $state(true);
-  let openLog = $state(true);
+  let openProxy = $state(false);
+  let openLog = $state(false);
 
   let newAddr = $state('');
   let newNote = $state('');

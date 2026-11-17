@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.72
+
+- Admin access: the "Trusted proxies" and "Access journal" blocks are collapsed by default; "Access restriction" stays open.
+
 ## 0.1.71
 
 - Server update, progress dialog: it no longer freezes on the first step and then ticks everything at once. The panel is served by the service that the update stops (from "Stopping the service" to "Start and check"), so for a few seconds it cannot learn the progress. The dialog now says so: the steps that had not finished at its last answer are shown as going on, with a seconds counter and an explanation, and when the server is back it shows the real result. The updater records when every step began and ended (`started_ms`, `finished_ms` in `update-status.json`), and the dialog shows how long each step took.
