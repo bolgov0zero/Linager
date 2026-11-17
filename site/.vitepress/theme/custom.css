@@ -70,4 +70,15 @@ body{font-variation-settings:"ELSH" 1;font-synthesis:none}
 .VPLocalSearchBox .shell{border:2px solid var(--lg-ink)}
 .VPNavBarSearch .DocSearch-Button{border-radius:0}
 .VPNavScreen,.VPLocalNav{background:var(--lg-surface)!important}
+
+/* drop-down menus (language, theme, social): hard edges, solid background, offset shade; they open under the bar line */
+.VPMenu{border-radius:0!important;border:2px solid var(--lg-ink)!important;background:var(--lg-surface)!important;box-shadow:4px 4px 0 var(--lg-shade)!important;padding:4px!important;min-width:150px!important;backdrop-filter:none!important}
+.dark .VPMenu{border-color:#3b4455}
+.VPNavBar .VPFlyout .menu{top:var(--vp-nav-height)!important}
+.VPMenu .items,.VPMenu .group{padding:0}
+.VPMenuLink .link,.VPMenu .items>.title{font-family:var(--lg-display);font-size:15px;font-weight:400;line-height:30px;padding:0 12px;border-radius:0;color:var(--lg-ink)}
+.VPMenu .items>.title{color:var(--lg-accent);margin:0;padding-left:12px}.VPMenuLink .link:hover{background:var(--lg-ink);color:var(--lg-surface)}
+.VPMenuLink .link.active{color:var(--lg-accent)}
+.VPMenuLink .link.active:hover{color:var(--lg-surface)}
+.VPNavBarTranslations .VPFlyout .button:hover .icon,.VPFlyout:hover .button[aria-expanded="false"] .icon,.VPFlyout .button[aria-expanded="true"] .icon{color:var(--lg-accent)}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
