@@ -670,10 +670,11 @@
     margin: 16px 0;
   }
 
+  /* stretch: the group picker (a Select, other font and padding) is as high as the chips next to it */
   .group {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: stretch;
     gap: 8px;
     min-width: 0;
   }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.75
+
+- Fix: on the dashboard the server group picker was lower than the filter buttons next to it. The items of the toolbar groups now stretch to the height of their row.
+
 ## 0.1.74
 
 - Fix: the last line of the terminal window (the prompt) was cut off by the bottom edge. The terminal fits its rows to the height of the element it sits in, and that element had padding and a frame that were counted as free room. The frame and padding are now on an outer block and xterm sits in an inner one without them.
