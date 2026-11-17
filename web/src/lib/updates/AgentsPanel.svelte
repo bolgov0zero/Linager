@@ -215,9 +215,6 @@
                   {/each}
                 </div>
                 {#if agent.message}<div class="upd-sub">{agent.message}</div>{/if}
-                {#if agent.steps?.length}
-                  {@render stages(agent)}
-                {/if}
               {:else if agent.status === 'rollback' || agent.status === 'failed'}
                 <span class="upd-err-inline">{agent.message ?? ''}</span>
                 {#if agent.steps?.length}

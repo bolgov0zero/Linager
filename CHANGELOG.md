@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.3
+
+- Updates page, the table of agents: the "Stages" link under the progress bar of an agent that is being updated is gone (the row already says "step N of 8: name" and shows the bar; the full list of stages stays on the page of the server). The link remains for an agent whose update failed or was rolled back, where the list shows where it stopped.
+
 ## 0.2.2
 
 - Docs: the README (en, ru), the landing page (en, ru) and the introduction of the site tell about the new ways to add a server (confirm a key, an install link, an install over SSH) and about the Linager menu that opens after an install. The landing got a "Three ways to add a server" block in the install section and a line in the install animation; the README got an "Adding servers" row in the table of features and a rewritten "Add a managed host" paragraph with the `wget … | sh` command.
