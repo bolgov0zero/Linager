@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Linager: макет окна «Добавить сервер»</title>
+<style>
+@font-face{font-family:"Medeo Mono";src:url(../mockup/fonts/MedeoMonoVariable.woff2) format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Medeo Pixel";src:url(../mockup/fonts/MedeoPixelVariable.woff) format("woff");font-style:normal;font-display:swap}
+:root{
+  --bg:#e8ebe5;--surface:#f6f7f3;--ink:#14181e;--muted:#5d6572;--line:#14181e;--accent:#2b55d9;--good:#1e8a4b;--warn:#b36f0e;--crit:#c4352a;--seg-off:#d5d9d0;--shade:#c3c8bd;
+  --ctl:36px;--ctl-sm:28px;
+  --font-display:"Medeo Pixel","Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  --font-body:"Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  font-variation-settings:"ELSH" 1;font-synthesis:none;color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45;display:flex;flex-direction:column;min-height:0}
+h1,h2,h3,h4,p{margin:0}
+button{font:inherit;color:inherit}
+.muted{color:var(--muted)}.small{font-size:12px}.mono{font-family:var(--font-body)}
+.ok{color:var(--good)}.warn{color:var(--warn)}.crit{color:var(--crit)}.acc{color:var(--accent)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px;border-bottom:2px solid var(--line);background:var(--surface)}
+.brand h1{font-family:var(--font-display);font-size:22px;font-weight:400}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:var(--ctl);background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;padding:0 12px;cursor:pointer;font-family:var(--font-display);font-size:14px;line-height:1;letter-spacing:.02em;box-shadow:3px 3px 0 var(--shade);white-space:nowrap}
+.btn.sm{height:var(--ctl-sm);padding:0 8px;font-size:12px}
+.btn.primary{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.btn.danger{background:var(--crit);color:var(--surface);border-color:var(--crit)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.input,select.input,textarea.input{height:var(--ctl);background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;padding:0 8px;font-family:var(--font-body);font-size:13px;line-height:1;min-width:0;width:100%}
+textarea.input{height:auto;padding:8px;line-height:1.4;resize:vertical}
+.input.bad{border-color:var(--crit)}
+.badge{display:inline-block;padding:0 6px;border:2px solid currentColor;font-size:12px;white-space:nowrap;line-height:1.35}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.row.end{justify-content:flex-end}.row.between{justify-content:space-between}
+.grow{flex:1 1 160px}
+
+/* demo controls (not part of the product) */
+.demo{margin:0;padding:8px 20px;background:var(--ink);color:var(--surface);font-size:12px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}
+.demo label{display:flex;align-items:center;gap:6px}
+.demo select{height:24px;background:var(--surface);color:var(--ink);border:2px solid var(--surface);font-family:inherit;font-size:12px;border-radius:0}
+.demo .btn{height:24px;font-size:12px;box-shadow:none;border-color:var(--surface)}
+
+/* the window: same frame and side navigation as the Settings dialog */
+main{padding:20px;display:flex;justify-content:center;flex:1;min-height:0}
+.dlg{background:var(--surface);border:2px solid var(--line);box-shadow:6px 6px 0 var(--shade);width:min(1120px,100%);display:flex;flex-direction:column;max-height:100%;min-height:0}
+.dlg>header{flex:none;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:2px solid var(--line)}
+.dlg>header h2{font-family:var(--font-display);font-weight:400;font-size:20px}
+.settings{display:grid;grid-template-columns:210px minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:20px;padding:16px;flex:1;min-height:0}
+.side{display:flex;flex-direction:column;gap:6px;align-self:start}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;text-align:left;background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;font-family:var(--font-display);font-size:14px;cursor:pointer;box-shadow:3px 3px 0 var(--shade)}
+.nav.active{background:var(--ink);color:var(--surface)}
+.nav .cnt{display:inline-block;min-width:20px;text-align:center;padding:0 5px;border:2px solid currentColor;font-size:12px;line-height:1.3}
+.nav .cnt.hot{background:var(--warn);border-color:var(--warn);color:var(--surface)}
+.content{min-width:0;min-height:0;overflow-y:auto;padding:0 6px 8px 0;scrollbar-gutter:stable}
+.panel{display:none;flex-direction:column;gap:16px}
+.panel.on{display:flex}
+.panel>h3.page{font-family:var(--font-display);font-weight:400;font-size:20px}
+.sec{display:flex;flex-direction:column;gap:10px}
+.sec>h4{font-family:var(--font-display);font-weight:400;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.card{background:var(--surface);border:2px solid var(--line);box-shadow:3px 3px 0 var(--shade);padding:12px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.card.link{border-color:var(--accent)}
+.card.fade{opacity:.5}
+.lead{color:var(--muted);font-size:13px}
+
+.kv{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:4px 14px;margin:0;font-size:13px}
+.kv dt{color:var(--muted)}.kv dd{margin:0;overflow-wrap:anywhere}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field>span{font-size:12px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.chip{display:inline-flex;align-items:center;height:var(--ctl-sm);padding:0 10px;border:2px solid var(--line);background:var(--surface);cursor:pointer;font-family:var(--font-display);font-size:13px;box-shadow:2px 2px 0 var(--shade)}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--surface)}
+.switch{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.switch i{width:34px;height:18px;border:2px solid var(--line);position:relative;background:var(--seg-off);flex:none;margin-top:1px}
+.switch i::after{content:"";position:absolute;top:1px;left:1px;width:12px;height:12px;background:var(--ink)}
+.switch.on i{background:var(--accent)}
+.switch.on i::after{left:17px;background:var(--surface)}
+.switch small{display:block;color:var(--muted);font-size:12px}
+.warnbox{border:2px solid var(--warn);color:var(--warn);padding:8px 10px;font-size:12px}
+.critbox{border:2px solid var(--crit);color:var(--crit);padding:8px 10px;font-size:12px}
+.infobox{border:2px dashed var(--accent);padding:8px 10px;font-size:12px}
+.goodbox{border:2px solid var(--good);color:var(--good);padding:8px 10px;font-size:12px}
+.box p+p{margin-top:4px}.box .row{margin-top:8px;color:var(--ink)}
+
+.cmd{margin:0;padding:10px;border:2px dashed var(--seg-off);background:var(--bg);font-family:var(--font-body);font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.cmd.code{white-space:pre;overflow-x:auto;overflow-wrap:normal}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-family:var(--font-display);font-weight:400;font-size:12px;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:2px solid var(--line);white-space:nowrap}
+.tbl td{padding:7px 8px;border-bottom:1px dashed var(--seg-off);vertical-align:middle}
+.wrap{overflow-x:auto}
+
+/* folded blocks (same as ui/Fold.svelte) */
+.fold{border:2px solid var(--line);background:var(--surface);box-shadow:4px 4px 0 var(--shade);padding:0 14px}
+.fh{display:flex;align-items:center;gap:10px;width:100%;min-height:42px;padding:0;background:none;border:0;text-align:left;cursor:pointer}
+.fh h4{flex:1;min-width:0;font-family:var(--font-display);font-size:13px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fh .meta{flex:none;font-size:12px;color:var(--muted)}
+.chev{display:inline-block;transition:transform .12s;width:20px;text-align:center}
+.fold.open .chev{transform:rotate(180deg)}
+.fbody{display:none;flex-direction:column;gap:10px;padding:0 0 14px}
+.fold.open .fbody{display:flex}
+
+/* stages: the same list as the one of the agent update */
+.stages{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;font-size:13px}
+.step{display:grid;grid-template-columns:16px 1fr auto;column-gap:8px;align-items:baseline}
+.step .ico{display:inline-flex;justify-content:center}
+.step .dur{color:var(--muted);white-space:nowrap}
+.step .note{grid-column:2/-1;color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+.step.pending{color:var(--muted)}
+.step.running{color:var(--accent)}
+.step.done .ico{color:var(--good)}
+.step.warn .ico,.step.warn .note{color:var(--warn)}
+.step.failed .ico,.step.failed .name,.step.failed .note{color:var(--crit)}
+.spin{display:inline-block;width:10px;height:10px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.bar{height:8px;border:2px solid var(--line);background:var(--seg-off);margin-top:4px}
+.bar i{display:block;height:100%;background:var(--accent);width:0}
+.log{margin:0;padding:8px 10px;border:2px solid var(--seg-off);background:var(--bg);font-size:12px;line-height:1.5;max-height:190px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+.log .c{color:var(--accent)}.log .g{color:var(--good)}.log .r{color:var(--crit)}
+
+/* modal + toast */
+.modal{position:fixed;inset:0;z-index:30;display:none;align-items:flex-start;justify-content:center;padding:10vh 16px;overflow-y:auto;background:rgba(10,12,16,.55)}
+.modal.on{display:flex}
+.modal .dlg{width:min(480px,100%);max-height:none}
+.modal .body{padding:16px;display:flex;flex-direction:column;gap:12px}
+.modal footer{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:2px solid var(--line)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:40;background:var(--ink);color:var(--surface);padding:10px 16px;font-size:13px;display:none;max-width:90vw}
+.toast.on{display:block}
+
+@media (max-width:720px){
+  html,body{height:auto}
+  main{padding:8px;flex:none}
+  .dlg{height:calc(100dvh - 16px);min-height:480px}
+  .settings{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);padding:12px;gap:12px}
+  .side{flex-direction:row;flex-wrap:wrap}
+  .nav{padding:6px 10px;font-size:13px;flex:1 1 auto}
+  .demo{padding:8px 12px}
+}
+</style>
+</head>
+<body>
+<div class="top"><div class="brand"><h1>Linager</h1></div><span class="muted small">макет · не рабочий код</span></div>
+
+<p class="demo">
+  <b>Демо:</b>
+  <label>Запросы на подтверждение
+    <select id="dPend"><option value="both">2: по ссылке и вручную</option><option value="link">1: по ссылке</option><option value="manual">1: вручную</option><option value="none">нет</option></select>
+  </label>
+  <label>SSH: проверка
+    <select id="dCheck">
+      <option value="ok">всё хорошо (sudo без пароля)</option>
+      <option value="root">вход под root</option>
+      <option value="sudopw">нужен пароль sudo</option>
+      <option value="port">хост не видит порт сервера</option>
+      <option value="os">ОС не поддерживается</option>
+      <option value="auth">неверный пароль</option>
+      <option value="exists">агент уже установлен</option>
+    </select>
+  </label>
+  <label>SSH: установка
+    <select id="dInst"><option value="ok">успешно</option><option value="fail">сбой: агент не подключился</option></select>
+  </label>
+  <label>Пароль админа перед установкой
+    <select id="dReauth"><option value="off">не спрашивать</option><option value="on">спрашивать</option></select>
+  </label>
+  <label>Скорость
+    <select id="dSpeed"><option value="1">обычная</option><option value="0.3">быстро</option><option value="2.5">медленно</option></select>
+  </label>
+  <button class="btn" id="dTheme" type="button">Тема</button>
+  <button class="btn" id="dReset" type="button">Сначала</button>
+</p>
+
+<main>
+<div class="dlg">
+  <header><h2>Добавить сервер</h2><button class="btn sm" type="button" data-toast="Закрыть окно (в макете не работает)">✕</button></header>
+  <div class="settings">
+    <nav class="side" aria-label="Способы добавления">
+      <button class="nav active" type="button" data-tab="confirm"><span>Подтверждения</span><span class="cnt" id="cntPend">2</span></button>
+      <button class="nav" type="button" data-tab="link">Установка по ссылке</button>
+      <button class="nav" type="button" data-tab="ssh">Установка по SSH</button>
+    </nav>
+    <div class="content">
+      <section class="panel on" id="p-confirm"></section>
+      <section class="panel" id="p-link"></section>
+      <section class="panel" id="p-ssh"></section>
+    </div>
+  </div>
+</div>
+</main>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="dlg">
+    <header><h2 id="mTitle"></h2></header>
+    <div class="body" id="mBody"></div>
+    <footer><button class="btn" type="button" id="mCancel">Отмена</button><button class="btn primary" type="button" id="mOk">Подтвердить</button></footer>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+
+/* ---- the data of this made-up server ---- */
+var HOST_EXT='panel.example.com',HOST_LOC='10.0.1.2',PORT='9443';
+var FP='SHA256:Qm4xv7p2Kc9sLw0nTz8dYhE3rJbVaU6fG1oXk5NtR9Lw';
+var PIN='sha256//3b1TqJ0Xr9mZc2vK8aW5uYdLe7nHpQf4sGtB6oVxA1E=';
+var CANCEL={cancel:true};
+var S;
+function fresh(){
+  S={
+    run:0,
+    pending:[],
+    available:[{name:'monitor-01',info:'Debian 12 · 10.0.1.30'},{name:'vpn-gw',info:'Debian 12 · 10.0.0.1'}],
+    links:[{id:'lk_9aT3…Rm',created:'вчера 18:40',exp:'через 5 ч 12 мин',uses:'1 из 5',mode:'вручную',nets:'10.0.0.0/8',group:'Production',used:'web-05 · вчера 18:52'}],
+    lastLink:null,showScript:false,
+    ssh:{view:'form',auth:'password',host:'10.0.1.40',port:'22',login:'deploy',secret:'demo-password',key:'',group:'',portFixed:false,newName:''}
+  };
+  setPending($('#dPend').value);
+}
+function setPending(v){
+  var l={id:1,kind:'link',host:'web-07',addr:'10.0.1.47',via:'локальной',os:'Debian 13 (trixie) · amd64',ver:'0.1.77',fp:'SHA256:Zt1p9Vx…c4Va',age:'2 мин назад',from:'10.0.1.47'};
+  var m={id:2,kind:'manual',host:'edge-09',addr:'10.0.7.9',os:'Ubuntu 24.04 · amd64',ver:'0.1.77',fp:'SHA256:Qm4x8Lw…r9Lw',code:'4F7-K2P',age:'5 мин назад',from:'198.51.100.23'};
+  S.pending=v==='both'?[l,m]:v==='link'?[l]:v==='manual'?[m]:[];
+}
+
+/* ---- common ---- */
+var toastT;
+function toast(msg){var t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove('on')},2600)}
+function speed(){return +$('#dSpeed').value||1}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms*speed())})}
+function fmt(ms){var s=ms/1000;if(s<10)return s.toFixed(1).replace('.',',')+' с';if(s<60)return Math.round(s)+' с';return Math.floor(s/60)+' мин '+Math.round(s%60)+' с'}
+function copy(text){
+  var done=function(){toast('Скопировано')};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(done,function(){toast('Не удалось скопировать')})}
+  else{var t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();try{document.execCommand('copy');done()}catch(e){toast('Не удалось скопировать')}t.remove()}
+}
+function modal(title,body,ok,onok){
+  $('#mTitle').textContent=title;$('#mBody').innerHTML=body;$('#mOk').textContent=ok;
+  $('#modal').classList.add('on');
+  $('#mOk').onclick=function(){var r=onok?onok():true;if(r!==false)$('#modal').classList.remove('on')};
+  $('#mCancel').onclick=function(){$('#modal').classList.remove('on')};
+}
+
+/* ---- tabs ---- */
+function tab(name){
+  $$('.nav').forEach(function(b){b.classList.toggle('active',b.dataset.tab===name)});
+  $$('.panel').forEach(function(p){p.classList.toggle('on',p.id==='p-'+name)});
+  $('.content').scrollTop=0;
+}
+document.addEventListener('click',function(e){
+  var t=e.target.closest('[data-tab]');if(t)tab(t.dataset.tab);
+  var m=e.target.closest('[data-toast]');if(m)toast(m.dataset.toast);
+});
+
+/* ---- tab 1: confirmations ---- */
+function renderConfirm(){
+  var p=S.pending;
+  $('#cntPend').textContent=p.length;$('#cntPend').classList.toggle('hot',p.length>0);
+  var h='<h3 class="page">Подтверждения</h3>';
+  h+='<div class="sec"><h4>Ждут подтверждения</h4>';
+  if(!p.length)h+='<p class="muted small">Нет запросов на подключение. Установите агент на новом сервере: по ссылке, по SSH или вручную по данным ниже.</p>';
+  p.forEach(function(r){
+    h+='<div class="card'+(r.kind==='link'?' link':'')+'" data-id="'+r.id+'">'
+     +'<div class="row between"><div><b>'+esc(r.host)+'</b> <span class="muted">'+esc(r.addr)+'</span></div>'
+     +(r.kind==='link'?'<span class="badge acc">по ссылке</span>':'<span class="badge muted">вручную</span>')+'</div>'
+     +'<dl class="kv"><dt>Система</dt><dd>'+esc(r.os)+' · агент '+esc(r.ver)+'</dd>'
+     +'<dt>Пришёл с</dt><dd>'+esc(r.from)+' · '+esc(r.age)+'</dd>'
+     +'<dt>Отпечаток</dt><dd>'+esc(r.fp)+'</dd>';
+    if(r.kind==='manual')h+='<dt>Код сверки</dt><dd><b>'+esc(r.code)+'</b> <span class="muted">должен совпадать с кодом на клиенте</span></dd>';
+    h+='</dl>';
+    if(r.kind==='link'){
+      h+='<p class="infobox">Пришёл по вашей <b>'+esc(r.via)+'</b> ссылке: ключ вводить не нужно. Имя сервера взято у агента.</p>'
+       +'<div class="row end"><button class="btn" data-a="reject">Отклонить</button><button class="btn primary" data-a="approve">Подтвердить</button></div>';
+    }else{
+      h+='<label class="field"><span>Ключ подтверждения (показан на клиенте)</span><input class="input mono" data-key maxlength="9" placeholder="XXXX-XXXX" autocomplete="off" spellcheck="false"></label>'
+       +'<p class="crit small" data-err style="display:none"></p>'
+       +'<p class="muted small">Для макета подойдёт любой ключ вида XXXX-XXXX, кроме 0000-0000 (он покажет ошибку).</p>'
+       +'<div class="row end"><button class="btn" data-a="reject">Отклонить</button><button class="btn primary" data-a="approve" disabled>Подтвердить</button></div>';
+    }
+    h+='</div>';
+  });
+  h+='</div>';
+  h+='<div class="sec"><h4>Подключённые, не на дашборде</h4>';
+  if(!S.available.length)h+='<p class="muted small">Все подключённые серверы уже на дашборде.</p>';
+  S.available.forEach(function(a,i){
+    h+='<div class="card"><div class="row between"><div><b>'+esc(a.name)+'</b><div class="muted small">'+esc(a.info)+'</div></div><button class="btn sm" data-a="add" data-i="'+i+'">Добавить</button></div></div>';
+  });
+  h+='</div>';
+  h+='<div class="sec"><h4>Данные для подключения клиента</h4><div class="card">'
+   +'<p class="lead">Укажите их при установке агента вручную на управляемом сервере. Порт агентов не проходит через обратный прокси: адрес должен вести на этот сервер напрямую.</p>'
+   +'<dl class="kv"><dt>Адрес</dt><dd>'+HOST_EXT+'</dd><dt>Порт</dt><dd>'+PORT+'</dd><dt>Отпечаток</dt><dd>'+FP+'</dd></dl>'
+   +'<p class="muted small">Другие адреса сервера: '+HOST_LOC+'</p>'
+   +'<div class="row"><button class="btn sm" data-a="copyaddr">Копировать адрес:порт</button><span class="muted small">'+HOST_EXT+':'+PORT+'</span></div>'
+   +'</div></div>';
+  $('#p-confirm').innerHTML=h;
+}
+$('#p-confirm').addEventListener('input',function(e){
+  var k=e.target.closest('[data-key]');if(!k)return;
+  var v=k.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8);
+  k.value=v.length>4?v.slice(0,4)+'-'+v.slice(4):v;
+  var card=k.closest('.card');card.querySelector('[data-a=approve]').disabled=v.length!==8;
+  var er=card.querySelector('[data-err]');er.style.display='none';k.classList.remove('bad');
+});
+$('#p-confirm').addEventListener('click',function(e){
+  var b=e.target.closest('[data-a]');if(!b)return;
+  var card=b.closest('.card'),id=card?+card.dataset.id:0;
+  var r=S.pending.filter(function(x){return x.id===id})[0];
+  switch(b.dataset.a){
+    case 'approve':
+      if(r.kind==='manual'&&card.querySelector('[data-key]').value==='0000-0000'){
+        var er=card.querySelector('[data-err]');er.textContent='Неверный ключ';er.style.display='block';card.querySelector('[data-key]').classList.add('bad');return;
+      }
+      S.pending=S.pending.filter(function(x){return x.id!==id});
+      S.available.unshift({name:r.host,info:r.os.split(' · ')[0]+' · '+r.addr});
+      toast('Сервер '+r.host+' подтверждён');renderConfirm();break;
+    case 'reject':S.pending=S.pending.filter(function(x){return x.id!==id});toast('Запрос отклонён');renderConfirm();break;
+    case 'add':var a=S.available.splice(+b.dataset.i,1)[0];toast('Сервер '+a.name+' добавлен на дашборд');renderConfirm();break;
+    case 'copyaddr':copy(HOST_EXT+':'+PORT);break;
+  }
+});
+
+/* ---- tab 2: install by a link ---- */
+var LK={ttl:'1 час',uses:'1',auto:false,nets:'',group:'',open:false};
+function newToken(){var c='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789',s='';for(var i=0;i<4;i++)s+=c[Math.floor(Math.random()*c.length)];return 'lk_'+s+'…'+c[Math.floor(Math.random()*c.length)]+c[Math.floor(Math.random()*c.length)]}
+function curlCmd(host,tok){return "curl -fsSk --pinnedpubkey '"+PIN+"' https://"+host+':'+PORT+'/v1/join/'+tok+' | sudo sh'}
+function scriptText(tok){return '#!/bin/sh\n# Linager: установка агента по ссылке (токен '+tok+'). Скрипт отдаёт ваш сервер.\nset -eu\nSERVER="'+HOST_LOC+':'+PORT+'"   # сервер подставляет адрес, по которому вы к нему обратились\nFP="'+FP+'"\n[ "$(id -u)" -eq 0 ] || { echo "запустите от root: sudo sh"; exit 1; }\narch=$(dpkg --print-architecture)          # amd64 или arm64\ntmp=$(mktemp -d); trap \'rm -rf "$tmp"\' EXIT\ncurl -fsSk --pinnedpubkey \''+PIN+'\' -o "$tmp/linager" "https://$SERVER/v1/join/'+tok+'/binary?arch=$arch"\nchmod 0755 "$tmp/linager"\n"$tmp/linager" install agent --server "$SERVER" --fingerprint "$FP" --join-token "'+tok+'"\n'}
+function sw(on,id,title,hint){return '<div class="switch'+(on?' on':'')+'" role="switch" aria-checked="'+on+'" tabindex="0" data-sw="'+id+'"><i></i><span>'+title+'<small>'+hint+'</small></span></div>'}
+function grp(sel){return ['','Production','Infrastructure'].map(function(g){return '<option value="'+g+'"'+(g===sel?' selected':'')+'>'+(g||'Без группы')+'</option>'}).join('')}
+function opts(list,sel){return list.map(function(o){return '<option'+(o===sel?' selected':'')+'>'+o+'</option>'}).join('')}
+function renderLink(){
+  var h='<h3 class="page">Установка по ссылке</h3>'
+   +'<p class="lead">Создайте ссылку и выполните команду на новом сервере от root. Агент скачает релиз <b>с этого сервера</b> (из кеша, без GitHub), подключится сам и появится во вкладке «Подтверждения». Имя сервера агент сообщит сам.</p>'
+   +'<div class="sec"><h4>Новая ссылка</h4><div class="card">'
+   +'<div class="grid">'
+   +'<label class="field"><span>Срок действия</span><select class="input" data-f="ttl">'+opts(['15 минут','1 час','24 часа','7 дней'],LK.ttl)+'</select></label>'
+   +'<label class="field"><span>Сколько серверов</span><select class="input" data-f="uses">'+opts(['1','5','10','25','без ограничения'],LK.uses)+'</select></label>'
+   +'<label class="field"><span>Группа (необязательно)</span><select class="input" data-f="group">'+grp(LK.group)+'</select></label>'
+   +'</div>'
+   +'<label class="field"><span>Разрешённые сети (необязательно)</span><input class="input mono" data-f="nets" value="'+esc(LK.nets)+'" placeholder="10.0.1.0/24, 192.168.0.0/16" spellcheck="false"><span>Без списка ссылка работает с любого адреса.</span></label>'
+   +sw(LK.auto,'auto','Одобрять серверы автоматически','Без этого каждый сервер, пришедший по ссылке, ждёт вашего нажатия «Подтвердить». Включайте для массовой раскатки вместе с ограничением по сетям.')
+   +'<div class="row end"><button class="btn primary" data-a="create">Создать ссылку</button></div>'
+   +'</div></div>';
+  if(S.lastLink){
+    var t=S.lastLink.id;
+    h+='<div class="sec"><h4>Ссылка создана</h4><div class="card link">'
+     +'<p class="small"><b>Показана один раз:</b> панель хранит только хеш токена. Действует '+esc(S.lastLink.ttlText)+', серверов: '+esc(S.lastLink.max)+', '+(S.lastLink.auto?'одобрение автоматическое':'каждый сервер вы подтверждаете сами')+'.</p>'
+     +'<div><div class="row between"><b>Внешняя ссылка</b><button class="btn sm" data-a="cp" data-h="'+HOST_EXT+'">Копировать</button></div><p class="muted small">Для серверов вне вашей сети: адрес, по которому этот сервер виден из интернета.</p><pre class="cmd">'+esc(curlCmd(HOST_EXT,t))+'</pre></div>'
+     +'<div><div class="row between"><b>Локальная ссылка</b><button class="btn sm" data-a="cp" data-h="'+HOST_LOC+'">Копировать</button></div><p class="muted small">Для серверов в одной сети с панелью: быстрее и не выходит наружу.</p><pre class="cmd">'+esc(curlCmd(HOST_LOC,t))+'</pre></div>'
+     +'<div class="row between"><button class="btn sm" data-a="script">'+(S.showScript?'Скрыть скрипт':'Показать скрипт')+'</button><span class="muted small">Прочитайте скрипт до запуска: его можно открыть по этой же ссылке.</span></div>'
+     +(S.showScript?'<pre class="cmd code">'+esc(scriptText(t))+'</pre>':'')
+     +'<p class="infobox"><b>Зачем <span class="mono">-k</span> и <span class="mono">--pinnedpubkey</span>.</b> У сервера собственный сертификат, поэтому обычная проверка цепочки не подходит. Вместо неё команда проверяет, что отвечает именно ваш сервер: хеш его ключа зашит в команду. Подмена скрипта по пути невозможна.</p>'
+     +'</div></div>';
+  }
+  h+='<div class="fold'+(LK.open?' open':'')+'"><button class="fh" type="button" data-fold="links" aria-expanded="'+!!LK.open+'"><h4>Действующие ссылки</h4><span class="meta">'+S.links.length+'</span><span class="chev" aria-hidden="true">▾</span></button><div class="fbody">';
+  if(!S.links.length)h+='<p class="muted small">Ссылок нет.</p>';
+  else{
+    h+='<div class="wrap"><table class="tbl"><thead><tr><th>Ссылка</th><th>Создана</th><th>Истекает</th><th>Использована</th><th>Одобрение</th><th>Сети</th><th>Группа</th><th></th></tr></thead><tbody>';
+    S.links.forEach(function(l,i){
+      h+='<tr><td class="mono">'+esc(l.id)+(l.used?'<div class="muted small">'+esc(l.used)+'</div>':'')+'</td><td>'+esc(l.created)+'</td><td>'+esc(l.exp)+'</td><td>'+esc(l.uses)+'</td><td>'+esc(l.mode)+'</td><td>'+esc(l.nets)+'</td><td>'+esc(l.group)+'</td><td><button class="btn sm" data-a="revoke" data-i="'+i+'">Отозвать</button></td></tr>';
+    });
+    h+='</tbody></table></div>';
+  }
+  h+='</div></div>';
+  $('#p-link').innerHTML=h;
+}
+$('#p-link').addEventListener('change',function(e){var f=e.target.closest('[data-f]');if(f)LK[f.dataset.f]=f.value});
+$('#p-link').addEventListener('input',function(e){var f=e.target.closest('[data-f]');if(f&&f.tagName==='INPUT')LK[f.dataset.f]=f.value});
+function swToggle(e,cb){var s=e.target.closest('[data-sw]');if(!s)return false;cb(s.dataset.sw);return true}
+$('#p-link').addEventListener('click',function(e){
+  if(swToggle(e,function(){LK.auto=!LK.auto;renderLink()}))return;
+  var fd=e.target.closest('[data-fold]');if(fd){LK.open=!LK.open;renderLink();return}
+  var b=e.target.closest('[data-a]');if(!b)return;
+  switch(b.dataset.a){
+    case 'create':
+      var nets=LK.nets.trim();
+      if(nets&&!/^[0-9a-f:.\/, ]+$/i.test(nets)){toast('Сети: укажите адреса или CIDR через запятую');return}
+      var tok=newToken();
+      S.lastLink={id:tok,ttlText:LK.ttl,max:LK.uses,auto:LK.auto};S.showScript=false;
+      S.links.unshift({id:tok,created:'сейчас',exp:'через '+LK.ttl.replace('15 минут','15 мин'),uses:'0 из '+(LK.uses==='без ограничения'?'∞':LK.uses),mode:LK.auto?'автоматически':'вручную',nets:nets||'любые',group:LK.group||'—',used:''});
+      renderLink();toast('Ссылка создана');break;
+    case 'cp':copy(curlCmd(b.dataset.h,S.lastLink.id));break;
+    case 'script':S.showScript=!S.showScript;renderLink();break;
+    case 'revoke':var l=S.links.splice(+b.dataset.i,1)[0];if(S.lastLink&&S.lastLink.id===l.id)S.lastLink=null;toast('Ссылка отозвана');renderLink();break;
+  }
+});
+$('#p-link').addEventListener('keydown',function(e){if((e.key===' '||e.key==='Enter')&&e.target.closest('[data-sw]')){e.preventDefault();e.target.closest('[data-sw]').click()}});
+
+/* ---- tab 3: install over SSH ---- */
+function sshBlocked(h){return /^(127\.|169\.254\.|localhost$|0\.0\.0\.0$|::1$)/i.test(h.trim())}
+function renderSSH(){
+  var s=S.ssh,el=$('#p-ssh');
+  if(s.view==='form'){
+    var bad=sshBlocked(s.host);
+    el.innerHTML='<h3 class="page">Установка по SSH</h3>'
+     +'<p class="lead">Панель подключится к серверу по SSH, проверит его и установит агент. Подтверждать запрос потом не нужно: вход по SSH уже подтвердил, что сервер ваш.</p>'
+     +'<div class="sec"><h4>Куда подключаться</h4><div class="card">'
+     +'<div class="grid"><label class="field"><span>Адрес сервера</span><input class="input mono'+(bad?' bad':'')+'" data-s="host" value="'+esc(s.host)+'" spellcheck="false"></label>'
+     +'<label class="field"><span>Порт SSH</span><input class="input mono" data-s="port" value="'+esc(s.port)+'" inputmode="numeric"></label>'
+     +'<label class="field"><span>Логин</span><input class="input mono" data-s="login" value="'+esc(s.login)+'" spellcheck="false"></label></div>'
+     +(bad?'<p class="crit small">Этот адрес запрещён: loopback и адреса метаданных облака (169.254.0.0/16) панель не использует.</p>':'')
+     +'<div class="row"><span class="muted small">Вход:</span><button class="chip" data-auth="password" aria-pressed="'+(s.auth==='password')+'">Пароль</button><button class="chip" data-auth="key" aria-pressed="'+(s.auth==='key')+'">Ключ</button></div>'
+     +(s.auth==='password'
+       ?'<label class="field"><span>Пароль</span><input class="input mono" type="password" data-s="secret" value="'+esc(s.secret)+'" autocomplete="off"></label>'
+       :'<label class="field"><span>Закрытый ключ (OpenSSH или PEM)</span><textarea class="input mono" rows="4" data-s="key" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----" spellcheck="false">'+esc(s.key)+'</textarea></label>')
+     +'<label class="field"><span>Группа (необязательно)</span><select class="input" data-s="group"><option value="">Без группы</option><option>Production</option><option>Infrastructure</option></select></label>'
+     +'<p class="infobox">Данные для входа передаются только по HTTPS, хранятся в памяти сервера, пока идут проверка и установка (не дольше 15 минут), и нигде не записываются, в том числе в журнал. В журнале аудита остаются адрес, логин и результат.</p>'
+     +'<div class="row end"><button class="btn primary" data-a="check"'+(bad||!s.host||!s.login||(s.auth==='password'?!s.secret:!s.key)?' disabled':'')+'>Проверить</button></div>'
+     +'</div></div>';
+  }else if(s.view==='check'){
+    el.innerHTML='<h3 class="page">Проверка '+esc(s.login)+'@'+esc(s.host)+'</h3><div class="card"><div id="stg"></div><div id="gate"></div><div id="after"></div></div>';
+  }else{
+    el.innerHTML='<h3 class="page">Установка на '+esc(s.host)+'</h3><div class="card"><div id="stg"></div><div id="after"></div><div class="fold" id="logFold"><button class="fh" type="button" data-fold="log" aria-expanded="false"><h4>Вывод</h4><span class="meta" id="logMeta">0 строк</span><span class="chev" aria-hidden="true">▾</span></button><div class="fbody"><pre class="log" id="log"></pre></div></div></div>';
+  }
+}
+$('#p-ssh').addEventListener('input',function(e){var f=e.target.closest('[data-s]');if(!f)return;S.ssh[f.dataset.s]=f.value;
+  if(f.dataset.s==='host'||f.dataset.s==='secret'||f.dataset.s==='key'||f.dataset.s==='login'){var s=S.ssh,b=$('#p-ssh [data-a=check]');if(b){var bad=sshBlocked(s.host);b.disabled=bad||!s.host||!s.login||(s.auth==='password'?!s.secret:!s.key);f.classList.toggle('bad',f.dataset.s==='host'&&bad)}}
+});
+$('#p-ssh').addEventListener('change',function(e){var f=e.target.closest('[data-s]');if(f&&f.dataset.s==='host'){renderSSH()}});
+
+/* the list of stages, drawn like the one of the agent update */
+var ctl;
+function stageList(defs){
+  var el=$('#stg');
+  el.innerHTML='<ol class="stages">'+defs.map(function(d){return '<li class="step pending"><span class="ico">○</span><span class="name">'+esc(d)+'</span><span class="dur"></span><span class="note" style="display:none"></span></li>'}).join('')+'</ol>';
+  var li=$$('li',el);
+  function set(i,st,o){
+    o=o||{};var x=li[i];x.className='step '+st;
+    $('.ico',x).innerHTML=st==='done'?'✓':st==='running'?'<span class="spin"></span>':st==='failed'?'✗':st==='warn'?'!':'○';
+    if(st==='running'){x.dataset.t=Date.now()}else{delete x.dataset.t}
+    if(o.dur!=null)$('.dur',x).textContent=fmt(o.dur);else if(st!=='running')$('.dur',x).textContent='';
+    var n=$('.note',x);if(o.note!=null){n.innerHTML=o.note;n.style.display=o.note?'block':'none'}
+    if(o.bar!=null){var b=$('.bar',x);if(!b){n.insertAdjacentHTML('afterend','<div class="bar" style="grid-column:2/-1"><i></i></div>');b=$('.bar',x)}$('i',b).style.width=Math.round(o.bar*100)+'%'}
+  }
+  return {set:set,count:li.length,add:function(name){$('ol',el).insertAdjacentHTML('beforeend','<li class="step pending"><span class="ico">○</span><span class="name">'+esc(name)+'</span><span class="dur"></span><span class="note" style="display:none"></span></li>');li=$$('li',el);return li.length-1}};
+}
+setInterval(function(){$$('.step.running').forEach(function(x){if(x.dataset.t)$('.dur',x).textContent=fmt(Date.now()-x.dataset.t)})},200);
+
+function chk(id){if(id!==S.run)throw CANCEL}
+async function play(id,i,ms,note){var t=Date.now();ctl.set(i,'running');await sleep(ms);chk(id);ctl.set(i,'done',{dur:Date.now()-t,note:note||''})}
+function gate(id,html){
+  return new Promise(function(res,rej){
+    var g=$('#gate');g.innerHTML=html;
+    g.onclick=function(e){var a=e.target.closest('[data-g]');if(!a)return;
+      if(a.dataset.g==='ok'){var v={};$$('[data-gv]',g).forEach(function(x){v[x.dataset.gv]=x.type==='checkbox'?x.checked:x.value});g.innerHTML='';id===S.run?res(v):rej(CANCEL)}
+      else if(a.dataset.g==='no'){g.innerHTML='';rej(CANCEL)}
+    };
+    g.oninput=function(){var ok=$('[data-g=ok]',g);if(ok&&ok.dataset.need){var need=$('[data-gv='+ok.dataset.need+']',g);ok.disabled=need.type==='checkbox'?!need.checked:!need.value}};
+  });
+}
+function failBox(id,i,note,msg,extra){
+  ctl.set(i,'failed',{note:note});
+  $('#after').innerHTML='<div class="critbox box"><p>'+msg+'</p>'+(extra||'')+'<div class="row"><button class="btn sm" data-a="edit">Изменить данные</button><button class="btn sm" data-a="recheck">Повторить проверку</button></div></div>';
+}
+
+async function runCheck(){
+  var id=++S.run,s=S.ssh,sc=$('#dCheck').value;
+  s.view='check';renderSSH();
+  ctl=stageList(['Соединение по SSH','Ключ хоста','Вход','Система','systemd и место на диске','Права','Связь хоста с сервером','Агент на хосте']);
+  var addr=HOST_LOC;
+  try{
+    await play(id,0,700,esc(s.host)+':'+esc(s.port)+' · OpenSSH_9.2p1 Debian-2');
+    ctl.set(1,'running',{note:'Сверьте отпечаток с консолью сервера или панелью хостинга'});
+    var t1=Date.now();
+    await gate(id,'<div class="warnbox box" style="margin-top:10px"><p><b>Новый ключ хоста</b> '+esc(s.host)+' (ED25519)</p><p class="mono">SHA256:Vq3nT8dLx0Zr5bW2cYk9HpEa7Uf1GmJsXoN4tR6iQe8</p><p>Если ключ не тот, кто-то может перехватывать соединение, и пароль уйдёт не на ваш сервер.</p><div class="row"><button class="btn sm primary" data-g="ok">Доверять и продолжить</button><button class="btn sm" data-g="no">Отмена</button></div></div>');
+    chk(id);ctl.set(1,'done',{dur:Date.now()-t1,note:'ED25519 SHA256:Vq3nT8…Qe8 · вы подтвердили'});
+    if(sc==='auth'){await sleep(600);chk(id);return failBox(id,2,'Permission denied: неверный логин или пароль','Не удалось войти как <b>'+esc(s.login)+'</b>: неверный логин или пароль. Панель не пробует другие варианты.')}
+    await play(id,2,800,s.auth==='password'?'по паролю':'по ключу');
+    if(sc==='os'){await sleep(700);chk(id);return failBox(id,3,'Alpine Linux 3.20 · x86_64','Эта система не поддерживается. Агент работает на Debian 12 и 13 и Ubuntu 22.04, 24.04 и 26.04 (amd64, а на Raspberry Pi 4 с 64-разрядной ОС arm64).')}
+    await play(id,3,700,sc==='exists'?'Debian 12 (bookworm) · amd64':'Debian 13 (trixie) · amd64 · поддерживается');
+    await play(id,4,600,'systemd 257 · свободно 4,2 ГБ');
+    // rights
+    if(sc==='root'){await play(id,5,500,'вход под root')}
+    else if(sc==='sudopw'){
+      ctl.set(5,'running',{note:'<span class="warn">sudo просит пароль</span>'});var t5=Date.now();
+      var v=await gate(id,'<div class="infobox box" style="margin-top:10px"><p><b>Нужен пароль sudo</b> для пользователя '+esc(s.login)+'. Он понадобится только на время установки и нигде не сохранится.</p><label class="field" style="margin-top:8px"><span>Пароль sudo</span><input class="input mono" type="password" data-gv="pw" value="'+(s.auth==='password'?esc(s.secret):'')+'" autocomplete="off"></label><div class="row"><button class="btn sm primary" data-g="ok" data-need="pw"'+(s.auth==='password'?'':' disabled')+'>Продолжить</button><button class="btn sm" data-g="no">Отмена</button></div></div>');
+      chk(id);ctl.set(5,'done',{dur:Date.now()-t5,note:'sudo с паролем'});
+    }else{await play(id,5,500,'sudo без пароля')}
+    // reachability
+    if(sc==='port'&&!s.portFixed){
+      await sleep(900);chk(id);
+      return failBox(id,6,'Таймаут 5 с: '+addr+':'+PORT+' недоступен с хоста','Хост не достучался до сервера <b>'+addr+':'+PORT+'</b>. Агент подключается к серверу сам, поэтому порт должен быть открыт со стороны хоста (файрвол, NAT, облачные правила). Можно попробовать другой адрес сервера:','<div class="row"><select class="input" style="max-width:300px" id="srvAddr"><option>'+HOST_LOC+' (локальный)</option><option selected>'+HOST_EXT+' (внешний)</option></select></div>');
+    }
+    await play(id,6,800,(s.portFixed?HOST_EXT:addr)+':'+PORT+' доступен · отпечаток совпал');
+    if(sc==='exists'){
+      ctl.set(7,'warn',{note:'Уже установлен агент 0.1.76 и подключён к другому серверу (panel-old.example.com:9443)'});
+      var t7=Date.now();
+      await gate(id,'<div class="warnbox box" style="margin-top:10px"><p>Прежний агент будет заменён: он перестанет отчитываться старому серверу.</p><label class="row" style="color:var(--ink)"><input type="checkbox" data-gv="re"> Переустановить и подключить к этому серверу</label><div class="row"><button class="btn sm primary" data-g="ok" data-need="re" disabled>Продолжить</button><button class="btn sm" data-g="no">Отмена</button></div></div>');
+      chk(id);ctl.set(7,'done',{dur:Date.now()-t7,note:'будет переустановлен'});
+    }else await play(id,7,500,'агента нет');
+    ready(id);
+  }catch(x){if(x!==CANCEL)throw x}
+}
+function ready(id){
+  var s=S.ssh,host=S.ssh.portFixed?HOST_EXT:HOST_LOC;
+  $('#after').innerHTML='<div class="goodbox box" style="margin-top:10px"><p><b>Всё готово к установке.</b></p>'
+   +'<dl class="kv" style="margin-top:6px;color:var(--ink)"><dt>Сервер</dt><dd>'+esc(s.login)+'@'+esc(s.host)+':'+esc(s.port)+'</dd><dt>Агент подключится к</dt><dd>'+host+':'+PORT+'</dd><dt>Подтверждение</dt><dd>не нужно: вход по SSH подтверждён вами</dd><dt>Имя сервера</dt><dd>возьмём у агента</dd></dl>'
+   +'<div class="row"><button class="btn primary" data-a="install">Установить</button><button class="btn" data-a="edit">Изменить данные</button></div></div>';
+}
+$('#p-ssh').addEventListener('click',function(e){
+  var c=e.target.closest('[data-auth]');if(c){S.ssh.auth=c.dataset.auth;renderSSH();return}
+  var fd=e.target.closest('[data-fold=log]');if(fd){var f=$('#logFold'),o=!f.classList.contains('open');f.classList.toggle('open',o);fd.setAttribute('aria-expanded',o);if(o){var lg=$('#log');lg.scrollTop=lg.scrollHeight}return}
+  var b=e.target.closest('[data-a]');if(!b)return;
+  switch(b.dataset.a){
+    case 'check':runCheck();break;
+    case 'recheck':
+      if($('#srvAddr'))S.ssh.portFixed=true; // another address of the server was picked
+      runCheck();break;
+    case 'edit':S.run++;S.ssh.view='form';S.ssh.portFixed=false;renderSSH();break;
+    case 'install':
+      if($('#dReauth').value==='on'){
+        modal('Подтвердите действие','<p class="lead">Панель подключится к серверу от вашего имени и установит на него программу. Введите пароль администратора.</p><label class="field"><span>Пароль администратора</span><input class="input mono" type="password" id="reauth" autocomplete="off"></label><p class="crit small" id="reauthErr" style="display:none">Введите пароль</p>','Подтвердить',function(){
+          if(!$('#reauth').value){$('#reauthErr').style.display='block';return false}
+          runInstall();
+        });
+      }else runInstall();
+      break;
+    case 'again':S.run++;S.ssh.view='form';S.ssh.portFixed=false;renderSSH();break;
+    case 'retry':runInstall();break;
+    case 'open':toast('Откроется страница сервера '+S.ssh.newName+' (в макете не работает)');break;
+  }
+});
+
+async function runInstall(){
+  var id=++S.run,s=S.ssh,fail=$('#dInst').value==='fail',host=s.portFixed?HOST_EXT:HOST_LOC;
+  s.newName='web-08';s.view='install';renderSSH();
+  ctl=stageList(['Одноразовый токен для установки','Скачивание агента с сервера','Проверка подписи и хеша','Установка: бинарник и служба systemd','Привязка к серверу','Первое подключение агента']);
+  var log=$('#log');
+  var lines=0;
+  function L(t,cls){log.insertAdjacentHTML('beforeend',(cls?'<span class="'+cls+'">':'')+esc(t)+(cls?'</span>':'')+'\n');log.scrollTop=log.scrollHeight;lines++;$('#logMeta').textContent=lines+' '+(lines%10===1&&lines%100!==11?'строка':(lines%10>=2&&lines%10<=4&&(lines%100<10||lines%100>=20)?'строки':'строк'))}
+  function openLog(){$('#logFold').classList.add('open');$('#logFold .fh').setAttribute('aria-expanded',true)}
+  try{
+    L('$ ssh '+s.login+'@'+s.host+' sudo -S -p "" sh -s','c');
+    await play(id,0,600,'действует 10 минут, один сервер');L('токен создан (в вывод не попадает)');
+    // download with progress
+    var t=Date.now();ctl.set(1,'running',{note:'0,0 из 18,4 МБ',bar:0});
+    L('$ curl -fsSk --pinnedpubkey sha256//3b1T… https://'+host+':'+PORT+'/v1/join/••••/binary?arch=amd64','c');
+    for(var p=1;p<=10;p++){await sleep(330);chk(id);ctl.set(1,'running',{note:(p*1.84).toFixed(1).replace('.',',')+' из 18,4 МБ',bar:p/10})}
+    ctl.set(1,'done',{dur:Date.now()-t,note:'18,4 МБ с '+host,bar:1});L('получено 19 300 000 байт','g');
+    L('$ sha256sum linager','c');await play(id,2,600,'совпадает с подписанным манифестом 0.1.77');L('контрольная сумма и подпись совпали','g');
+    L('$ linager install agent --server '+host+':'+PORT+' --fingerprint '+FP.slice(0,16)+'… --join-token ••••','c');
+    await play(id,3,1200,'/usr/local/bin/linager, linager-agent.service включена');L('служба linager-agent запущена','g');
+    await play(id,4,700,'запрос принят и сразу одобрен: токен установки');L('запрос на привязку одобрен автоматически');
+    if(fail){
+      var t5=Date.now();ctl.set(5,'running');await sleep(2500);chk(id);
+      ctl.set(5,'failed',{dur:Date.now()-t5,note:'агент не подключился за 60 с'});L('агент не вышел на связь за 60 с','r');openLog();
+      var r=ctl.add('Откат: остановлена служба, агент удалён с хоста');ctl.set(r,'running');L('$ linager agent uninstall --purge','c');await sleep(900);chk(id);ctl.set(r,'done',{dur:900,note:'хост в прежнем состоянии'});L('агент удалён','g');
+      $('#after').innerHTML='<div class="critbox box" style="margin-top:10px"><p><b>Агент установлен, но не подключился к серверу.</b> Скорее всего, исходящий порт '+PORT+' закрыт файрволом хоста или адрес сервера недоступен с него. Установка отменена, хост остался как был.</p><div class="row"><button class="btn sm" data-a="retry">Повторить установку</button><button class="btn sm" data-a="again">Изменить данные</button></div></div>';
+      return;
+    }
+    await play(id,5,1500,'агент 0.1.77 на связи');L('агент подключился, имя сервера: '+s.newName,'g');
+    S.available.unshift({name:s.newName,info:'Debian 13 · '+s.host});renderConfirm();
+    $('#after').innerHTML='<div class="goodbox box" style="margin-top:10px"><p><b>Сервер '+esc(s.newName)+' добавлен.</b> Имя взято у агента. Подтверждение не потребовалось: вход по SSH подтверждён вами. Он уже во вкладке «Подтверждения» в списке подключённых.</p><div class="row"><button class="btn sm primary" data-a="open">Открыть сервер</button><button class="btn sm" data-a="again">Добавить ещё</button></div></div>';
+    toast('Сервер '+s.newName+' добавлен');
+  }catch(x){if(x!==CANCEL)throw x}
+}
+
+/* ---- demo bar ---- */
+$('#dTheme').onclick=function(){var r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dark?'light':'dark'};
+$('#dPend').onchange=function(){setPending(this.value);renderConfirm()};
+$('#dReset').onclick=function(){S.run++;fresh();renderConfirm();renderLink();renderSSH();toast('Макет сброшен')};
+fresh();renderConfirm();renderLink();renderSSH();
+})();
+</script>
+</body>
+</html>

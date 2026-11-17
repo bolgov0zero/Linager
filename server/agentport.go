@@ -38,12 +38,17 @@ type AgentPort struct {
 	Log     *slog.Logger
 	// CertLifetime is the validity of renewed agent certificates (0 = the default).
 	CertLifetime time.Duration
-	enrollL      *ipLimiter
+	// ListenPort is the port of the agent listener, for the install script when a request names none.
+	ListenPort string
+	// Live, when set, tells the admin panel that something changed on the dashboard.
+	Live    *Live
+	enrollL *ipLimiter
+	joinL   *ipLimiter
 }
 
 // NewAgentPort builds the handler set.
 func NewAgentPort(db *store.Store, keys *Keys, hub *Hub, metrics *Metrics, updates *Updates, log *slog.Logger) *AgentPort {
-	return &AgentPort{DB: db, Keys: keys, Hub: hub, Metrics: metrics, Updates: updates, Log: log, enrollL: newLimiter(20, 10*time.Minute)}
+	return &AgentPort{DB: db, Keys: keys, Hub: hub, Metrics: metrics, Updates: updates, Log: log, enrollL: newLimiter(20, 10*time.Minute), joinL: newLimiter(40, 10*time.Minute)}
 }
 
 // TLSConfig is the agent listener configuration: TLS 1.3, client certificate optional
@@ -65,6 +70,8 @@ func (a *AgentPort) Handler() http.Handler {
 	mux.HandleFunc("POST /v1/enroll", a.enroll)
 	mux.HandleFunc("GET /v1/enroll/{id}", a.enrollStatus)
 	mux.HandleFunc("GET /v1/ws", a.ws)
+	mux.HandleFunc("GET /v1/join/{token}", a.joinScript)
+	mux.HandleFunc("GET /v1/join/{token}/binary", a.joinBinary)
 	mux.HandleFunc("GET /v1/release/latest", a.releaseLatest)
 	mux.HandleFunc("GET /v1/release/{ver}/{file}", a.releaseFile)
 	return mux
@@ -102,18 +109,85 @@ func (a *AgentPort) enroll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "too many pending requests", http.StatusServiceUnavailable)
 		return
 	}
+	// An install link names who asked for this agent: its use is counted here, so the last use of a link
+	// goes to one agent only.
+	var tok *store.JoinToken
+	if req.JoinToken != "" {
+		t, ok := a.lookupJoin(r.Context(), req.JoinToken, remoteAddr(r))
+		if !ok {
+			http.Error(w, "the install link is not valid", http.StatusUnauthorized)
+			return
+		}
+		if used, err := a.DB.UseJoinToken(r.Context(), t.ID, req.Hostname); err != nil || !used {
+			http.Error(w, "the install link is not valid", http.StatusUnauthorized)
+			return
+		}
+		tok = t
+	}
 	nonce := make([]byte, 16)
 	_, _ = rand.Read(nonce)
-	e, err := a.DB.CreateEnrollment(r.Context(), &store.Enrollment{
+	pending := &store.Enrollment{
 		AgentPubkey: req.Pubkey, Hostname: req.Hostname, Address: req.Address, RemoteAddr: ip,
 		OS: req.OS, AgentVersion: req.AgentVersion, Protocol: req.Protocol, Nonce: nonce,
-	}, enrollTTL)
+	}
+	if tok != nil {
+		pending.TokenID = tok.ID
+	}
+	e, err := a.DB.CreateEnrollment(r.Context(), pending, enrollTTL)
 	if err != nil {
 		a.Log.Error("create enrollment", "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	if tok != nil {
+		a.afterJoin(r, tok, e)
+	}
 	writeJSON(w, http.StatusOK, protocol.EnrollResponse{ID: e.ID, Nonce: nonce, ExpiresAt: e.ExpiresAt})
+}
+
+// afterJoin records a request that came with a link and, when the link says so, approves it on the spot.
+func (a *AgentPort) afterJoin(r *http.Request, tok *store.JoinToken, e *store.Enrollment) {
+	ctx := context.WithoutCancel(r.Context())
+	ip := remoteAddr(r).String()
+	actor := "link:" + tok.Label
+	_ = a.DB.WriteAudit(ctx, store.Audit{Actor: actor, Action: "enroll.join", TargetType: "enrollment", TargetID: e.ID, TargetName: e.Hostname,
+		RemoteAddr: ip, ClientIP: ip, Result: "ok", Details: map[string]any{"link": tok.Label, "auto": tok.AutoApprove}})
+	if a.Live != nil {
+		a.Live.Publish("dashboard", map[string]any{})
+	}
+	if !tok.AutoApprove {
+		return
+	}
+	srv, err := a.approveJoined(ctx, e, tok)
+	if err != nil {
+		a.Log.Error("auto-approve an enrollment", "err", err)
+		return
+	}
+	_ = a.DB.WriteAudit(ctx, store.Audit{Actor: actor, Action: "enroll.approve", TargetType: "server", TargetID: srv.ID, TargetName: srv.Name,
+		RemoteAddr: ip, ClientIP: ip, Result: "ok", Details: map[string]any{"link": tok.Label, "auto": true}})
+}
+
+// approveJoined approves an enrollment that came with a link: it issues the certificate and puts the server into
+// the group of the link. The name stays the one the agent reported.
+func (a *AgentPort) approveJoined(ctx context.Context, e *store.Enrollment, tok *store.JoinToken) (*store.Server, error) {
+	life := a.CertLifetime
+	if life == 0 {
+		life = config.DefaultAgentCertLifetime
+	}
+	srv, err := a.DB.ApproveEnrollment(ctx, e, func(serverID string) (string, error) {
+		pem, err := a.Keys.CA.IssueAgentCert(e.AgentPubkey, serverID, life)
+		return string(pem), err
+	})
+	if err != nil {
+		return nil, err
+	}
+	if tok.GroupID != nil {
+		_ = a.DB.SetServerGroup(ctx, srv.ID, tok.GroupID)
+	}
+	if a.Live != nil {
+		a.Live.Publish("dashboard", map[string]any{})
+	}
+	return srv, nil
 }
 
 func (a *AgentPort) enrollStatus(w http.ResponseWriter, r *http.Request) {

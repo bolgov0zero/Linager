@@ -39,7 +39,59 @@ export interface Enrollment {
   key_fingerprint: string;
   verify_code: string;
   expires_at: string;
+  /** The label of the install link the agent came by; absent for an agent installed by hand. */
+  via?: string;
+  /** True when the administrator must type the key shown on the client; false for a request that came by a link. */
+  needs_key: boolean;
 }
+
+/** An install link ("install by a link" of the Add server dialog). The token itself is never listed. */
+export interface JoinLink {
+  id: number;
+  label: string;
+  created_by: string;
+  /** Unix seconds. */
+  created_at: number;
+  expires_at: number;
+  /** 0 means unlimited. */
+  max_uses: number;
+  uses: number;
+  auto_approve: boolean;
+  networks: string[];
+  group_id: number | null;
+  group_name?: string;
+  used: { host: string; at: number }[];
+}
+export interface JoinLinkInput { ttl_seconds: number; max_uses: number; auto_approve: boolean; networks: string[]; group_id: number | null }
+export interface JoinCommand { kind: 'external' | 'local'; host: string; command: string }
+/** The answer of the creation: the token and the commands exist only in this answer. */
+export interface JoinLinkCreated extends JoinLink { token: string; commands: JoinCommand[] }
+
+// ---- install over SSH ----
+export type SSHPhase = 'checking' | 'ready' | 'check_failed' | 'installing' | 'done' | 'install_failed' | 'closed';
+export interface SSHStep {
+  id: string; state: 'pending' | 'running' | 'done' | 'warn' | 'failed';
+  /** Unix milliseconds on the server clock. */
+  started_ms?: number; finished_ms?: number;
+  detail?: string; code?: string; bytes?: number; size?: number;
+}
+export interface SSHGate { kind: 'hostkey' | 'sudo' | 'address' | 'reinstall'; data?: Record<string, unknown> }
+export interface SSHState {
+  id: string; phase: SSHPhase; host: string; port: number; login: string;
+  steps: SSHStep[]; gate?: SSHGate; error?: string;
+  /** host:port the new host will use to reach this server. */
+  server?: string;
+  mode?: 'root' | 'nopass' | 'password';
+  log: string[]; log_total: number;
+  new_id?: string; new_name?: string;
+  /** The server clock when the answer was made. */
+  now_ms: number;
+}
+export interface SSHStart {
+  host: string; port: number; login: string; auth: 'password' | 'key';
+  password: string; key: string; passphrase: string; group_id: number | null;
+}
+export interface SSHAnswer { gate: string; accept: boolean; password?: string; address?: string }
 
 export interface TotpSetup {
   secret: string;
@@ -344,6 +396,8 @@ export interface ServerDetail {
   id: string; name: string; hostname: string; address: string; os: string; agent_version: string;
   online: boolean; last_seen_at: string | null; enrolled_at: string;
   system: SystemInfo | null; sample: Sample | null; spark: number[];
+  /** The note of the server (Markdown), when it was changed (Unix seconds) and by whom. */
+  note?: string; note_updated_at?: number; note_updated_by?: string;
   /** Latest raw samples (oldest first) that seed the overview bars. */
   recent: { ts: number; cpu: number; mem: number; rx: number; tx: number }[];
 }
@@ -467,6 +521,16 @@ export const api = {
 
   rejectEnrollment: (id: string) => request<void>('POST', `api/enrollments/${enc(id)}/reject`),
 
+  joinLinks: () => request<JoinLink[]>('GET', 'api/join-tokens'),
+  joinLinkCreate: (input: JoinLinkInput) => request<JoinLinkCreated>('POST', 'api/join-tokens', input),
+  joinLinkRevoke: (id: number) => request<void>('DELETE', `api/join-tokens/${id}`),
+
+  sshStart: (input: SSHStart) => request<{ id: string }>('POST', 'api/ssh-install', input),
+  sshState: (id: string) => request<SSHState>('GET', `api/ssh-install/${enc(id)}`),
+  sshAnswer: (id: string, answer: SSHAnswer) => request<SSHState>('POST', `api/ssh-install/${enc(id)}/answer`, answer),
+  sshInstall: (id: string) => request<SSHState>('POST', `api/ssh-install/${enc(id)}/install`, {}),
+  sshClose: (id: string) => request<void>('DELETE', `api/ssh-install/${enc(id)}`),
+
   totpSetup: () => request<TotpSetup>('POST', 'api/me/totp/setup'),
 
   /** Returns the recovery codes: they are shown once. */
@@ -524,6 +588,8 @@ export const api = {
   groupDelete: (id: number) => request<void>('DELETE', `api/groups/${id}`),
   /** Stores the order of the groups: every group id exactly once, in the wanted order. */
   groupsReorder: (ids: number[]) => request<void>('PUT', 'api/groups/order', { ids }),
+  serverNoteSet: (serverId: string, note: string) =>
+    request<{ note: string; note_updated_at?: number; note_updated_by?: string }>('PUT', `api/servers/${enc(serverId)}/note`, { note }),
   serverSetGroup: (serverId: string, groupId: number | null) =>
     request<void>('PUT', `api/servers/${enc(serverId)}/group`, { group_id: groupId }),
   connectInfo: () => request<ConnectInfo>('GET', 'api/connect'),

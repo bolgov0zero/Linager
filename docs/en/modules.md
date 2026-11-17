@@ -40,6 +40,9 @@ Reboot (`reboot`) is always available and requires confirmation.
   If a host was switched off for longer than the certificate lifetime, enroll it again (`linager install`).
   The lifetime is set on the server: `agents.cert_lifetime` in `server.yaml` (for example `2160h`, default `8760h`).
 
+## The note of a server
+On the server page, left of the "Reboot" button, there is a button with a note icon (a small square in its corner shows that the note exists). It opens the "Note" window: free text of up to 20,000 characters, for example who owns the server, what it is for, where its backups are. Everyone who can see the server reads the note; an administrator changes it: the pencil next to the cross starts editing, "Cancel" and "Save" return to the text without closing the window (`Ctrl+Enter` saves, `Esc` in the editor cancels the edit). Markdown is supported: headings, **bold**, *italic*, ~~strike~~, `code` and code blocks, lists (nested, and tasks `- [ ]`), quotes, links (`http`, `https` and `mailto` only), a horizontal rule. The text is escaped before the markup is added, so HTML in a note is never run. The audit journal records that the note changed and its length (`server.note`), not the text. API: the note comes with `GET /api/servers/{id}` (`note`, `note_updated_at`, `note_updated_by`) and is saved with `PUT /api/servers/{id}/note`.
+
 ## Agent files and directories
 | Path | Purpose |
 |---|---|

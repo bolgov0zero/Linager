@@ -43,6 +43,7 @@ func newInstallCmd() *cobra.Command {
 	f.StringSliceVar(&o.Server.ExtraHosts, "agent-host", nil, "server: extra DNS name or IP for the client-port certificate")
 	f.StringVar(&o.Agent.Server, "server", "", "agent: server address host:port of the client port")
 	f.StringVar(&o.Agent.Fingerprint, "fingerprint", "", "agent: expected server fingerprint (SHA256:...)")
+	f.StringVar(&o.Agent.JoinToken, "join-token", "", "agent: secret of an install link made in the admin panel")
 	f.StringVar(&o.Agent.DataDir, "data-dir", "", "agent: data directory (default /var/lib/linager-agent)")
 	return cmd
 }

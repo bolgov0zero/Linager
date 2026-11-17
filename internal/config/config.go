@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/netip"
 	"os"
 	"strconv"
 	"time"
@@ -30,6 +31,11 @@ type Server struct {
 		Source  string `yaml:"source"`  // "" = GitHub releases of bolgov0zero/linager, "owner/repo", or a mirror URL
 		Channel string `yaml:"channel"` // stable (default) or beta
 	} `yaml:"update"`
+	// SSHInstall limits where the panel may open SSH connections when it installs an agent. Empty means any address
+	// except loopback, link-local (cloud metadata) and multicast, which are always refused.
+	SSHInstall struct {
+		AllowedNetworks []string `yaml:"allowed_networks"`
+	} `yaml:"ssh_install"`
 	Agents struct {
 		Listen string   `yaml:"listen"` // host:port, port is mandatory
 		Hosts  []string `yaml:"hosts"`  // names/IPs placed into the agent TLS certificate
@@ -104,6 +110,11 @@ func (c *Server) Validate() error {
 	case "auto", "always", "never":
 	default:
 		return errors.New("admin.cookie_secure must be auto, always or never")
+	}
+	for _, n := range c.SSHInstall.AllowedNetworks {
+		if _, err := netip.ParsePrefix(n); err != nil {
+			return fmt.Errorf("ssh_install.allowed_networks: %q is not a network like 10.0.0.0/8", n)
+		}
 	}
 	return nil
 }

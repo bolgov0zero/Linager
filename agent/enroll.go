@@ -30,6 +30,8 @@ type EnrollOptions struct {
 	Confirm func(fingerprint string) bool
 	// Show is called once the request is registered; it must display the key and the check code.
 	Show func(key, code, serverFP string)
+	// JoinToken is the secret of an install link: it tells the server who asked for this agent.
+	JoinToken string
 	// PollEvery overrides the polling interval (tests).
 	PollEvery time.Duration
 }
@@ -109,6 +111,7 @@ func Enroll(ctx context.Context, o EnrollOptions) error {
 	body, _ := json.Marshal(protocol.EnrollRequest{
 		Pubkey: pub, Hostname: host, Address: local, OS: osName(), AgentVersion: o.AgentVersion,
 		Protocol: protocol.Version, TS: ts, Sig: ed25519.Sign(key, protocol.EnrollSigningBytes(pub, host, ts)),
+		JoinToken: o.JoinToken,
 	})
 	var er protocol.EnrollResponse
 	if err := doJSON(ctx, hc, http.MethodPost, base+"/v1/enroll", body, &er); err != nil {

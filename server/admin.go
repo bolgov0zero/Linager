@@ -46,6 +46,8 @@ type Admin struct {
 	Cfg     *config.Server
 	Trust   *ProxyTrust
 	Access  *AccessGuard
+	SSH     *SSHInstaller
+	sshL    *ipLimiter
 	Static  fs.FS // built frontend (may be nil in tests)
 
 	loginL *ipLimiter
@@ -67,7 +69,9 @@ func NewAdmin(db *store.Store, keys *Keys, hub *Hub, live *Live, metrics *Metric
 	guard := newAccessGuard(db, trust, cfg.Admin.TrustedProxies, log)
 	guard.loadHosts(context.Background()) // the last known addresses of host names, before the first request
 	guard.Load(context.Background())
-	return &Admin{DB: db, Keys: keys, Hub: hub, Live: live, Metrics: metrics, Updates: updates, Log: log, Cfg: cfg, Trust: trust, Access: guard, Static: static, loginL: newLimiter(max(cfg.Admin.LoginRate, 10), time.Minute), terms: map[string]int{}, cers: map[string]*ceremony{}}, nil
+	ad := &Admin{DB: db, Keys: keys, Hub: hub, Live: live, Metrics: metrics, Updates: updates, Log: log, Cfg: cfg, Trust: trust, Access: guard, Static: static, loginL: newLimiter(max(cfg.Admin.LoginRate, 10), time.Minute), terms: map[string]int{}, cers: map[string]*ceremony{}, sshL: newLimiter(10, 10*time.Minute)}
+	ad.SSH = ad.newSSHInstaller()
+	return ad, nil
 }
 
 // Handler returns the full admin handler including the base path and security headers.
@@ -108,12 +112,21 @@ func (a *Admin) Handler() http.Handler {
 	a.route(mux, "GET /api/servers/{id}/metrics", "srv", a.history)
 	a.route(mux, "GET /api/servers/{id}/metrics.csv", "srv", a.historyCSV)
 	a.route(mux, "GET /api/connect", "admin", a.connectInfo)
+	a.route(mux, "GET /api/join-tokens", "admin", a.joinList)
+	a.route(mux, "POST /api/join-tokens", "admin", a.joinCreate)
+	a.route(mux, "DELETE /api/join-tokens/{id}", "admin", a.joinRevoke)
+	a.route(mux, "POST /api/ssh-install", "admin", a.sshStart)
+	a.route(mux, "GET /api/ssh-install/{id}", "admin", a.sshGet)
+	a.route(mux, "POST /api/ssh-install/{id}/answer", "admin", a.sshAnswer)
+	a.route(mux, "POST /api/ssh-install/{id}/install", "admin", a.sshInstall)
+	a.route(mux, "DELETE /api/ssh-install/{id}", "admin", a.sshClose)
 	a.route(mux, "GET /api/groups", "any", a.groupsList)
 	a.route(mux, "POST /api/groups", "admin", a.groupCreate)
 	a.route(mux, "PUT /api/groups/order", "admin", a.groupsReorder)
 	a.route(mux, "PUT /api/groups/{id}", "admin", a.groupRename)
 	a.route(mux, "DELETE /api/groups/{id}", "admin", a.groupDelete)
 	a.route(mux, "PUT /api/servers/{id}/group", "srv:admin", a.serverSetGroup)
+	a.route(mux, "PUT /api/servers/{id}/note", "srv:admin", a.serverNoteSet)
 	a.route(mux, "GET /api/dashboard", "any", a.dashboard)
 	a.route(mux, "GET /api/dashboard/available", "admin", a.dashboardAvailable)
 	a.route(mux, "POST /api/dashboard/items", "admin", a.dashboardAdd)
@@ -535,6 +548,9 @@ type enrollmentView struct {
 	KeyFP        string    `json:"key_fingerprint"`
 	VerifyCode   string    `json:"verify_code"`
 	ExpiresAt    time.Time `json:"expires_at"`
+	// Via is the label of the install link the agent came with; such a request needs no key.
+	Via      string `json:"via,omitempty"`
+	NeedsKey bool   `json:"needs_key"`
 }
 
 func (a *Admin) listEnrollments(w http.ResponseWriter, r *http.Request, _ *store.User) {
@@ -545,11 +561,15 @@ func (a *Admin) listEnrollments(w http.ResponseWriter, r *http.Request, _ *store
 	}
 	out := make([]enrollmentView, 0, len(list))
 	for _, e := range list {
+		via, needsKey := "", true
+		if t := a.joinOf(r.Context(), e); t != nil {
+			via, needsKey = t.Label, false
+		}
 		out = append(out, enrollmentView{
 			ID: e.ID, Hostname: e.Hostname, Address: e.Address, RemoteAddr: e.RemoteAddr, OS: e.OS, AgentVersion: e.AgentVersion,
 			KeyFP:      pki.ShortFingerprint(pki.KeyFingerprint(e.AgentPubkey)),
 			VerifyCode: pki.VerificationCode(a.Keys.TLSDER, e.AgentPubkey, e.Nonce),
-			ExpiresAt:  e.ExpiresAt,
+			ExpiresAt:  e.ExpiresAt, Via: via, NeedsKey: needsKey,
 		})
 	}
 	writeJSON(w, http.StatusOK, out)
@@ -568,9 +588,11 @@ func (a *Admin) approve(w http.ResponseWriter, r *http.Request, u *store.User) {
 		jsonErr(w, http.StatusNotFound, "request not found or expired")
 		return
 	}
+	// An agent that came with a valid install link needs no key: the link made by an administrator says it is theirs.
+	tok := a.joinOf(r.Context(), e)
 	want := pki.EnrollmentKey(e.AgentPubkey)
 	got := pki.NormalizeKey(req.Key)
-	if got == "" || subtle.ConstantTimeCompare([]byte(got), []byte(want)) != 1 {
+	if tok == nil && (got == "" || subtle.ConstantTimeCompare([]byte(got), []byte(want)) != 1) {
 		n, _ := a.DB.BumpEnrollmentAttempts(r.Context(), id, maxEnrollTries)
 		a.audit(r, u, "enroll.approve", "enrollment", id, e.Hostname, "bad_key", map[string]any{"attempts": n})
 		if n >= maxEnrollTries {
@@ -589,7 +611,14 @@ func (a *Admin) approve(w http.ResponseWriter, r *http.Request, u *store.User) {
 		jsonErr(w, http.StatusInternalServerError, "internal error")
 		return
 	}
-	a.audit(r, u, "enroll.approve", "server", srv.ID, srv.Name, "ok", map[string]any{"address": e.Address})
+	details := map[string]any{"address": e.Address}
+	if tok != nil {
+		details["link"] = tok.Label
+		if tok.GroupID != nil {
+			_ = a.DB.SetServerGroup(r.Context(), srv.ID, tok.GroupID)
+		}
+	}
+	a.audit(r, u, "enroll.approve", "server", srv.ID, srv.Name, "ok", details)
 	a.Live.Publish("dashboard", map[string]any{})
 	writeJSON(w, http.StatusOK, srv)
 }

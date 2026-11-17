@@ -25,13 +25,14 @@ type Enrollment struct {
 	ServerID     string
 	CreatedAt    time.Time
 	ExpiresAt    time.Time
+	TokenID      int64 // the install link or SSH token the agent came with, 0 for none
 }
 
-const enrCols = `id, agent_pubkey, hostname, address, remote_addr, os, agent_version, protocol, nonce, attempts, status, coalesce(cert_pem,''), coalesce(server_id::text,''), created_at, expires_at`
+const enrCols = `id, agent_pubkey, hostname, address, remote_addr, os, agent_version, protocol, nonce, attempts, status, coalesce(cert_pem,''), coalesce(server_id::text,''), created_at, expires_at, coalesce(token_id,0)`
 
 func scanEnr(r pgx.Row) (*Enrollment, error) {
 	var e Enrollment
-	err := r.Scan(&e.ID, &e.AgentPubkey, &e.Hostname, &e.Address, &e.RemoteAddr, &e.OS, &e.AgentVersion, &e.Protocol, &e.Nonce, &e.Attempts, &e.Status, &e.CertPEM, &e.ServerID, &e.CreatedAt, &e.ExpiresAt)
+	err := r.Scan(&e.ID, &e.AgentPubkey, &e.Hostname, &e.Address, &e.RemoteAddr, &e.OS, &e.AgentVersion, &e.Protocol, &e.Nonce, &e.Attempts, &e.Status, &e.CertPEM, &e.ServerID, &e.CreatedAt, &e.ExpiresAt, &e.TokenID)
 	if err != nil {
 		return nil, notFound(err)
 	}
@@ -48,9 +49,9 @@ func (s *Store) CreateEnrollment(ctx context.Context, e *Enrollment, ttl time.Du
 	if _, err := tx.Exec(ctx, `DELETE FROM enrollments WHERE agent_pubkey=$1 AND status='pending'`, e.AgentPubkey); err != nil {
 		return nil, err
 	}
-	out, err := scanEnr(tx.QueryRow(ctx, `INSERT INTO enrollments (agent_pubkey,hostname,address,remote_addr,os,agent_version,protocol,nonce,expires_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,now()+make_interval(secs => $9)) RETURNING `+enrCols,
-		e.AgentPubkey, e.Hostname, e.Address, e.RemoteAddr, e.OS, e.AgentVersion, e.Protocol, e.Nonce, ttl.Seconds()))
+	out, err := scanEnr(tx.QueryRow(ctx, `INSERT INTO enrollments (agent_pubkey,hostname,address,remote_addr,os,agent_version,protocol,nonce,expires_at,token_id)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,now()+make_interval(secs => $9), NULLIF($10::bigint,0)) RETURNING `+enrCols,
+		e.AgentPubkey, e.Hostname, e.Address, e.RemoteAddr, e.OS, e.AgentVersion, e.Protocol, e.Nonce, ttl.Seconds(), e.TokenID))
 	if err != nil {
 		return nil, err
 	}

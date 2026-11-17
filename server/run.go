@@ -87,8 +87,14 @@ func Run(ctx context.Context, cfg *config.Server, static fs.FS, log *slog.Logger
 	if err != nil {
 		return err
 	}
+	go admin.SSH.Run(ctx)
+	go admin.RunJoinPurge(ctx)
 	agents := NewAgentPort(db, keys, hub, metrics, updates, log)
 	agents.CertLifetime = cfg.AgentCertLifetime()
+	agents.Live = live
+	if _, port, err := net.SplitHostPort(cfg.Agents.Listen); err == nil {
+		agents.ListenPort = port
+	}
 	go (&Scheduler{DB: db, Log: log}).Run(ctx)
 	go admin.Access.Run(ctx)
 

@@ -37,7 +37,7 @@ func newAgentCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "agent", Short: "Linager agent"}
 	cmd.PersistentFlags().StringVar(&dataDir, "data-dir", defaultAgentDir, "agent data directory (keys, state)")
 
-	var srv, fp, cfgPath string
+	var srv, fp, cfgPath, joinToken string
 	enroll := &cobra.Command{
 		Use:   "enroll",
 		Short: "Pair this host with a Linager server and wait for approval",
@@ -46,7 +46,7 @@ func newAgentCmd() *cobra.Command {
 			defer stop()
 			out := c.OutOrStdout()
 			err := agent.Enroll(ctx, agent.EnrollOptions{
-				Server: srv, Fingerprint: fp, DataDir: dataDir, AgentVersion: version.Version,
+				Server: srv, Fingerprint: fp, DataDir: dataDir, AgentVersion: version.Version, JoinToken: joinToken,
 				Confirm: func(f string) bool {
 					_, _ = fmt.Fprintf(out, "Server fingerprint: %s\nTrust this server? [yes/no]: ", f)
 					ans, _ := bufio.NewReader(os.Stdin).ReadString('\n')
@@ -64,6 +64,7 @@ func newAgentCmd() *cobra.Command {
 	}
 	enroll.Flags().StringVar(&srv, "server", "", "server agent port as host:port")
 	enroll.Flags().StringVar(&fp, "fingerprint", "", "expected server certificate fingerprint (SHA256:...)")
+	enroll.Flags().StringVar(&joinToken, "join-token", "", "secret of an install link made in the admin panel")
 	_ = enroll.MarkFlagRequired("server")
 
 	run := &cobra.Command{

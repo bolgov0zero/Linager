@@ -3,6 +3,7 @@
   import { locale, tr } from '../../i18n';
   import { subscribeLive } from '../../live';
   import DeleteServerModal from '../DeleteServerModal.svelte';
+  import NoteModal from './NoteModal.svelte';
   import { showToast } from '../toast';
   import MetricsTab from './MetricsTab.svelte';
   import OverviewTab from './OverviewTab.svelte';
@@ -57,6 +58,7 @@
   let attempt = $state(0);
   let sectionsOpen = $state(false);
   let menuOpen = $state(false);
+  let noteOpen = $state(false);
 
   const serverId = $derived(detail?.id ?? null);
   const sample = $derived<Sample | null>(detail?.sample ?? null);
@@ -167,6 +169,9 @@
         {#if detail}<span class="sq" class:online aria-hidden="true"></span>{detail.name} · {detail.address} · {online ? $tr('srv.online') : $tr('srv.offline')}{:else}{name}{/if}
       </p>
     </div>
+    {#if detail}
+      <button class="btn ic note" class:has={Boolean(detail.note?.trim())} type="button" aria-label={$tr('srv.note.open')} onclick={() => (noteOpen = true)}><PixIcon name="note" /></button>
+    {/if}
     {#if detail && isAdmin}
       <button class="btn ic" type="button" aria-label={$tr('srv.menu')} onclick={() => (menuOpen = true)}><PixIcon name="more" /></button>
     {/if}
@@ -185,6 +190,13 @@
       </div>
       {#if detail}
         <div class="row actions">
+          <button
+            class="btn note"
+            class:has={Boolean(detail.note?.trim())}
+            type="button"
+            aria-label={$tr('srv.note.open')}
+            title={$tr('srv.note.open')}
+            onclick={() => (noteOpen = true)}><PixIcon name="note" size={18} /></button>
           {#if isAdmin}
             <RebootButton server={detail} />
             <button class="btn danger" type="button" onclick={() => (deleteOpen = true)}>{$tr('srv.delete')}</button>
@@ -299,6 +311,21 @@
   </Modal>
 {/if}
 
+{#if noteOpen && detail}
+  <NoteModal
+    server={detail}
+    canEdit={isAdmin}
+    onclose={() => (noteOpen = false)}
+    onsaved={(n) => {
+      if (!detail) return;
+      detail.note = n.note;
+      detail.note_updated_at = n.note_updated_at;
+      detail.note_updated_by = n.note_updated_by;
+    }}
+    onauthlost={onBack}
+  />
+{/if}
+
 {#if deleteOpen && detail}
   <DeleteServerModal
     server={detail}
@@ -353,6 +380,22 @@
 
   .actions {
     margin-left: auto;
+  }
+
+  /* The note button is only an icon; a small square in the corner says that the server has a note. */
+  .btn.note {
+    position: relative;
+    padding: 0 10px;
+  }
+
+  .btn.note.has::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
   }
 
   .dot {

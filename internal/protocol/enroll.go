@@ -16,6 +16,9 @@ type EnrollRequest struct {
 	Protocol     int    `json:"protocol"`
 	TS           int64  `json:"ts"`
 	Sig          []byte `json:"sig"`
+	// JoinToken is the secret of an install link or of an install over SSH. The request travels over a TLS
+	// connection pinned to the server, so the token needs no signature of its own.
+	JoinToken string `json:"join_token,omitempty"`
 }
 
 // EnrollSigningBytes is what the agent signs to prove possession of its key.

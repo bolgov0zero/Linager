@@ -115,5 +115,18 @@
   "srv.nav.collapse": "Collapse menu",
   "srv.nav.expand": "Expand menu",
   "srv.nav.badgeUpdates": "Updates available: {n}",
-  "srv.nav.badgeFailed": "Failed services: {n}"
+  "srv.nav.badgeFailed": "Failed services: {n}",
+  "srv.note.open": "Note",
+  "srv.note.title": "Note",
+  "srv.note.edit": "Edit the note",
+  "srv.note.save": "Save",
+  "srv.note.saved": "Note saved",
+  "srv.note.saveFailed": "Could not save the note",
+  "srv.note.empty": "There is no note yet.",
+  "srv.note.emptyEdit": "Press the pencil to add one.",
+  "srv.note.unsaved": "There are unsaved changes: save or cancel them.",
+  "srv.note.hint": "Markdown is supported: **bold**, *italic*, `code`, lists, [links](https://…), quotes, headings.",
+  "srv.note.counter": "{n} of {max}",
+  "srv.note.meta": "Changed {date} · {who}",
+  "srv.note.label": "Text of the note"
 }

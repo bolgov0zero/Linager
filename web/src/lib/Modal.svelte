@@ -11,6 +11,9 @@
     wide = false,
     medium = false,
     flush = false,
+    fixed = false,
+    onescape,
+    actions,
     children,
   }: {
     title: string;
@@ -22,6 +25,12 @@
     medium?: boolean;
     /** No padding around the content (lists of actions on a phone). */
     flush?: boolean;
+    /** A large dialog of a fixed height: the body does not scroll, the content inside it does (Add server). */
+    fixed?: boolean;
+    /** What the Escape key does; closing the dialog by default. */
+    onescape?: () => void;
+    /** Buttons in the header, left of the close button. */
+    actions?: Snippet;
     children: Snippet;
   } = $props();
 
@@ -40,19 +49,22 @@
 
 <svelte:window
   onkeydown={(event) => {
-    if (event.key === 'Escape') onclose();
+    if (event.key === 'Escape') (onescape ?? onclose)();
   }}
 />
 
 <div class="modal-layer">
   <button class="backdrop" type="button" tabindex="-1" aria-label={$tr('common.close')} onclick={onclose}
   ></button>
-  <div class="dialog" class:wide class:medium role="dialog" aria-modal="true" aria-labelledby={labelId} tabindex="-1" bind:this={dialog}>
+  <div class="dialog" class:wide class:medium class:fixed role="dialog" aria-modal="true" aria-labelledby={labelId} tabindex="-1" bind:this={dialog}>
     <header class="dialog-head">
       <h2 id={labelId}>{title}</h2>
-      <button class="btn" type="button" aria-label={$tr('common.close')} onclick={onclose}>×</button>
+      <div class="dialog-tools">
+        {#if actions}{@render actions()}{/if}
+        <button class="btn" type="button" aria-label={$tr('common.close')} onclick={onclose}>×</button>
+      </div>
     </header>
-    <div class="dialog-body" class:flush>
+    <div class="dialog-body" class:flush class:fixed>
       {@render children()}
     </div>
   </div>
@@ -97,6 +109,13 @@
     max-width: min(1360px, 100%);
   }
 
+  .dialog.fixed {
+    display: flex;
+    flex-direction: column;
+    max-width: min(1120px, 100%);
+    height: min(760px, calc(100dvh - 64px));
+  }
+
   .dialog-head {
     display: flex;
     align-items: center;
@@ -104,6 +123,12 @@
     gap: 12px;
     padding: 12px 16px;
     border-bottom: 2px solid var(--line);
+  }
+
+  .dialog-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .dialog-head h2 {
@@ -117,6 +142,14 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  .dialog-body.fixed {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
   }
 
   /* Phones: every dialog is a sheet from the bottom edge (a large one fills the screen); only its body scrolls. */
@@ -138,9 +171,14 @@
       box-shadow: 0 -4px 0 var(--shade);
     }
 
-    .dialog.wide {
+    .dialog.wide,
+    .dialog.fixed {
       height: calc(100dvh - 12px);
       max-height: none;
+    }
+
+    .dialog.fixed {
+      max-width: none;
     }
 
     .dialog-head {
@@ -178,6 +216,15 @@
 
     .dialog-body.flush::after {
       height: var(--safe-b);
+    }
+
+    .dialog-body.fixed {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .dialog-body.fixed::after {
+      display: none;
     }
 
     /* The buttons at the end of a dialog stay in reach while its content scrolls. */

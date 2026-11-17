@@ -115,5 +115,18 @@
   "srv.nav.collapse": "Свернуть меню",
   "srv.nav.expand": "Развернуть меню",
   "srv.nav.badgeUpdates": "Доступно обновлений: {n}",
-  "srv.nav.badgeFailed": "Упавших служб: {n}"
+  "srv.nav.badgeFailed": "Упавших служб: {n}",
+  "srv.note.open": "Заметка",
+  "srv.note.title": "Заметка",
+  "srv.note.edit": "Редактировать заметку",
+  "srv.note.save": "Сохранить",
+  "srv.note.saved": "Заметка сохранена",
+  "srv.note.saveFailed": "Не удалось сохранить заметку",
+  "srv.note.empty": "Заметки пока нет.",
+  "srv.note.emptyEdit": "Нажмите на карандаш, чтобы добавить.",
+  "srv.note.unsaved": "Есть несохранённые изменения: сохраните или отмените их.",
+  "srv.note.hint": "Поддерживается Markdown: **жирный**, *курсив*, `код`, списки, [ссылки](https://…), цитаты, заголовки.",
+  "srv.note.counter": "{n} из {max}",
+  "srv.note.meta": "Изменено {date} · {who}",
+  "srv.note.label": "Текст заметки"
 }

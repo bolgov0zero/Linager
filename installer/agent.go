@@ -19,6 +19,7 @@ import (
 type AgentOpts struct {
 	Server      string // host:port
 	Fingerprint string
+	JoinToken   string // secret of an install link or of an install over SSH
 	DataDir     string
 	LogPath     string
 	Force       bool
@@ -90,7 +91,7 @@ func AgentFlow(o AgentOpts) Flow {
 		// Fingerprint confirmation needs the terminal, so it runs between the steps.
 		pairing := func(ctx context.Context) error {
 			return agent.Enroll(ctx, agent.EnrollOptions{
-				Server: addr, Fingerprint: fp, DataDir: o.DataDir, AgentVersion: version.Version,
+				Server: addr, Fingerprint: fp, DataDir: o.DataDir, AgentVersion: version.Version, JoinToken: o.JoinToken,
 				Show: func(key, code, f string) { c.Wait(Waiting{Key: key, Code: code, Fingerprint: f, Server: addr}) },
 			})
 		}

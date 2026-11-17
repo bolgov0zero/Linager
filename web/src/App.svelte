@@ -4,14 +4,13 @@
   import { liveConnected, subscribeLive } from './live';
   import { locale, setLocale, t, tr, type Locale } from './i18n';
   import Dashboard from './lib/Dashboard.svelte';
-  import EnrollModal from './lib/EnrollModal.svelte';
   import Login from './lib/Login.svelte';
   import SettingsModal from './lib/settings/SettingsModal.svelte';
   import type { SettingsSection } from './lib/settings/sections';
   import { settingsRequest } from './lib/settings/request';
   import Toast from './lib/Toast.svelte';
   import { showToast } from './lib/toast';
-  import AddServerModal from './lib/dashboard/AddServerModal.svelte';
+  import AddServerModal from './lib/addserver/AddServerModal.svelte';
   import { fmtClock } from './lib/dashboard/format';
   import ServerPage from './lib/server/ServerPage.svelte';
   import TermWindows from './lib/terminal/TermWindows.svelte';
@@ -63,7 +62,6 @@
   let settingsList = $state(false);
   let editing = $state(false);
   let addOpen = $state(false);
-  let enrollOpen = $state(false);
   let reloadKey = $state(0);
   let menuOpen = $state(false);
   let moreOpen = $state(false);
@@ -186,7 +184,6 @@
     settingsOpen = false;
     editing = false;
     addOpen = false;
-    enrollOpen = false;
     closeAllTermWindows();
     unsubscribeLive?.();
     unsubscribeLive = undefined;
@@ -347,22 +344,7 @@
   <AddServerModal
     onclose={() => (addOpen = false)}
     onadded={() => (reloadKey += 1)}
-    onpairing={() => {
-      addOpen = false;
-      enrollOpen = true;
-    }}
-    onauthlost={endSession}
-  />
-{/if}
-
-{#if enrollOpen && session}
-  <EnrollModal
-    onclose={() => (enrollOpen = false)}
-    onback={() => {
-      enrollOpen = false;
-      addOpen = true;
-    }}
-    onchanged={() => (reloadKey += 1)}
+    onopen={openServer}
     onauthlost={endSession}
   />
 {/if}
