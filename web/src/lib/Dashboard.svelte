@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { api, isUnauthorized, type Group, type LiveEvent, type ServerCard } from '../api';
+  import { api, isUnauthorized, type Group, type LiveEvent, type SchemeLayout, type ServerCard } from '../api';
   import { locale, t, tr } from '../i18n';
   import { subscribeLive } from '../live';
   import CardView from './dashboard/CardView.svelte';
   import { fmtAgo, fmtRate, fmtUptime, pluralForm, type Units } from './dashboard/format';
+  import SchemeView from './dashboard/SchemeView.svelte';
   import Summary from './dashboard/Summary.svelte';
   import Tags from './dashboard/Tags.svelte';
   import { levelOf, summarize, tagsOf, toneOfPct, type AgentFlag } from './dashboard/status';
@@ -18,19 +19,22 @@
   import { showToast } from './toast';
 
   type Filter = 'all' | 'problems' | 'offline';
-  type View = 'cards' | 'map';
+  type View = 'cards' | 'map' | 'scheme';
 
   let {
     editing,
     reloadKey,
     onopen,
     onauthlost,
+    onadd,
   }: {
     editing: boolean;
     /** Bumped by the parent after the server list changed (add or pair). */
     reloadKey: number;
     onopen: (name: string, tab?: string) => void;
     onauthlost: () => void;
+    /** Opens the "Add server" window (the empty scheme offers it). */
+    onadd?: () => void;
   } = $props();
 
   const VIEW_KEY = 'linager.dashboard.view';
@@ -39,12 +43,13 @@
   const SAFETY_RELOAD_MS = 60_000;
   const TICK_MS = 15_000;
   const ORDER_SAVE_MS = 400;
+  const SCHEME_SAVE_MS = 600;
   const UNDO_MS = 5_000;
 
   function readView(): View {
     try {
       const value = localStorage.getItem(VIEW_KEY);
-      if (value === 'cards') return value;
+      if (value === 'cards' || value === 'scheme') return value;
       if (value === 'map' || value === 'rows') return 'map'; // the old rows view was replaced by the map
     } catch {
       // storage unavailable: fall back to the default view
@@ -94,6 +99,9 @@
   let pending = $state<{ card: ServerCard; index: number } | null>(null);
   let dragId = $state<string | null>(null);
   let overId = $state<string | null>(null);
+  /** Where this user dragged the servers on the scheme view (null: the automatic layout). Read once: the local state is the truth after that. */
+  let scheme = $state<SchemeLayout | null>(null);
+  let schemeRead = false;
 
   /** Only the server list scrolls: its height is what is left of the window below the summary and the filters. */
   let scroller = $state<HTMLDivElement | undefined>(undefined);
@@ -114,6 +122,7 @@
   let seenReload = -1;
   let reloadTimer: ReturnType<typeof setTimeout> | undefined;
   let orderTimer: ReturnType<typeof setTimeout> | undefined;
+  let schemeTimer: ReturnType<typeof setTimeout> | undefined;
   let undoTimer: ReturnType<typeof setTimeout> | undefined;
 
   const inGroup = $derived(
@@ -183,6 +192,10 @@
       const [res, list] = await Promise.all([api.dashboard(), api.groups()]);
       const hidden = pending?.card.id;
       items = hidden ? res.items.filter((c) => c.id !== hidden) : res.items;
+      if (!schemeRead) {
+        schemeRead = true;
+        scheme = res.scheme ?? null;
+      }
       groups = list;
       if (groupFilter !== 'all' && groupFilter !== 'none' && !list.some((g) => String(g.id) === groupFilter)) pickGroup('all');
       loadFailed = false;
@@ -255,6 +268,10 @@
     if (orderTimer) {
       clearTimeout(orderTimer);
       void persistOrder();
+    }
+    if (schemeTimer) {
+      clearTimeout(schemeTimer);
+      void persistScheme();
     }
   });
 
@@ -374,6 +391,43 @@
     scheduleOrderSave();
   }
 
+  // ---- scheme layout (saved on the server, per user) ----
+
+  function onSchemeLayout(next: SchemeLayout): void {
+    scheme = next;
+    clearTimeout(schemeTimer);
+    schemeTimer = setTimeout(() => void persistScheme(), SCHEME_SAVE_MS);
+  }
+
+  async function persistScheme(): Promise<void> {
+    schemeTimer = undefined;
+    if (!scheme) return;
+    try {
+      await api.dashboardScheme(scheme);
+    } catch (e) {
+      if (isUnauthorized(e)) {
+        onauthlost();
+        return;
+      }
+      showToast(t('scheme.saveFailed'));
+    }
+  }
+
+  async function onSchemeReset(): Promise<void> {
+    clearTimeout(schemeTimer);
+    schemeTimer = undefined;
+    scheme = null;
+    try {
+      await api.dashboardSchemeReset();
+    } catch (e) {
+      if (isUnauthorized(e)) {
+        onauthlost();
+        return;
+      }
+      showToast(t('scheme.saveFailed'));
+    }
+  }
+
   function scheduleOrderSave(): void {
     clearTimeout(orderTimer);
     orderTimer = setTimeout(() => void persistOrder(), ORDER_SAVE_MS);
@@ -489,7 +543,11 @@
             <button class="chip" type="button" aria-pressed={filter === 'offline'} onclick={() => (filter = 'offline')}>{$tr('dash.filter.offline')}</button>
           </div>
           <button class="btn ic" type="button" aria-label={$tr('dash.searchOpen')} aria-pressed={searchOpen || query !== ''} onclick={() => (searchOpen = !searchOpen)}><PixIcon name="search" /></button>
-          <button class="btn ic" type="button" aria-label={$tr('dash.viewToggle')} onclick={() => setView(view === 'cards' ? 'map' : 'cards')}><PixIcon name={view === 'cards' ? 'map' : 'cards'} /></button>
+          <div class="pseg" role="group" aria-label={$tr('dash.viewToggle')}>
+            <button class="btn ic" type="button" title={$tr('dash.view.cards')} aria-label={$tr('dash.view.cards')} aria-pressed={view === 'cards'} onclick={() => setView('cards')}><PixIcon name="cards" /></button>
+            <button class="btn ic" type="button" title={$tr('dash.view.map')} aria-label={$tr('dash.view.map')} aria-pressed={view === 'map'} onclick={() => setView('map')}><PixIcon name="map" /></button>
+            <button class="btn ic" type="button" title={$tr('dash.view.scheme')} aria-label={$tr('dash.view.scheme')} aria-pressed={view === 'scheme'} onclick={() => setView('scheme')}><PixIcon name="scheme" /></button>
+          </div>
         </div>
         {#if searchOpen || query !== ''}
           <input class="input search" type="search" placeholder={$tr('dash.search')} aria-label={$tr('dash.search')} bind:value={query} />
@@ -525,6 +583,8 @@
           >{$tr('dash.view.cards')}</button>
         <button class="chip" type="button" aria-pressed={view === 'map'} onclick={() => setView('map')}
           >{$tr('dash.view.map')}</button>
+        <button class="chip" type="button" aria-pressed={view === 'scheme'} onclick={() => setView('scheme')}
+          >{$tr('dash.view.scheme')}</button>
         <input
           class="input search"
           type="search"
@@ -536,10 +596,26 @@
     </div>
     {/if}
 
-    {#if items.length === 0 && !pending}
+    {#if view === 'scheme' && items.length === 0 && !pending}
+      <!-- An empty fleet still shows the panel, with a way to add the first server. -->
+      <SchemeView cards={[]} total={0} online={0} layout={scheme} {groups} {onopen} onlayout={onSchemeLayout} onreset={() => void onSchemeReset()} {onadd} />
+    {:else if items.length === 0 && !pending}
       <p class="card muted">{$tr('dash.noServers')}</p>
     {:else if visible.length === 0}
       <p class="muted">{$tr('dash.empty')}</p>
+    {:else if view === 'scheme'}
+      <div class="scroll" bind:this={scroller} style:--list-h="{listH}px">
+        <SchemeView
+          cards={visible}
+          total={items.length}
+          online={items.filter((c) => c.online).length}
+          layout={scheme}
+          {groups}
+          {onopen}
+          onlayout={onSchemeLayout}
+          onreset={() => void onSchemeReset()}
+          {onadd} />
+      </div>
     {:else if view === 'cards'}
       <div class="scroll" bind:this={scroller} style:--list-h="{listH}px">
       <div class="grid">

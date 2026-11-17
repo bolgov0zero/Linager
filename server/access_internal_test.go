@@ -25,6 +25,8 @@ func TestRouteTableIsComplete(t *testing.T) {
 		"GET /api/me/passkeys": true, "POST /api/me/passkeys/begin": true, "POST /api/me/passkeys/finish": true,
 		"DELETE /api/me/passkeys/{id}": true, "GET /api/servers": true, "GET /api/groups": true, "GET /api/dashboard": true,
 		"PUT /api/dashboard/order": true, "GET /api/live": true,
+		// where the user dragged the servers on the scheme view: a setting of the user's own dashboard
+		"PUT /api/dashboard/scheme": true, "DELETE /api/dashboard/scheme": true,
 	}
 	srvOK := map[string]bool{
 		"GET /api/servers/{id}": true, "GET /api/servers/{id}/metrics": true, "GET /api/servers/{id}/metrics.csv": true,

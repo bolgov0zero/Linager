@@ -138,6 +138,11 @@ export interface ServerCard {
 }
 export interface Group { id: number; name: string }
 
+/** A place on the scheme plane: pixels at 100% zoom, the panel's own place is 0,0. */
+export interface SchemePoint { x: number; y: number }
+/** Where the user dragged the panel and the servers on the scheme view of the dashboard (by server id). */
+export interface SchemeLayout { panel?: SchemePoint; nodes: Record<string, SchemePoint> }
+
 /** Access restriction of the admin panel (settings, "Access to the admin panel"). */
 export interface AccessRule { cidr: string; note: string }
 export type AccessMode = 'off' | 'white' | 'black';
@@ -581,7 +586,7 @@ export const api = {
   accessLog: (filter: AccessLogFilter, before = 0) =>
     request<{ rows: AccessLogRow[] }>('GET', `api/access/log?filter=${filter}&limit=50${before ? `&before=${before}` : ''}`),
 
-  dashboard: () => request<{ items: ServerCard[] }>('GET', 'api/dashboard'),
+  dashboard: () => request<{ items: ServerCard[]; scheme?: SchemeLayout | null }>('GET', 'api/dashboard'),
   groups: () => request<Group[]>('GET', 'api/groups'),
   groupCreate: (name: string) => request<Group>('POST', 'api/groups', { name }),
   groupRename: (id: number, name: string) => request<void>('PUT', `api/groups/${id}`, { name }),
@@ -597,6 +602,8 @@ export const api = {
   dashboardAdd: (serverId: string) => request<void>('POST', 'api/dashboard/items', { server_id: serverId }),
   dashboardRemove: (serverId: string) => request<void>('DELETE', `api/dashboard/items/${enc(serverId)}`),
   dashboardOrder: (serverIds: string[]) => request<void>('PUT', 'api/dashboard/order', { server_ids: serverIds }),
+  dashboardScheme: (layout: SchemeLayout) => request<void>('PUT', 'api/dashboard/scheme', layout),
+  dashboardSchemeReset: () => request<void>('DELETE', 'api/dashboard/scheme'),
   server: (id: string) => request<ServerDetail>('GET', `api/servers/${enc(id)}`),
   history: (id: string, period: Period) => request<History>('GET', `api/servers/${enc(id)}/metrics?period=${period}`),
   /** Relative URL for a CSV download link. */

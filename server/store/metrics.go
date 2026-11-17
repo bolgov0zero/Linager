@@ -346,6 +346,23 @@ func (s *Store) DashboardSetOrder(ctx context.Context, dashID int64, ids []strin
 	return tx.Commit(ctx)
 }
 
+// DashboardScheme returns the saved layout of the scheme view of a dashboard as JSON (nil when there is none).
+func (s *Store) DashboardScheme(ctx context.Context, dashID int64) ([]byte, error) {
+	var raw []byte
+	err := s.Pool.QueryRow(ctx, `SELECT scheme FROM dashboards WHERE id=$1`, dashID).Scan(&raw)
+	return raw, notFound(err)
+}
+
+// SetDashboardScheme stores the layout of the scheme view; nil resets it to the automatic layout.
+func (s *Store) SetDashboardScheme(ctx context.Context, dashID int64, raw []byte) error {
+	var v any
+	if raw != nil {
+		v = raw
+	}
+	_, err := s.Pool.Exec(ctx, `UPDATE dashboards SET scheme=$2 WHERE id=$1`, dashID, v)
+	return err
+}
+
 // SetModules stores the modules an agent reported in its hello.
 func (s *Store) SetModules(ctx context.Context, serverID string, modules []string) error {
 	if modules == nil {

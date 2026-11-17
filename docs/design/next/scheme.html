@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Linager: макет вида «Схема» на дашборде</title>
+<style>
+@font-face{font-family:"Medeo Mono";src:url(../mockup/fonts/MedeoMonoVariable.woff2) format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Medeo Pixel";src:url(../mockup/fonts/MedeoPixelVariable.woff) format("woff");font-style:normal;font-display:swap}
+:root{
+  --bg:#e8ebe5;--surface:#f6f7f3;--ink:#14181e;--muted:#5d6572;--line:#14181e;--accent:#2b55d9;--good:#1e8a4b;--warn:#b36f0e;--crit:#c4352a;--seg-off:#d5d9d0;--shade:#c3c8bd;
+  --ctl:36px;--ctl-sm:28px;
+  --font-display:"Medeo Pixel","Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  --font-body:"Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  font-variation-settings:"ELSH" 1;font-synthesis:none;color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45}
+h1,h2,h3,h4,p{margin:0}
+button{font:inherit;color:inherit}
+[hidden]{display:none!important}
+.muted{color:var(--muted)}.small{font-size:12px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px;border-bottom:2px solid var(--line);background:var(--surface)}
+.brand h1{font-family:var(--font-display);font-size:22px;font-weight:400;font-variation-settings:"ELSH" 40}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:var(--ctl);background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;padding:0 12px;cursor:pointer;font-family:var(--font-display);font-size:14px;box-shadow:2px 2px 0 var(--shade)}
+.btn.sm{height:var(--ctl-sm);padding:0 8px;font-size:13px}
+.btn.primary{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.input{height:var(--ctl-sm);background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;padding:0 8px;font-family:var(--font-body);font-size:13px;line-height:1;min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:transparent;border:2px solid var(--line);padding:4px 10px;cursor:pointer;font-family:var(--font-display);font-size:14px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.chip:hover:not([aria-pressed="true"]){background:var(--surface)}
+
+/* demo controls (not part of the product) */
+.demo{margin:0;padding:8px 20px;background:var(--ink);color:var(--surface);font-size:12px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}
+.demo label{display:flex;align-items:center;gap:6px}
+.demo select{height:24px;background:var(--surface);color:var(--ink);border:2px solid var(--surface);font-family:inherit;font-size:12px;border-radius:0}
+
+main{padding:20px}
+.frame{max-width:1400px;margin:0 auto}
+.frame.phone{width:390px;border:2px solid var(--line);padding:12px;background:var(--bg)}
+.tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.tools .grp{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.tools .search{min-width:180px}
+.vsw-i{display:none}
+.chip.ic{width:44px;height:36px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.frame.phone .vsw-t{display:none}.frame.phone .vsw-i{display:flex}
+.phone .tools .grp.v{flex-wrap:nowrap}.phone .tools .grp.v .search{flex:1}
+.phone .tools{flex-direction:column;align-items:stretch}
+.phone .tools .grp{justify-content:flex-start}
+.phone .tools .search{width:100%}
+
+.card{background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);min-width:0}
+.card>header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-bottom:2px solid var(--line)}
+.card>header h3{font-family:var(--font-display);font-weight:400;font-size:15px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.card>header .meta{font-size:12px;color:var(--muted)}
+
+/* the scheme */
+.stage{position:relative;overflow:hidden;background-image:radial-gradient(var(--seg-off) 1px,transparent 1px);background-size:20px 20px}
+.stage.mv{cursor:grab}
+#world{position:absolute;left:0;top:0;width:0;height:0;transform-origin:0 0}
+#lines{position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible;pointer-events:none}
+.lk{vector-effect:non-scaling-stroke}
+.zoom{position:absolute;right:10px;top:10px;z-index:6;display:flex;align-items:center;gap:6px}
+.zoom .pct{font-size:12px;color:var(--muted);min-width:44px;text-align:right;background:var(--surface);padding:0 4px}
+.btn.sqb{min-width:var(--ctl-sm);padding:0 6px}
+.lk{fill:none;stroke-width:3;stroke-linecap:butt}
+.lk.run{stroke-dasharray:3 13;animation:flow 1.1s linear infinite}
+.lk.s1{animation-duration:2.4s}.lk.s2{animation-duration:1.1s}.lk.s3{animation-duration:.5s}
+.lk.hot{stroke-width:4}
+.lk.gray{stroke:var(--muted);stroke-dasharray:2 8;opacity:.3;animation:none}
+.lk.ok{stroke:var(--good)}.lk.warn{stroke:var(--warn)}.lk.crit{stroke:var(--crit)}
+.lk.off{stroke:var(--muted);stroke-dasharray:2 8;opacity:.55}
+.lk.trunk{stroke-width:3}
+.lk.empty{stroke:var(--muted);stroke-dasharray:2 8;opacity:.55}
+@keyframes flow{to{stroke-dashoffset:-16}}
+body.still .lk.run{animation:none}
+@media (prefers-reduced-motion:reduce){.lk.run{animation:none}}
+
+.n,.pn{position:absolute;background:var(--surface);border:2px solid var(--line);box-shadow:3px 3px 0 var(--shade);text-align:left;padding:0;cursor:pointer;overflow:hidden}
+.n{z-index:3}
+.n:hover{box-shadow:3px 3px 0 var(--ink)}
+.n.sel{outline:2px solid var(--accent);outline-offset:2px}
+.n.gray{filter:grayscale(1);opacity:.5}
+.gf.gray{opacity:.5}
+.stage.mv .n,.stage.mv .pn,.stage.mv .gf span{touch-action:none;cursor:grab}
+.stage.mv .gf span{pointer-events:auto}
+body.drag,body.drag *{cursor:grabbing!important;user-select:none}
+.n,.pn{user-select:none}
+.n.full{display:flex;flex-direction:column;justify-content:center;gap:1px;padding:7px 10px 5px}
+.n.full::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:transparent}
+.n.st-warn::before{background:var(--warn)}.n.st-crit::before{background:var(--crit)}.n.st-off::before{background:var(--muted)}
+.n .nm{font-family:var(--font-display);font-weight:400;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.n .stt{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.n.st-warn .stt{color:var(--warn)}.n.st-crit .stt{color:var(--crit)}
+.n.st-off{border-color:var(--muted);color:var(--muted)}
+.sq{display:inline-block;width:8px;height:8px;margin-right:6px;background:var(--good);vertical-align:0}
+.st-warn .sq{background:var(--warn)}.st-crit .sq{background:var(--crit)}.st-off .sq{background:var(--muted)}
+.n.comp{display:flex;align-items:center;gap:0;padding:0 8px;border-left-width:2px}
+.n.comp .nm{margin:0;font-size:13px}
+.n.comp.st-warn{border-left:5px solid var(--warn)}.n.comp.st-crit{border-left:5px solid var(--crit)}
+.pn{z-index:4;cursor:default;display:flex;flex-direction:column;justify-content:center;padding:8px 12px 6px;box-shadow:4px 4px 0 var(--shade);border-width:2px}
+.pn::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--accent)}
+.pn .t{font-family:var(--font-display);font-variation-settings:"ELSH" 40;font-size:19px;margin-top:3px}
+.pn .t i{font-style:normal;color:var(--accent)}
+.pn .s{font-size:12px;color:var(--muted)}
+.gf{position:absolute;z-index:1;border:2px dashed var(--seg-off);pointer-events:none}
+.gf span{position:absolute;left:8px;top:-11px;background:var(--surface);padding:0 6px;font-family:var(--font-display);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.gh{position:absolute;z-index:2;font-family:var(--font-display);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.ph{position:absolute;z-index:3;border:2px dashed var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:8px;background:var(--surface)}
+.note{position:absolute;z-index:3;left:0;right:0;text-align:center;font-size:13px;color:var(--muted)}
+
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 14px;border-top:2px solid var(--line);font-size:12px;color:var(--muted)}
+.legend .sq{margin-right:5px}
+.legend .off{background:var(--muted)}
+.legend .w{background:var(--warn)}.legend .c{background:var(--crit)}
+.detail{border-top:2px solid var(--line);padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;min-height:56px}
+.detail .nm{font-family:var(--font-display);font-variation-settings:"ELSH" 40;font-size:18px}
+.detail .info{font-size:12px;color:var(--muted)}
+.detail .m{display:flex;gap:14px;font-size:12px}
+.detail .m b{font-weight:400;color:var(--ink)}
+.detail .m .warn{color:var(--warn)}.detail .m .crit{color:var(--crit)}
+.detail .acts{display:flex;gap:8px;margin-left:auto}
+.phone .detail .acts{margin-left:0;width:100%}
+.hint{color:var(--muted);font-size:12px}
+
+@media (max-width:720px){
+  .vsw-t{display:none}.vsw-i{display:flex}
+  main{padding:8px}
+  .top{padding:10px 12px}.demo{padding:8px 12px}
+  .tools{flex-direction:column;align-items:stretch}
+}
+</style>
+</head>
+<body>
+<div class="top"><div class="brand"><h1>Linager</h1></div><span class="muted small">макет вида «Схема» · не рабочий код</span></div>
+<div class="demo">
+  <label>Серверов
+    <select id="dN"><option>0</option><option>3</option><option selected>10</option><option>24</option><option>60</option><option>150</option></select>
+  </label>
+  <label>Тема
+    <select id="dT"><option value="auto">как в системе</option><option value="light">светлая</option><option value="dark">тёмная</option></select>
+  </label>
+  <label>Экран
+    <select id="dW"><option value="desk">рабочий стол</option><option value="phone">телефон (390 px)</option></select>
+  </label>
+  <label>Линии
+    <select id="dL"><option value="straight">прямые</option><option value="ortho">под 90° (дорожки)</option><option value="route">под 90° (обход)</option></select>
+  </label>
+  <label><input type="checkbox" id="dG" checked> рамки групп</label>
+  <label><input type="checkbox" id="dM" checked> движение</label>
+</div>
+<main>
+<div class="frame" id="frame">
+  <div class="tools">
+    <div class="grp">
+      <div class="chips" role="group" aria-label="Фильтр" id="fsw">
+        <button class="chip" data-f="all" aria-pressed="true">Все</button>
+        <button class="chip" data-f="problem" aria-pressed="false">Проблемные</button>
+        <button class="chip" data-f="off" aria-pressed="false">Offline</button>
+      </div>
+      <select class="input" id="gsel" aria-label="Группа"></select>
+    </div>
+    <div class="grp v">
+      <div class="chips vsw-t" role="group" aria-label="Вид">
+        <button class="chip" aria-pressed="false">Карточки</button>
+        <button class="chip" aria-pressed="false">Карта</button>
+        <button class="chip" aria-pressed="true">Схема</button>
+      </div>
+      <div class="chips vsw-i" id="vi" role="group" aria-label="Вид"></div>
+      <input class="input search" type="search" placeholder="Поиск по имени или IP" id="q" aria-label="Поиск">
+    </div>
+  </div>
+
+  <section class="card">
+    <header><h3>Схема подключений</h3><span class="meta" id="cnt"></span><button class="btn sm" id="rst" hidden>Сбросить расположение</button></header>
+    <div class="stage" id="stage">
+      <div id="world"><svg id="lines"></svg><div id="nodes"></div></div>
+      <div class="zoom" id="zoom" hidden>
+        <span class="pct" id="pct">100%</span>
+        <button class="btn sm sqb" id="zout" aria-label="Уменьшить" title="Уменьшить">−</button>
+        <button class="btn sm sqb" id="zin" aria-label="Увеличить" title="Увеличить">+</button>
+        <button class="btn sm" id="z1" title="Масштаб 100%">1:1</button>
+        <button class="btn sm" id="zfit" title="Вся схема целиком, как при открытии">По размеру</button>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i class="sq"></i>онлайн</span><span><i class="sq w"></i>предупреждение</span><span><i class="sq c"></i>критично</span><span><i class="sq off"></i>нет связи</span>
+      <span>· квадраты бегут от агента к панели; скорость: медленно &lt; 50 КБ/с, средне &lt; 2 МБ/с, быстро выше</span><span>· много серверов: схема растёт, а не сжимается; масштаб справа вверху</span>
+    </div>
+    <div class="detail" id="detail"></div>
+  </section>
+</div>
+</main>
+
+<script>
+(function(){
+var $=function(id){return document.getElementById(id)};
+/* name, address, group, state, os, agent, note, network rate in bytes/s */
+var BASE=[
+['web-01','10.0.0.11','Офис','ok','Debian 13','0.2.3','',820e3],
+['web-02','10.0.0.12','Офис','ok','Debian 13','0.2.3','',21e3],
+['db-main','10.0.0.20','Офис','warn','Debian 12','0.2.3','диск 82%',640e3],
+['backup','10.0.0.30','Офис','crit','Debian 12','0.2.3','диск 93%',5.4e6],
+['rpi-garden','192.168.1.40','Дача','ok','Debian 12 (arm64)','0.2.3','',14e3],
+['nas-dacha','192.168.1.41','Дача','ok','Ubuntu 24.04','0.2.3','',12.6e6],
+['mail','203.0.113.5','Облако','ok','Debian 13','0.2.3','',310e3],
+['vpn-gw','203.0.113.6','Облако','ok','Ubuntu 22.04','0.2.3','',2.4e6],
+['mon','203.0.113.7','Облако','ok','Debian 13','0.2.3','',35e3],
+['test-lab','172.20.99.251','','off','Debian 13','0.2.3','офлайн 14 мин',0]
+];
+var GR=['Офис','Дача','Облако',''];
+function server(i){
+  if(i<BASE.length){var b=BASE[i];return {name:b[0],addr:b[1],group:b[2],state:b[3],os:b[4],ver:b[5],note:b[6],rate:b[7]}}
+  var st=i%11===0?'warn':i%17===0?'off':i%29===0?'crit':'ok';
+  var r=st==='off'?0:[8e3,40e3,300e3,900e3,3e6][i%5];
+  return {name:'node-'+(i<100?('0'+i).slice(-2):i),addr:'10.1.'+(i>>8)+'.'+(i&255),group:GR[i%4],state:st,os:'Debian 13',ver:'0.2.3',note:st==='warn'?'RAM 87%':st==='crit'?'диск 94%':st==='off'?'офлайн 3 мин':'',rate:r};
+}
+function seeded(s,k){var h=0,t=s+k;for(var i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))>>>0;return 8+h%70}
+var STAT={ok:'онлайн',warn:'предупреждение',crit:'критично',off:'офлайн'};
+function stText(s){return s.state==='ok'?STAT.ok:s.note}
+/* three speed levels by the sum of rx and tx: slow < 50 KB/s, medium < 2 MB/s, fast above */
+function level(s){return s.rate<50e3?1:s.rate<2e6?2:3}
+function fmt(r){return r>=1e6?(r/1e6).toFixed(1)+' МБ/с':Math.round(r/1e3)+' КБ/с'}
+
+/* The scheme is a plane: x and y are pixels at 100% zoom, the panel is at 0,0 until it is moved.
+   Positions that a user dragged are kept in the same units (they do not depend on the window or the number of servers). */
+var F={f:'all',group:'all',q:'',sel:null,N:10,man:null,manPanel:null};
+var V={k:1,tx:0,ty:0,user:false};   /* the view: zoom and shift; user=true once the user has changed it */
+var MINK=.2,MAXK=2.5;
+var all=[],LAST=null,D=null,raf=0,dragEnd=0;
+function build(){all=[];for(var i=0;i<F.N;i++)all.push(server(i))}
+function groups(){var g={};all.forEach(function(s){if(s.group)g[s.group]=1});return Object.keys(g)}
+function fillGroups(){
+  var sel=$('gsel'),g=groups(),cur=F.group;
+  sel.innerHTML='<option value="all">Все группы</option><option value="none">Без группы</option>'+g.map(function(x){return '<option value="g:'+x+'">'+x+'</option>'}).join('');
+  if(!Array.prototype.some.call(sel.options,function(o){return o.value===cur}))F.group=cur='all';
+  sel.value=cur;sel.style.display=g.length?'':'none';
+}
+function visible(){
+  return all.filter(function(s){
+    if(F.f==='problem'&&!(s.state==='warn'||s.state==='crit'))return false;
+    if(F.f==='off'&&s.state!=='off')return false;
+    if(F.group==='none'&&s.group)return false;
+    if(F.group.indexOf('g:')===0&&s.group!==F.group.slice(2))return false;
+    if(F.q&&(s.name+' '+s.addr).toLowerCase().indexOf(F.q.toLowerCase())<0)return false;
+    return true;
+  }).sort(function(a,b){return (a.group||'я').localeCompare(b.group||'я','ru')});
+}
+
+/* automatic layout: rings around the panel; the rings grow until nothing touches, so nodes never shrink */
+var PW=190,PH=74;
+function ramanujan(a,b){return Math.PI*(3*(a+b)-Math.sqrt((3*a+b)*(a+3*b)))}
+function overlapW(p,nw,nh,m){
+  var panel=[-PW/2-14,-PH/2-14,PW/2+14,PH/2+14];
+  var bx=p.map(function(q){return [q.x-nw/2-m,q.y-nh/2-m,q.x+nw/2+m,q.y+nh/2+m]});
+  for(var i=0;i<bx.length;i++){
+    var a=bx[i];
+    if(a[0]<panel[2]&&a[2]>panel[0]&&a[1]<panel[3]&&a[3]>panel[1])return true;
+    for(var j=i+1;j<bx.length;j++){var b=bx[j];if(a[0]<b[2]&&a[2]>b[0]&&a[1]<b[3]&&a[3]>b[1])return true}
+  }
+  return false;
+}
+function autoLayout(n){
+  var full=n<=16,nw=full?160:118,nh=full?58:30,rings=full?1:Math.min(8,Math.ceil(n/18));
+  var rx0=PW/2+nw/2+50,ry0=PH/2+nh/2+50,sx=nw+34,sy=nh+34;
+  for(var s=full?1.7:1;s<60;s*=1.05){
+    var per=[],tot=0,k;
+    for(k=0;k<rings;k++){per.push(ramanujan((rx0+k*sx)*s,(ry0+k*sy)*s));tot+=per[k]}
+    var counts=[],left=n;
+    for(k=0;k<rings;k++){var c=k===rings-1?left:Math.round(n*per[k]/tot);c=Math.min(c,left);counts.push(c);left-=c}
+    var pos=[];
+    for(k=0;k<rings;k++){
+      var m=counts[k],ph0=(k%2)*Math.PI/Math.max(m,1);
+      for(var i=0;i<m;i++){var a=ph0+2*Math.PI*i/m-Math.PI/2;pos.push({x:(rx0+k*sx)*s*Math.cos(a),y:(ry0+k*sy)*s*Math.sin(a)})}
+    }
+    if(!overlapW(pos,nw,nh,8))return {mode:full?'full':'compact',nw:nw,nh:nh,pos:pos};
+  }
+  return null;
+}
+
+function el(tag,cls,html){var e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e}
+function svgEl(tag,attrs){var e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(var k in attrs)e.setAttribute(k,attrs[k]);return e}
+function snap(v){return Math.round(v/10)*10}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+
+/* a route is the node and its parents up to the panel; today an agent hangs on the panel, later a device hangs on
+   its agent and the same function lights the whole way */
+function route(s){return [s.name]}
+function lit(s){return !F.sel||route(byName(F.sel)).indexOf(s.name)>=0}
+function byName(n){for(var i=0;i<all.length;i++)if(all[i].name===n)return all[i];return null}
+function lineCls(s){
+  if(!lit(s))return 'lk gray';
+  return 'lk '+s.state+(s.state==='off'?'':' run s'+level(s))+(F.sel?' hot':'');
+}
+function nodeHtml(s,mode){
+  if(mode==='full')return '<b class="nm">'+s.name+'</b><span class="stt"><i class="sq"></i>'+stText(s)+'</span>';
+  return '<i class="sq"></i><b class="nm">'+s.name+'</b>';
+}
+function select(name){F.sel=F.sel===name?null:name;render()}
+function mkNode(s,mode,x,y,w,h){
+  var b=el('button','n '+mode+' st-'+s.state+(F.sel===s.name?' sel':'')+(lit(s)?'':' gray'),nodeHtml(s,mode));
+  b.style.left=Math.round(x-w/2)+'px';b.style.top=Math.round(y-h/2)+'px';b.style.width=w+'px';b.style.height=h+'px';
+  b.title=s.name+' · '+s.addr+' · '+STAT[s.state];
+  b.addEventListener('pointerdown',function(e){if(e.button===0)begin(e,'node',s.name,x,y)});
+  b.addEventListener('click',function(e){if(e.detail===0)select(s.name)});
+  return b;
+}
+function panelNode(x,y,w,h,online,total,movable){
+  var p=el('div','pn','<div class="t"><i>&gt;_</i> Linager</div><div class="s">панель · v0.2.3'+(total?' · онлайн '+online+' из '+total:'')+'</div>');
+  p.style.left=Math.round(x-w/2)+'px';p.style.top=Math.round(y-h/2)+'px';p.style.width=w+'px';p.style.height=h+'px';
+  if(movable)p.addEventListener('pointerdown',function(e){if(e.button===0)begin(e,'panel','',x,y)});
+  return p;
+}
+
+function posOf(s){return (F.man&&F.man[s.name])||LAST.auto[s.name]}
+function panelPos(){return F.manPanel||{x:0,y:0}}
+function toManual(){
+  if(F.man)return;
+  F.man={};LAST.list.forEach(function(s){F.man[s.name]={x:LAST.auto[s.name].x,y:LAST.auto[s.name].y}});
+  F.manPanel={x:0,y:0};
+}
+/* servers that are new in the manual mode stand in a column to the right of everything */
+function placeNewcomers(){
+  var L=LAST,fresh=L.list.filter(function(s){return !F.man[s.name]});
+  if(!fresh.length)return;
+  var maxX=-1e9,minY=1e9;
+  L.list.forEach(function(s){var p=F.man[s.name];if(p){maxX=Math.max(maxX,p.x+L.nw/2);minY=Math.min(minY,p.y)}});
+  if(maxX<-1e8){maxX=PW/2;minY=-PH/2}
+  fresh.forEach(function(s,i){F.man[s.name]={x:snap(maxX+L.nw/2+50),y:snap(minY+i*(L.nh+18))}});
+}
+function bbox(){
+  var L=LAST,pp=panelPos(),b=[pp.x-PW/2,pp.y-PH/2,pp.x+PW/2,pp.y+PH/2];
+  L.list.forEach(function(s){var q=posOf(s);b[0]=Math.min(b[0],q.x-L.nw/2);b[1]=Math.min(b[1],q.y-L.nh/2);b[2]=Math.max(b[2],q.x+L.nw/2);b[3]=Math.max(b[3],q.y+L.nh/2)});
+  return b;
+}
+
+/* view: zoom and shift */
+function viewSize(){return {w:$('stage').clientWidth,h:$('stage').clientHeight}}
+function fit(){
+  var v=viewSize(),b=bbox(),m=36,bw=b[2]-b[0],bh=b[3]-b[1];
+  V.k=clamp(Math.min(1,(v.w-2*m)/bw,(v.h-2*m)/bh),MINK,MAXK);
+  V.tx=v.w/2-(b[0]+bw/2)*V.k;V.ty=v.h/2-(b[1]+bh/2)*V.k;V.user=false;
+}
+function applyView(){
+  var st=$('stage');
+  if(!LAST||LAST.vertical){$('world').style.transform='none';st.style.backgroundSize='';st.style.backgroundPosition='';return}
+  $('world').style.transform='translate('+V.tx+'px,'+V.ty+'px) scale('+V.k+')';
+  st.style.backgroundSize=(20*V.k)+'px '+(20*V.k)+'px';
+  st.style.backgroundPosition=V.tx+'px '+V.ty+'px';
+  $('pct').textContent=Math.round(V.k*100)+'%';
+}
+function zoomAt(px,py,f){
+  var k2=clamp(V.k*f,MINK,MAXK),r=k2/V.k;
+  V.tx=px-(px-V.tx)*r;V.ty=py-(py-V.ty)*r;V.k=k2;V.user=true;applyView();
+}
+
+function render(){
+  var stage=$('stage'),W=stage.clientWidth,list=visible();
+  var online=all.filter(function(s){return s.state!=='off'}).length;
+  $('cnt').textContent=all.length?('онлайн '+online+' из '+all.length+(list.length!==all.length?' · показано '+list.length:'')):'';
+  var nodes=$('nodes'),svg=$('lines'),H;
+  stage.classList.remove('mv');$('zoom').hidden=true;
+  if(!all.length||!list.length){
+    nodes.innerHTML='';svg.innerHTML='';LAST=null;
+    if(!all.length){
+      H=360;var cx=W/2;
+      nodes.appendChild(panelNode(cx,110,200,74,0,0,false));
+      var ph=el('div','ph','<span>Серверов пока нет</span><button class="btn sm primary">+ Сервер</button>');
+      ph.style.cssText='left:'+Math.round(cx-120)+'px;top:250px;width:240px;height:92px';nodes.appendChild(ph);
+      svg.appendChild(svgEl('line',{x1:cx,y1:147,x2:cx,y2:250,class:'lk empty'}));
+    }else{
+      H=240;nodes.appendChild(panelNode(W/2,80,200,74,online,all.length,false));
+      var nt=el('div','note','Нет серверов по этому фильтру');nt.style.top='160px';nodes.appendChild(nt);
+    }
+    stage.style.height=H+'px';applyView();detail();return;
+  }
+  if(W<720){
+    LAST={vertical:true,list:list,online:online};
+    H=vertical(W,list,online,nodes,svg);
+  }else{
+    var L=autoLayout(list.length);
+    L.list=list;L.online=online;L.auto={};
+    list.forEach(function(s,i){L.auto[s.name]=L.pos[i]});
+    LAST=L;
+    if(F.man)placeNewcomers();
+    H=Math.max(440,Math.min(660,Math.round(W*.5)));
+    stage.style.height=H+'px';
+    stage.classList.add('mv');$('zoom').hidden=false;
+    if(!V.user)fit();
+    drawWorld();
+  }
+  stage.style.height=H+'px';applyView();detail();
+}
+/* Right-angle links that avoid servers and other links where that is cheap.
+   The plane is cut into cells; a server and the panel are walls (with a margin); a link is found by Dijkstra over
+   (cell, direction). Costs: a step 1, a turn 6, running next to a wall 2, running along a link already laid 6, crossing
+   one 14, ending at an entry slot of the panel that is taken 25 per link. Links are laid shortest first, so the short
+   ones keep the direct way and the long ones go around. It is a preference, not a promise: when no way is found within
+   the budget (or a fleet is large) the bus-like tracks above are used, and while something is being dragged the
+   cheap tracks are drawn and the router runs again after the drop. */
+var RC={key:'',d:null};
+function routeAll(list,pp,L){
+  var N=list.length,step=N>16?20:10,pad=150,bb=bbox();
+  var x0=Math.floor((bb[0]-pad)/step)*step,y0=Math.floor((bb[1]-pad)/step)*step;
+  var gw=Math.ceil((bb[2]+pad-x0)/step)+1,gh=Math.ceil((bb[3]+pad-y0)/step)+1,G=gw*gh;
+  var blk=new Uint8Array(G),nr=new Uint8Array(G),hU=new Uint8Array(G),vU=new Uint8Array(G);
+  function lo(v,o){return Math.floor((v-o)/step)}
+  function hi(v,o){return Math.ceil((v-o)/step)}
+  function box(b,m,arr){
+    var a=Math.max(0,lo(b[0]-m,x0)),c=Math.min(gw-1,hi(b[2]+m,x0)),d=Math.max(0,lo(b[1]-m,y0)),e=Math.min(gh-1,hi(b[3]+m,y0));
+    for(var y=d;y<=e;y++)for(var x=a;x<=c;x++)arr[y*gw+x]=1;
+  }
+  var boxes=list.map(function(s){var q=posOf(s);return [q.x-L.nw/2,q.y-L.nh/2,q.x+L.nw/2,q.y+L.nh/2]});
+  var pb=[pp.x-PW/2,pp.y-PH/2,pp.x+PW/2,pp.y+PH/2];
+  boxes.forEach(function(b){box(b,8,blk);box(b,8+step,nr)});box(pb,8,blk);box(pb,8+step,nr);
+
+  /* five entry slots on every side of the panel; the goal is the cell in front of a slot, reached moving inwards */
+  var DX=[1,-1,0,0],DY=[0,0,1,-1];            /* E W S N */
+  var goal={},slotUse=[],slot=[];
+  function addGoal(side,j,cx,cy,dir,edge,at){
+    if(cx<0||cy<0||cx>=gw||cy>=gh||blk[cy*gw+cx])return;
+    goal[(cy*gw+cx)*4+dir]=side*5+j;slot[side*5+j]={edge:edge,at:at};slotUse[side*5+j]=0;
+  }
+  for(var j=0;j<5;j++){
+    var yS=pp.y+(j-2)*((PH-18)/4),xS=pp.x+(j-2)*((PW-30)/4);
+    addGoal(0,j,lo(pb[0]-8,x0)-1,Math.round((yS-y0)/step),0,pb[0],yS);
+    addGoal(1,j,hi(pb[2]+8,x0)+1,Math.round((yS-y0)/step),1,pb[2],yS);
+    addGoal(2,j,Math.round((xS-x0)/step),lo(pb[1]-8,y0)-1,2,pb[1],xS);
+    addGoal(3,j,Math.round((xS-x0)/step),hi(pb[3]+8,y0)+1,3,pb[3],xS);
+  }
+
+  var dist=new Float32Array(G*4),prev=new Int32Array(G*4),out={};
+  var order=list.map(function(s,i){return i}).sort(function(a,b){
+    var qa=posOf(list[a]),qb=posOf(list[b]);
+    return Math.abs(qa.x-pp.x)+Math.abs(qa.y-pp.y)-Math.abs(qb.x-pp.x)-Math.abs(qb.y-pp.y)});
+  order.forEach(function(i){
+    var s=list[i],q=posOf(s),b=boxes[i];
+    dist.fill(Infinity);prev.fill(-1);
+    var hc=[],hs=[];
+    function push(c,st){var k=hc.length;hc.push(c);hs.push(st);while(k>0){var p=(k-1)>>1;if(hc[p]<=hc[k])break;var tc=hc[p],ts=hs[p];hc[p]=hc[k];hs[p]=hs[k];hc[k]=tc;hs[k]=ts;k=p}}
+    function pop(){
+      var c=hc[0],st=hs[0],lc=hc.pop(),ls=hs.pop();
+      if(hc.length){hc[0]=lc;hs[0]=ls;var k=0,n=hc.length;
+        for(;;){var l=2*k+1,r=l+1,m=k;if(l<n&&hc[l]<hc[m])m=l;if(r<n&&hc[r]<hc[m])m=r;if(m===k)break;
+          var tc=hc[m],ts=hs[m];hc[m]=hc[k];hs[m]=hs[k];hc[k]=tc;hs[k]=ts;k=m}}
+      return [c,st];
+    }
+    var cyq=Math.round((q.y-y0)/step),cxq=Math.round((q.x-x0)/step);
+    [[hi(b[2]+8,x0)+1,cyq,0],[lo(b[0]-8,x0)-1,cyq,1],[cxq,hi(b[3]+8,y0)+1,2],[cxq,lo(b[1]-8,y0)-1,3]].forEach(function(t){
+      if(t[0]<0||t[1]<0||t[0]>=gw||t[1]>=gh||blk[t[1]*gw+t[0]])return;
+      var st=(t[1]*gw+t[0])*4+t[2];dist[st]=0;push(0,st);
+    });
+    var found=-1,pops=0;
+    while(hc.length&&pops++<400000){
+      var pr=pop(),c=pr[0],st=pr[1];
+      if(c>dist[st])continue;
+      if(goal[st]!==undefined){found=st;break}
+      var dir=st&3,cell=st>>2,cx=cell%gw,cy=(cell-cx)/gw;
+      for(var nd=0;nd<4;nd++){
+        if(nd===(dir^1))continue;
+        var nx=cx+DX[nd],ny=cy+DY[nd];
+        if(nx<0||ny<0||nx>=gw||ny>=gh)continue;
+        var nc=ny*gw+nx;if(blk[nc])continue;
+        var cost=c+1+(nd!==dir?6:0)+(nr[nc]?2:0);
+        if(nd<2){if(vU[nc])cost+=14;if(hU[nc])cost+=6}else{if(hU[nc])cost+=14;if(vU[nc])cost+=6}
+        var ns=nc*4+nd,g=goal[ns];
+        if(g!==undefined)cost+=slotUse[g]*25;
+        if(cost<dist[ns]){dist[ns]=cost;prev[ns]=st;push(cost,ns)}
+      }
+    }
+    if(found<0){out[s.name]=null;return}
+    var pts=[];
+    for(var st2=found;st2!==-1;st2=prev[st2]){var cl=st2>>2;pts.push({x:x0+(cl%gw)*step,y:y0+Math.floor(cl/gw)*step,dir:st2&3,c:cl})}
+    pts.reverse();
+    /* mark the cells: a cell is used along the direction the link leaves it and the direction it arrived with */
+    for(var k=0;k<pts.length;k++){
+      var d1=pts[k].dir<2?hU:vU;d1[pts[k].c]=1;
+      if(k>0){var d2=pts[k].dir<2?hU:vU;d2[pts[k-1].c]=1}
+    }
+    var gs=goal[found];slotUse[gs]++;
+    /* keep the corners only */
+    var poly=[pts[0]];
+    for(var m=1;m<pts.length-1;m++)if(pts[m+1].dir!==pts[m].dir)poly.push(pts[m]);
+    poly.push(pts[pts.length-1]);
+    /* the first run keeps the server's own row or column, the last one the slot's, so nothing jogs at the ends */
+    if(poly.length>1){
+      var a0=poly[0],a1=poly[1];
+      if(a0.dir<2){a0.y=q.y;a1.y=q.y}else{a0.x=q.x;a1.x=q.x}
+    }
+    var sl=slot[gs],last=poly[poly.length-1],endPt;
+    if(poly.length>3||(poly.length===3&&false)){
+      var z=poly[poly.length-2];
+      if(gs<10){z.y=sl.at;last.y=sl.at}else{z.x=sl.at;last.x=sl.at}
+    }else if(poly.length===2){
+      /* one straight run: it leaves the server and enters the panel on one line */
+      if(gs<10){poly[0].y=poly[1].y=q.y}else{poly[0].x=poly[1].x=q.x}
+    }
+    endPt=gs<10?{x:sl.edge,y:last.y}:{x:last.x,y:sl.edge};
+    var d='M'+q.x+' '+q.y;
+    poly.forEach(function(p){d+=' L'+p.x+' '+p.y});
+    d+=' L'+endPt.x+' '+endPt.y;
+    out[s.name]=d;
+  });
+  return out;
+}
+
+/* a link with right-angle bends, drawn like a bus on a circuit board: out of the node along the longer axis to one
+   of three parallel tracks that run around the panel, along the track, then into the panel at its own point */
+function orthoPath(a,b,i){
+  var dx=b.x-a.x,dy=b.y-a.y,gap=46,track=(i%3)*12;
+  if(Math.abs(dx)>=Math.abs(dy)){
+    var side=dx>0?-1:1,bx=b.x+side*(PW/2+gap+track),ey=b.y+((i%5)-2)*12;
+    return 'M'+a.x+' '+a.y+' L'+bx+' '+a.y+' L'+bx+' '+ey+' L'+b.x+' '+ey;
+  }
+  var sd=dy>0?-1:1,by=b.y+sd*(PH/2+gap+track),ex=b.x+((i%7)-3)*22;
+  return 'M'+a.x+' '+a.y+' L'+a.x+' '+by+' L'+ex+' '+by+' L'+ex+' '+b.y;
+}
+function drawWorld(){
+  var L=LAST,nodes=$('nodes'),svg=$('lines'),list=L.list;
+  nodes.innerHTML='';svg.innerHTML='';
+  var pp=panelPos();
+  /* grey lines first, the lit route on top */
+  var style=$('dL').value,ortho=style!=='straight',idx={},routed=null;
+  list.forEach(function(s,i){idx[s.name]=i});
+  if(style==='route'&&list.length<=30&&!(D&&D.moved)){
+    var key=list.map(function(s){var p=posOf(s);return s.name+p.x+','+p.y}).join('|')+'#'+pp.x+','+pp.y;
+    if(RC.key!==key){RC.key=key;RC.d=routeAll(list,pp,L)}
+    routed=RC.d;
+  }
+  list.slice().sort(function(a,b){return (lit(a)?1:0)-(lit(b)?1:0)}).forEach(function(s){
+    var q=posOf(s);
+    if(ortho)svg.appendChild(svgEl('path',{d:(routed&&routed[s.name])||orthoPath(q,pp,idx[s.name]),class:lineCls(s)}));
+    else svg.appendChild(svgEl('line',{x1:q.x,y1:q.y,x2:pp.x,y2:pp.y,class:lineCls(s)}));
+  });
+  if($('dG').checked&&L.mode==='full'){
+    var gb={};
+    list.forEach(function(s){if(!s.group)return;var q=posOf(s),g=gb[s.group]||(gb[s.group]=[1e9,1e9,-1e9,-1e9]);
+      g[0]=Math.min(g[0],q.x-L.nw/2);g[1]=Math.min(g[1],q.y-L.nh/2);g[2]=Math.max(g[2],q.x+L.nw/2);g[3]=Math.max(g[3],q.y+L.nh/2)});
+    Object.keys(gb).forEach(function(k){
+      var g=gb[k],f=el('div','gf'+(F.sel&&byName(F.sel).group!==k?' gray':''),'<span>'+k+'</span>');
+      f.style.left=(g[0]-10)+'px';f.style.top=(g[1]-12)+'px';f.style.width=(g[2]-g[0]+20)+'px';f.style.height=(g[3]-g[1]+22)+'px';
+      f.firstChild.addEventListener('pointerdown',function(e){if(e.button===0)begin(e,'group',k,0,0)});
+      nodes.appendChild(f);
+    });
+  }
+  nodes.appendChild(panelNode(pp.x,pp.y,PW,PH,L.online,all.length,true));
+  list.forEach(function(s){var q=posOf(s);nodes.appendChild(mkNode(s,L.mode,q.x,q.y,L.nw,L.nh))});
+}
+
+/* phone: one column, a trunk on the left, a stub to every agent; it scrolls with the page, no zoom */
+function vertical(W,list,online,nodes,svg){
+  nodes.innerHTML='';svg.innerHTML='';
+  var trunk=26,nx=50,nw=W-nx-12,nh=list.length>12?34:58,mode=list.length>12?'compact':'full';
+  var y=12,pw=W-24,ph=66;
+  nodes.appendChild(panelNode(W/2,y+ph/2,pw,ph,online,all.length,false));
+  var top=y+ph,cursor=top+22,stubs=[],lastY=cursor,showG=$('dG').checked,prev=null;
+  list.forEach(function(s){
+    if(showG&&s.group!==prev){var h=el('div','gh',s.group||'Без группы');h.style.left=nx+'px';h.style.top=cursor+'px';nodes.appendChild(h);cursor+=22;prev=s.group}
+    var yc=cursor+nh/2,n=mkNode(s,mode,nx+nw/2,yc,nw,nh);
+    nodes.appendChild(n);stubs.push({s:s,y:yc});lastY=yc;cursor+=nh+12;
+  });
+  svg.appendChild(svgEl('path',{d:'M'+trunk+' '+lastY+' L'+trunk+' '+top,class:'lk ok run s2'+(F.sel?' gray':'')}));
+  stubs.forEach(function(b){svg.appendChild(svgEl('path',{d:'M'+nx+' '+b.y+' L'+trunk+' '+b.y,class:lineCls(b.s)}))});
+  stubs.forEach(function(b){if(F.sel===b.s.name)svg.appendChild(svgEl('path',{d:'M'+trunk+' '+b.y+' L'+trunk+' '+top,class:lineCls(b.s)}))});
+  return cursor+6;
+}
+
+/* dragging: a server, the panel, a whole group by its label, or the background (shifts the view);
+   a move of less than 4 px is a click */
+function begin(e,kind,key,cx,cy){
+  var L=LAST;if(!L)return;
+  D={kind:kind,key:key,sx:e.clientX,sy:e.clientY,ox:cx,oy:cy,moved:false,nodrag:!!L.vertical,start:null,tx0:V.tx,ty0:V.ty};
+  if(kind==='group'){D.start={};L.list.forEach(function(s){if(s.group===key)D.start[s.name]=posOf(s)})}
+}
+$('stage').addEventListener('pointerdown',function(e){
+  if(e.button!==0||!LAST||LAST.vertical||e.target.closest('.n,.pn,.gf span,.zoom'))return;
+  begin(e,'pan','',0,0);
+});
+document.addEventListener('pointermove',function(e){
+  if(!D||D.nodrag)return;
+  var dx=e.clientX-D.sx,dy=e.clientY-D.sy;
+  if(!D.moved&&Math.hypot(dx,dy)<4)return;
+  if(!D.moved){D.moved=true;if(D.kind!=='pan')toManual();document.body.classList.add('drag')}
+  if(D.kind==='pan'){V.tx=D.tx0+dx;V.ty=D.ty0+dy;V.user=true;applyView();return}
+  var L=LAST,wx=dx/V.k,wy=dy/V.k;
+  if(D.kind==='node')F.man[D.key]={x:snap(D.ox+wx),y:snap(D.oy+wy)};
+  else if(D.kind==='panel')F.manPanel={x:snap(D.ox+wx),y:snap(D.oy+wy)};
+  else Object.keys(D.start).forEach(function(k){var p=D.start[k];F.man[k]={x:snap(p.x+wx),y:snap(p.y+wy)}});
+  if(!raf)raf=requestAnimationFrame(function(){raf=0;if(LAST&&!LAST.vertical)drawWorld()});
+});
+document.addEventListener('pointerup',function(){
+  if(!D)return;
+  var d=D;D=null;document.body.classList.remove('drag');
+  if(d.moved){dragEnd=Date.now();$('rst').hidden=!F.man;if(LAST&&!LAST.vertical&&$('dL').value==='route')drawWorld();return}
+  if(d.kind==='node')select(d.key);
+});
+document.addEventListener('pointercancel',function(){D=null;document.body.classList.remove('drag')});
+
+/* zoom: buttons, and Ctrl or Cmd with the wheel (also a pinch on a trackpad); the plain wheel scrolls the page */
+function centre(f){var v=viewSize();zoomAt(v.w/2,v.h/2,f)}
+$('zin').addEventListener('click',function(){centre(1.25)});
+$('zout').addEventListener('click',function(){centre(1/1.25)});
+$('z1').addEventListener('click',function(){centre(1/V.k)});
+$('zfit').addEventListener('click',function(){if(LAST&&!LAST.vertical){fit();applyView()}});
+$('stage').addEventListener('wheel',function(e){
+  if(!(e.ctrlKey||e.metaKey)||!LAST||LAST.vertical)return;
+  e.preventDefault();
+  var r=$('stage').getBoundingClientRect();
+  zoomAt(e.clientX-r.left,e.clientY-r.top,Math.exp(-e.deltaY*(e.ctrlKey?.01:.0015)));
+},{passive:false});
+
+function detail(){
+  var d=$('detail'),s=F.sel?byName(F.sel):null;
+  $('rst').hidden=!F.man||!LAST||!!LAST.vertical;
+  if(!s){d.innerHTML='<span class="hint">Нажмите на сервер: подсветится его путь до панели, остальное станет серым. Серверы, панель и рамки групп можно двигать, фон сдвигает схему, Ctrl или ⌘ с колесом меняет масштаб.</span>';return}
+  var off=s.state==='off';
+  function m(k){var v=seeded(s.name,k);return '<span>'+k+' <b class="'+(v>90?'crit':v>75?'warn':'')+'">'+v+'%</b></span>'}
+  d.innerHTML='<span class="nm">'+s.name+'</span><span class="info">'+s.addr+' · '+s.os+' · агент '+s.ver+(s.group?' · '+s.group:'')+'</span>'+
+    (off?'<span class="info">нет данных</span>':'<span class="m">'+m('CPU')+m('RAM')+m('Диск')+'<span>сеть <b>'+fmt(s.rate)+'</b></span></span>')+
+    '<span class="acts"><button class="btn sm primary">Открыть</button><button class="btn sm"'+(off?' disabled':'')+'>Терминал &gt;_</button></span>';
+}
+
+/* pixel icons of the three views (8x8, as in ui/pixicons.ts) for a phone */
+var IC={
+  cards:['11111111','10000001','11111111','00000000','11111111','10000001','11111111','00000000'],
+  map:['11011011','11011011','00000000','11011011','11011011','00000000','11011011','11011011'],
+  scheme:['11000011','11000011','00100100','00011000','00011000','00100100','11000011','11000011']
+};
+function icon(n){var s='';IC[n].forEach(function(row,y){for(var x=0;x<8;x++)if(row.charAt(x)==='1')s+='<rect x="'+x+'" y="'+y+'" width="1" height="1"/>'});
+  return '<svg viewBox="0 0 8 8" width="20" height="20" shape-rendering="crispEdges" fill="currentColor">'+s+'</svg>'}
+var NAMES={cards:'Карточки',map:'Карта',scheme:'Схема'};
+$('vi').innerHTML=['cards','map','scheme'].map(function(n){return '<button class="chip ic" aria-label="'+NAMES[n]+'" title="'+NAMES[n]+'" aria-pressed="'+(n==='scheme')+'">'+icon(n)+'</button>'}).join('');
+
+/* controls */
+function refit(){V.user=false}
+$('fsw').addEventListener('click',function(e){var b=e.target.closest('.chip');if(!b)return;F.f=b.dataset.f;refit();
+  Array.prototype.forEach.call($('fsw').children,function(c){c.setAttribute('aria-pressed',c===b)});render()});
+$('gsel').addEventListener('change',function(){F.group=this.value;refit();render()});
+$('q').addEventListener('input',function(){F.q=this.value;refit();render()});
+$('dN').addEventListener('change',function(){F.N=+this.value;F.sel=null;F.man=null;F.manPanel=null;refit();build();fillGroups();render()});
+$('dT').addEventListener('change',function(){var v=this.value;if(v==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',v)});
+$('dW').addEventListener('change',function(){$('frame').className='frame'+(this.value==='phone'?' phone':'');refit();render()});
+$('dG').addEventListener('change',render);
+$('dL').addEventListener('change',render);
+$('dM').addEventListener('change',function(){document.body.classList.toggle('still',!this.checked)});
+$('rst').addEventListener('click',function(){F.man=null;F.manPanel=null;refit();render()});
+$('stage').addEventListener('click',function(e){
+  if(Date.now()-dragEnd<80)return;
+  if(F.sel&&!e.target.closest('.n,.pn,.gf,.gh,.zoom')){F.sel=null;render()}
+});
+if(window.ResizeObserver)new ResizeObserver(function(){render()}).observe($('frame'));
+build();fillGroups();render();
+})();
+</script>
+</body>
+</html>

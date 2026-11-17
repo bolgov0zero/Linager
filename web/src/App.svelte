@@ -335,7 +335,7 @@
           onagentchanged={refreshUpdatesCount} />
       {/key}
     {:else}
-      <Dashboard {editing} {reloadKey} onopen={openServer} onauthlost={endSession} />
+      <Dashboard {editing} {reloadKey} onopen={openServer} onauthlost={endSession} onadd={() => (addOpen = true)} />
     {/if}
   {/if}
 </main>

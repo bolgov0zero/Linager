@@ -132,6 +132,8 @@ func (a *Admin) Handler() http.Handler {
 	a.route(mux, "POST /api/dashboard/items", "admin", a.dashboardAdd)
 	a.route(mux, "DELETE /api/dashboard/items/{id}", "admin", a.dashboardRemove)
 	a.route(mux, "PUT /api/dashboard/order", "any", a.dashboardOrder)
+	a.route(mux, "PUT /api/dashboard/scheme", "any", a.dashboardSchemeSet)
+	a.route(mux, "DELETE /api/dashboard/scheme", "any", a.dashboardSchemeReset)
 	a.route(mux, "GET /api/live", "any", a.liveHandler)
 	a.route(mux, "GET /api/updates", "admin", a.updatesGet)
 	a.route(mux, "GET /api/updates/summary", "admin", a.updatesSummary)

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4
+
+- New: **the "Scheme" view of the dashboard** (a third view next to "Cards" and "Map"; on a phone the single view button became three icons). The panel stands in the middle, the servers on rings around it, with the name and the state of each. Every link is drawn in the colour of the state and squares run along it from the server to the panel, slow, medium or fast by the traffic of the server (below 50 KB/s, below 2 MB/s, above). A click on a server lights its way to the panel and greys everything else; a strip under the scheme shows the details and the buttons "Open" and "Terminal". Servers, the panel and a whole group (by its label) can be dragged; the background shifts the view; zoom by the buttons "-", "+", "1:1" and "Fit", or with Ctrl/Cmd and the wheel. A large fleet is not turned into dots: the nodes keep their size and the scheme grows. The switch "Links" offers straight lines, right-angle links on shared tracks and right-angle links that go around servers and each other where possible (up to 16 servers). The places of the servers are saved on the server, for each user separately (migration 00014, `PUT`/`DELETE /api/dashboard/scheme`, returned by `GET /api/dashboard`); "Reset layout" returns the automatic one. Mockup: `docs/design/next/scheme.html`; docs: `docs/design/ui-spec.md` and section 12o of the architecture.
+- Tests: the layout, the zoom, the tracks and the router (`web/src/lib/dashboard/schemeLayout.test.mjs`); the saving, the limits and the isolation between users on the server (`TestDashboardScheme`).
+
 ## 0.2.3
 
 - Updates page, the table of agents: the "Stages" link under the progress bar of an agent that is being updated is gone (the row already says "step N of 8: name" and shows the bar; the full list of stages stays on the page of the server). The link remains for an agent whose update failed or was rolled back, where the list shows where it stopped.
