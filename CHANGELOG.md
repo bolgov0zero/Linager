@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2
+
+- Docs: the README (en, ru), the landing page (en, ru) and the introduction of the site tell about the new ways to add a server (confirm a key, an install link, an install over SSH) and about the Linager menu that opens after an install. The landing got a "Three ways to add a server" block in the install section and a line in the install animation; the README got an "Adding servers" row in the table of features and a rewritten "Add a managed host" paragraph with the `wget … | sh` command.
+- Fix: the note button next to "Reboot" (and the pencil next to the cross in the note window) could be a little taller or shorter than the text buttons, depending on the font metrics of the browser: the icon buttons had a fixed height while the height of the text buttons follows the font. The rows now stretch their buttons to one height (`align-items: stretch`), so the note button, "Reboot" and "Delete server", and the pencil and the cross, always have the same height and the same top edge. Checked in the browser with line heights from 14 px to 28 px.
+
 ## 0.2.1
 
 - After an install the Linager menu opens, as if the person had typed `linager`: `install.sh` (the install from GitHub) and the script of an install by a link end with "Press Enter to open the Linager menu" (in Russian when `LANG` is Russian) and then run `linager` on the terminal. The prompt comes after the wizard's summary, so the addresses and the generated administrator password can be read first. The menu is not opened after a failed install, without a terminal (automation, `ssh` runs) or with `--no-tui`. `install.sh` no longer `exec`s the wizard; the link script removes its temporary files before it hands the terminal to the menu. Tests: the generated link script is valid shell, uses wget without sudo and ends with the menu; `install.sh` is valid shell and has the same ending; the ending was also run in a pseudo-terminal (prompt in both languages, Enter opens the menu, no terminal ends quietly, `--no-tui` skips it); `shellcheck install.sh` is clean.

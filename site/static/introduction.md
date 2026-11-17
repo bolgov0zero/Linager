@@ -31,4 +31,4 @@ The agent also runs on a Raspberry Pi 4 with a 64-bit OS.
 
 ## Where to go next
 
-Start with [Installation](install), then add your first server: run the same installer on it, choose **Client**, and confirm the check code in the panel. To put the panel behind a reverse proxy, read [Reverse proxy](proxy); to restrict who may open it, read [Admin panel access](access).
+Start with [Installation](install), then add your first server in one of three ways ("+ Server" in the panel): run the same installer on it, choose **Client**, and confirm the check code; or make an **install link** and run one command on the new host; or let the panel install the agent **over SSH**. When an install ends, the Linager menu opens by itself ([the terminal menu](menu)). To put the panel behind a reverse proxy, read [Reverse proxy](proxy); to restrict who may open it, read [Admin panel access](access).

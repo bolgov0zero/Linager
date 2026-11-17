@@ -127,7 +127,7 @@
 
   .dialog-tools {
     display: flex;
-    align-items: center;
+    align-items: stretch; /* the pencil and the cross are of one height */
     gap: 8px;
   }
 

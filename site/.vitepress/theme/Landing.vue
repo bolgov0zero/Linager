@@ -79,6 +79,7 @@ const TERM: [string, string][] = [
   ['g', '✔ Administrator "admin" created'],
   ['g', '✔ linager-server.service started'],
   ['b', '  Admin panel: http://203.0.113.10:8080'],
+  ['m', 'Done. Press Enter to open the Linager menu (the same as typing linager)...'],
 ];
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
@@ -317,6 +318,14 @@ function pick(i: number): void {
             <p>{{ t('i.' + n + 'p') }}</p>
           </div>
         </div>
+        <h3 class="ways-h reveal">{{ t('w.h3') }}</h3>
+        <div class="steps ways">
+          <div v-for="n in 3" :key="'w' + n" class="card step reveal" :style="{ '--d': (n - 1) * 0.1 + 's' }">
+            <h3>{{ t('w.' + n + 't') }}</h3>
+            <p>{{ t('w.' + n + 'p') }}</p>
+          </div>
+        </div>
+        <p class="menu-note reveal">{{ t('w.menu') }}</p>
         <div class="term reveal"><div class="tb"><i></i><i></i><i></i></div><pre v-html="typed"></pre></div>
         <div class="platforms"><span>Debian 12</span><span>Debian 13</span><span>Ubuntu 22.04</span><span>Ubuntu 24.04</span><span>Ubuntu 26.04</span><span>amd64</span><span>arm64 (agent)</span></div>
       </div>
@@ -463,10 +472,14 @@ function pick(i: number): void {
 .lg .step::before{counter-increment:s;content:"0" counter(s);position:absolute;top:-16px;left:16px;background:var(--accent);color:var(--lg-surface);font-family:var(--font-display);font-size:18px;padding:0 10px;border:2px solid var(--line)}
 .lg .step h3{font-family:var(--font-display);font-weight:400;font-size:20px;margin:4px 0 8px}
 .lg .step p{color:var(--muted);font-size:14px}
+.lg .ways-h{font-family:var(--font-display);font-weight:400;font-size:24px;margin:54px 0 0}
+.lg .ways{margin-top:34px}
+.lg .ways .step::before{content:counter(s,upper-alpha)}
+.lg .menu-note{margin-top:26px;color:var(--muted);font-size:14px}
 .lg .term{margin-top:30px;background:var(--term);color:var(--term-ink);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);font-size:13px}
 .lg .term .tb{display:flex;gap:6px;padding:8px 12px;border-bottom:2px solid #3b4455}
 .lg .term .tb i{width:10px;height:10px;border:2px solid #3b4455}
-.lg .term pre{margin:0;padding:16px;min-height:178px;white-space:pre-wrap;font-family:"Medeo Mono",monospace;line-height:1.55;background:none;color:inherit}
+.lg .term pre{margin:0;padding:16px;min-height:200px;white-space:pre-wrap;font-family:"Medeo Mono",monospace;line-height:1.55;background:none;color:inherit}
 .lg .term .g{color:#4fcf86}.lg .term .b{color:#7d9cff}.lg .term .m{color:#8a93a4}
 .lg .term .caret{display:inline-block;width:8px;height:15px;background:#7d9cff;vertical-align:-2px;animation:lgblink 1s steps(1) infinite}
 .lg .platforms{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}

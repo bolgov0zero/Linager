@@ -135,7 +135,9 @@
 
 <style>
   .pencil {
-    padding: 6px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;

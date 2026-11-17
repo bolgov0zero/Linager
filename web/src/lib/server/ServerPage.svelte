@@ -380,12 +380,16 @@
 
   .actions {
     margin-left: auto;
+    /* the buttons of the row are of one height, whatever the font metrics of the text buttons are */
+    align-items: stretch;
   }
 
   /* The note button is only an icon; a small square in the corner says that the server has a note. */
   .btn.note {
     position: relative;
-    padding: 6px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;

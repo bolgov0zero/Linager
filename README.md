@@ -48,6 +48,7 @@ One web panel, a lightweight agent on every host: live metrics, terminal, files,
 | **Disk** | Partitions, a fill-up forecast, what takes the space, safe cleanup (journal, apt cache, unused images, old kernels). |
 | **Roles and sign-in** | Administrator, operator (chosen servers and modules) and auditor (read-only). Password with 2FA (TOTP, recovery codes) or a passkey. |
 | **Admin access control** | A white or black list by real client address, trusted reverse proxies, an access journal. **New in 0.1.69.** |
+| **Adding servers** | Three ways: confirm a key shown by the installer, an **install link** (one command on the new host, the signed release comes from your server, one click or none to approve), or an **install over SSH** from the panel (checks, stages, output, rollback on failure). |
 | **Self-update** | Signed releases (minisign), a database backup before the update, automatic rollback, staged rollout to agents. |
 
 Details per module: [docs/en/modules.md](docs/en/modules.md). History of changes: [CHANGELOG.md](CHANGELOG.md).
@@ -117,9 +118,21 @@ On a clean Debian or Ubuntu server, as root:
 curl -fsSL https://raw.githubusercontent.com/bolgov0zero/linager/main/install.sh | sh
 ```
 
-The wizard asks **Server** or **Client**, then sets up PostgreSQL, the keys, the administrator account and a systemd service. Prefer to look first? Download, verify and run it yourself: [docs/en/install.md](docs/en/install.md).
+The wizard asks **Server** or **Client**, then sets up PostgreSQL, the keys, the administrator account and a systemd service. When it ends, the **Linager menu** opens (press Enter): the state of the host and numbered actions, the same as typing `linager` ([docs/en/menu.md](docs/en/menu.md)). Prefer to look first? Download, verify and run it yourself: [docs/en/install.md](docs/en/install.md).
 
-**Add a managed host:** run the same command on it, pick **Client**, enter the server address. The agent shows a key and a check code; confirm it in the panel ("+ Server") and the agent receives its certificate.
+**Add a managed host** ("+ Server" in the panel), three ways:
+
+- **Confirm a key.** Run the same command on the host, pick **Client**, enter the server address. The agent shows a key and a check code; confirm it in the panel and the agent receives its certificate.
+- **Install by a link.** The panel makes a link (lifetime, number of servers, optional networks and group) and shows a command for the new host, as root, with no `sudo` and no `curl` needed:
+
+  ```bash
+  wget -nv -O- --no-check-certificate --pinnedpubkey 'sha256//…' 'https://panel.example.com:9443/v1/join/lk_…' | sh
+  ```
+
+  The agent comes from the cached, signed release of **your server** (no GitHub), the key of the server is pinned in the command, and the host appears in the panel for one click, or at once when the link approves itself. The name is taken from the agent.
+- **Install over SSH.** Enter the address, login and password (or a key) of the new host: the panel shows its host key, checks the system, the rights (asks for the `sudo` password when needed) and whether the host can reach the server, installs the agent, shows the stages and the output, and rolls the host back if the agent does not connect. Passwords live only in memory.
+
+After either install the Linager menu opens on the new host. Details and the security notes: [docs/en/install.md](docs/en/install.md).
 
 | | Server | Agent |
 |---|---|---|
