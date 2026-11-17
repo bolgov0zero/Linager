@@ -299,8 +299,19 @@ export interface AgentUpdateRow {
   id: string; name: string; os: string; address: string; version: string;
   status: 'current' | 'available' | 'unsupported' | 'updating' | 'queued' | 'rollback' | 'failed';
   online: boolean; target?: string;
-  step?: number; steps_total: number; step_id?: 'download' | 'verify' | 'backup' | 'replace' | 'restart';
+  step?: number; steps_total: number;
+  step_id?: 'download' | 'verify' | 'backup' | 'replace' | 'restart' | 'offline' | 'reconnect' | 'confirm';
   message?: string;
+  /** The stages of the run that is going on or ended badly, and the server clock they are measured by. */
+  steps?: AgentUpdateStep[]; now_ms?: number;
+  /** Unix seconds: when the agent restores its old binary if the new one has not confirmed itself. */
+  rollback_at?: number;
+}
+export interface AgentUpdateStep {
+  id: NonNullable<AgentUpdateRow['step_id']>; state: 'pending' | 'running' | 'done' | 'failed';
+  /** Unix milliseconds on the server clock. */
+  started_ms?: number; finished_ms?: number;
+  detail?: string; bytes?: number; size?: number;
 }
 export interface UpdateHistoryRow { id: number; ts: number; kind: 'server' | 'agents'; from: string; to: string; status: 'success' | 'failed' | 'rolled_back'; detail: string }
 export type RolloutMode = 'all' | 'one_by_one' | 'first_then_rest';

@@ -194,7 +194,9 @@ func session(ctx context.Context, o RunOptions, st *State, cert tls.Certificate,
 	}
 	reg.SetEmitter(send)
 	defer reg.SetEmitter(nil)
-	ConfirmUpdate(o.DataDir, func(m string, a ...any) { o.Log.Info(m, a...) }) // the new version is connected: cancel the rollback
+	if ConfirmUpdate(o.DataDir, func(m string, a ...any) { o.Log.Info(m, a...) }) { // the new version is connected: cancel the rollback
+		reg.emitUpdate(protocol.UpdateEvent{Version: o.AgentVersion, Step: 6, Total: 6, ID: "confirm", State: protocol.UpdateDone})
+	}
 	o.Log.Info("connected", "server", st.Server)
 
 	// Certificate renewal: asked over the signed channel when a third of the lifetime is left, and again

@@ -80,11 +80,28 @@ const ChangeWindow = 30 * time.Second
 // TypeUpdateEvent reports the progress of an agent self-update to the server.
 const TypeUpdateEvent = "update.event"
 
+// AgentRollbackDelay is how long after arming the rollback timer the old binary is restored if the new agent
+// has not confirmed itself. The agent must reconnect within 60 seconds; the extra time covers the restart.
+const AgentRollbackDelay = 70 * time.Second
+
+// Update event states. An empty state is an event of an agent older than the stages: "this step is reached".
+const (
+	UpdateRunning = "running"
+	UpdateDone    = "done"
+	UpdateFailed  = "failed"
+)
+
 // UpdateEvent is the payload of TypeUpdateEvent.
 type UpdateEvent struct {
 	Version string `json:"version"`
 	Step    int    `json:"step"`  // 1..Total
 	Total   int    `json:"total"` // 5
-	ID      string `json:"id"`    // download | verify | backup | replace | restart
+	ID      string `json:"id"`    // download | verify | backup | replace | restart | confirm
 	Error   string `json:"error,omitempty"`
+	// State is running, done or failed; Detail is a short note such as "12.3 / 18.4 MB".
+	State  string `json:"state,omitempty"`
+	Detail string `json:"detail,omitempty"`
+	// Bytes and Size describe the progress of a download (Size 0 or -1: not known).
+	Bytes int64 `json:"bytes,omitempty"`
+	Size  int64 `json:"size,omitempty"`
 }

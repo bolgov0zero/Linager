@@ -27,7 +27,7 @@ var updateSteps = []string{"download", "verify", "backup", "replace", "restart"}
 
 // RollbackDelay is how long after the restart the old binary is restored if the new agent never confirmed.
 // The agent must reconnect within 60 seconds; the extra time covers the restart itself.
-var RollbackDelay = 70 * time.Second
+var RollbackDelay = protocol.AgentRollbackDelay
 
 var agentVersionRe = regexp.MustCompile(`^v?\d+\.\d+\.\d+(-[A-Za-z0-9.]+)?$`)
 
@@ -58,22 +58,28 @@ func serverClient(dir string) (*http.Client, string, error) {
 }
 
 func fetch(ctx context.Context, c *http.Client, url string, limit int64) (io.ReadCloser, error) {
+	rc, _, err := fetchSized(ctx, c, url, limit)
+	return rc, err
+}
+
+// fetchSized is fetch that also returns the announced size of the body (-1 when unknown).
+func fetchSized(ctx context.Context, c *http.Client, url string, limit int64) (io.ReadCloser, int64, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	resp, err := c.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if resp.StatusCode != http.StatusOK {
 		_ = resp.Body.Close()
-		return nil, fmt.Errorf("server answered %s", resp.Status)
+		return nil, 0, fmt.Errorf("server answered %s", resp.Status)
 	}
 	return struct {
 		io.Reader
 		io.Closer
-	}{io.LimitReader(resp.Body, limit), resp.Body}, nil
+	}{io.LimitReader(resp.Body, limit), resp.Body}, resp.ContentLength, nil
 }
 
 // LatestFromServer asks the server which release agents should run.
@@ -94,8 +100,28 @@ func LatestFromServer(ctx context.Context, dir string) (string, error) {
 	return out.Version, nil
 }
 
+// progressReader reports how much of a download has arrived, at most once a second.
+type progressReader struct {
+	r     io.Reader
+	size  int64
+	n     int64
+	last  time.Time
+	every func(n, size int64)
+}
+
+func (p *progressReader) Read(b []byte) (int, error) {
+	n, err := p.r.Read(b)
+	p.n += int64(n)
+	if p.every != nil && time.Since(p.last) >= time.Second {
+		p.last = time.Now()
+		p.every(p.n, p.size)
+	}
+	return n, err
+}
+
 // Apply downloads, verifies and installs a release from the server, then arms the rollback timer.
-// It does not restart: the caller restarts the service after reporting success.
+// It does not restart: the caller restarts the service after reporting success. Every stage is reported twice,
+// when it begins and when it ends, so the panel can show a timeline.
 func (u *updater) Apply(ctx context.Context, version string, key *release.Key) error {
 	if !agentVersionRe.MatchString(version) {
 		return errors.New("invalid version")
@@ -116,37 +142,73 @@ func (u *updater) Apply(ctx context.Context, version string, key *release.Key) e
 		return errors.New("a previous update is still waiting for confirmation")
 	}
 
-	step := func(i int, err error) {
-		if u.emit != nil {
-			e := protocol.UpdateEvent{Version: version, Step: i + 1, Total: len(updateSteps), ID: updateSteps[i]}
-			if err != nil {
-				e.Error = err.Error()
-			}
-			u.emit(e)
+	send := func(i int, state string, err error, bytes, size int64) {
+		if u.emit == nil {
+			return
 		}
+		e := protocol.UpdateEvent{Version: version, Step: i + 1, Total: len(updateSteps), ID: updateSteps[i], State: state, Bytes: bytes, Size: size}
+		if err != nil {
+			e.Error, e.State = err.Error(), protocol.UpdateFailed
+		}
+		u.emit(e)
 	}
-	fail := func(i int, err error) error { step(i, err); return err }
+	begin := func(i int) { send(i, protocol.UpdateRunning, nil, 0, 0) }
+	end := func(i int) { send(i, protocol.UpdateDone, nil, 0, 0) }
+	fail := func(i int, err error) error { send(i, protocol.UpdateFailed, err, 0, 0); return err }
 
 	c, base, err := serverClient(u.dir)
 	if err != nil {
 		return fail(0, err)
 	}
+	exe, err := executablePath()
+	if err != nil {
+		return fail(0, err)
+	}
+	if r, e := filepath.EvalSymlinks(exe); e == nil {
+		exe = r
+	}
 	root := base + "/v1/release/" + version
-	step(0, nil)
-	mrc, err := fetch(ctx, c, root+"/manifest.json", 1<<20)
+
+	// download: the signed manifest and the binary. The binary stays in a temporary file that is not
+	// executable and is not touched until the next stage has checked it.
+	begin(0)
+	mrc, _, err := fetchSized(ctx, c, root+"/manifest.json", 1<<20)
 	if err != nil {
 		return fail(0, err)
 	}
 	mb, _ := io.ReadAll(mrc)
 	_ = mrc.Close()
-	src, err := fetch(ctx, c, root+"/manifest.json.minisig", 4096)
+	src, _, err := fetchSized(ctx, c, root+"/manifest.json.minisig", 4096)
 	if err != nil {
 		return fail(0, err)
 	}
 	sb, _ := io.ReadAll(src)
 	_ = src.Close()
+	tmp := exe + ".linager-new"
+	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600) //nolint:gosec // becomes executable only after the check
+	if err != nil {
+		return fail(0, err)
+	}
+	defer func() { _ = os.Remove(tmp) }()
+	brc, size, err := fetchSized(ctx, c, root+"/binary?arch="+release.HostArch, 200<<20)
+	if err != nil {
+		_ = f.Close()
+		return fail(0, err)
+	}
+	h := sha256.New()
+	pr := &progressReader{r: brc, size: size, every: func(n, total int64) { send(0, protocol.UpdateRunning, nil, n, total) }}
+	n, err := io.Copy(io.MultiWriter(f, h), pr)
+	_ = brc.Close()
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return fail(0, err)
+	}
+	send(0, protocol.UpdateDone, nil, n, n)
 
-	// verify: signature of the manifest, then the binary's checksum, before anything on disk changes
+	// verify: the signature of the manifest, then the checksum of the binary, before anything is replaced
+	begin(1)
 	m, err := update.VerifyManifest(key, mb, string(sb))
 	if err != nil {
 		return fail(1, err)
@@ -158,45 +220,23 @@ func (u *updater) Apply(ctx context.Context, version string, key *release.Key) e
 	if !ok {
 		return fail(1, fmt.Errorf("the release has no binary for %s", release.HostArch))
 	}
-	exe, err := os.Executable()
-	if err != nil {
-		return fail(1, err)
-	}
-	if r, e := filepath.EvalSymlinks(exe); e == nil {
-		exe = r
-	}
-	tmp := exe + ".linager-new"
-	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755) //nolint:gosec // executable
-	if err != nil {
-		return fail(1, err)
-	}
-	defer func() { _ = os.Remove(tmp) }()
-	brc, err := fetch(ctx, c, root+"/binary?arch="+release.HostArch, 200<<20)
-	if err != nil {
-		_ = f.Close()
-		return fail(0, err)
-	}
-	h := sha256.New()
-	n, err := io.Copy(io.MultiWriter(f, h), brc)
-	_ = brc.Close()
-	if cerr := f.Close(); err == nil {
-		err = cerr
-	}
-	if err != nil {
-		return fail(0, err)
-	}
 	if hex.EncodeToString(h.Sum(nil)) != strings.ToLower(asset.SHA256) || (asset.Size > 0 && n != asset.Size) {
 		return fail(1, errors.New("binary does not match the signed manifest"))
 	}
-	step(1, nil)
+	if err := os.Chmod(tmp, 0o755); err != nil { //nolint:gosec // the executable of the agent
+		return fail(1, err)
+	}
+	end(1)
 
 	// backup the running binary
+	begin(2)
 	if err := copyExecutable(exe, prevPath(u.dir)); err != nil {
 		return fail(2, err)
 	}
-	step(2, nil)
+	end(2)
 
 	// replace atomically, journal the update and arm the rollback timer (run by the OLD binary)
+	begin(3)
 	mk := updateMarker{From: u.version, To: version, Exe: exe, Deadline: time.Now().Add(RollbackDelay).Unix()}
 	mb2, _ := json.Marshal(mk)
 	if err := os.WriteFile(markerPath(u.dir), mb2, 0o600); err != nil {
@@ -206,13 +246,13 @@ func (u *updater) Apply(ctx context.Context, version string, key *release.Key) e
 		_ = os.Remove(markerPath(u.dir))
 		return fail(3, err)
 	}
-	if err := armRollback(u.dir, exe); err != nil {
+	if err := armRollbackFn(u.dir, exe); err != nil {
 		// without the safety net the update is not allowed to proceed
 		_ = copyExecutable(prevPath(u.dir), exe)
 		_ = os.Remove(markerPath(u.dir))
 		return fail(3, fmt.Errorf("cannot arm the rollback timer: %w", err))
 	}
-	step(3, nil)
+	end(3)
 	return nil
 }
 
@@ -237,6 +277,12 @@ func copyExecutable(src, dst string) error {
 	return os.Rename(tmp, dst)
 }
 
+// Hooks that the tests replace: the path of the running binary and the arming of the systemd timer.
+var (
+	executablePath = os.Executable
+	armRollbackFn  = armRollback
+)
+
 func armRollback(dir, exe string) error {
 	args := []string{"--unit=linager-agent-rollback", "--on-active=" + fmt.Sprint(int(RollbackDelay.Seconds())), "--description=Linager agent update rollback",
 		prevPath(dir), "agent", "rollback-update", "--data-dir", dir, "--binary", exe}
@@ -248,11 +294,12 @@ func armRollback(dir, exe string) error {
 	return nil
 }
 
-// ConfirmUpdate is called once the new agent is connected: it cancels the rollback timer.
-func ConfirmUpdate(dir string, log func(string, ...any)) {
+// ConfirmUpdate is called once the new agent is connected: it cancels the rollback timer. It reports whether
+// there was an unconfirmed update to confirm.
+func ConfirmUpdate(dir string, log func(string, ...any)) bool {
 	b, err := os.ReadFile(markerPath(dir))
 	if err != nil {
-		return
+		return false
 	}
 	var mk updateMarker
 	_ = json.Unmarshal(b, &mk)
@@ -261,6 +308,7 @@ func ConfirmUpdate(dir string, log func(string, ...any)) {
 	if log != nil {
 		log("update confirmed", "from", mk.From, "to", mk.To)
 	}
+	return true
 }
 
 // RollbackUpdate restores the previous binary when an update was never confirmed. It is executed by the
@@ -299,7 +347,7 @@ func UpdateFromServer(ctx context.Context, dir, runningVersion, version string, 
 		return errors.New("already up to date (" + runningVersion + ")")
 	}
 	u := &updater{dir: dir, version: runningVersion, emit: func(e protocol.UpdateEvent) {
-		if progress != nil && e.Error == "" {
+		if progress != nil && e.Error == "" && e.State == protocol.UpdateRunning && e.Bytes == 0 {
 			progress(fmt.Sprintf("[%d/%d] %s", e.Step, e.Total, e.ID))
 		}
 	}}
@@ -330,7 +378,7 @@ func (r *Registry) updateApplyCmd(running string) CmdFunc {
 			return nil, err
 		}
 		restartSoon()
-		r.emitUpdate(protocol.UpdateEvent{Version: p.Version, Step: 5, Total: 5, ID: "restart"})
+		r.emitUpdate(protocol.UpdateEvent{Version: p.Version, Step: 5, Total: 5, ID: "restart", State: protocol.UpdateRunning})
 		return map[string]any{"ok": true, "restarting": true}, nil
 	}
 }

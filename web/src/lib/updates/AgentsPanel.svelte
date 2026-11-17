@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { AgentUpdateRow, RolloutMode, UpdatesInfo } from '../../api';
   import Fold from '../ui/Fold.svelte';
+  import AgentSteps from './AgentSteps.svelte';
   import Select from '../ui/Select.svelte';
   import { tr as trans } from '../../i18n';
 
@@ -14,13 +15,15 @@
   } = $props();
 
   const APPLICABLE = new Set<AgentUpdateRow['status']>(['available', 'unsupported', 'failed', 'rollback']);
-  const TOTAL_STEPS = 5;
+  const TOTAL_STEPS = 8;
 
   let mode = $state<RolloutMode>('first_then_rest');
   let stopOnError = $state(true);
   /** Checkbox state by agent id. Kept apart from `info`, so refreshes never reset it. */
   let picked = $state<Record<string, boolean>>({});
   let submitting = $state(false);
+  /** Agents whose list of stages is open. Kept apart from `info`, so refreshes never close it. */
+  let opened = $state<Record<string, boolean>>({});
 
   const applicable = $derived(info.agents.filter((agent) => APPLICABLE.has(agent.status)));
   const selectedIds = $derived(applicable.filter((agent) => picked[agent.id]).map((agent) => agent.id));
@@ -80,6 +83,19 @@
     }
   }
 </script>
+
+{#snippet stages(agent: AgentUpdateRow)}
+  <button
+    class="more"
+    type="button"
+    aria-expanded={Boolean(opened[agent.id])}
+    onclick={() => (opened = { ...opened, [agent.id]: !opened[agent.id] })}>
+    {opened[agent.id] ? $trans('upd.agstep.hide') : $trans('upd.agstep.show')}
+  </button>
+  {#if opened[agent.id] && agent.steps}
+    <div class="stages"><AgentSteps steps={agent.steps} nowMs={agent.now_ms} rollbackAt={agent.rollback_at} /></div>
+  {/if}
+{/snippet}
 
 <Fold title={$trans('upd.agents.title')} {meta} tone={metaTone}>
   <p class="upd-intro">
@@ -199,8 +215,14 @@
                   {/each}
                 </div>
                 {#if agent.message}<div class="upd-sub">{agent.message}</div>{/if}
+                {#if agent.steps?.length}
+                  {@render stages(agent)}
+                {/if}
               {:else if agent.status === 'rollback' || agent.status === 'failed'}
                 <span class="upd-err-inline">{agent.message ?? ''}</span>
+                {#if agent.steps?.length}
+                  {@render stages(agent)}
+                {/if}
               {:else if agent.status === 'queued' && agent.message}
                 <span class="upd-sub">{agent.message}</span>
               {:else}
@@ -222,3 +244,21 @@
     </table>
   </div>
 </Fold>
+
+<style>
+  .more {
+    margin: 4px 0 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    font-size: 12px;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .stages {
+    margin-top: 6px;
+  }
+</style>

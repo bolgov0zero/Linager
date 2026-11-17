@@ -454,6 +454,17 @@ func (s *Store) UpdateRuns(ctx context.Context, limit int) ([]UpdateRun, error) 
 	return out, rows.Err()
 }
 
+// UpdateStep is one stage of an agent update (download, verify, restart, reconnect...).
+type UpdateStep struct {
+	ID         string `json:"id"`
+	State      string `json:"state"` // pending, running, done or failed
+	StartedMS  int64  `json:"started_ms,omitempty"`
+	FinishedMS int64  `json:"finished_ms,omitempty"`
+	Detail     string `json:"detail,omitempty"`
+	Bytes      int64  `json:"bytes,omitempty"`
+	Size       int64  `json:"size,omitempty"`
+}
+
 // AgentUpdate is the update state of one agent.
 type AgentUpdate struct {
 	ServerID  string
@@ -463,27 +474,58 @@ type AgentUpdate struct {
 	Message   string
 	RunID     string
 	UpdatedAt time.Time
+	// Steps is the timeline of the run. SetAgentUpdate keeps the stored one when it is nil and clears it when
+	// it is empty but not nil.
+	Steps []UpdateStep
 }
 
 // SetAgentUpdate inserts or updates the state of an agent's update.
 func (s *Store) SetAgentUpdate(ctx context.Context, u AgentUpdate) error {
-	_, err := s.Pool.Exec(ctx, `INSERT INTO agent_updates (server_id, version, status, step, message, run_id) VALUES ($1,$2,$3,$4,$5,$6)
+	var steps any
+	if u.Steps != nil {
+		b, err := json.Marshal(u.Steps)
+		if err != nil {
+			return err
+		}
+		steps = string(b)
+	}
+	_, err := s.Pool.Exec(ctx, `INSERT INTO agent_updates (server_id, version, status, step, message, run_id, steps)
+		VALUES ($1,$2,$3,$4,$5,$6, COALESCE($7::jsonb, '[]'::jsonb))
 		ON CONFLICT (server_id) DO UPDATE SET version=EXCLUDED.version, status=EXCLUDED.status, step=EXCLUDED.step,
-		message=EXCLUDED.message, run_id=EXCLUDED.run_id, updated_at=now()`, u.ServerID, u.Version, u.Status, u.Step, u.Message, u.RunID)
+		message=EXCLUDED.message, run_id=EXCLUDED.run_id, steps=COALESCE($7::jsonb, agent_updates.steps), updated_at=now()`,
+		u.ServerID, u.Version, u.Status, u.Step, u.Message, u.RunID, steps)
 	return err
+}
+
+const agentUpdateCols = `server_id::text, version, status, step, message, run_id, updated_at, steps`
+
+func scanAgentUpdate(r pgx.Row) (AgentUpdate, error) {
+	var u AgentUpdate
+	var raw []byte
+	if err := r.Scan(&u.ServerID, &u.Version, &u.Status, &u.Step, &u.Message, &u.RunID, &u.UpdatedAt, &raw); err != nil {
+		return u, err
+	}
+	_ = json.Unmarshal(raw, &u.Steps)
+	return u, nil
+}
+
+// AgentUpdate returns the update row of one agent.
+func (s *Store) AgentUpdate(ctx context.Context, serverID string) (AgentUpdate, bool) {
+	u, err := scanAgentUpdate(s.Pool.QueryRow(ctx, `SELECT `+agentUpdateCols+` FROM agent_updates WHERE server_id=$1`, serverID))
+	return u, err == nil
 }
 
 // AgentUpdates lists all agent update rows.
 func (s *Store) AgentUpdates(ctx context.Context) (map[string]AgentUpdate, error) {
-	rows, err := s.Pool.Query(ctx, `SELECT server_id::text, version, status, step, message, run_id, updated_at FROM agent_updates`)
+	rows, err := s.Pool.Query(ctx, `SELECT `+agentUpdateCols+` FROM agent_updates`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	out := map[string]AgentUpdate{}
 	for rows.Next() {
-		var u AgentUpdate
-		if err := rows.Scan(&u.ServerID, &u.Version, &u.Status, &u.Step, &u.Message, &u.RunID, &u.UpdatedAt); err != nil {
+		u, err := scanAgentUpdate(rows)
+		if err != nil {
 			return nil, err
 		}
 		out[u.ServerID] = u

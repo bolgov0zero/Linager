@@ -74,10 +74,13 @@ func Run(ctx context.Context, cfg *config.Server, static fs.FS, log *slog.Logger
 	hub := NewHub()
 	live := NewLive()
 	metrics := NewMetrics(db, live, log)
-	hub.OnChange = func(id string, online bool) { go metrics.Status(ctx, id, online) }
 	updates, err := NewUpdates(db, hub, cfg, log)
 	if err != nil {
 		return err
+	}
+	hub.OnChange = func(id string, online bool) {
+		go metrics.Status(ctx, id, online)
+		go updates.AgentOnline(ctx, id, online)
 	}
 	go updates.Run(ctx)
 	admin, err := NewAdmin(db, keys, hub, live, metrics, updates, cfg, static, log)

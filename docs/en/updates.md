@@ -22,6 +22,22 @@ Agents take the release **from the server** (client port, mTLS), so the server m
 
 The agent verifies the signature and checksum, keeps the previous binary (`/var/lib/linager-agent/linager.prev`), replaces `/usr/local/bin/linager`, starts a **rollback timer** (`systemd-run`, runs the previous binary), and restarts. The new version confirms itself with its first successful connection to the server and cancels the timer. **If there is no connection, the previous binary is restored automatically after about 70 s.** Manually on the client host: `sudo linager agent update`, `linager agent status`.
 
+### Stages of an agent update
+The progress is shown as a list of stages: on the server page (in a frame under the header) and on the Updates page, in the row of the agent (the "Stages" button). Every stage has a mark, a time and details:
+
+| Stage | What it shows |
+|---|---|
+| Download | the size (`7.2 MB of 18.4 MB`) |
+| Signature and checksum | |
+| Backup | |
+| Replace the file, arm the rollback | the rollback countdown starts here |
+| Restart the service | |
+| Agent offline | how many seconds the agent has been gone and how long is left before the rollback |
+| New version connected | the version the agent came back with |
+| Confirmation | the new version cancelled the rollback timer |
+
+The first five stages are reported by the agent itself; the server sees the last three: the connection dropping, the hello of the new version and the "confirmed" event. So the restart is no longer a black box. When the agent comes back with its old version, the "connected" stage is marked as failed, and an error at any stage shows where and why it stopped (the error text under the stage). The list is kept for the current run only: it disappears after a success and stays after an error or a rollback until the next run. An agent older than this version does not report the beginning and the end of its stages: its list is built from its events, and the last three stages are fully visible.
+
 ## Channels and release source
 The `stable` channel (tags `vX.Y.Z`) or `beta` channel (`vX.Y.Z-beta.N`) is selected in the admin panel. In `/etc/linager/server.yaml`:
 

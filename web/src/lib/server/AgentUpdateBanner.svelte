@@ -3,6 +3,7 @@
   import { api, type AgentUpdateRow, type ServerDetail } from '../../api';
   import { tr } from '../../i18n';
   import Modal from '../Modal.svelte';
+  import AgentSteps from '../updates/AgentSteps.svelte';
   import { showToast } from '../toast';
   import { errorText } from '../updates/format';
 
@@ -10,7 +11,7 @@
 
   const FAST_MS = 2000;
   const SLOW_MS = 15000;
-  const TOTAL_STEPS = 5;
+  const TOTAL_STEPS = 8;
 
   let row = $state<AgentUpdateRow | null>(null);
   let confirmOpen = $state(false);
@@ -111,12 +112,18 @@
           name: row.step_id ? $tr(`upd.agstep.${row.step_id}`) : '',
         })}{#if row.message}{' · ' + row.message}{/if}
       </span>
+      {#if row.steps?.length}
+        <div class="stages"><AgentSteps steps={row.steps} nowMs={row.now_ms} rollbackAt={row.rollback_at} /></div>
+      {/if}
     {:else if row.status === 'queued'}
       <span class="msg">{$tr('upd.ag.queued')}{#if row.message}: {row.message}{:else if !row.online}: {$tr('upd.ag.waiting')}{/if}</span>
     {:else}
       <span class="msg">
         {row.status === 'rollback' ? $tr('upd.ag.rollback') : $tr('upd.ag.failed')}{#if row.message}: {row.message}{/if}
       </span>
+      {#if row.steps?.length}
+        <div class="stages"><AgentSteps steps={row.steps} nowMs={row.now_ms} /></div>
+      {/if}
       {#if canUpdate || server.online}
         <button class="btn sm" type="button" disabled={submitting} onclick={() => (confirmOpen = true)}>
           {$tr('srv.agent.update')}
@@ -165,6 +172,12 @@
 
   .text {
     margin: 0;
+  }
+
+  /* The stages sit under the message, across the whole banner. */
+  .stages {
+    flex: 1 1 100%;
+    padding-top: 4px;
   }
 
   /* Phones: a card with the button across its full width. */

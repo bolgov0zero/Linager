@@ -51,6 +51,8 @@ type Updates struct {
 	checkingCh string
 	ro         *rollout
 	roSaved    string // last persisted rollout state, to skip identical writes
+	// smu serializes the changes of the timelines of agent updates (events, hello, disconnects, the watchdog).
+	smu sync.Mutex
 }
 
 // rolloutSetting keeps the running rollout in the settings table, so a server restart (including the
@@ -361,9 +363,13 @@ type AgentRow struct {
 	StepsTotal int    `json:"steps_total"`
 	StepID     string `json:"step_id,omitempty"`
 	Message    string `json:"message,omitempty"`
+	// Steps is the timeline of the run that is going on or ended badly; RollbackAt (Unix time) is when the
+	// agent restores its old binary if the new one has not confirmed itself by then.
+	Steps      []store.UpdateStep `json:"steps,omitempty"`
+	RollbackAt int64              `json:"rollback_at,omitempty"`
+	// NowMS is the server clock; the stage times are measured by it, not by the clock of the browser.
+	NowMS int64 `json:"now_ms,omitempty"`
 }
-
-var stepIDs = []string{"download", "verify", "backup", "replace", "restart"}
 
 func (u *Updates) agentRows(ctx context.Context) ([]AgentRow, int) {
 	servers, _ := u.DB.Servers(ctx)
@@ -375,17 +381,18 @@ func (u *Updates) agentRows(ctx context.Context) ([]AgentRow, int) {
 	out := make([]AgentRow, 0, len(servers))
 	count := 0
 	for _, s := range servers {
-		r := AgentRow{ID: s.ID, Name: s.Name, OS: s.OS, Address: s.Address, Version: s.AgentVersion, Online: u.Hub.Online(s.ID), StepsTotal: len(stepIDs)}
+		r := AgentRow{ID: s.ID, Name: s.Name, OS: s.OS, Address: s.Address, Version: s.AgentVersion, Online: u.Hub.Online(s.ID), StepsTotal: len(stageIDs)}
 		au, has := rows[s.ID]
 		switch {
 		case has && au.Status == "updating":
-			r.Status, r.Target, r.Step, r.Message = "updating", au.Version, au.Step, au.Message
+			r.Status, r.Target, r.Step, r.Message = "updating", au.Version, currentStep(normalize(au.Steps)), au.Message
+			r.Steps, r.RollbackAt = normalize(au.Steps), rollbackAt(au.Steps)
 		case has && au.Status == "queued":
 			r.Status, r.Target = "queued", au.Version
 		case has && au.Status == "rolled_back":
-			r.Status, r.Target, r.Message = "rollback", au.Version, au.Message
+			r.Status, r.Target, r.Message, r.Steps = "rollback", au.Version, au.Message, au.Steps
 		case has && au.Status == "failed":
-			r.Status, r.Target, r.Message = "failed", au.Version, au.Message
+			r.Status, r.Target, r.Message, r.Steps = "failed", au.Version, au.Message, au.Steps
 		default:
 			r.Status = "current"
 			if release.Newer(version.Version, s.AgentVersion) {
@@ -396,8 +403,11 @@ func (u *Updates) agentRows(ctx context.Context) ([]AgentRow, int) {
 			}
 			r.Target = version.Version
 		}
-		if r.Step >= 1 && r.Step <= len(stepIDs) {
-			r.StepID = stepIDs[r.Step-1]
+		if r.Step >= 1 && r.Step <= len(stageIDs) {
+			r.StepID = stageIDs[r.Step-1]
+		}
+		if len(r.Steps) > 0 {
+			r.NowMS = time.Now().UnixMilli()
 		}
 		if r.Status == "available" || r.Status == "unsupported" {
 			count++
@@ -455,7 +465,7 @@ func (u *Updates) StartRollout(ctx context.Context, req RolloutRequest) (int, er
 	u.ro = &rollout{mode: mode, stopOnError: req.StopOnError, version: version.Version, order: order, started: map[string]bool{}, state: "running"}
 	u.mu.Unlock()
 	for _, id := range order {
-		_ = u.DB.SetAgentUpdate(ctx, store.AgentUpdate{ServerID: id, Version: version.Version, Status: "queued"})
+		_ = u.DB.SetAgentUpdate(ctx, store.AgentUpdate{ServerID: id, Version: version.Version, Status: "queued", Steps: []store.UpdateStep{}})
 	}
 	u.pump(ctx)
 	return len(order), nil
@@ -561,7 +571,7 @@ func (u *Updates) finishRollout(ctx context.Context) {
 // dispatch sends the update command to one agent.
 func (u *Updates) dispatch(ctx context.Context, id string) {
 	ctx = context.WithoutCancel(ctx)
-	_ = u.DB.SetAgentUpdate(ctx, store.AgentUpdate{ServerID: id, Version: version.Version, Status: "updating", Step: 1})
+	_ = u.DB.SetAgentUpdate(ctx, store.AgentUpdate{ServerID: id, Version: version.Version, Status: "updating", Step: 1, Steps: newTimeline()})
 	_, err := u.Hub.Call(ctx, id, "update", "apply", map[string]string{"version": version.Version}, true, 4*time.Minute)
 	if err != nil {
 		var ae *AgentError
@@ -574,7 +584,7 @@ func (u *Updates) dispatch(ctx context.Context, id string) {
 }
 
 func (u *Updates) fail(ctx context.Context, id, msg string) {
-	_ = u.DB.SetAgentUpdate(ctx, store.AgentUpdate{ServerID: id, Version: version.Version, Status: "failed", Message: msg})
+	u.endRun(ctx, id, "failed", msg, func(st []store.UpdateStep) []store.UpdateStep { return failRunning(st, time.Now().UnixMilli(), msg) })
 	u.mu.Lock()
 	ro := u.ro
 	if ro != nil && ro.state == "running" {
@@ -592,6 +602,23 @@ func (u *Updates) fail(ctx context.Context, id, msg string) {
 	u.pump(ctx)
 }
 
+// endRun stores the end of a run that did not succeed, with the timeline marked where it broke.
+func (u *Updates) endRun(ctx context.Context, id, status, msg string, mark func([]store.UpdateStep) []store.UpdateStep) {
+	u.smu.Lock()
+	defer u.smu.Unlock()
+	au, ok := u.DB.AgentUpdate(ctx, id)
+	if !ok {
+		au = store.AgentUpdate{ServerID: id, Version: version.Version}
+	}
+	au.Status, au.Message = status, msg
+	if au.Version == "" {
+		au.Version = version.Version
+	}
+	au.Steps = mark(normalize(au.Steps))
+	au.Step = currentStep(au.Steps)
+	_ = u.DB.SetAgentUpdate(ctx, au)
+}
+
 func (u *Updates) cancelQueued(ctx context.Context) {
 	rows, _ := u.DB.AgentUpdates(ctx)
 	for id, r := range rows {
@@ -601,31 +628,87 @@ func (u *Updates) cancelQueued(ctx context.Context) {
 	}
 }
 
-// AgentEvent handles progress messages from an updating agent.
-func (u *Updates) AgentEvent(ctx context.Context, id string, e protocol.UpdateEvent) {
-	if e.Error != "" {
-		u.fail(ctx, id, e.Error)
+// timeline changes the timeline of a run that is going on; f returns false when nothing changed.
+func (u *Updates) timeline(ctx context.Context, id string, f func(au *store.AgentUpdate) bool) {
+	u.smu.Lock()
+	defer u.smu.Unlock()
+	au, ok := u.DB.AgentUpdate(ctx, id)
+	if !ok || au.Status != "updating" {
 		return
 	}
-	_ = u.DB.SetAgentUpdate(ctx, store.AgentUpdate{ServerID: id, Version: e.Version, Status: "updating", Step: e.Step})
+	au.Steps = normalize(au.Steps)
+	if !f(&au) {
+		return
+	}
+	au.Step = currentStep(au.Steps)
+	_ = u.DB.SetAgentUpdate(ctx, au)
+}
+
+// AgentEvent handles progress messages from an updating agent.
+func (u *Updates) AgentEvent(ctx context.Context, id string, e protocol.UpdateEvent) {
+	now := time.Now().UnixMilli()
+	u.timeline(ctx, id, func(au *store.AgentUpdate) bool {
+		au.Steps = applyEvent(au.Steps, e, now)
+		return true
+	})
+	switch {
+	case e.Error != "":
+		u.fail(ctx, id, e.Error)
+	case e.ID == "confirm" && e.State == protocol.UpdateDone:
+		u.finish(ctx, id)
+	}
+}
+
+// AgentOnline is called when an agent connects or disconnects; a drop during an update is a stage of it.
+func (u *Updates) AgentOnline(ctx context.Context, id string, online bool) {
+	if online {
+		return
+	}
+	u.timeline(ctx, id, func(au *store.AgentUpdate) bool {
+		var changed bool
+		au.Steps, changed = markOffline(au.Steps, time.Now().UnixMilli())
+		return changed
+	})
+}
+
+// finish ends a run that succeeded: the row goes away and the rollout counts the agent as done.
+func (u *Updates) finish(ctx context.Context, id string) {
+	u.smu.Lock()
+	au, ok := u.DB.AgentUpdate(ctx, id)
+	if !ok || au.Status != "updating" {
+		u.smu.Unlock()
+		return
+	}
+	_ = u.DB.DeleteAgentUpdate(ctx, id)
+	u.smu.Unlock()
+	u.mu.Lock()
+	if u.ro != nil && u.ro.state == "running" {
+		u.ro.ok++
+		if u.ro.mode == ModeFirstRest && u.ro.first == id {
+			u.ro.firstDone = true
+		}
+	}
+	u.mu.Unlock()
+	u.pump(ctx)
 }
 
 // AgentHello is called when an agent has connected and reported its version.
 func (u *Updates) AgentHello(ctx context.Context, id, agentVersion string) {
-	rows, _ := u.DB.AgentUpdates(ctx)
-	if r, ok := rows[id]; ok && r.Status == "updating" {
+	if r, ok := u.DB.AgentUpdate(ctx, id); ok && r.Status == "updating" {
+		now := time.Now().UnixMilli()
 		switch {
 		case !release.Newer(r.Version, agentVersion): // agent runs the target version (or newer)
-			_ = u.DB.DeleteAgentUpdate(ctx, id)
-			u.mu.Lock()
-			if u.ro != nil && u.ro.state == "running" {
-				u.ro.ok++
-				if u.ro.mode == ModeFirstRest && u.ro.first == id {
-					u.ro.firstDone = true
-				}
-			}
-			u.mu.Unlock()
-		case r.Step >= len(stepIDs): // restarted but still the old version: the agent rolled itself back
+			// it still has to confirm itself; finish() runs on its event or, for an agent that does not send
+			// one, when the watchdog sees the grace period over
+			u.timeline(ctx, id, func(au *store.AgentUpdate) bool {
+				au.Steps = markReconnect(au.Steps, now, agentVersion)
+				return true
+			})
+		case restartReached(r.Steps): // restarted but still the old version: the agent rolled itself back
+			u.timeline(ctx, id, func(au *store.AgentUpdate) bool {
+				au.Steps = markOldVersionBack(au.Steps, now, agentVersion)
+				return true
+			})
 			u.markRolledBack(ctx, id, r.Version)
 		}
 	}
@@ -633,7 +716,8 @@ func (u *Updates) AgentHello(ctx context.Context, id, agentVersion string) {
 }
 
 func (u *Updates) markRolledBack(ctx context.Context, id, ver string) {
-	_ = u.DB.SetAgentUpdate(ctx, store.AgentUpdate{ServerID: id, Version: ver, Status: "rolled_back", Message: "agent did not reconnect in time and rolled back"})
+	const msg = "agent did not reconnect in time and rolled back"
+	u.endRun(ctx, id, "rolled_back", msg, func(st []store.UpdateStep) []store.UpdateStep { return failRunning(st, time.Now().UnixMilli(), msg) })
 	u.mu.Lock()
 	if u.ro != nil && u.ro.state == "running" {
 		u.ro.rolled++
@@ -650,6 +734,24 @@ func (u *Updates) markRolledBack(ctx context.Context, id, ver string) {
 	u.persistRollout(ctx)
 }
 
+// settle looks at the runs that are going on: an agent that reconnected but never confirmed is counted as done
+// after the grace period, one that went silent is reported as rolled back.
+func (u *Updates) settle(ctx context.Context) {
+	rows, _ := u.DB.AgentUpdates(ctx)
+	for id, r := range rows {
+		if r.Status != "updating" {
+			continue
+		}
+		st := normalize(r.Steps)
+		switch {
+		case st[stageConfirm].State == "running" && time.Since(time.UnixMilli(st[stageConfirm].StartedMS)) > confirmGrace:
+			u.finish(ctx, id)
+		case time.Since(r.UpdatedAt) > agentUpdateTTL:
+			u.markRolledBack(ctx, id, r.Version)
+		}
+	}
+}
+
 // Run watches for stuck updates until ctx ends.
 func (u *Updates) Run(ctx context.Context) {
 	t := time.NewTicker(5 * time.Second)
@@ -664,12 +766,7 @@ func (u *Updates) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			rows, _ := u.DB.AgentUpdates(ctx)
-			for id, r := range rows {
-				if r.Status == "updating" && time.Since(r.UpdatedAt) > agentUpdateTTL {
-					u.markRolledBack(ctx, id, r.Version)
-				}
-			}
+			u.settle(ctx)
 			u.pump(ctx)
 			if time.Since(lastCheck) > 6*time.Hour {
 				lastCheck = time.Now()
