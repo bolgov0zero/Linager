@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.9
+
+- Fix: in the terminal window the buttons "User" and "Snippets" were taller than the other buttons; they are now the size of the buttons in the window of the file editor.
+- Fix: the side menu of a server stays in place under the top bar while the page scrolls, and it is never taller than the free part of the screen, so it no longer makes the page scroll by itself when the panel on the right is short. A long list of tabs scrolls inside the menu, the footer with the agent version stays. On a narrow screen the menu is still the dropdown it was.
+- Change: the one-off cleanup that 0.2.8 added for the rollback is removed: the migration `00017`, the cleanup of `agent.yaml` and `gateway.json` when an agent starts, the line in the dashboard that forgot the stored link style, their tests and the section 12o of the architecture. A database that is already at version 17 opens as before (checked: a database at version 17 opens with migrations that end at `00013`). An installation that went from 0.2.4 to 0.2.7 straight to this release keeps the old tables and the `gateway:` line; they are not used. The next new migration is `00018`.
+- Docs: the mockups of the server page show an address from the private range instead of a public one.
 ## 0.2.8
 
 - Change: **the Scheme view of the dashboard (0.2.4, 0.2.5) and the Gateway module (0.2.6, 0.2.7) are taken out again.** The project is back to the functionality of 0.2.3: the code, the tab, the module, the tests and the docs of those releases are gone (their entries below stay as history). Servers, metrics, users, notes and the ways to add a server are as they were in 0.2.3.

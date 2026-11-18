@@ -43,7 +43,6 @@
 
   function readView(): View {
     try {
-      localStorage.removeItem('linager.dashboard.scheme.links'); // the setting of a view that was taken out again (0.2.4 to 0.2.7)
       const value = localStorage.getItem(VIEW_KEY);
       if (value === 'cards') return value;
       if (value === 'map' || value === 'rows') return 'map'; // the old rows view was replaced by the map

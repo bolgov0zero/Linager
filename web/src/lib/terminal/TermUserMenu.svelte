@@ -85,7 +85,7 @@
 
 <button
   bind:this={button}
-  class="btn um-btn"
+  class="btn sm um-btn"
   type="button"
   aria-haspopup="menu"
   aria-expanded={open}

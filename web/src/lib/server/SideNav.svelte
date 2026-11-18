@@ -82,6 +82,49 @@
     return null;
   }
 
+  // The menu stays in place while the page scrolls: it sticks right under the pinned top bar and is never taller than
+  // the free part of the screen at the top of the page, so it does not make the page scroll by itself; a long list of
+  // tabs scrolls inside the menu. On narrow screens the menu is a plain dropdown and none of this applies.
+  const PAGE_GAP = 16;
+  const PAGE_BOTTOM = 28;
+  const MIN_HEIGHT = 240;
+
+  let side = $state<HTMLElement | null>(null);
+
+  $effect(() => {
+    const el = side;
+    const row = el?.parentElement;
+    if (!el || !row) return;
+    const wide = window.matchMedia('(min-width: 861px)');
+
+    const measure = () => {
+      if (!wide.matches) {
+        el.style.removeProperty('--side-top');
+        el.style.removeProperty('--side-max');
+        return;
+      }
+      const bar = document.querySelector<HTMLElement>('.top');
+      const stick = (bar?.offsetHeight ?? 0) + PAGE_GAP;
+      const rowTop = row.getBoundingClientRect().top + window.scrollY;
+      el.style.setProperty('--side-top', `${stick}px`);
+      el.style.setProperty('--side-max', `${Math.max(MIN_HEIGHT, Math.floor(window.innerHeight - rowTop - PAGE_BOTTOM))}px`);
+    };
+
+    measure();
+    const watch = new ResizeObserver(measure);
+    watch.observe(document.body);
+    const bar = document.querySelector('.top');
+    if (bar) watch.observe(bar);
+    if (row.parentElement) watch.observe(row.parentElement);
+    window.addEventListener('resize', measure);
+    wide.addEventListener('change', measure);
+    return () => {
+      watch.disconnect();
+      window.removeEventListener('resize', measure);
+      wide.removeEventListener('change', measure);
+    };
+  });
+
   // Up and Down move between the tabs of the whole menu.
   function onkeydown(e: KeyboardEvent) {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
@@ -104,7 +147,7 @@
   </svg>
 {/snippet}
 
-<aside class="side" class:rail class:open={menuOpen}>
+<aside class="side" class:rail class:open={menuOpen} bind:this={side}>
   <button class="menu-btn" type="button" aria-expanded={menuOpen} onclick={() => (menuOpen = !menuOpen)}>
     <span class="cur">{currentGroup ? $tr(currentGroup.key) : ''} · {currentTab ? $tr(currentTab.key) : ''}</span>
     <svg viewBox="0 0 8 8" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M0 2h8v2H6v2H4V4H2V2z" /></svg>
@@ -171,12 +214,12 @@
 <style>
   .side {
     position: sticky;
-    top: 16px;
+    top: var(--side-top, 16px);
     width: 236px;
     flex: none;
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - 32px);
+    max-height: var(--side-max, calc(100vh - 32px));
     background: var(--surface);
     border: 2px solid var(--line);
     box-shadow: 4px 4px 0 var(--shade);
