@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"os"
 	"os/exec"
 	"regexp"
 	"sync"
@@ -153,7 +152,7 @@ func winUpdateStream(ctx context.Context, raw json.RawMessage, sio *StreamIO) er
 	ids, _ := json.Marshal(p.IDs)
 	cmd := exec.CommandContext(context.WithoutCancel(ctx), powerShellPath(), "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", //nolint:gosec // fixed binary, constant script text
 		"-EncodedCommand", encodePowerShell(psPrelude+updateInstallScript))
-	cmd.Env = append(os.Environ(), "LINAGER_IDS="+string(ids))
+	cmd.Env = append(psEnv(), "LINAGER_IDS="+string(ids))
 	err := pipeCommand(cmd, sio)
 	go refreshUpdateCounts(context.Background())
 	return err

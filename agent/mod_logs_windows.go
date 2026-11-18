@@ -76,7 +76,7 @@ func logsStream(ctx context.Context, raw json.RawMessage, sio *StreamIO) error {
 	logs, provider, level := eventQuery(p)
 	cmd := exec.CommandContext(ctx, powerShellPath(), "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", //nolint:gosec // fixed binary, the script is a constant
 		"-EncodedCommand", encodePowerShell(eventScript))
-	cmd.Env = append(os.Environ(),
+	cmd.Env = append(psEnv(),
 		"LINAGER_LOGS="+strings.Join(logs, "|"), "LINAGER_PROVIDER="+provider,
 		"LINAGER_LEVEL="+strconv.Itoa(level), "LINAGER_LINES="+strconv.Itoa(n))
 	return pipeCommand(cmd, sio)
