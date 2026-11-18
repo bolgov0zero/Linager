@@ -1,8 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
-- Change: a new host whose clock differs from the server's by more than two minutes is refused with a clear message ("the clock of this host differs from the server's by ...: set the time and the time zone") instead of "bad signature".
+The first stable release with the **Windows agent** (beta feature, see `docs/en/windows.md`). It gathers everything of 0.3.0-beta.1 to beta.15 below; there is no database migration, a server and its Linux agents update as usual.
+
+- New (beta): the agent for Windows x64 (10/11, Server 2016 and newer) as a Windows service with an MSI package: metrics, services, processes, event log, terminal (ConPTY), files, disk, users, Windows Update, network settings with a rollback, reboot, and a **remote desktop in the browser** (RDP through the panel, no extra software). The agent updates itself from the panel; the dashboard cards and the map tiles show a Linux or Windows badge.
+- New: install of a Windows agent by a link, one PowerShell command (the panel gives a command for the outside address and one for the local network); the server has a second ECDSA certificate for Windows clients, which cannot verify Ed25519.
+- Fix: releases with a label such as `beta.11` are compared by number (they were taken for older than `beta.9`).
+- Fix: the external install link takes the site address, not the bare host name of the server; the local one prefers an IP address.
+- Change: a new host whose clock differs from the server's by more than two minutes is refused with a clear message instead of "bad signature". **Set the time and the time zone of a new computer before the install.**
 
 ## 0.3.0-beta.15
 
