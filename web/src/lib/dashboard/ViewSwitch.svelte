@@ -24,7 +24,7 @@
 <style>
   .seg {
     display: flex;
-    gap: 6px;
+    gap: 5px;
   }
 
   .ic {

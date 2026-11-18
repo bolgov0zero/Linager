@@ -416,7 +416,7 @@
     <span class="pc-l2 ihint mono">{mainAddr(iface)} · {trafficText(iface)}</span>
   </span>
   {#if !fixedOpen}
-    <span class="chev" class:up={open}><PixIcon name="chev" size={20} /></span>
+    <span class="chev" class:up={open}><PixIcon name="chev" /></span>
   {/if}
 {/snippet}
 
@@ -441,7 +441,7 @@
     </span>
   {/if}
   {#if !fixedOpen}
-    <span class="chev" class:up={open}><PixIcon name="chev" size={20} /></span>
+    <span class="chev" class:up={open}><PixIcon name="chev" /></span>
   {/if}
 {/snippet}
 
@@ -988,26 +988,26 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 7px;
   }
 
   h2 {
     margin: 0;
-    font-size: 18px;
+    font-size: 16px;
     line-height: 1.1;
   }
 
   h3 {
     margin: 0;
     font-variation-settings: "ELSH" 40;
-    font-size: 20px;
+    font-size: 18px;
     line-height: 1.1;
     overflow-wrap: anywhere;
   }
 
   .banner {
     margin: 0;
-    padding: 8px 12px;
+    padding: 7px 11px;
     border: 2px solid var(--warn);
     color: var(--warn);
   }
@@ -1016,17 +1016,17 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 11px;
   }
 
   .pending {
     background: var(--surface);
     border: 2px solid var(--warn);
     box-shadow: 4px 4px 0 var(--shade);
-    padding: 16px;
+    padding: 14px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
   }
 
   .pending h2 {
@@ -1037,19 +1037,19 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 16px 24px;
+    gap: 14px 22px;
   }
 
   .countdown {
     display: flex;
     align-items: baseline;
-    gap: 8px;
-    min-width: 120px;
+    gap: 7px;
+    min-width: 108px;
   }
 
   .count {
     font-family: var(--font-display);
-    font-size: 64px;
+    font-size: 58px;
     line-height: 1;
     color: var(--warn);
     font-variant-numeric: tabular-nums;
@@ -1074,7 +1074,7 @@
 
   .changes {
     margin: 0;
-    padding-left: 18px;
+    padding-left: 16px;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -1084,21 +1084,21 @@
   .ifaces {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
   }
 
   .icol {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
   }
 
   /* Wide screen: the primary interface is a column of its own, the other interfaces are a column of folded rows beside it. */
   .ifaces.two {
     display: grid;
-    grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
-    gap: 12px;
+    grid-template-columns: minmax(0, 306px) minmax(0, 1fr);
+    gap: 11px;
     align-items: start;
   }
 
@@ -1123,13 +1123,13 @@
   .badges {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 5px;
   }
 
   .iface {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
   }
 
@@ -1145,14 +1145,14 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
   }
 
   /* A collapsed interface is one clickable line; the open card keeps the same header. */
   button.iface-head {
     flex-wrap: nowrap;
     width: 100%;
-    min-height: 32px;
+    min-height: 29px;
     padding: 0;
     background: none;
     color: var(--ink);
@@ -1167,9 +1167,9 @@
     flex: 1;
     flex-wrap: wrap;
     justify-content: flex-end;
-    gap: 4px 18px;
+    gap: 4px 16px;
     min-width: 0;
-    margin-left: 6px;
+    margin-left: 5px;
   }
 
   .sum-ip {
@@ -1193,8 +1193,8 @@
     display: grid;
     place-items: center;
     flex: none;
-    width: 28px;
-    height: 28px;
+    width: 25px;
+    height: 25px;
   }
 
   .chev.up {
@@ -1205,21 +1205,21 @@
   @media (min-width: 721px) {
     .iface.open .facts {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
-      gap: 4px 28px;
+      grid-template-columns: repeat(auto-fill, minmax(min(234px, 100%), 1fr));
+      gap: 4px 25px;
     }
 
     .iface-form {
-      max-width: 640px;
+      max-width: 576px;
     }
   }
 
   .tag {
     display: inline-block;
-    padding: 0 6px;
+    padding: 0 5px;
     border: 2px solid var(--line);
     background: var(--surface);
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.5;
   }
 
@@ -1253,7 +1253,7 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
   }
 
@@ -1271,13 +1271,13 @@
 
   .iface-form {
     border-top: 2px solid var(--line);
-    padding-top: 12px;
+    padding-top: 11px;
   }
 
   .grid2 {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    gap: 11px;
   }
 
   .grid2 .wide {
@@ -1288,7 +1288,7 @@
     display: grid;
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
     align-items: start;
-    gap: 12px;
+    gap: 11px;
   }
 
   .table-wrap {
@@ -1302,7 +1302,7 @@
 
   th,
   td {
-    padding: 6px 8px;
+    padding: 5px 7px;
     text-align: left;
     border-bottom: 1px solid var(--shade);
     vertical-align: top;
@@ -1320,21 +1320,21 @@
 
   .config {
     margin: 0;
-    padding: 12px;
+    padding: 11px;
     overflow-x: auto;
     background: var(--ink);
     color: var(--surface);
     border: 2px solid var(--line);
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.5;
   }
 
   .warn-list {
     margin: 0;
-    padding-left: 18px;
+    padding-left: 16px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
     color: var(--warn);
   }
 
@@ -1345,14 +1345,14 @@
     }
 
     .count {
-      font-size: 48px;
+      font-size: 43px;
     }
   }
 
   /* Phone: expandable interface cards, row lists, pinned draft / countdown bar, full-screen config editor. */
   @media (max-width: 720px) {
     .net {
-      gap: 12px;
+      gap: 11px;
     }
 
     .iface {
@@ -1363,10 +1363,10 @@
     .ihead {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 9px;
       width: 100%;
       min-height: 56px;
-      padding: 8px 8px 8px 12px;
+      padding: 7px 7px 7px 11px;
       background: none;
       color: var(--ink);
       border: 0;
@@ -1377,7 +1377,7 @@
 
     .ihead .pc-l1 b {
       font-family: var(--font-display);
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 400;
     }
 
@@ -1389,8 +1389,8 @@
       display: grid;
       place-items: center;
       flex: none;
-      width: 36px;
-      height: 36px;
+      width: 32px;
+      height: 32px;
     }
 
     .chev.up {
@@ -1400,8 +1400,8 @@
     .ibody {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      padding: 4px 12px 12px;
+      gap: 9px;
+      padding: 4px 11px 11px;
       border-top: 2px dashed var(--seg-off);
     }
 
@@ -1410,9 +1410,9 @@
     }
 
     .fact {
-      padding: 7px 0;
+      padding: 6px 0;
       border-top: 2px dashed var(--seg-off);
-      font-size: 13px;
+      font-size: 12px;
     }
 
     .fact:first-child {
@@ -1425,7 +1425,7 @@
     }
 
     .iface-form {
-      padding-top: 10px;
+      padding-top: 9px;
     }
 
     .psec {
@@ -1436,7 +1436,7 @@
     }
 
     .psec .head h2 {
-      font-size: 18px;
+      font-size: 16px;
     }
 
     .psec .head {
@@ -1465,9 +1465,9 @@
       bottom: calc(var(--bar-h) + var(--safe-b));
       z-index: 6;
       /* The negative bottom margin cancels the 16 px page padding: at the end of the scroll the bar still lies on the tab bar. */
-      margin: 0 -12px -16px;
-      padding: 10px 12px;
-      gap: 8px;
+      margin: 0 -11px -14px;
+      padding: 9px 11px;
+      gap: 7px;
       border-width: 2px 0 0;
       box-shadow: 0 -4px 0 var(--shade);
     }
@@ -1475,7 +1475,7 @@
     .pending-body {
       flex-wrap: nowrap;
       align-items: flex-start;
-      gap: 12px;
+      gap: 11px;
     }
 
     .countdown {
@@ -1486,17 +1486,17 @@
     }
 
     .count {
-      font-size: 36px;
+      font-size: 32px;
     }
 
     .unit {
-      font-size: 11px;
+      font-size: 10px;
     }
 
     .pending-text {
       flex: 1 1 0;
-      gap: 8px;
-      font-size: 12.5px;
+      gap: 7px;
+      font-size: 11px;
     }
 
     .pending .row,
@@ -1516,15 +1516,15 @@
     }
 
     .dchanges summary {
-      min-height: 32px;
+      min-height: 29px;
       display: flex;
       align-items: center;
       cursor: pointer;
-      font-size: 12.5px;
+      font-size: 11px;
     }
 
     .dchanges {
-      font-size: 12.5px;
+      font-size: 11px;
     }
   }
 </style>

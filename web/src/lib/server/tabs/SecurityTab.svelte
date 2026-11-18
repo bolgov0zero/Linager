@@ -473,7 +473,7 @@
 {#snippet checkRow(c: Check)}
   {@const hint = hintKey(c)}
   <li class="crow">
-    <svg class="mark tone-{c.tone}" viewBox="0 0 8 8" width="20" height="20" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">
+    <svg class="mark tone-{c.tone}" viewBox="0 0 8 8" width="16" height="16" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">
       {#each MARKS[c.tone] as row, y (y)}
         {#each [...row] as cell, x (x)}
           {#if cell === '1'}<rect {x} {y} width="1" height="1" />{/if}
@@ -625,7 +625,7 @@
   .sec {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 13px;
     min-width: 0;
   }
 
@@ -633,7 +633,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 11px;
   }
 
   .head p,
@@ -644,8 +644,8 @@
   h3 {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 16px;
+    gap: 9px;
+    font-size: 14px;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -653,16 +653,16 @@
 
   .notice {
     margin: 0;
-    padding: 8px 12px;
+    padding: 7px 11px;
     border: 2px solid var(--warn);
     color: var(--warn);
   }
 
   .badge {
     display: inline-block;
-    padding: 1px 6px;
+    padding: 1px 5px;
     border: 2px solid currentColor;
-    font-size: 12px;
+    font-size: 11px;
     font-family: var(--font-body);
     letter-spacing: 0;
     text-transform: none;
@@ -688,7 +688,7 @@
   .grp {
     margin: 4px 0 -4px;
     font-family: var(--font-display);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 400;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -706,8 +706,8 @@
   .crow {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
-    padding: 9px 0;
+    gap: 11px;
+    padding: 8px 0;
     border-bottom: 1px dashed var(--seg-off);
   }
 
@@ -730,7 +730,7 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
-    gap: 2px 16px;
+    gap: 2px 14px;
   }
 
   .clabel {
@@ -752,13 +752,13 @@
     flex-wrap: wrap;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 16px 32px;
+    gap: 14px 29px;
   }
 
   .big {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 36px;
+    font-size: 32px;
     line-height: 1;
   }
 
@@ -768,11 +768,11 @@
 
   .bars {
     display: flex;
-    gap: 6px;
+    gap: 5px;
     align-items: flex-end;
-    min-width: 240px;
+    min-width: 216px;
     flex: 1 1 280px;
-    max-width: 460px;
+    max-width: 414px;
   }
 
   .bar-col {
@@ -788,7 +788,7 @@
     display: flex;
     align-items: flex-end;
     width: 100%;
-    height: 56px;
+    height: 50px;
     background: var(--seg-off);
   }
 
@@ -800,8 +800,8 @@
 
   .two {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(306px, 1fr));
+    gap: 13px;
     min-width: 0;
   }
 
@@ -810,7 +810,7 @@
   }
 
   .table-wrap.scroll {
-    max-height: 360px;
+    max-height: 324px;
     overflow-y: auto;
   }
 
@@ -820,10 +820,10 @@
   }
 
   .tbl th {
-    padding: 6px 10px;
+    padding: 5px 9px;
     text-align: left;
     font-weight: 400;
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--muted);
@@ -831,7 +831,7 @@
   }
 
   .tbl td {
-    padding: 8px 10px;
+    padding: 7px 9px;
     vertical-align: middle;
     border-bottom: 1px dashed var(--seg-off);
   }
@@ -842,7 +842,7 @@
 
   .fp {
     overflow-wrap: anywhere;
-    max-width: 320px;
+    max-width: 288px;
   }
 
   .plain {
@@ -851,7 +851,7 @@
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
   }
 
   .sess {
@@ -859,15 +859,15 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 6px 12px;
+    gap: 5px 11px;
   }
 
   .small-btn {
     display: inline-flex;
     align-items: center;
-    height: 28px;
-    padding: 0 8px;
-    font-size: 13px;
+    height: 25px;
+    padding: 0 7px;
+    font-size: 12px;
   }
 
   .all {
@@ -875,7 +875,7 @@
   }
 
   .confirm {
-    padding: 12px;
+    padding: 11px;
     border: 2px solid var(--crit);
   }
 
@@ -887,17 +887,17 @@
   .ips {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 5px;
   }
 
   .pill {
     display: inline-flex;
     align-items: center;
-    height: 28px;
-    padding: 0 10px;
+    height: 25px;
+    padding: 0 9px;
     border: 2px solid var(--crit);
     color: var(--crit);
-    font-size: 13px;
+    font-size: 12px;
     white-space: nowrap;
   }
 
@@ -910,9 +910,9 @@
   }
 
   .chip-ip {
-    padding: 1px 6px;
+    padding: 1px 5px;
     border: 2px solid var(--line);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   @media (max-width: 600px) {
@@ -937,8 +937,8 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 2px 12px;
-      padding: 8px 4px;
+      gap: 2px 11px;
+      padding: 7px 4px;
       border-bottom: 1px dashed var(--seg-off);
     }
 
@@ -955,14 +955,14 @@
   /* Phone: a summary card, the marks as rows, accordion sections. */
   @media (max-width: 720px) {
     .sec {
-      gap: 12px;
+      gap: 11px;
     }
 
     .srow {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
+      gap: 9px;
     }
 
     .smain {
@@ -982,7 +982,7 @@
     h4 {
       margin: 0;
       font-family: var(--font-display);
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 400;
       letter-spacing: 0.06em;
       text-transform: uppercase;
@@ -994,11 +994,11 @@
     }
 
     .pc-l1 .badge {
-      font-size: 11.5px;
+      font-size: 10px;
     }
 
     .pill {
-      height: 28px;
+      height: 25px;
     }
   }
 </style>

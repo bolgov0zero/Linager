@@ -131,7 +131,7 @@
   .sm-btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
   }
 
   .arrow {
@@ -145,8 +145,8 @@
   .list {
     position: fixed;
     z-index: 100001;
-    min-width: 220px;
-    max-width: min(420px, calc(100vw - 16px));
+    min-width: 198px;
+    max-width: min(378px, calc(100vw - 14px));
     margin: 0;
     padding: 4px;
     overflow-y: auto;
@@ -170,14 +170,14 @@
     background: none;
     color: inherit;
     font: inherit;
-    font-size: 13px;
+    font-size: 12px;
     cursor: pointer;
   }
 
   .run {
     flex: 1;
     min-width: 0;
-    padding: 8px 10px;
+    padding: 7px 9px;
     text-align: left;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -188,7 +188,7 @@
     flex: none;
     display: inline-flex;
     align-items: center;
-    padding: 0 10px;
+    padding: 0 9px;
     border-left: 2px solid var(--seg-off);
     color: var(--muted);
   }
@@ -203,9 +203,9 @@
   }
 
   .empty {
-    padding: 8px 10px;
+    padding: 7px 9px;
     color: var(--muted);
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .manage {
@@ -215,7 +215,7 @@
 
   .manage button {
     width: 100%;
-    padding: 8px 10px;
+    padding: 7px 9px;
     text-align: left;
     color: var(--muted);
   }
@@ -258,7 +258,7 @@
     .paste,
     .manage button {
       min-height: 50px;
-      font-size: 15px;
+      font-size: 14px;
     }
 
     .paste {
@@ -277,7 +277,7 @@
     }
 
     .empty {
-      padding: 14px 0;
+      padding: 13px 0;
     }
   }
 </style>

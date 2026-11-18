@@ -70,7 +70,7 @@
     border-radius: 0;
     box-shadow: 2px 2px 0 var(--shade);
     font-family: var(--font-body);
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1;
     cursor: pointer;
   }
@@ -86,6 +86,6 @@
   }
 
   .k.arrow {
-    font-size: 16px;
+    font-size: 14px;
   }
 </style>

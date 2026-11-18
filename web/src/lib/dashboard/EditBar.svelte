@@ -41,7 +41,7 @@
   .edit {
     flex-wrap: nowrap;
     margin-left: auto;
-    gap: 6px;
+    gap: 5px;
   }
 
   /* Square icon buttons, as in the design's edit mode. */
@@ -49,10 +49,10 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 25px;
+    height: 25px;
     padding: 0;
-    font-size: 16px;
+    font-size: 14px;
     line-height: 1;
     box-shadow: 2px 2px 0 var(--shade);
   }

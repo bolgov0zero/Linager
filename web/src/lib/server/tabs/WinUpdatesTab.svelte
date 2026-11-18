@@ -127,22 +127,22 @@
 
 <style>
   .wrap { display: flex; flex-direction: column; gap: 12px; }
-  .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  .summary .big { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 34px; line-height: 1.1; }
-  .btns, .tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .banner { margin: 0; padding: 8px 10px; border: 2px solid var(--warn); color: var(--warn); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 11px; flex-wrap: wrap; }
+  .summary .big { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 31px; line-height: 1.1; }
+  .btns, .tools { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+  .banner { margin: 0; padding: 7px 9px; border: 2px solid var(--warn); color: var(--warn); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .table-wrap { overflow-x: auto; }
-  .tbl { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
+  .tbl { width: 100%; min-width: 576px; border-collapse: collapse; font-size: 12px; }
   .tbl th { padding: 6px 8px; text-align: left; font-family: var(--font-display); font-weight: 400; font-size: 12px; color: var(--muted); border-bottom: 2px solid var(--line); white-space: nowrap; }
   .tbl td { padding: 8px; vertical-align: middle; border-bottom: 1px dashed var(--seg-off); overflow-wrap: anywhere; }
   .num { text-align: right; }
   .nw { white-space: nowrap; }
-  .badge { display: inline-block; padding: 0 6px; border: 2px solid currentColor; font-size: 12px; line-height: 1.35; white-space: nowrap; }
+  .badge { display: inline-block; padding: 0 5px; border: 2px solid currentColor; font-size: 11px; line-height: 1.35; white-space: nowrap; }
   .tone-warn { color: var(--warn); }
   .stack { display: flex; flex-direction: column; gap: 8px; }
-  .row { display: flex; gap: 8px; align-items: center; }
+  .row { display: flex; gap: 7px; align-items: center; }
   .row.between { justify-content: space-between; }
   .err { color: var(--crit); margin: 0; }
-  .log { margin: 0; padding: 10px; background: #0f1218; color: #e6e9ef; border: 2px solid var(--line); max-height: 320px; overflow: auto; font-size: 12px; white-space: pre-wrap; }
+  .log { margin: 0; padding: 9px; background: #0f1218; color: #e6e9ef; border: 2px solid var(--line); max-height: 288px; overflow: auto; font-size: 11px; white-space: pre-wrap; }
   p { margin: 0; }
 </style>

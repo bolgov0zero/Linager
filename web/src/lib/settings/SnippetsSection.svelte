@@ -153,7 +153,7 @@
   .snippets {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
   }
 
@@ -161,7 +161,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 11px;
   }
 
   h3,
@@ -171,7 +171,7 @@
 
   textarea {
     resize: vertical;
-    min-height: 80px;
+    min-height: 72px;
   }
 
   .list {
@@ -187,8 +187,8 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px 12px;
-    padding: 10px 0;
+    gap: 7px 11px;
+    padding: 9px 0;
     border-bottom: 1px dashed var(--seg-off);
   }
 
@@ -209,24 +209,24 @@
   }
 
   .acts {
-    gap: 6px;
+    gap: 5px;
   }
 
   .confirm {
     flex: 1 0 100%;
-    padding: 12px;
+    padding: 11px;
     border: 2px solid var(--crit);
   }
 
   /* Phones: every snippet is a card, its actions are in a sheet, the form buttons are one under another. */
   @media (max-width: 720px) {
     .list {
-      gap: 12px;
+      gap: 11px;
     }
 
     .item {
       flex-wrap: nowrap;
-      padding: 10px 6px 10px 12px;
+      padding: 9px 5px 9px 11px;
       background: var(--surface);
       border: 2px solid var(--line);
       box-shadow: 3px 3px 0 var(--shade);
@@ -237,7 +237,7 @@
     }
 
     .confirm {
-      margin-right: 6px;
+      margin-right: 5px;
     }
 
     .item:has(.confirm) {

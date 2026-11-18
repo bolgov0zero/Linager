@@ -320,20 +320,20 @@
   .cmdblock {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
   }
 
   .cards {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 9px;
   }
 
   .lcard {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding-top: 10px;
+    gap: 7px;
+    padding-top: 9px;
     border-top: 2px dashed var(--seg-off);
   }
 
@@ -347,6 +347,6 @@
   }
   .seg {
     display: flex;
-    gap: 6px;
+    gap: 5px;
   }
 </style>

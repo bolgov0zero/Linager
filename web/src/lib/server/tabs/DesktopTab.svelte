@@ -51,29 +51,29 @@
   .deskTab {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    height: calc(100vh - 220px);
-    min-height: 420px;
+    gap: 9px;
+    height: calc(100vh - 198px);
+    min-height: 378px;
   }
 
   .head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 9px;
     flex-wrap: wrap;
   }
 
   .meta {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
     margin: 0;
   }
 
   .dot {
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
     background: var(--muted);
   }
 
@@ -83,7 +83,7 @@
 
   .actions {
     display: flex;
-    gap: 8px;
+    gap: 7px;
     flex-wrap: wrap;
   }
 

@@ -346,12 +346,12 @@
     <div class="more">
       <button class="act" type="button" onclick={() => openSettings(settingsSection, true)}>
         <PixIcon name="gear" />{isAdmin ? $tr('app.settings') : $tr('app.profile')}
-        <PixIcon name="next" size={16} />
+        <PixIcon name="next" />
       </button>
       {#if isAdmin}
         <button class="act" type="button" onclick={() => { moreOpen = false; toggleEdit(); }}>
           <PixIcon name="cards" />{editing ? $tr('dash.done') : $tr('dash.edit')}
-          <PixIcon name="next" size={16} />
+          <PixIcon name="next" />
         </button>
       {/if}
       <div class="act plain">
@@ -387,8 +387,8 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 12px 16px;
+    gap: 11px;
+    padding: 11px 14px;
     background: var(--surface);
     border-bottom: 2px solid var(--line);
     box-shadow: 3px 3px 0 var(--shade);
@@ -404,19 +404,19 @@
   .brand {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 11px;
   }
 
   .logo {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     display: block;
   }
 
   .brand h1 {
     margin: 0;
     font-variation-settings: "ELSH" 40;
-    font-size: 26px;
+    font-size: 23px;
     letter-spacing: 0.02em;
     line-height: 1;
   }
@@ -424,15 +424,15 @@
   .live {
     display: flex;
     align-items: center;
-    margin: 0 6px 0 0;
+    margin: 0 5px 0 0;
     color: var(--muted);
   }
 
   .dot {
     display: inline-block;
-    width: 8px;
-    height: 8px;
-    margin-right: 6px;
+    width: 7px;
+    height: 7px;
+    margin-right: 5px;
     background: var(--muted);
   }
 
@@ -444,7 +444,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: stretch;
-    gap: 8px;
+    gap: 7px;
   }
 
   /* :where() keeps this rule weaker than .add-text and .phone-add below. */
@@ -460,33 +460,33 @@
 
   .seg {
     display: flex;
-    gap: 6px;
+    gap: 5px;
   }
 
   /* Phones: a compact bar (logo, live indicator, view and add buttons) that stays pinned; the rest is in the bottom bar. */
   @media (max-width: 720px) {
     .top {
       flex-wrap: nowrap;
-      padding: 8px 12px;
+      padding: 7px 11px;
     }
 
     .logo {
-      width: 26px;
-      height: 26px;
+      width: 28px;
+      height: 28px;
     }
 
     .brand {
-      gap: 8px;
+      gap: 7px;
     }
 
     .brand h1 {
-      font-size: 22px;
+      font-size: 20px;
     }
 
     .right {
       flex-wrap: nowrap;
       align-items: center;
-      gap: 8px;
+      gap: 7px;
     }
 
     .live {
@@ -516,16 +516,16 @@
   }
 
   main {
-    padding: 24px 16px;
+    padding: 22px 14px;
   }
 
   @media (max-width: 720px) {
     main {
-      padding: 12px;
+      padding: 11px;
     }
 
     main.bar {
-      padding-bottom: calc(var(--bar-h) + var(--safe-b) + 16px);
+      padding-bottom: calc(var(--bar-h) + var(--safe-b) + 14px);
     }
 
     main.srvpage {
@@ -538,7 +538,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: calc(100dvh - 62px); /* the top bar is 62 px high (50 px on phones) */
+    min-height: calc(100dvh - 56px); /* the top bar is 62 px high (50 px on phones) */
   }
 
   @media (max-width: 720px) {
@@ -549,16 +549,16 @@
   .more .act {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 11px;
     width: 100%;
     min-height: 54px;
-    padding: 0 14px;
+    padding: 0 13px;
     background: none;
     border: 0;
     border-top: 2px dashed var(--seg-off);
     color: var(--ink);
     font-family: var(--font-display);
-    font-size: 16px;
+    font-size: 14px;
     text-align: left;
   }
 

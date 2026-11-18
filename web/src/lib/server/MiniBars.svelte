@@ -27,7 +27,7 @@
     align-items: flex-end;
     gap: 1px;
     width: 100%;
-    height: 44px;
+    height: 40px;
   }
 
   i {

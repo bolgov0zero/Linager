@@ -392,7 +392,7 @@
   .profile {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
     min-width: 0;
   }
 
@@ -402,7 +402,7 @@
   }
 
   h4 {
-    font-size: 16px;
+    font-size: 14px;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -410,20 +410,20 @@
 
   .secret {
     margin: 0;
-    font-size: 18px;
+    font-size: 16px;
     letter-spacing: 0.12em;
     user-select: all;
   }
 
   .codes {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 6px 16px;
+    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+    gap: 5px 14px;
     margin: 0;
-    padding: 12px;
+    padding: 11px;
     list-style: none;
     border: 2px dashed var(--line);
-    font-size: 16px;
+    font-size: 14px;
     letter-spacing: 0.08em;
     user-select: all;
   }
@@ -435,7 +435,7 @@
 
   .notice {
     margin: 0;
-    padding: 8px 12px;
+    padding: 7px 11px;
     border: 2px solid var(--warn);
     color: var(--warn);
   }
@@ -452,8 +452,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 8px 0;
+    gap: 11px;
+    padding: 7px 0;
     border-bottom: 1px dashed var(--seg-off);
   }
 
@@ -462,18 +462,18 @@
   }
 
   .confirm {
-    padding: 12px;
+    padding: 11px;
     border: 2px solid var(--crit);
   }
 
   .add {
-    gap: 8px;
+    gap: 7px;
   }
 
   /* the field and the button of this row are the same height */
   .add .input,
   .add .btn {
-    height: 36px;
+    height: 32px;
     padding-block: 0;
   }
 
@@ -485,11 +485,11 @@
   /* Phones: one column of cards, full-width buttons one under another. */
   @media (max-width: 720px) {
     .profile {
-      gap: 12px;
+      gap: 11px;
     }
 
     .who {
-      font-size: 20px;
+      font-size: 18px;
     }
 
     .profile .row {

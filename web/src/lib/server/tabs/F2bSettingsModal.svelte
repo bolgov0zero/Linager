@@ -182,7 +182,7 @@
   h4 {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -196,7 +196,7 @@
   .form {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
+    gap: 11px;
     align-items: end;
   }
 
@@ -205,12 +205,12 @@
   }
 
   .input {
-    height: 36px;
+    height: 32px;
     padding-block: 0;
   }
 
   .input.num {
-    width: 80px;
+    width: 72px;
   }
 
   .grow {
@@ -220,7 +220,7 @@
 
   .form :global(.sel),
   .nowrap :global(.sel) {
-    height: 36px;
+    height: 32px;
     padding-block: 0;
   }
 
@@ -228,23 +228,23 @@
   .row :global(.btn) {
     display: inline-flex;
     align-items: center;
-    height: 36px;
+    height: 32px;
     padding-block: 0;
   }
 
   .ips {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 5px;
   }
 
   .ipchip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 2px 8px;
+    gap: 5px;
+    padding: 2px 7px;
     border: 2px solid var(--line);
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .ipchip button {
@@ -262,10 +262,10 @@
 
   .cmd {
     margin: 0;
-    padding: 10px;
+    padding: 9px;
     border: 2px solid var(--line);
     background: var(--bg);
-    font-size: 12px;
+    font-size: 11px;
     white-space: pre-wrap;
   }
 
@@ -286,7 +286,7 @@
   @media (max-width: 720px) {
     .ipchip {
       min-height: 44px;
-      padding: 0 0 0 10px;
+      padding: 0 0 0 9px;
       overflow-wrap: anywhere;
     }
 
@@ -294,7 +294,7 @@
       min-width: 44px;
       min-height: 44px;
       padding: 0;
-      font-size: 20px;
+      font-size: 18px;
     }
 
     .input.num {

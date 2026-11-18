@@ -216,8 +216,8 @@
 <style>
   .wrap { display: flex; flex-direction: column; gap: 10px; }
   h3 { margin: 6px 0; }
-  .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-  .search { flex: 1 1 200px; max-width: 320px; height: 36px; padding-block: 0; }
+  .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+  .search { flex: 1 1 200px; max-width: 288px; height: 36px; padding-block: 0; }
   .add { margin-left: auto; }
   .table-wrap { overflow-x: auto; }
   .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -232,10 +232,10 @@
   .gl { display: flex; flex-wrap: wrap; gap: 4px; }
   .gtag { padding: 0 6px; overflow-wrap: anywhere; border: 1px solid var(--muted); color: var(--muted); font-size: 12px; }
   .gtag.hot { border-color: var(--warn); color: var(--warn); }
-  .badge { display: inline-block; padding: 0 6px; border: 2px solid currentColor; font-size: 12px; line-height: 1.35; white-space: nowrap; }
+  .badge { display: inline-block; padding: 0 5px; border: 2px solid currentColor; font-size: 11px; line-height: 1.35; white-space: nowrap; }
   .tone-ok { color: var(--good); }
   .tone-muted { color: var(--muted); }
-  .dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; background: currentColor; }
+  .dot { display: inline-block; width: 7px; height: 8px; margin-right: 5px; background: currentColor; }
   .acts { width: 1%; white-space: nowrap; }
   .act-row { display: flex; justify-content: flex-end; gap: 6px; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
@@ -244,12 +244,12 @@
   .crit { background: var(--surface); color: var(--crit); border-color: var(--crit); }
   .crit:disabled { color: var(--muted); border-color: var(--line); }
   .err { color: var(--crit); }
-  .form { display: flex; flex-direction: column; gap: 10px; min-width: min(360px, 80vw); }
-  .form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+  .form { display: flex; flex-direction: column; gap: 10px; min-width: min(324px, 80vw); }
+  .form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
   .form label.chk { flex-direction: row; align-items: center; gap: 6px; }
   .form input:not([type='checkbox']) { padding: 8px 10px; font: inherit; color: var(--ink); background: var(--bg); border: 2px solid var(--line); }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .row { display: flex; gap: 7px; flex-wrap: wrap; }
   .row.end { justify-content: flex-end; }
-  fieldset { border: 2px solid var(--line); padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow: auto; }
+  fieldset { border: 2px solid var(--line); padding: 7px 9px; display: flex; flex-direction: column; gap: 4px; max-height: 198px; overflow: auto; }
   p { margin: 0; }
 </style>

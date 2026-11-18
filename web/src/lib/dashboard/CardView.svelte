@@ -137,7 +137,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: 14px 16px 0;
+    padding: 13px 14px 0;
     border-top-width: 6px;
     border-top-color: var(--strip);
     min-width: 0;
@@ -166,17 +166,17 @@
   .head {
     display: flex;
     align-items: center;
-    gap: 8px;
-    min-height: 32px;
+    gap: 7px;
+    min-height: 29px;
   }
 
   .name {
     display: flex;
     font-variation-settings: "ELSH" 40;
     align-items: center;
-    gap: 10px;
+    gap: 9px;
     margin: 0;
-    font-size: 20px;
+    font-size: 18px;
     line-height: 1.1;
     min-width: 0;
     overflow-wrap: anywhere;
@@ -184,18 +184,18 @@
 
   .sq {
     flex: none;
-    width: 12px;
-    height: 12px;
+    width: 11px;
+    height: 11px;
     background: var(--sq);
   }
 
   .sub {
-    margin: 6px 0 10px;
+    margin: 5px 0 9px;
     overflow-wrap: anywhere;
   }
 
   .body {
-    margin-top: 10px;
+    margin-top: 9px;
   }
 
   .off .body {
@@ -205,19 +205,19 @@
   .meters {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
   }
 
   .meter {
     display: grid;
-    grid-template-columns: 40px minmax(0, 1fr) 42px;
+    grid-template-columns: 36px minmax(0, 1fr) 38px;
     align-items: center;
-    gap: 10px;
+    gap: 9px;
   }
 
   .lbl {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .val {
@@ -225,17 +225,17 @@
   }
 
   .chart {
-    margin-top: 12px;
+    margin-top: 11px;
     border-bottom: 2px dashed var(--seg-off);
-    padding-bottom: 6px;
+    padding-bottom: 5px;
   }
 
   .net {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
-    gap: 4px 10px;
-    margin: 6px 0 12px;
+    gap: 4px 9px;
+    margin: 5px 0 11px;
   }
 
   .cap {
@@ -243,19 +243,19 @@
   }
 
   .foot {
-    margin: auto -16px 0;
-    padding: 10px 16px 12px;
+    margin: auto -14px 0;
+    padding: 9px 14px 11px;
     border-top: 2px solid var(--line);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 7px;
   }
 
   .foot .btn {
-    padding: 4px 10px;
-    font-size: 13px;
+    padding: 4px 9px;
+    font-size: 12px;
   }
 
   /* Icon buttons: the same height as text buttons, square-ish. */
@@ -263,7 +263,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 4px 8px;
+    padding: 4px 7px;
   }
 
   .foot .btn.del:hover:not(:disabled) {
@@ -279,12 +279,12 @@
     }
 
     .srv:not(.pc) {
-      padding: 10px 12px 0;
+      padding: 9px 11px 0;
     }
 
     .srv:not(.pc) .foot {
-      margin: auto -12px 0;
-      padding: 8px 12px 10px;
+      margin: auto -11px 0;
+      padding: 7px 11px 9px;
     }
 
     .srv:not(.pc) .foot .btn.ic {
@@ -296,7 +296,7 @@
   /* Phone card */
   .pc {
     position: relative;
-    padding: 10px 12px;
+    padding: 9px 11px;
     border-top-width: 2px;
     border-left: 5px solid var(--strip);
   }
@@ -316,12 +316,12 @@
   }
 
   .pc .head {
-    gap: 8px;
+    gap: 7px;
   }
 
   .pc .name {
     flex: 1;
-    font-size: 21px;
+    font-size: 19px;
   }
 
   .pc .term {
@@ -332,7 +332,7 @@
   }
 
   .pc .sub {
-    margin: 0 0 8px;
+    margin: 0 0 7px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -341,26 +341,26 @@
   .pm {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
+    gap: 11px;
   }
 
   .pl {
     display: flex;
     justify-content: space-between;
     margin-bottom: 4px;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .pm :global(i) {
-    height: 8px;
+    height: 7px;
   }
 
   .pft {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 6px 8px;
-    margin-top: 8px;
+    gap: 5px 7px;
+    margin-top: 7px;
   }
 
   .net2 {

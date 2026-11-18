@@ -476,21 +476,21 @@
 
 <style>
   .fp {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--ink);
   }
 
   .gatefield {
-    margin-top: 8px;
+    margin-top: 7px;
     color: var(--ink);
   }
 
   .addr {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
-    max-width: 420px;
+    gap: 7px;
+    margin-top: 7px;
+    max-width: 378px;
   }
 
   .addr > :global(*) {

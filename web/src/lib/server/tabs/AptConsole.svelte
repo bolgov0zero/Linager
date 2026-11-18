@@ -27,26 +27,26 @@
   .console {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 7px;
     min-width: 0;
   }
 
   .small-btn {
     align-self: flex-start;
-    padding: 2px 8px;
-    font-size: 13px;
+    padding: 2px 7px;
+    font-size: 12px;
   }
 
   .log {
     margin: 0;
-    padding: 10px;
-    max-height: 320px;
+    padding: 9px;
+    max-height: 288px;
     overflow: auto;
     border: 2px solid var(--line);
     background: var(--ink);
     color: var(--surface);
     font-family: var(--font-body);
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.5;
     white-space: pre-wrap;
     overflow-wrap: anywhere;

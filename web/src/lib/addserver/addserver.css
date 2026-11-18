@@ -2,26 +2,26 @@
 .asv .panel {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   min-width: 0;
 }
 
 .asv .panel > h3.page {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 400;
 }
 
 .asv .sec {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
   min-width: 0;
 }
 
 .asv .sec > h4 {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 400;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -31,9 +31,9 @@
 .asv .card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
   min-width: 0;
-  padding: 12px;
+  padding: 11px;
   box-shadow: 3px 3px 0 var(--shade);
 }
 
@@ -48,7 +48,7 @@
 .asv .lead {
   margin: 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .asv p {
@@ -76,16 +76,16 @@
 }
 
 .asv .btn.sm {
-  padding: 3px 8px;
-  font-size: 12px;
+  padding: 3px 7px;
+  font-size: 11px;
 }
 
 .asv .kv {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
-  gap: 4px 14px;
+  gap: 4px 13px;
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .asv .kv dt {
@@ -102,13 +102,13 @@
 }
 
 .asv .field > .label {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .asv .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(171px, 1fr));
+  gap: 11px;
 }
 
 .asv .input.bad {
@@ -123,7 +123,7 @@
 .asv .switch {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 9px;
   cursor: pointer;
 }
 
@@ -134,13 +134,13 @@
 .asv .switch small {
   display: block;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .asv .box {
-  padding: 8px 10px;
+  padding: 7px 9px;
   border: 2px solid currentColor;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .asv .box p + p {
@@ -148,7 +148,7 @@
 }
 
 .asv .box .row {
-  margin-top: 8px;
+  margin-top: 7px;
   color: var(--ink);
 }
 
@@ -176,20 +176,20 @@
 
 .asv .badge {
   display: inline-block;
-  padding: 0 6px;
+  padding: 0 5px;
   border: 2px solid currentColor;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.35;
   white-space: nowrap;
 }
 
 .asv .cmd {
   margin: 0;
-  padding: 10px;
+  padding: 9px;
   border: 2px dashed var(--seg-off);
   background: var(--bg);
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 11px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -207,15 +207,15 @@
 .asv .tbl {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .asv .tbl th {
-  padding: 6px 8px;
+  padding: 5px 7px;
   border-bottom: 2px solid var(--line);
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
   text-align: left;
   white-space: nowrap;
@@ -223,24 +223,24 @@
 
 .asv .tbl td {
   white-space: nowrap;
-  padding: 7px 8px;
+  padding: 6px 7px;
   border-bottom: 1px dashed var(--seg-off);
   vertical-align: middle;
 }
 
 .asv .tbl td.wrapok {
   white-space: normal;
-  min-width: 120px;
+  min-width: 108px;
 }
 
 .asv .log {
   margin: 0;
-  padding: 8px 10px;
-  max-height: 190px;
+  padding: 7px 9px;
+  max-height: 171px;
   overflow: auto;
   border: 2px solid var(--seg-off);
   background: var(--bg);
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -254,12 +254,12 @@
   }
 
   .asv .kv dd {
-    margin-bottom: 6px;
+    margin-bottom: 5px;
   }
 
   .asv .btn.sm {
-    min-height: 36px;
-    font-size: 13px;
+    min-height: 32px;
+    font-size: 12px;
   }
 
   .asv .grid {

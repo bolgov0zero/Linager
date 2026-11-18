@@ -110,7 +110,7 @@
   .row :global(.btn) {
     display: inline-flex;
     align-items: center;
-    height: 36px;
+    height: 32px;
     padding-block: 0;
   }
 

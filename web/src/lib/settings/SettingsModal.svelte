@@ -80,9 +80,9 @@
 <style>
   .settings {
     display: grid;
-    grid-template-columns: 190px minmax(0, 1fr);
-    gap: 20px;
-    min-height: min(640px, calc(100dvh - 180px));
+    grid-template-columns: 171px minmax(0, 1fr);
+    gap: 18px;
+    min-height: min(576px, calc(100dvh - 162px));
   }
 
   .settings.single {
@@ -93,7 +93,7 @@
   .side {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
     align-self: start;
   }
 
@@ -101,15 +101,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    padding: 8px 12px;
+    gap: 7px;
+    padding: 7px 11px;
     text-align: left;
     background: var(--surface);
     color: var(--ink);
     border: 2px solid var(--line);
     border-radius: 0;
     font-family: var(--font-display);
-    font-size: 14px;
+    font-size: 13px;
     cursor: pointer;
     box-shadow: 3px 3px 0 var(--shade);
   }
@@ -120,16 +120,16 @@
   }
 
   .badge {
-    padding: 0 6px;
+    padding: 0 5px;
     border: 2px solid currentColor;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .content {
     min-width: 0;
-    max-height: calc(100dvh - 190px);
+    max-height: calc(100dvh - 171px);
     overflow-y: auto;
-    padding: 2px 4px 8px 2px;
+    padding: 2px 4px 7px 2px;
   }
 
   .back {
@@ -141,7 +141,7 @@
     .settings {
       grid-template-columns: minmax(0, 1fr);
       grid-auto-rows: max-content;
-      gap: 12px;
+      gap: 11px;
       min-height: 0;
     }
 
@@ -165,7 +165,7 @@
 
     .back {
       display: inline-flex;
-      margin-bottom: 12px;
+      margin-bottom: 11px;
     }
   }
 </style>

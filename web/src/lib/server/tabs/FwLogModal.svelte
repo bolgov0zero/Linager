@@ -475,26 +475,26 @@
   .stats {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 7px;
   }
 
   .stat {
     display: flex;
     flex-direction: column;
-    min-width: 100px;
-    padding: 6px 12px;
+    min-width: 90px;
+    padding: 5px 11px;
     border: 2px solid var(--line);
   }
 
   .stat b {
     font-family: var(--font-display);
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 400;
     line-height: 1.2;
   }
 
   .stat span {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--muted);
   }
 
@@ -510,8 +510,8 @@
     display: flex;
     align-items: flex-end;
     gap: 2px;
-    height: 64px;
-    padding-top: 6px;
+    height: 58px;
+    padding-top: 5px;
   }
 
   .hist .col {
@@ -534,24 +534,24 @@
   .axis {
     display: flex;
     justify-content: space-between;
-    font-size: 11px;
+    font-size: 10px;
     color: var(--muted);
   }
 
   .legend {
-    gap: 12px;
+    gap: 11px;
   }
 
   .chip,
   .btn {
     display: inline-flex;
     align-items: center;
-    height: 36px;
+    height: 32px;
     padding-block: 0;
   }
 
   .btn.sm {
-    height: 28px;
+    height: 25px;
   }
 
   .chip .count {
@@ -584,9 +584,9 @@
 
   .live i {
     display: inline-block;
-    width: 8px;
-    height: 8px;
-    margin-right: 8px;
+    width: 7px;
+    height: 7px;
+    margin-right: 7px;
     background: var(--muted);
   }
 
@@ -604,27 +604,27 @@
   .filters {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
-    gap: 12px 16px;
-    padding: 12px 14px;
+    gap: 11px 14px;
+    padding: 11px 13px;
     border: 2px solid var(--line);
   }
 
   .fg {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
     min-width: 0;
   }
 
   .fg .lbl {
-    font-size: 11px;
+    font-size: 10px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--muted);
   }
 
   .fg .row {
-    gap: 6px;
+    gap: 5px;
   }
 
   .g-chain {
@@ -652,17 +652,17 @@
     flex-direction: row;
     align-items: flex-end;
     justify-content: flex-end;
-    gap: 10px;
+    gap: 9px;
   }
 
   .fg .input {
     width: 100%;
-    height: 36px;
+    height: 32px;
     padding-block: 0;
   }
 
   .hint {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--muted);
   }
 
@@ -671,30 +671,30 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 7px;
   }
 
   .note-line {
-    padding: 6px 10px;
+    padding: 5px 9px;
     border: 2px solid var(--accent);
   }
 
   .tw {
-    max-height: 420px;
+    max-height: 378px;
     overflow: auto;
   }
 
   .tbl {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .tbl th {
-    padding: 6px 10px;
+    padding: 5px 9px;
     border-bottom: 2px solid var(--line);
     font-family: var(--font-display);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 400;
     letter-spacing: 0.06em;
     text-align: left;
@@ -704,7 +704,7 @@
   }
 
   .tbl td {
-    padding: 8px 10px;
+    padding: 7px 9px;
     border-bottom: 1px dashed var(--seg-off);
     vertical-align: middle;
   }
@@ -719,10 +719,10 @@
 
   .act {
     display: inline-block;
-    padding: 1px 8px;
+    padding: 1px 7px;
     border: 2px solid var(--muted);
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
   }
 
@@ -744,19 +744,19 @@
   .srcc {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
   }
 
   .tag {
-    padding: 0 6px;
+    padding: 0 5px;
     border: 2px solid var(--accent);
     color: var(--accent);
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .rl {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
   }
 
@@ -774,7 +774,7 @@
   }
 
   tr.det td {
-    padding: 0 10px 12px;
+    padding: 0 9px 11px;
     background: color-mix(in srgb, var(--accent) 11%, transparent);
   }
 
@@ -783,8 +783,8 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px 28px;
-    padding: 10px 12px;
+    gap: 7px 25px;
+    padding: 9px 11px;
     border: 2px dashed var(--line);
     background: var(--surface);
   }
@@ -792,12 +792,12 @@
   .kv {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 22px;
-    font-size: 12px;
+    gap: 5px 20px;
+    font-size: 11px;
   }
 
   .kv b {
-    margin-right: 6px;
+    margin-right: 5px;
     font-weight: 400;
     color: var(--muted);
   }
@@ -806,7 +806,7 @@
     display: inline-block;
     width: 0;
     height: 0;
-    margin-right: 6px;
+    margin-right: 5px;
     border-left: 4px solid transparent;
     border-right: 4px solid transparent;
     border-top: 5px solid currentColor;
@@ -819,7 +819,7 @@
   }
 
   .empty {
-    padding: 26px 10px;
+    padding: 23px 9px;
     text-align: center;
     color: var(--muted);
   }
@@ -827,26 +827,26 @@
   .howto {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
   }
 
   .steps {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(198px, 1fr));
+    gap: 9px;
   }
 
   .step {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding: 10px 12px;
+    padding: 9px 11px;
     border: 2px solid var(--line);
   }
 
   .step b {
     font-family: var(--font-display);
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 400;
     color: var(--accent);
   }
@@ -858,20 +858,20 @@
   .rules .r {
     display: grid;
     grid-template-columns: auto 1fr auto;
-    gap: 12px;
+    gap: 11px;
     align-items: center;
-    padding: 8px 12px;
+    padding: 7px 11px;
     border-bottom: 1px dashed var(--seg-off);
   }
 
   .pad {
-    padding: 10px 12px;
+    padding: 9px 11px;
   }
 
   .sw {
     position: relative;
-    width: 38px;
-    height: 22px;
+    width: 34px;
+    height: 20px;
     padding: 0;
     border: 2px solid var(--line);
     background: var(--seg-off);
@@ -883,8 +883,8 @@
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
     background: var(--ink);
     transition: transform 0.15s;
   }
@@ -935,7 +935,7 @@
       padding: 0 2px;
       border-width: 0 0 0 2px;
       box-shadow: none;
-      font-size: 13px;
+      font-size: 12px;
       white-space: nowrap;
     }
 
@@ -963,7 +963,7 @@
     }
 
     .filters {
-      padding: 12px;
+      padding: 11px;
     }
 
     .fg .input {
@@ -972,17 +972,17 @@
 
     .legend {
       flex-wrap: wrap;
-      gap: 4px 10px;
+      gap: 4px 9px;
     }
 
     .axis {
       flex-wrap: wrap;
-      gap: 4px 12px;
+      gap: 4px 11px;
     }
 
     .detwrap {
       display: block;
-      padding: 0 12px 12px;
+      padding: 0 11px 11px;
       background: color-mix(in srgb, var(--accent) 11%, transparent);
       border-top: 0;
     }
@@ -1002,18 +1002,18 @@
     }
 
     .pc-l1 .act {
-      padding: 0 6px;
-      font-size: 11.5px;
+      padding: 0 5px;
+      font-size: 10px;
     }
 
     .sw {
       width: 54px;
-      height: 32px;
+      height: 29px;
     }
 
     .sw::after {
-      width: 22px;
-      height: 22px;
+      width: 20px;
+      height: 20px;
     }
 
     .sw[aria-pressed='true']::after {

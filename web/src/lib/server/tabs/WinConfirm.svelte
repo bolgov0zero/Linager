@@ -17,8 +17,8 @@
   .row {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
-    margin-top: 12px;
+    gap: 7px;
+    margin-top: 11px;
   }
 
 </style>

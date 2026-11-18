@@ -369,14 +369,14 @@
     position: absolute;
     inset: 0;
     margin: auto;
-    width: min(360px, calc(100% - 24px));
+    width: min(324px, calc(100% - 22px));
     height: fit-content;
-    max-height: calc(100% - 24px);
+    max-height: calc(100% - 22px);
     overflow: auto;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 16px;
+    gap: 9px;
+    padding: 14px;
     background: var(--surface);
     border: 2px solid var(--line);
   }
@@ -389,11 +389,11 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   input {
-    padding: 8px 10px;
+    padding: 7px 9px;
     font: inherit;
     color: var(--ink);
     background: var(--bg);
@@ -402,16 +402,16 @@
 
   .warn {
     margin: 0;
-    padding: 8px 10px;
+    padding: 7px 9px;
     border: 2px solid var(--warn);
     color: var(--warn);
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .err {
     margin: 0;
     color: var(--crit);
-    font-size: 13px;
+    font-size: 12px;
     overflow-wrap: anywhere;
   }
 

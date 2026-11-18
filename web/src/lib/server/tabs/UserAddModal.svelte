@@ -178,34 +178,34 @@
   .cols {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px 24px;
+    gap: 14px 22px;
     align-items: start;
   }
 
   .col {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
   }
 
   .two {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 9px;
   }
 
   .opts {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
   }
 
   .opt {
     display: flex;
-    gap: 10px;
+    gap: 9px;
     align-items: flex-start;
-    padding: 8px 10px;
+    padding: 7px 9px;
     border: 2px solid var(--seg-off);
     cursor: pointer;
   }
@@ -216,7 +216,7 @@
 
   .opt small {
     display: block;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   /* the hint of an option is shown only for the chosen one, so the column stays short */
@@ -231,14 +231,14 @@
 
   .cmd {
     margin: 0;
-    padding: 8px 10px;
+    padding: 7px 9px;
     overflow-x: auto;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     border: 2px dashed var(--seg-off);
     background: var(--bg);
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   @media (max-width: 760px) {
@@ -264,7 +264,7 @@
       padding: 0 4px;
       border-width: 0 0 0 2px;
       box-shadow: none;
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1.15;
       text-align: center;
       /* Long labels (English) wrap inside the segment instead of being cut at both sides. */

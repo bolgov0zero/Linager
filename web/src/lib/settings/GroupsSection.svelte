@@ -136,7 +136,7 @@
   .groups {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
   }
 
@@ -162,8 +162,8 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 12px;
-    padding: 10px 0;
+    gap: 7px 11px;
+    padding: 9px 0;
     border-bottom: 1px dashed var(--seg-off);
   }
 
@@ -177,7 +177,7 @@
   }
 
   .sq {
-    width: 36px;
+    width: 32px;
     padding: 0;
   }
 

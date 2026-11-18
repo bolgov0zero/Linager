@@ -199,7 +199,7 @@
             {/if}
           </svg>
         </button>
-        <button class="btn ib" type="button" aria-label={$tr('logs.clear')} onclick={clearLines}><PixIcon name="x" size={16} /></button>
+        <button class="btn ib" type="button" aria-label={$tr('logs.clear')} onclick={clearLines}><PixIcon name="x" /></button>
       </div>
       {#if source === 'custom'}
         <div class="unitrow">
@@ -309,7 +309,7 @@
   .logs {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
   }
 
@@ -318,46 +318,46 @@
     flex-wrap: wrap;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 12px;
+    gap: 11px;
   }
 
   .group {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 11px;
   }
 
   .ctl {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    min-width: 160px;
+    min-width: 144px;
   }
 
   .ctl .label {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .ctl .input {
     width: auto;
-    min-width: 160px;
+    min-width: 144px;
   }
 
   .hint {
     margin: 0;
     color: var(--warn);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .log {
-    height: 420px;
+    height: 378px;
     overflow: auto;
-    padding: 10px 12px;
+    padding: 9px 11px;
     background: #0f1218;
     color: #e6e9ef;
     border: 2px solid var(--line);
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.5;
   }
 
@@ -380,7 +380,7 @@
 
   .note {
     margin: 0;
-    padding: 24px 0;
+    padding: 22px 0;
     text-align: center;
     color: var(--muted);
   }
@@ -389,7 +389,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
+    gap: 11px;
   }
 
   /* Phones: the log is the only scrolling thing and takes everything between the header and the bottom bar; the
@@ -407,8 +407,8 @@
       display: flex;
       flex: none;
       align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
+      gap: 5px;
+      padding: 5px 11px;
       background: var(--surface);
       border-bottom: 2px solid var(--line);
     }
@@ -426,7 +426,7 @@
     .pbar :global(.sel) {
       width: 100%;
       min-height: 44px;
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .ib {
@@ -437,14 +437,14 @@
 
     .unitrow {
       flex: none;
-      padding: 6px 12px;
+      padding: 5px 11px;
       background: var(--surface);
       border-bottom: 2px solid var(--line);
     }
 
     .hint {
       flex: none;
-      padding: 4px 12px;
+      padding: 4px 11px;
       background: var(--surface);
     }
 
@@ -452,27 +452,27 @@
       flex: 1;
       height: auto;
       min-height: 0;
-      padding: 8px 12px;
+      padding: 7px 11px;
       border-width: 0;
-      font-size: 11.5px;
+      font-size: 10px;
       -webkit-overflow-scrolling: touch;
     }
 
     .toend {
       position: absolute;
-      right: 12px;
-      bottom: 12px;
+      right: 11px;
+      bottom: 11px;
     }
 
     .closed {
       flex: none;
-      padding: 8px 12px;
+      padding: 7px 11px;
       background: var(--surface);
       border-top: 2px solid var(--line);
     }
 
     .note {
-      padding: 24px 12px;
+      padding: 22px 11px;
     }
   }
 </style>

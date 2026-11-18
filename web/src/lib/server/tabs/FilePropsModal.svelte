@@ -308,7 +308,7 @@
   .kv {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
-    gap: 6px 16px;
+    gap: 5px 14px;
     margin: 0;
   }
 
@@ -325,14 +325,14 @@
   .block {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding-top: 12px;
+    gap: 9px;
+    padding-top: 11px;
     border-top: 2px dashed var(--seg-off);
   }
 
   h3 {
     margin: 0;
-    font-size: 15px;
+    font-size: 14px;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -343,15 +343,15 @@
   }
 
   .perm th {
-    padding: 4px 12px 4px 0;
+    padding: 4px 11px 4px 0;
     text-align: left;
     font-weight: 400;
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .perm td {
-    padding: 4px 16px 4px 0;
+    padding: 4px 14px 4px 0;
   }
 
   /* Phone: the whole 44 px cell toggles the box. */
@@ -380,8 +380,8 @@
   .strip {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px 12px;
+    gap: 7px;
+    padding: 9px 11px;
     border: 2px solid var(--warn);
   }
 

@@ -73,17 +73,17 @@
 
 <style>
   .wide :global(.dialog) {
-    max-width: 900px;
+    max-width: 810px;
   }
 
   .logpanel {
-    height: min(60vh, 460px);
+    height: min(60vh, 414px);
     overflow: auto;
-    padding: 10px;
+    padding: 9px;
     border: 2px solid var(--line);
     background: #0c0f14;
     color: #d8dee9;
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.4;
   }
 

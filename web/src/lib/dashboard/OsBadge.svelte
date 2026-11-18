@@ -11,11 +11,11 @@
 <style>
   .os {
     flex: none;
-    padding: 1px 6px;
+    padding: 1px 5px;
     border: 2px solid var(--line);
     color: var(--muted);
     background: var(--surface);
-    font-size: 11px;
+    font-size: 10px;
     line-height: 1.3;
     letter-spacing: 0.04em;
     text-transform: uppercase;

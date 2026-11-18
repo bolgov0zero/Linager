@@ -157,10 +157,10 @@
 
 <style>
   .sec h3 {
-    margin: 0 0 8px;
+    margin: 0 0 7px;
     font-family: var(--font-display);
     font-weight: 400;
-    font-size: 13px;
+    font-size: 12px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--muted);
@@ -168,10 +168,10 @@
 
   .kv {
     display: grid;
-    grid-template-columns: 130px 1fr;
-    gap: 4px 12px;
+    grid-template-columns: 117px 1fr;
+    gap: 4px 11px;
     margin: 0;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .kv dt {
@@ -186,14 +186,14 @@
   .opts {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
   }
 
   .opt {
     display: flex;
-    gap: 10px;
+    gap: 9px;
     align-items: flex-start;
-    padding: 8px 10px;
+    padding: 7px 9px;
     border: 2px solid var(--seg-off);
     cursor: pointer;
   }
@@ -204,7 +204,7 @@
 
   .opt small {
     display: block;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .opt small.crit {
@@ -214,17 +214,17 @@
   .checks {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+    gap: 5px;
   }
 
   .chk {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
+    gap: 7px;
+    padding: 5px 7px;
     border: 2px solid var(--seg-off);
     cursor: pointer;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .chk.on {
@@ -234,27 +234,27 @@
   .hint-hot {
     margin-left: auto;
     color: var(--warn);
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .lock {
-    margin-top: 10px;
+    margin-top: 9px;
   }
 
   .warnbox {
-    margin: 8px 0 0;
-    padding: 8px 10px;
+    margin: 7px 0 0;
+    padding: 7px 9px;
     border: 2px solid var(--warn);
     color: var(--warn);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .foot {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
-    padding-top: 12px;
+    gap: 7px;
+    padding-top: 11px;
     border-top: 2px solid var(--line);
   }
 
@@ -274,7 +274,7 @@
 
   @media (max-width: 720px) {
     .kv {
-      grid-template-columns: 110px minmax(0, 1fr);
+      grid-template-columns: 99px minmax(0, 1fr);
     }
 
     .chk,
@@ -287,8 +287,8 @@
       position: sticky;
       bottom: 0;
       z-index: 2;
-      margin: 0 -12px calc(-12px - var(--safe-b));
-      padding: 10px 12px calc(10px + var(--safe-b));
+      margin: 0 -11px calc(-11px - var(--safe-b));
+      padding: 9px 11px calc(9px + var(--safe-b));
       background: var(--surface);
     }
 

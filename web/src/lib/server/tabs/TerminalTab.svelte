@@ -113,14 +113,14 @@
 
   .actions {
     display: flex;
-    gap: 8px;
+    gap: 7px;
     flex-wrap: wrap;
   }
 
   .term {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
   }
 
@@ -129,22 +129,22 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 7px;
   }
 
   .meta {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
     margin: 0;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .dot {
     flex: none;
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
     border: 2px solid var(--line);
     background: var(--muted);
   }
@@ -156,12 +156,12 @@
   /* The screen takes the fixed height; the reconnect row (when closed) adds below it. */
   .box :global(.screen) {
     flex: none;
-    height: 420px;
+    height: 378px;
   }
 
   .note {
     margin: 0;
-    padding: 24px 0;
+    padding: 22px 0;
     text-align: center;
     color: var(--muted);
   }
@@ -196,7 +196,7 @@
       flex: none;
       flex-wrap: nowrap;
       gap: 4px;
-      padding: 2px 6px 2px 12px;
+      padding: 2px 5px 2px 11px;
       border-bottom: 2px solid var(--line);
       background: var(--surface);
     }
@@ -205,7 +205,7 @@
       flex: 1;
       flex-wrap: nowrap;
       min-width: 0;
-      gap: 6px;
+      gap: 5px;
       overflow: hidden;
       white-space: nowrap;
     }
@@ -256,7 +256,7 @@
     }
 
     .note {
-      padding: 24px 12px;
+      padding: 22px 11px;
     }
   }
 </style>

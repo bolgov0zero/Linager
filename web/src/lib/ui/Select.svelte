@@ -234,7 +234,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 9px;
     max-width: 100%;
     min-width: 0;
     background: var(--surface);
@@ -247,12 +247,12 @@
   }
 
   .sel.md {
-    padding: 8px 10px;
+    padding: 7px 9px;
   }
 
   .sel.sm {
-    padding: 5px 8px;
-    font-size: 13px;
+    padding: 5px 7px;
+    font-size: 12px;
   }
 
   .sel:disabled {
@@ -275,8 +275,8 @@
   /* Pixel chevron: a small square-cornered "v" drawn with two borders. */
   .arrow {
     flex: none;
-    width: 7px;
-    height: 7px;
+    width: 6px;
+    height: 6px;
     margin-top: -4px;
     border-right: 2px solid currentColor;
     border-bottom: 2px solid currentColor;
@@ -308,11 +308,11 @@
   }
 
   :global(.sel-list.sm) {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   :global(.sel-list li) {
-    padding: 6px 10px;
+    padding: 5px 9px;
     white-space: nowrap;
     cursor: pointer;
   }

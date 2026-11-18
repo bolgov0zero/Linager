@@ -155,7 +155,7 @@
   .am {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
   }
 
   .arrow {

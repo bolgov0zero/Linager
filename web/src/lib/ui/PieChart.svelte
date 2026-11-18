@@ -138,14 +138,14 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 14px 24px;
+    gap: 13px 22px;
     min-width: 0;
   }
 
   .piewrap {
     position: relative;
     flex: none;
-    padding: 10px;
+    padding: 9px;
   }
 
   .pie {
@@ -164,11 +164,11 @@
     position: absolute;
     z-index: 6;
     pointer-events: none;
-    padding: 3px 8px;
+    padding: 3px 7px;
     border: 2px solid var(--line);
     background: var(--ink);
     color: var(--surface);
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
     box-shadow: 3px 3px 0 var(--shade);
   }
@@ -177,11 +177,11 @@
     flex: 1 1 220px;
     min-width: 0;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .legend td {
-    padding: 7px 8px;
+    padding: 6px 7px;
     border-bottom: 2px dashed var(--seg-off);
     cursor: default;
   }
@@ -193,9 +193,9 @@
 
   .sw {
     display: inline-block;
-    width: 12px;
-    height: 12px;
-    margin-right: 8px;
+    width: 11px;
+    height: 11px;
+    margin-right: 7px;
     vertical-align: -1px;
   }
 
@@ -210,22 +210,22 @@
       flex-direction: column;
       align-items: stretch;
       flex-wrap: nowrap;
-      gap: 8px;
+      gap: 7px;
     }
 
     .piewrap {
       align-self: center;
-      padding: 8px;
+      padding: 7px;
     }
 
     .legend {
       flex: none;
       width: 100%;
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .legend td {
-      padding: 12px 8px;
+      padding: 11px 7px;
     }
 
     .legend tr:last-child td {

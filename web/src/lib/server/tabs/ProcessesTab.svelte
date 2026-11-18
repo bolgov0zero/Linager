@@ -264,7 +264,7 @@
   .proc {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
   }
 
@@ -273,20 +273,20 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 7px;
   }
 
   .count {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-left: 6px;
+    gap: 5px;
+    margin-left: 5px;
   }
 
 
   .note {
     margin: 0;
-    padding: 24px 0;
+    padding: 22px 0;
     text-align: center;
     color: var(--muted);
   }
@@ -298,12 +298,12 @@
   table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   th,
   td {
-    padding: 8px 10px;
+    padding: 7px 9px;
     text-align: left;
     vertical-align: middle;
     border-bottom: 1px dashed var(--seg-off);
@@ -334,7 +334,7 @@
 
   .ellipsis {
     display: block;
-    max-width: 320px;
+    max-width: 288px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -352,17 +352,17 @@
     display: inline-flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 8px;
+    gap: 7px;
   }
 
   .v {
-    min-width: 40px;
+    min-width: 36px;
     text-align: right;
   }
 
   .meter {
     display: inline-block;
-    width: 72px;
+    width: 65px;
   }
 
   .args {
@@ -371,11 +371,11 @@
 
   .state {
     display: inline-block;
-    min-width: 20px;
-    padding: 0 6px;
+    min-width: 18px;
+    padding: 0 5px;
     border: 2px solid var(--line);
     background: var(--surface);
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.3;
     text-align: center;
   }
@@ -387,8 +387,8 @@
 
   .btn.sm {
     min-height: 0;
-    padding: 2px 8px;
-    font-size: 12px;
+    padding: 2px 7px;
+    font-size: 11px;
     box-shadow: 2px 2px 0 var(--shade);
   }
 
@@ -403,19 +403,19 @@
   .hint {
     margin: 0;
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .check {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
     cursor: pointer;
   }
 
   .check input {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     margin: 0;
     accent-color: var(--accent);
   }
@@ -432,7 +432,7 @@
     .bar.pbar {
       flex-direction: column;
       align-items: stretch;
-      gap: 8px;
+      gap: 7px;
     }
 
     .sorts {
@@ -455,7 +455,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 8px;
+      gap: 7px;
     }
 
     .meta p {
@@ -475,10 +475,10 @@
     .li {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 11px;
       width: 100%;
       min-height: 56px;
-      padding: 8px 12px;
+      padding: 7px 11px;
       background: none;
       border: 0;
       color: inherit;
@@ -505,7 +505,7 @@
     .l2 {
       overflow: hidden;
       color: var(--muted);
-      font-size: 12px;
+      font-size: 11px;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
@@ -526,10 +526,10 @@
     .act {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 9px;
       width: 100%;
       min-height: 52px;
-      padding: 0 14px;
+      padding: 0 13px;
       background: none;
       border: 0;
       border-top: 2px dashed var(--seg-off);

@@ -83,16 +83,16 @@
     flex: 1 1 auto;
     min-height: 0;
     display: grid;
-    grid-template-columns: 210px minmax(0, 1fr);
+    grid-template-columns: 189px minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
-    gap: 20px;
-    padding: 16px;
+    gap: 18px;
+    padding: 14px;
   }
 
   .side {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
     align-self: start;
   }
 
@@ -100,15 +100,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    padding: 8px 12px;
+    gap: 7px;
+    padding: 7px 11px;
     text-align: left;
     background: var(--surface);
     color: var(--ink);
     border: 2px solid var(--line);
     border-radius: 0;
     font-family: var(--font-display);
-    font-size: 14px;
+    font-size: 13px;
     cursor: pointer;
     box-shadow: 3px 3px 0 var(--shade);
   }
@@ -120,10 +120,10 @@
 
   .cnt {
     display: inline-block;
-    min-width: 20px;
+    min-width: 18px;
     padding: 0 5px;
     border: 2px solid currentColor;
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.3;
     text-align: center;
   }
@@ -139,7 +139,7 @@
     min-width: 0;
     min-height: 0;
     overflow-y: auto;
-    padding: 0 6px 8px 0;
+    padding: 0 5px 7px 0;
     scrollbar-gutter: stable;
     overscroll-behavior: contain;
   }
@@ -153,8 +153,8 @@
     .asv {
       grid-template-columns: minmax(0, 1fr);
       grid-template-rows: auto minmax(0, 1fr);
-      gap: 12px;
-      padding: 12px 12px calc(12px + var(--safe-b));
+      gap: 11px;
+      padding: 11px 11px calc(11px + var(--safe-b));
     }
 
     .side {
@@ -165,8 +165,8 @@
     .nav {
       flex: 1 1 auto;
       min-height: 44px;
-      padding: 6px 10px;
-      font-size: 13px;
+      padding: 5px 9px;
+      font-size: 12px;
     }
 
     .content {

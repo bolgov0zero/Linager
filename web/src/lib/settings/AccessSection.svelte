@@ -604,13 +604,13 @@
   .access {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 13px;
     min-width: 0;
   }
 
   h3.page {
     margin: 0;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 400;
   }
 
@@ -629,31 +629,31 @@
 
   .ddns {
     display: inline-block;
-    margin-left: 6px;
+    margin-left: 5px;
     padding: 0 5px;
     border: 2px solid var(--accent);
     color: var(--accent);
-    font-size: 11px;
+    font-size: 10px;
     line-height: 1.3;
     vertical-align: middle;
   }
 
   .ips {
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.5;
   }
 
   .radios {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
   }
 
   .opt {
     display: flex;
-    gap: 10px;
+    gap: 9px;
     align-items: flex-start;
-    padding: 8px 10px;
+    padding: 7px 9px;
     border: 2px solid var(--seg-off);
     cursor: pointer;
   }
@@ -669,13 +669,13 @@
   small {
     display: block;
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .sec h4,
   .tester h4 {
-    margin: 0 0 8px;
-    font-size: 13px;
+    margin: 0 0 7px;
+    font-size: 12px;
     font-weight: 400;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -689,18 +689,18 @@
   .tbl {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .tbl.wide {
-    min-width: 720px;
+    min-width: 648px;
   }
 
   .tbl th {
-    padding: 6px 8px;
+    padding: 5px 7px;
     border-bottom: 2px solid var(--line);
     font-family: var(--font-display);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 400;
     text-align: left;
     color: var(--muted);
@@ -708,7 +708,7 @@
   }
 
   .tbl td {
-    padding: 7px 8px;
+    padding: 6px 7px;
     border-bottom: 1px dashed var(--seg-off);
     vertical-align: middle;
   }
@@ -726,18 +726,18 @@
   }
 
   .btn.sm {
-    padding: 3px 8px;
-    font-size: 12px;
+    padding: 3px 7px;
+    font-size: 11px;
   }
 
   .add {
-    margin-top: 10px;
+    margin-top: 9px;
   }
 
   .switch {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
+    gap: 9px;
     cursor: pointer;
   }
 
@@ -748,8 +748,8 @@
   .tester {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px;
+    gap: 7px;
+    padding: 9px;
     border: 2px dashed var(--seg-off);
   }
 
@@ -764,17 +764,17 @@
 
   .badge {
     display: inline-block;
-    padding: 0 6px;
+    padding: 0 5px;
     border: 2px solid currentColor;
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.35;
     white-space: nowrap;
   }
 
   .box {
-    padding: 8px 10px;
+    padding: 7px 9px;
     border: 2px solid currentColor;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .box.good {
@@ -792,7 +792,7 @@
   .box.info {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 7px;
     align-items: center;
     justify-content: space-between;
     border: 2px dashed var(--accent);
@@ -810,8 +810,8 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
+    gap: 9px;
+    padding: 9px 11px;
     background: var(--surface);
     border: 2px solid var(--accent);
     box-shadow: 4px 4px 0 var(--shade);
@@ -819,7 +819,7 @@
 
   .applybar .msg {
     flex: 1 1 220px;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   @media (max-width: 720px) {

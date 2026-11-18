@@ -78,13 +78,13 @@
     display: flex;
     flex-direction: column;
     gap: 3px;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .step {
     display: grid;
-    grid-template-columns: 14px 1fr auto;
-    column-gap: 8px;
+    grid-template-columns: 13px 1fr auto;
+    column-gap: 7px;
     align-items: baseline;
     color: var(--ink);
   }
@@ -128,8 +128,8 @@
 
   .spin {
     display: inline-block;
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
     border: 2px solid currentColor;
     border-right-color: transparent;
     border-radius: 50%;

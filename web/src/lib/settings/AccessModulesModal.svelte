@@ -61,16 +61,16 @@
     padding: 0;
     list-style: none;
     border: 2px solid var(--line);
-    max-height: min(52vh, 460px);
+    max-height: min(52vh, 414px);
     overflow: auto;
   }
 
   .mod {
     display: grid;
     grid-template-columns: auto 1fr auto;
-    gap: 12px;
+    gap: 11px;
     align-items: center;
-    padding: 9px 12px;
+    padding: 8px 11px;
     border-bottom: 1px dashed var(--seg-off);
   }
 
@@ -86,23 +86,23 @@
   }
 
   .badge.root {
-    padding: 1px 6px;
+    padding: 1px 5px;
     border: 2px solid var(--warn);
     color: var(--warn);
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
   }
 
   .warn {
-    padding: 8px 12px;
+    padding: 7px 11px;
     border: 2px solid var(--warn);
     color: var(--warn);
   }
 
   .sw {
     position: relative;
-    width: 38px;
-    height: 22px;
+    width: 34px;
+    height: 20px;
     padding: 0;
     border: 2px solid var(--line);
     background: var(--seg-off);
@@ -114,8 +114,8 @@
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
     background: var(--ink);
     transition: transform 0.15s;
   }
@@ -143,7 +143,7 @@
     .sw::before {
       content: '';
       position: absolute;
-      inset: -11px -6px;
+      inset: -10px -5px;
     }
 
     .bar {
@@ -152,9 +152,9 @@
       z-index: 2;
       flex-direction: column;
       align-items: stretch;
-      gap: 8px;
-      margin: 0 -12px calc(-12px - var(--safe-b));
-      padding: 10px 12px calc(10px + var(--safe-b));
+      gap: 7px;
+      margin: 0 -11px calc(-11px - var(--safe-b));
+      padding: 9px 11px calc(9px + var(--safe-b));
       background: var(--surface);
       border-top: 2px solid var(--line);
     }

@@ -19,7 +19,7 @@
 
 <style>
   .seg { display: inline-flex; gap: 2px; width: 100%; }
-  i { flex: 1; height: 10px; background: var(--seg-off); }
+  i { flex: 1; height: 9px; background: var(--seg-off); }
   .ok i.on { background: var(--accent); }
   .warn i.on { background: var(--warn); }
   .crit i.on { background: var(--crit); }

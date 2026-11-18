@@ -136,10 +136,10 @@
   }
 
   .win.max {
-    left: 8px !important;
-    top: 8px !important;
-    width: calc(100% - 16px) !important;
-    height: calc(100% - 56px) !important;
+    left: 7px !important;
+    top: 7px !important;
+    width: calc(100% - 14px) !important;
+    height: calc(100% - 50px) !important;
   }
 
   /* Minimized windows keep their size (no PTY resize) and their session; they are only hidden. */
@@ -152,8 +152,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    padding: 6px 8px 6px 12px;
+    gap: 7px;
+    padding: 5px 7px 5px 11px;
     border-bottom: 2px solid var(--line);
     cursor: move;
     user-select: none;
@@ -171,10 +171,10 @@
   .name {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
     min-width: 0;
     margin: 0;
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
   }
 
@@ -191,8 +191,8 @@
 
   .name :global(.dot) {
     flex: none;
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
     border: 2px solid var(--line);
     background: var(--muted);
   }
@@ -208,20 +208,20 @@
   }
 
   .tools :global(.btn.sm) {
-    padding: 2px 8px;
-    font-size: 12px;
+    padding: 2px 7px;
+    font-size: 11px;
     line-height: 1.4;
   }
 
   .tools :global(.btn.icon) {
-    min-width: 28px;
+    min-width: 25px;
     padding: 2px 4px;
   }
 
   .body {
     flex: 1;
     min-height: 0;
-    padding: 8px;
+    padding: 7px;
   }
 
   .grip {
@@ -232,7 +232,7 @@
   .grip.e {
     top: 0;
     right: -5px;
-    width: 8px;
+    width: 7px;
     height: 100%;
     cursor: ew-resize;
   }
@@ -241,15 +241,15 @@
     left: 0;
     bottom: -5px;
     width: 100%;
-    height: 8px;
+    height: 7px;
     cursor: ns-resize;
   }
 
   .grip.se {
     right: -5px;
     bottom: -5px;
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
     cursor: nwse-resize;
   }
 
@@ -274,8 +274,8 @@
     .bar {
       flex-wrap: wrap;
       justify-content: flex-start;
-      gap: 0 6px;
-      padding: calc(2px + var(--safe-t)) 8px 6px 12px;
+      gap: 0 5px;
+      padding: calc(2px + var(--safe-t)) 7px 5px 11px;
       cursor: default;
     }
 
@@ -306,7 +306,7 @@
     .tools :global(.btn.sm),
     .tools :global(.btn.icon) {
       min-width: 44px;
-      font-size: 13px;
+      font-size: 12px;
     }
 
     .tools :global(.btn.sm) {

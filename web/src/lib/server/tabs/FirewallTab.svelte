@@ -829,7 +829,7 @@
                     </span>
                   </span>
                   {#if v.logged}<span class="pc-tag warn">{$trs('mobC.fw.logTag')}</span>{/if}
-                  <PixIcon name="more" size={20} />
+                  <PixIcon name="more" />
                 </button>
               {/each}
             </div>
@@ -837,7 +837,7 @@
           <p class="small muted lock">{$trs('fw.chain.established')}</p>
 
           <button class="btn" type="button" onclick={() => (addOpen = true)}>
-            <PixIcon name="plus" size={16} />&nbsp;{$trs('fw.add.title')}
+            <PixIcon name="plus" />&nbsp;{$trs('fw.add.title')}
           </button>
           <button class="btn" type="button" aria-expanded={showRuleset} onclick={() => (showRuleset = !showRuleset)}>
             {$trs('fw.ruleset.title')}: {showRuleset ? $trs('fw.ruleset.hide') : $trs('fw.ruleset.show')}
@@ -859,7 +859,7 @@
                     <span class="pc-l1 mono"><b>@{set.name}</b></span>
                     <span class="pc-l2">{set.family} · {$trs('mobC.fw.elements', { n: set.elements.length })}</span>
                   </span>
-                  <PixIcon name="chev" size={20} />
+                  <PixIcon name="chev" />
                 </button>
               {/each}
             </div>
@@ -873,7 +873,7 @@
                 <span class="pc-l2">{$trs('mobC.fw.logMarked', { n: loggedCount })}</span>
               </span>
               {#if logBadge !== null && logBadge > 0}<span class="pc-tag crit">{logBadge}</span>{/if}
-              <PixIcon name="chev" size={20} />
+              <PixIcon name="chev" />
             </button>
           </div>
           <button class="btn" type="button" onclick={() => (logOpen = true)}>{$trs('fw.log.open')}</button>
@@ -1320,25 +1320,25 @@
 <style>
   .fw {
     min-width: 0;
-    gap: 20px;
+    gap: 18px;
   }
 
   h3 {
     margin: 0;
-    font-size: 18px;
+    font-size: 16px;
     line-height: 1.2;
   }
 
   .rules {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
   }
 
   .cap {
     margin: 0;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 400;
     color: var(--muted);
     text-transform: uppercase;
@@ -1347,21 +1347,21 @@
 
   .sect {
     font-family: var(--font-display);
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 600;
   }
 
   .status {
     margin: 0;
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .warn,
   .draft,
   .pending {
     margin: 0;
-    padding: 12px;
+    padding: 11px;
     background: var(--surface);
     border: 2px solid var(--warn);
     box-shadow: 3px 3px 0 var(--shade);
@@ -1376,7 +1376,7 @@
   .pending {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 9px;
   }
 
   .pending {
@@ -1390,13 +1390,13 @@
 
   .countdown {
     font-family: var(--font-display);
-    font-size: 44px;
+    font-size: 40px;
     line-height: 1;
     color: var(--warn);
   }
 
   .countdown.expired {
-    font-size: 22px;
+    font-size: 20px;
     color: var(--crit);
   }
 
@@ -1406,7 +1406,7 @@
 
   .changes {
     margin: 0;
-    padding-left: 18px;
+    padding-left: 16px;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -1423,7 +1423,7 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 7px;
   }
 
   .tabsrow .count {
@@ -1435,7 +1435,7 @@
   .tabsrow :global(.chip) {
     display: inline-flex;
     align-items: center;
-    height: 36px;
+    height: 32px;
     padding-block: 0;
   }
 
@@ -1444,7 +1444,7 @@
   .ruleset-block {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
     min-width: 0;
   }
 
@@ -1454,7 +1454,7 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 7px;
     margin-bottom: 4px;
   }
 
@@ -1462,18 +1462,18 @@
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
-    gap: 10px;
+    gap: 9px;
   }
 
   .chain-name {
     font-family: var(--font-display);
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 600;
   }
 
   .hook {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .tw {
@@ -1484,24 +1484,24 @@
   .tbl {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .tbl th {
     font-family: var(--font-display);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--muted);
     text-align: left;
-    padding: 6px 8px;
+    padding: 5px 7px;
     border-bottom: 2px solid var(--line);
     white-space: nowrap;
   }
 
   .tbl td {
-    padding: 7px 8px;
+    padding: 6px 7px;
     border-bottom: 2px dashed var(--seg-off);
     vertical-align: middle;
   }
@@ -1520,8 +1520,8 @@
 
   .sw {
     position: relative;
-    width: 38px;
-    height: 22px;
+    width: 34px;
+    height: 20px;
     padding: 0;
     border: 2px solid var(--line);
     background: var(--seg-off);
@@ -1533,8 +1533,8 @@
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
     background: var(--ink);
     transition: transform 0.15s;
   }
@@ -1560,10 +1560,10 @@
 
   .act {
     display: inline-block;
-    padding: 1px 8px;
+    padding: 1px 7px;
     border: 2px solid var(--muted);
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
   }
 
@@ -1605,14 +1605,14 @@
   }
 
   .rule {
-    font-size: 12px;
+    font-size: 11px;
     overflow-wrap: anywhere;
     min-width: 0;
   }
 
   .empty {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .acts {
@@ -1620,8 +1620,8 @@
   }
 
   .ib {
-    width: 26px;
-    height: 26px;
+    width: 23px;
+    height: 23px;
     padding: 0;
     display: inline-grid;
     place-items: center;
@@ -1632,7 +1632,7 @@
     border-radius: 0;
     cursor: pointer;
     font-family: var(--font-display);
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1;
   }
 
@@ -1661,10 +1661,10 @@
     color: var(--ink);
     border: 2px solid var(--line);
     border-radius: 0;
-    padding: 5px 8px;
+    padding: 5px 7px;
     min-width: 0;
     font: inherit;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .fw :global(.ctl)::placeholder {
@@ -1672,7 +1672,7 @@
   }
 
   .fw :global(.ctl.w) {
-    width: 170px;
+    width: 153px;
   }
 
   .fw :global(.ctl.grow) {
@@ -1689,7 +1689,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
   }
 
   /* One height for every control of the row: the button is the tallest. */
@@ -1697,7 +1697,7 @@
   .inl :global(.sel),
   .inl :global(.btn) {
     box-sizing: border-box;
-    height: 36px;
+    height: 32px;
     padding-block: 0;
   }
 
@@ -1708,9 +1708,9 @@
 
   .errt {
     margin: 0;
-    min-height: 16px;
+    min-height: 14px;
     color: var(--crit);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .link {
@@ -1720,7 +1720,7 @@
     border: 0;
     color: var(--accent);
     font-family: var(--font-display);
-    font-size: 13px;
+    font-size: 12px;
     text-decoration: underline;
     text-underline-offset: 3px;
     cursor: pointer;
@@ -1728,14 +1728,14 @@
 
   .ruleset {
     margin: 0;
-    padding: 12px;
-    max-height: 360px;
+    padding: 11px;
+    max-height: 324px;
     overflow: auto;
     background: #14181e;
     color: #e6e9ef;
     border: 2px solid var(--line);
     box-shadow: 3px 3px 0 var(--shade);
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.5;
     white-space: pre;
   }
@@ -1747,11 +1747,11 @@
   /* Phone: rows instead of the table, the draft / countdown pinned above the bottom bar. */
   @media (max-width: 720px) {
     .fw {
-      gap: 12px;
+      gap: 11px;
     }
 
     .rtext {
-      font-size: 13.5px;
+      font-size: 12px;
       overflow-wrap: anywhere;
     }
 
@@ -1786,7 +1786,7 @@
 
     .link {
       min-height: 44px;
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .docks {
@@ -1797,7 +1797,7 @@
       display: flex;
       flex-direction: column;
       /* The negative bottom margin cancels the 16 px page padding: at the end of the scroll the bar still lies on the tab bar. */
-      margin: 0 -12px -16px;
+      margin: 0 -11px -14px;
       /* Both blocks (confirm and draft) together must not eat the whole screen: the dock scrolls inside. */
       max-height: 55dvh;
       overflow-y: auto;
@@ -1813,8 +1813,8 @@
 
     .pending,
     .draft {
-      padding: 10px 12px;
-      gap: 8px;
+      padding: 9px 11px;
+      gap: 7px;
       border-width: 0;
       box-shadow: none;
     }
@@ -1830,11 +1830,11 @@
 
     .pending p,
     .draft p {
-      font-size: 12px;
+      font-size: 11px;
     }
 
     .countdown {
-      font-size: 28px;
+      font-size: 25px;
     }
 
     .pending .row,
@@ -1851,8 +1851,8 @@
     .dchanges summary {
       display: flex;
       align-items: center;
-      min-height: 32px;
-      font-size: 12.5px;
+      min-height: 29px;
+      font-size: 11px;
       cursor: pointer;
     }
   }

@@ -3,7 +3,7 @@
   let { name }: { name: 'terminal' | 'open' | 'trash' } = $props();
 </script>
 
-<svg viewBox="0 0 16 16" width="18" height="18" shape-rendering="crispEdges" fill="currentColor" aria-hidden="true">
+<svg viewBox="0 0 16 16" width="16" height="16" shape-rendering="crispEdges" fill="currentColor" aria-hidden="true">
   {#if name === 'terminal'}
     <rect x="2" y="3" width="2" height="2" />
     <rect x="4" y="5" width="2" height="2" />

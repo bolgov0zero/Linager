@@ -203,7 +203,7 @@
             type="button"
             aria-label={$tr('srv.note.open')}
             title={$tr('srv.note.open')}
-            onclick={() => (noteOpen = true)}><PixIcon name="note" size={20} /></button>
+            onclick={() => (noteOpen = true)}><PixIcon name="note" /></button>
           {#if isAdmin}
             <RebootButton server={detail} />
             <button class="btn danger" type="button" onclick={() => (deleteOpen = true)}>{$tr('srv.delete')}</button>
@@ -353,29 +353,29 @@
   .srv {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    max-width: 1440px;
+    gap: 11px;
+    max-width: 1296px;
     margin: 0 auto;
   }
 
   .titlebar {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
   }
 
   .title-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
+    gap: 11px;
   }
 
   .name {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
+    gap: 9px;
     min-width: 0;
     flex: 1 1 auto;
   }
@@ -383,7 +383,7 @@
   .titlebar h1 {
     margin: 0;
     font-variation-settings: "ELSH" 40;
-    font-size: 30px;
+    font-size: 27px;
     line-height: 1.1;
     overflow-wrap: anywhere;
   }
@@ -397,9 +397,9 @@
   /* The note button is only an icon; a small square in the corner says that the server has a note. */
   .btn.note {
     position: relative;
-    min-width: 36px;
-    min-height: 36px;
-    padding: 0 8px;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0 7px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -410,15 +410,15 @@
     position: absolute;
     top: 3px;
     right: 3px;
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     background: var(--accent);
   }
 
   .dot {
     flex: none;
-    width: 12px;
-    height: 12px;
+    width: 11px;
+    height: 11px;
     background: var(--muted);
   }
 
@@ -428,10 +428,10 @@
 
   /* Status pill next to the server name, like the design's "в норме" tag. */
   .state {
-    padding: 1px 8px;
+    padding: 1px 7px;
     border: 2px solid var(--muted);
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.4;
   }
 
@@ -442,7 +442,7 @@
 
   .banner {
     margin: 0;
-    padding: 8px 12px;
+    padding: 7px 11px;
     border: 2px solid var(--warn);
     color: var(--warn);
   }
@@ -451,15 +451,15 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 11px;
   }
 
   /* Sidebar with the tabs on the left, the panel on the right. */
   .body {
     display: flex;
     align-items: flex-start;
-    gap: 20px;
-    margin-top: 6px;
+    gap: 18px;
+    margin-top: 5px;
   }
 
   .main {
@@ -469,16 +469,16 @@
 
   .crumb {
     font-family: var(--font-display);
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--muted);
   }
 
   .page-title {
-    margin: 2px 0 12px;
+    margin: 2px 0 11px;
     font-family: var(--font-display);
-    font-size: 26px;
+    font-size: 23px;
     font-weight: 400;
     line-height: 1.2;
   }
@@ -487,17 +487,17 @@
     background: var(--surface);
     border: 2px solid var(--line);
     box-shadow: 4px 4px 0 var(--shade);
-    padding: 16px;
+    padding: 14px;
     min-width: 0;
   }
 
   .soon {
     margin: 0;
-    padding: 48px 0;
+    padding: 43px 0;
     text-align: center;
     color: var(--muted);
     font-family: var(--font-display);
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .phead {
@@ -508,14 +508,14 @@
     .body {
       flex-direction: column;
       align-items: stretch;
-      gap: 14px;
+      gap: 13px;
     }
   }
 
   @media (max-width: 720px) {
     .srv {
-      gap: 12px;
-      padding-bottom: calc(var(--bar-h) + var(--safe-b) + 16px);
+      gap: 11px;
+      padding-bottom: calc(var(--bar-h) + var(--safe-b) + 14px);
     }
 
     /* One header (the global bar is hidden on a server page); the side menu became the bottom bar. */
@@ -531,9 +531,9 @@
       z-index: 10;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 7px;
       min-height: 56px;
-      padding: 5px 12px 5px 8px;
+      padding: 5px 11px 5px 7px;
       padding-top: calc(5px + var(--safe-t));
       background: var(--surface);
       border-bottom: 2px solid var(--line);
@@ -560,7 +560,7 @@
       overflow: hidden;
       margin: 0;
       font-family: var(--font-display);
-      font-size: 22px;
+      font-size: 20px;
       line-height: 1.15;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -569,18 +569,18 @@
     .pt p {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       overflow: hidden;
       margin: 0;
       color: var(--muted);
-      font-size: 11.5px;
+      font-size: 10px;
       white-space: nowrap;
     }
 
     .pt .sq {
       flex: none;
-      width: 9px;
-      height: 9px;
+      width: 8px;
+      height: 8px;
       background: var(--muted);
     }
 
@@ -589,8 +589,8 @@
     }
 
     .srv > :global(:not(.phead)) {
-      margin-left: 12px;
-      margin-right: 12px;
+      margin-left: 11px;
+      margin-right: 11px;
     }
 
     .body {

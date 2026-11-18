@@ -629,7 +629,7 @@
 
 <style>
   .pick {
-    margin-top: 8px;
+    margin-top: 7px;
   }
 
   .toolbar {
@@ -637,8 +637,8 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 10px 16px;
-    margin: 16px 0;
+    gap: 9px 14px;
+    margin: 14px 0;
   }
 
   /* stretch: the group picker (a Select, other font and padding) is as high as the chips next to it */
@@ -646,7 +646,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: stretch;
-    gap: 8px;
+    gap: 7px;
     min-width: 0;
   }
 
@@ -656,10 +656,10 @@
 
   /* as high as the buttons next to it */
   .search {
-    width: 260px;
+    width: 234px;
     max-width: 100%;
-    height: 36px;
-    padding: 0 10px;
+    height: 32px;
+    padding: 0 9px;
   }
 
   @media (max-width: 720px) {
@@ -675,22 +675,22 @@
     .scroll {
       max-height: var(--list-h);
       overflow-y: auto;
-      padding: 2px 8px 8px 2px;
-      margin: -2px -8px -8px -2px;
+      padding: 2px 7px 7px 2px;
+      margin: -2px -7px -7px -2px;
     }
   }
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
-    gap: 18px;
+    grid-template-columns: repeat(auto-fill, minmax(min(270px, 100%), 1fr));
+    gap: 16px;
   }
 
   /* The status map: small tiles, the left edge shows the status. */
   .map {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 7px;
   }
 
   @media (min-width: 600px) {
@@ -715,7 +715,7 @@
   .thead {
     display: flex;
     align-items: flex-start;
-    gap: 6px;
+    gap: 5px;
     min-width: 0;
   }
 
@@ -727,7 +727,7 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
-    padding: 6px 10px 8px;
+    padding: 5px 9px 7px;
     background: var(--surface);
     border: 2px solid var(--line);
     border-left-width: 6px;
@@ -777,7 +777,7 @@
 
   .tname {
     overflow: hidden;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -786,8 +786,8 @@
   .tmeters {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 6px;
+    gap: 7px;
+    margin-top: 5px;
   }
 
   .tmeter {
@@ -805,7 +805,7 @@
   }
 
   .tval {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     text-align: right;
   }
@@ -835,13 +835,13 @@
   .tnet {
     display: flex;
     flex-wrap: wrap;
-    gap: 2px 14px;
-    margin-top: 6px;
-    font-size: 12px;
+    gap: 2px 13px;
+    margin-top: 5px;
+    font-size: 11px;
   }
 
   .tnet b {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
   }
 
@@ -858,18 +858,18 @@
   }
 
   .ttags {
-    margin-top: 6px;
+    margin-top: 5px;
   }
 
   .ttags :global(.tag) {
-    font-size: 11px;
+    font-size: 10px;
     padding: 1px 5px;
   }
 
   .tsub {
     overflow: hidden;
     color: var(--muted);
-    font-size: 11px;
+    font-size: 10px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -896,11 +896,11 @@
   }
 
   .undo {
-    left: 16px;
+    left: 14px;
     right: auto;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 11px;
   }
 
   /* Phone toolbar: pinned under the top bar, its background hides the cards that pass under it. */
@@ -910,23 +910,23 @@
     z-index: 4;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin: 4px -12px 0;
-    padding: 8px 12px 16px;
+    gap: 7px;
+    margin: 4px -11px 0;
+    padding: 7px 11px 14px;
     background: var(--bg);
   }
 
   .prow {
     display: flex;
-    gap: 8px;
+    gap: 7px;
   }
 
   .ptool:has(+ .pgroup) {
-    padding-bottom: 8px;
+    padding-bottom: 7px;
   }
 
   .pgroup {
-    margin: 0 0 12px;
+    margin: 0 0 11px;
   }
 
   .pseg {
@@ -943,7 +943,7 @@
     min-width: 0;
     padding: 0 4px;
     overflow: hidden;
-    font-size: 14px;
+    font-size: 13px;
     text-overflow: ellipsis;
     white-space: nowrap;
     border: 0;
@@ -974,7 +974,7 @@
     }
 
     .tmeter {
-      grid-template-columns: 30px minmax(0, 1fr) 36px;
+      grid-template-columns: 27px minmax(0, 1fr) 32px;
       align-items: center;
       gap: 0 5px;
     }
@@ -997,12 +997,12 @@
     /* The summary strip already shows the number of servers. */
     .grid {
       grid-template-columns: minmax(0, 1fr);
-      gap: 12px;
+      gap: 11px;
     }
 
     .undo {
-      left: 12px;
-      right: 12px;
+      left: 11px;
+      right: 11px;
     }
   }
 

@@ -360,7 +360,7 @@
   .disk {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 13px;
     min-width: 0;
   }
 
@@ -370,7 +370,7 @@
   }
 
   h3 {
-    font-size: 16px;
+    font-size: 14px;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -379,13 +379,13 @@
   .sub {
     text-transform: none;
     letter-spacing: 0;
-    margin-left: 6px;
+    margin-left: 5px;
   }
 
   .fss {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(306px, 1fr));
+    gap: 13px;
   }
 
   .between {
@@ -394,7 +394,7 @@
   }
 
   .notice {
-    padding: 8px 12px;
+    padding: 7px 11px;
     border: 2px solid var(--warn);
     color: var(--warn);
   }
@@ -415,7 +415,7 @@
     display: flex;
     align-items: flex-end;
     gap: 2px;
-    height: 34px;
+    height: 31px;
   }
 
   .spark i {
@@ -430,10 +430,10 @@
 
   .badge {
     display: inline-block;
-    padding: 1px 6px;
+    padding: 1px 5px;
     border: 2px solid var(--muted);
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .badge.warn {
@@ -471,11 +471,11 @@
 
   .drow {
     display: grid;
-    grid-template-columns: minmax(120px, 240px) 1fr 90px;
-    gap: 12px;
+    grid-template-columns: minmax(108px, 216px) 1fr 81px;
+    gap: 11px;
     align-items: center;
     width: 100%;
-    padding: 6px 8px;
+    padding: 5px 7px;
     border: 0;
     background: none;
     color: inherit;
@@ -500,7 +500,7 @@
   }
 
   .track {
-    height: 14px;
+    height: 13px;
     background: var(--seg-off);
   }
 
@@ -516,50 +516,50 @@
 
   .clean {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(252px, 1fr));
+    gap: 11px;
   }
 
   .cc {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 12px;
+    gap: 7px;
+    padding: 11px;
     border: 2px solid var(--line);
   }
 
   .cc .big {
     font-family: var(--font-display);
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .small-btn {
     display: inline-flex;
     align-items: center;
-    height: 30px;
-    padding: 0 10px;
-    font-size: 13px;
+    height: 27px;
+    padding: 0 9px;
+    font-size: 12px;
   }
 
   .confirm {
-    padding: 12px;
+    padding: 11px;
     border: 2px solid var(--crit);
   }
 
   .cmd {
     margin: 0;
-    padding: 10px;
+    padding: 9px;
     border: 2px solid var(--line);
     background: var(--bg);
-    font-size: 12px;
+    font-size: 11px;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
 
   .list {
     margin: 0;
-    padding-left: 18px;
-    max-height: 160px;
+    padding-left: 16px;
+    max-height: 144px;
     overflow: auto;
   }
 
@@ -571,7 +571,7 @@
 
   .pct {
     font-family: var(--font-display);
-    font-size: 28px;
+    font-size: 25px;
     line-height: 1;
   }
 
@@ -583,19 +583,19 @@
     .fsrow {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 11px;
     }
 
     .fsinfo {
       display: flex;
       flex-direction: column;
       flex: 1;
-      gap: 6px;
+      gap: 5px;
       min-width: 0;
     }
 
     h3 {
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .sub {
@@ -637,7 +637,7 @@
 
     .crumbs button {
       min-height: 44px;
-      padding: 0 8px;
+      padding: 0 7px;
     }
 
     .crumbs span {
@@ -649,9 +649,9 @@
       grid-template-areas:
         'nm sz'
         'track track';
-      gap: 4px 12px;
+      gap: 4px 11px;
       min-height: 44px;
-      padding: 8px;
+      padding: 7px;
     }
 
     .drow .nm {
@@ -664,7 +664,7 @@
 
     .drow .track {
       grid-area: track;
-      height: 10px;
+      height: 9px;
     }
 
     .drow.link {
@@ -686,7 +686,7 @@
         'size btn'
         'text btn';
       align-items: center;
-      gap: 2px 10px;
+      gap: 2px 9px;
       border-width: 0;
       border-top: 2px dashed var(--seg-off);
     }
@@ -712,13 +712,13 @@
     }
 
     .cc .big {
-      font-size: 20px;
+      font-size: 18px;
     }
 
     .small-btn {
       height: 44px;
-      padding: 0 14px;
-      font-size: 14px;
+      padding: 0 13px;
+      font-size: 13px;
     }
   }
 </style>

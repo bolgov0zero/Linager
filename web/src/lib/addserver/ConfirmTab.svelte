@@ -307,7 +307,7 @@
     flex-direction: row;
     flex-wrap: wrap;
     align-items: baseline;
-    gap: 2px 8px;
+    gap: 2px 7px;
   }
 
   .nowrap {
@@ -319,7 +319,7 @@
   }
 
   .code {
-    font-size: 16px;
+    font-size: 14px;
     letter-spacing: 0.15em;
   }
 

@@ -71,14 +71,14 @@
   .opts {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
   }
 
   .opt {
     display: flex;
-    gap: 10px;
+    gap: 9px;
     align-items: flex-start;
-    padding: 8px 10px;
+    padding: 7px 9px;
     border: 2px solid var(--seg-off);
     cursor: pointer;
   }
@@ -102,8 +102,8 @@
       bottom: 0;
       z-index: 2;
       flex-wrap: nowrap;
-      margin: 0 -12px calc(-12px - var(--safe-b));
-      padding: 10px 12px calc(10px + var(--safe-b));
+      margin: 0 -11px calc(-11px - var(--safe-b));
+      padding: 9px 11px calc(9px + var(--safe-b));
       background: var(--surface);
       border-top: 2px solid var(--line);
     }

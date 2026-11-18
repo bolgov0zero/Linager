@@ -141,7 +141,7 @@
 </script>
 
 {#snippet icon(id: TabId)}
-  <svg class="ic" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true">
+  <svg class="ic" viewBox="0 0 9 9" fill="currentColor" aria-hidden="true">
     {#each TAB_ICONS[id] as row, y (y)}
       {#each [...row] as cell, x (x)}
         {#if cell === '1'}<rect {x} {y} width="1" height="1" />{/if}
@@ -226,12 +226,12 @@
 <style>
   .side {
     position: sticky;
-    top: var(--side-top, 16px);
-    width: 236px;
+    top: var(--side-top, 14px);
+    width: 212px;
     flex: none;
     display: flex;
     flex-direction: column;
-    max-height: var(--side-max, calc(100vh - 32px));
+    max-height: var(--side-max, calc(100vh - 29px));
     background: var(--surface);
     border: 2px solid var(--line);
     box-shadow: 4px 4px 0 var(--shade);
@@ -244,11 +244,11 @@
     min-height: 0;
     overflow-y: auto;
     scrollbar-width: thin;
-    padding: 6px 0;
+    padding: 5px 0;
   }
 
   .grp {
-    padding: 4px 8px 6px;
+    padding: 4px 7px 5px;
   }
 
   .grp + .grp {
@@ -260,15 +260,15 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    height: 28px;
+    height: 25px;
     margin: 2px 0;
-    padding: 0 6px;
+    padding: 0 5px;
     background: none;
     border: 0;
     cursor: pointer;
     color: var(--muted);
     font-family: var(--font-display);
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     text-align: left;
@@ -279,8 +279,8 @@
   }
 
   .chev {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     flex: none;
     shape-rendering: crispEdges;
     transition: transform 0.12s;
@@ -301,7 +301,7 @@
   }
 
   .item.withwin {
-    padding-right: 40px;
+    padding-right: 36px;
   }
 
   /* The "open in a window" button at the right end of the Terminal item. */
@@ -313,8 +313,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
+    width: 23px;
+    height: 23px;
     padding: 0;
     transform: translateY(-50%);
     background: var(--surface);
@@ -333,8 +333,8 @@
   }
 
   .winbtn :global(svg) {
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
   }
 
   .rail .winbtn {
@@ -349,15 +349,15 @@
     position: relative;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 9px;
     width: 100%;
-    height: 34px;
-    padding: 0 10px;
+    height: 31px;
+    padding: 0 9px;
     background: none;
     border: 2px solid transparent;
     color: var(--ink);
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
     text-align: left;
   }
 
@@ -398,11 +398,11 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 20px;
-    height: 20px;
+    min-width: 18px;
+    height: 18px;
     padding: 0 5px;
     border: 2px solid currentColor;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .cnt.warn {
@@ -421,14 +421,14 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    padding: 8px;
+    gap: 7px;
+    padding: 7px;
     border-top: 2px solid var(--line);
   }
 
   .ver {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -439,8 +439,8 @@
     align-items: center;
     justify-content: center;
     flex: none;
-    width: 28px;
-    height: 28px;
+    width: 25px;
+    height: 25px;
     padding: 0;
     background: var(--surface);
     border: 2px solid var(--line);
@@ -450,8 +450,8 @@
   }
 
   .collapse svg {
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
     shape-rendering: crispEdges;
   }
 
@@ -466,7 +466,7 @@
   /* rail: icons only, wide screens */
   @media (min-width: 861px) {
     .side.rail {
-      width: 60px;
+      width: 54px;
     }
 
     .rail .nav {
@@ -474,11 +474,11 @@
     }
 
     .rail .grp {
-      padding: 4px 6px;
+      padding: 4px 5px;
     }
 
     .rail .grp-h {
-      height: 12px;
+      height: 11px;
       justify-content: center;
       pointer-events: none;
     }
@@ -490,7 +490,7 @@
 
     .rail .grp-h::after {
       content: '';
-      width: 14px;
+      width: 13px;
       height: 2px;
       background: var(--line);
       opacity: 0.35;
@@ -510,8 +510,8 @@
       top: 1px;
       right: 1px;
       min-width: 0;
-      width: 9px;
-      height: 9px;
+      width: 8px;
+      height: 8px;
       padding: 0;
       border: 0;
       background: currentColor;
@@ -520,7 +520,7 @@
 
     .rail .foot {
       flex-direction: column;
-      padding: 8px 4px;
+      padding: 7px 4px;
     }
 
     .rail .ver {
@@ -531,13 +531,13 @@
       content: attr(data-tip);
       position: absolute;
       top: 50%;
-      left: calc(100% + 10px);
+      left: calc(100% + 9px);
       z-index: 5;
       transform: translateY(-50%);
-      padding: 3px 8px;
+      padding: 3px 7px;
       background: var(--ink);
       color: var(--surface);
-      font-size: 12px;
+      font-size: 11px;
       white-space: nowrap;
       pointer-events: none;
     }
@@ -561,16 +561,16 @@
     .menu-btn {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 9px;
       width: 100%;
-      height: 36px;
-      padding: 0 12px;
+      height: 32px;
+      padding: 0 11px;
       background: var(--surface);
       border: 0;
       color: var(--ink);
       cursor: pointer;
       font-family: var(--font-display);
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .cur {

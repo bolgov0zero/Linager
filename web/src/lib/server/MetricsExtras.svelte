@@ -69,7 +69,7 @@
 <style>
   .extras {
     display: grid;
-    gap: 16px;
+    gap: 14px;
     grid-template-columns: 1fr;
     align-items: start;
   }
@@ -84,17 +84,17 @@
   .events {
     list-style: none;
     margin: 0;
-    padding: 0 6px 0 0;
-    max-height: 320px;
+    padding: 0 5px 0 0;
+    max-height: 288px;
     overflow-y: auto;
   }
 
   .events li {
     display: grid;
     grid-template-columns: max-content 1fr;
-    gap: 4px 10px;
+    gap: 4px 9px;
     align-items: center;
-    padding: 8px 0;
+    padding: 7px 0;
     border-bottom: 1px dashed var(--line);
   }
 
@@ -105,10 +105,10 @@
 
   .tag {
     justify-self: start;
-    padding: 0 6px;
+    padding: 0 5px;
     border: 2px solid var(--warn);
     color: var(--warn);
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
   }
 
@@ -125,8 +125,8 @@
   .grow {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    padding: 8px;
+    gap: 7px;
+    padding: 7px;
     border-bottom: 1px dashed var(--line);
   }
 
@@ -138,12 +138,12 @@
   .hint {
     margin: 0;
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   @media (max-width: 720px) {
     .extras {
-      gap: 12px;
+      gap: 11px;
     }
 
     .events {

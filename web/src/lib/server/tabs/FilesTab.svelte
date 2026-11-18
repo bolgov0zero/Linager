@@ -673,17 +673,17 @@
   {#if $isPhone}
     <div class="ptools">
       <button class="btn sm" type="button" aria-expanded={treeOpen} onclick={() => (treeOpen = true)}>
-        <PixIcon name="folder" size={16} />
+        <PixIcon name="folder" />
         {$tStore('files.tree')}
       </button>
       <button class="btn sm ico" type="button" aria-label={$tStore('files.m.search')} aria-pressed={searching} onclick={() => { searching = !searching; if (!searching) filterText = ''; }}>
-        <PixIcon name="search" size={16} />
+        <PixIcon name="search" />
       </button>
       <button class="btn sm grow" type="button" aria-pressed={selectMode} disabled={!listing} onclick={toggleSelectMode}>
         {$tStore(selectMode ? 'files.m.done' : 'files.m.select')}
       </button>
       <button class="btn sm ico" type="button" aria-label={$tStore('files.m.create')} disabled={readOnly || !listing} onclick={openCreate}>
-        <PixIcon name="plus" size={16} />
+        <PixIcon name="plus" />
       </button>
     </div>
     {#if searching}
@@ -850,7 +850,7 @@
               {#if entry.type === 'dir'}
                 <PixIcon name="folder" />
               {:else}
-                <svg class="fileic" viewBox="0 0 8 8" width="20" height="20" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">
+                <svg class="fileic" viewBox="0 0 8 8" width="16" height="16" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">
                   {#each FILE_ICON as row, y (y)}{#each [...row] as cell, x (x)}{#if cell === '1'}<rect {x} {y} width="1" height="1" />{/if}{/each}{/each}
                 </svg>
               {/if}
@@ -858,11 +858,11 @@
                 <span class="l1"><b>{entry.name}</b></span>
                 <span class="l2">{metaLine(entry)}</span>
               </span>
-              {#if entry.type !== 'dir' && !selectMode}<PixIcon name="more" size={16} />{/if}
+              {#if entry.type !== 'dir' && !selectMode}<PixIcon name="more" />{/if}
             </button>
             {#if entry.type === 'dir' && !selectMode}
               <button class="more-btn" type="button" aria-label={$tStore('files.menu.more')} onclick={() => openActions(entry)}>
-                <PixIcon name="more" size={16} />
+                <PixIcon name="more" />
               </button>
             {/if}
           </div>
@@ -1019,7 +1019,7 @@
   /* The "more" button replaces the old row buttons on touch screens; with a mouse the context menu is used. */
   .more {
     display: none;
-    padding: 2px 10px;
+    padding: 2px 9px;
   }
 
   @media (pointer: coarse) {
@@ -1031,7 +1031,7 @@
   .files {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
   }
 
@@ -1040,7 +1040,7 @@
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
   }
 
   /* The path with the number of selected items to its right. */
@@ -1048,7 +1048,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px 12px;
+    gap: 4px 11px;
     min-width: 0;
   }
 
@@ -1083,7 +1083,7 @@
   }
 
   .actions {
-    gap: 6px;
+    gap: 5px;
   }
 
   .picker {
@@ -1096,7 +1096,7 @@
 
   .notice {
     margin: 0;
-    padding: 8px 12px;
+    padding: 7px 11px;
     border: 2px solid var(--warn);
     color: var(--warn);
   }
@@ -1104,7 +1104,7 @@
   .upload {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
   }
 
   .upload p {
@@ -1112,7 +1112,7 @@
   }
 
   .bar {
-    height: 12px;
+    height: 11px;
     border: 2px solid var(--line);
     background: var(--seg-off);
   }
@@ -1127,12 +1127,12 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 11px;
   }
 
   .panes {
     display: grid;
-    grid-template-columns: var(--tree-w) 8px minmax(0, 1fr);
+    grid-template-columns: var(--tree-w) 7px minmax(0, 1fr);
     align-items: stretch;
     height: var(--panes-h);
   }
@@ -1141,7 +1141,7 @@
     min-width: 0;
     min-height: 0;
     overflow: auto;
-    padding: 6px 4px;
+    padding: 5px 4px;
     border: 2px solid var(--line);
     background: var(--surface);
   }
@@ -1203,15 +1203,15 @@
 
   table.grid {
     width: 100%;
-    min-width: 520px;
+    min-width: 468px;
     border-collapse: collapse;
   }
 
   th {
-    padding: 8px;
+    padding: 7px;
     border-bottom: 2px solid var(--line);
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 400;
     letter-spacing: 0.04em;
     text-align: left;
@@ -1220,7 +1220,7 @@
   }
 
   td {
-    padding: 8px;
+    padding: 7px;
     border-bottom: 2px dashed var(--seg-off);
     vertical-align: middle;
   }
@@ -1231,14 +1231,14 @@
   }
 
   .kind {
-    width: 24px;
+    width: 22px;
     padding-right: 0;
   }
 
   .kind-icon {
     display: inline-block;
-    width: 12px;
-    height: 12px;
+    width: 11px;
+    height: 11px;
     border: 2px solid var(--line);
   }
 
@@ -1319,12 +1319,12 @@
   .ptools {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
   }
 
   .ptools .btn {
-    gap: 6px;
-    padding: 0 12px;
+    gap: 5px;
+    padding: 0 11px;
   }
 
   .ptools .ico {
@@ -1348,7 +1348,7 @@
     align-items: center;
     gap: 4px;
     min-width: 0;
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .pathline {
@@ -1363,7 +1363,7 @@
   .pathline .crumb {
     flex: none;
     min-height: 44px;
-    padding: 0 6px;
+    padding: 0 5px;
     overflow-wrap: normal;
   }
 
@@ -1396,8 +1396,8 @@
   }
 
   .plist button.li {
-    gap: 10px;
-    padding: 8px 8px 8px 12px;
+    gap: 9px;
+    padding: 7px 7px 7px 11px;
     cursor: pointer;
   }
 
@@ -1412,11 +1412,11 @@
   .plist .main {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 9px;
     flex: 1;
     min-width: 0;
     min-height: 56px;
-    padding: 8px 12px 8px 12px;
+    padding: 7px 11px 7px 11px;
     background: none;
     border: 0;
     color: inherit;
@@ -1456,7 +1456,7 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    font-size: 14.5px;
+    font-size: 13px;
   }
 
   .plist .l1 b {
@@ -1469,7 +1469,7 @@
     white-space: nowrap;
     text-overflow: ellipsis;
     color: var(--muted);
-    font-size: 11.5px;
+    font-size: 10px;
   }
 
   .fileic {
@@ -1479,8 +1479,8 @@
 
   .box {
     flex: none;
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     border: 2px solid var(--line);
     background: var(--surface);
   }
@@ -1491,7 +1491,7 @@
   }
 
   .empty {
-    padding: 14px 12px;
+    padding: 13px 11px;
   }
 
   /* The actions of the selection (or the clipboard) stay above the bottom bar while the list scrolls. */
@@ -1501,9 +1501,9 @@
     z-index: 5;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin: 0 -12px;
-    padding: 8px 12px;
+    gap: 7px;
+    margin: 0 -11px;
+    padding: 7px 11px;
     background: var(--surface);
     border: 0;
     border-top: 2px solid var(--line);
@@ -1514,20 +1514,20 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 7px;
     padding-left: 4px;
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .pbar-btns {
     display: flex;
-    gap: 6px;
+    gap: 5px;
   }
 
   .pbar-btns .btn {
     flex: 1;
     min-width: 0;
     padding: 0 4px;
-    font-size: 13px;
+    font-size: 12px;
   }
 </style>

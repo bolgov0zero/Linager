@@ -121,18 +121,18 @@
     position: absolute;
     top: -5px;
     right: -5px;
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
     background: var(--warn);
     border: 2px solid var(--surface);
   }
 
   .panel {
     position: absolute;
-    top: calc(100% + 8px);
+    top: calc(100% + 7px);
     right: 0;
     z-index: 30;
-    min-width: 220px;
+    min-width: 198px;
     background: var(--surface);
     border: 2px solid var(--line);
     box-shadow: 4px 4px 0 var(--shade);
@@ -142,16 +142,16 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 14px;
     width: 100%;
-    min-height: 40px;
-    padding: 0 14px;
+    min-height: 36px;
+    padding: 0 13px;
     background: none;
     border: 0;
     border-top: 2px dashed var(--seg-off);
     color: var(--ink);
     font-family: var(--font-display);
-    font-size: 15px;
+    font-size: 14px;
     text-align: left;
     cursor: pointer;
   }

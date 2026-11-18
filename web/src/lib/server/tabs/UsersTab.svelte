@@ -162,7 +162,7 @@
                 <span class="pc-l2 mono">{[u.uid, u.shell, u.human ? u.home : ''].filter((x) => x !== '').join(' · ')}</span>
                 {#if u.gecos}<span class="pc-l2">{u.gecos}</span>{/if}
               </span>
-              <PixIcon name="more" size={20} />
+              <PixIcon name="more" />
             </button>
           {/each}
         </div>
@@ -307,11 +307,11 @@
   .sums {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
+    gap: 11px;
   }
 
   .sum {
-    padding: 10px 12px;
+    padding: 9px 11px;
     border: 2px solid var(--line);
   }
 
@@ -319,7 +319,7 @@
     display: block;
     font-family: var(--font-display);
     font-weight: 400;
-    font-size: 26px;
+    font-size: 23px;
     line-height: 1.1;
   }
 
@@ -327,13 +327,13 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
   }
 
   .search {
     flex: 1 1 200px;
-    max-width: 320px;
-    height: 36px;
+    max-width: 288px;
+    height: 32px;
     padding-block: 0;
   }
 
@@ -347,24 +347,24 @@
 
   .tbl {
     width: 100%;
-    min-width: 900px;
+    min-width: 810px;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .tbl th {
-    padding: 6px 8px;
+    padding: 5px 7px;
     text-align: left;
     font-family: var(--font-display);
     font-weight: 400;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--muted);
     border-bottom: 2px solid var(--line);
     white-space: nowrap;
   }
 
   .tbl td {
-    padding: 8px;
+    padding: 7px;
     vertical-align: middle;
     border-bottom: 1px dashed var(--seg-off);
   }
@@ -388,7 +388,7 @@
   .uname {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
     font-weight: 600;
     white-space: nowrap;
   }
@@ -411,11 +411,11 @@
   }
 
   .gtag {
-    padding: 0 6px;
+    padding: 0 5px;
     white-space: nowrap;
     border: 1px solid var(--muted);
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .gtag.hot {
@@ -425,9 +425,9 @@
 
   .badge {
     display: inline-block;
-    padding: 0 6px;
+    padding: 0 5px;
     border: 2px solid currentColor;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 400;
     line-height: 1.35;
     white-space: nowrap;
@@ -451,9 +451,9 @@
 
   .dot {
     display: inline-block;
-    width: 8px;
-    height: 8px;
-    margin-right: 6px;
+    width: 7px;
+    height: 7px;
+    margin-right: 5px;
     background: currentColor;
   }
 
@@ -465,17 +465,17 @@
   .act-row {
     display: flex;
     justify-content: flex-end;
-    gap: 6px;
+    gap: 5px;
   }
 
   .empty {
-    padding: 24px;
+    padding: 22px;
     text-align: center;
   }
 
   .notice {
     margin: 0;
-    padding: 8px 12px;
+    padding: 7px 11px;
     border: 2px solid var(--warn);
     color: var(--warn);
   }
@@ -497,23 +497,23 @@
   @media (max-width: 720px) {
     .sums {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
+      gap: 7px;
     }
 
     .sum {
-      padding: 8px 10px;
+      padding: 7px 9px;
       background: var(--surface);
       box-shadow: 3px 3px 0 var(--shade);
     }
 
     .sum b {
-      font-size: 22px;
+      font-size: 20px;
     }
 
     .ptools {
       flex-direction: column;
       align-items: stretch;
-      gap: 10px;
+      gap: 9px;
     }
 
     .ptools .search {
@@ -530,7 +530,7 @@
 
     .pc-l1 b {
       font-family: var(--font-display);
-      font-size: 17px;
+      font-size: 15px;
       font-weight: 400;
     }
 

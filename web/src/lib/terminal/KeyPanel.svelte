@@ -103,7 +103,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding: 6px;
+    padding: 5px;
     background: var(--surface);
     border: 2px solid var(--line);
     user-select: none;
@@ -132,7 +132,7 @@
     border: 2px solid var(--line);
     border-radius: 0;
     font-family: var(--font-body);
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1;
     cursor: pointer;
     box-shadow: 2px 2px 0 var(--shade);
@@ -144,8 +144,8 @@
   }
 
   .k.tab {
-    min-height: 32px;
-    font-size: 11px;
+    min-height: 29px;
+    font-size: 10px;
     white-space: nowrap;
   }
 
@@ -163,11 +163,11 @@
   }
 
   .k.arrow {
-    font-size: 16px;
+    font-size: 14px;
   }
 
   .k.small {
     min-height: 44px;
-    font-size: 11px;
+    font-size: 10px;
   }
 </style>

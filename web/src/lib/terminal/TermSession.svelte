@@ -138,7 +138,7 @@
       const fontFamily = getComputedStyle(document.documentElement).getPropertyValue('--font-body').trim();
       const term = new Terminal({
         cursorBlink: true,
-        fontSize: get(isPhone) ? 12 : 13,
+        fontSize: 12,
         fontFamily: fontFamily || 'monospace',
         theme: TERM_THEME,
         scrollback: 2000,
@@ -320,7 +320,7 @@
   .session {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 7px;
     min-width: 0;
     height: 100%;
   }
@@ -330,7 +330,7 @@
     min-height: 0;
     min-width: 0;
     display: flex;
-    padding: 8px;
+    padding: 7px;
     overflow: hidden;
     background: #0f1218;
     border: 2px solid var(--line);
@@ -347,7 +347,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
+    gap: 11px;
   }
 
   /* Phones: the screen takes all the room the owner gives it, no frame; the key panel and the quick row sit under it. */
@@ -367,7 +367,7 @@
 
     .screen {
       order: 1;
-      padding: 4px 6px;
+      padding: 4px 5px;
       border-width: 0;
     }
 
@@ -378,7 +378,7 @@
 
     .closed {
       order: 1;
-      padding: 8px 12px;
+      padding: 7px 11px;
       background: var(--surface);
       border-top: 2px solid var(--line);
     }

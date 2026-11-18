@@ -121,20 +121,20 @@
     margin: 0;
     padding: 0;
     list-style: none;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   li {
     display: flex;
     align-items: center;
     min-width: 0;
-    padding-left: calc(var(--depth) * 14px);
+    padding-left: calc(var(--depth) * 13px);
     white-space: nowrap;
   }
 
   .twist {
     flex: none;
-    width: 18px;
+    width: 16px;
     padding: 0;
     background: none;
     border: 0;
@@ -150,9 +150,9 @@
   .label {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     min-width: 0;
-    padding: 3px 6px;
+    padding: 3px 5px;
     background: none;
     border: 2px solid transparent;
     color: var(--ink);
@@ -177,8 +177,8 @@
 
   .icon {
     flex: none;
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
     background: var(--accent);
     border: 2px solid var(--accent);
   }
@@ -191,12 +191,12 @@
   /* Phones (a list in a sheet): every folder is a full-width row of at least 46 px, indented by its depth. */
   @media (max-width: 720px) {
     .tree {
-      font-size: 15px;
+      font-size: 14px;
     }
 
     li {
       min-height: 46px;
-      padding-left: calc(4px + var(--depth) * 18px);
+      padding-left: calc(4px + var(--depth) * 16px);
       border-top: 2px dashed var(--seg-off);
     }
 
@@ -205,7 +205,7 @@
     }
 
     .twist {
-      width: 36px;
+      width: 32px;
       height: 44px;
       font-size: 16px;
     }
@@ -213,12 +213,12 @@
     .label {
       flex: 1;
       min-height: 44px;
-      padding: 0 8px;
+      padding: 0 7px;
     }
 
     .icon {
-      width: 12px;
-      height: 12px;
+      width: 11px;
+      height: 11px;
     }
   }
 </style>

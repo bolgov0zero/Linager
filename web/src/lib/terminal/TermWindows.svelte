@@ -89,21 +89,21 @@
 
   .dock {
     position: absolute;
-    left: 16px;
-    bottom: 12px;
+    left: 14px;
+    bottom: 11px;
     z-index: 100000;
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    max-width: calc(100% - 32px);
+    gap: 5px;
+    max-width: calc(100% - 29px);
     pointer-events: auto;
   }
 
   .btn.sm {
-    max-width: 220px;
+    max-width: 198px;
     overflow: hidden;
-    padding: 2px 8px;
-    font-size: 12px;
+    padding: 2px 7px;
+    font-size: 11px;
     text-overflow: ellipsis;
     white-space: nowrap;
     box-shadow: 3px 3px 0 var(--shade);
@@ -128,7 +128,7 @@
       gap: 4px;
       max-width: none;
       overflow-x: auto;
-      padding: 4px 14px calc(4px + var(--safe-b));
+      padding: 4px 13px calc(4px + var(--safe-b));
       background: var(--surface);
       border-top: 2px solid var(--line);
     }
@@ -157,8 +157,8 @@
       flex: 1 1 0;
       max-width: none;
       min-width: 96px;
-      padding: 0 8px;
-      font-size: 13px;
+      padding: 0 7px;
+      font-size: 12px;
       box-shadow: none;
     }
   }

@@ -235,7 +235,7 @@
   .head h1 {
     margin: 0;
     font-variation-settings: "ELSH" 40;
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .filters {
@@ -248,7 +248,7 @@
   }
 
   .field.grow {
-    flex-basis: 220px;
+    flex-basis: 198px;
   }
 
   .filters > .btn {
@@ -257,12 +257,12 @@
 
   .note {
     margin: 0;
-    padding: 24px 0;
+    padding: 22px 0;
     text-align: center;
   }
 
   .small {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .muted {

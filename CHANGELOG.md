@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.3
+
+- Change: **the whole interface is about 10% smaller**, on the computer and on the phone. Done in whole pixels, not with a zoom, so the 2 px lines, the shadows and the pixel font stay sharp: the font sizes go down by a step (12 to 11, 13 to 12, 14 to 13, 16 to 14), the paddings, gaps, widths and heights by a tenth. On the phone the buttons and rows keep their 44 px touch size and the fields keep 16 px (iOS would zoom the page otherwise).
+- Change: **the icons are redrawn on a 9x9 grid** and shown at 18 px, so every square is exactly 2 px and the icons are sharp on 1x, 2x and 3x screens (the old 8x8 icons at 20 px had 2.5 px squares and were blurred on some screens). The icons of the card buttons and of the terminal are shown at 16 px for the same reason.
+- Dev: the agent simulator (`linager-sim`, built with `-tags sim`) answers the commands of the modules (services, processes, updates, network, firewall, security, Docker, disk, users, logs) with sample data, so every tab can be looked at without a Linux host. A normal build is not affected.
 ## 0.3.2
 
 - Fix: **an agent update from the panel failed with "context deadline exceeded" after exactly 2 minutes** on a slow link. The agent gave every command two minutes, the download of the release (about 35 MB) included. Now the update command has **10 minutes** (`protocol.AgentUpdateTimeout`), the other commands keep two; the server waits for the answer 12 minutes instead of 4. Tests: the limit of the update command and of another one.

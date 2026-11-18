@@ -171,7 +171,7 @@
   .overview {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
   }
 
   .overview.dim {
@@ -180,20 +180,20 @@
 
   .notice {
     margin: 0;
-    padding: 8px 12px;
+    padding: 7px 11px;
     border: 2px solid var(--warn);
     color: var(--warn);
   }
 
   .grid-top {
     display: grid;
-    gap: 16px;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(198px, 1fr));
   }
 
   .grid-bottom {
     display: grid;
-    gap: 16px;
+    gap: 14px;
     grid-template-columns: 1fr;
     align-items: start;
   }
@@ -201,13 +201,13 @@
   .panel {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
   }
 
   .panel h3 {
     margin: 0;
-    font-size: 16px;
+    font-size: 14px;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -217,12 +217,12 @@
     margin: 0;
     font-variation-settings: "ELSH" 40;
     font-family: var(--font-display);
-    font-size: 30px;
+    font-size: 27px;
     line-height: 1.1;
   }
 
   .unit {
-    font-size: 16px;
+    font-size: 14px;
     color: var(--muted);
   }
 
@@ -235,7 +235,7 @@
   .disk-head {
     display: flex;
     justify-content: space-between;
-    gap: 8px;
+    gap: 7px;
   }
 
   .table-wrap {
@@ -245,15 +245,15 @@
   .grid-table {
     display: flex;
     flex-direction: column;
-    min-width: 930px;
+    min-width: 837px;
   }
 
   .nrow {
     display: grid;
-    grid-template-columns: minmax(150px, 1.4fr) 100px minmax(110px, 1fr) minmax(150px, 1.3fr) repeat(4, minmax(84px, 1fr));
-    gap: 8px;
+    grid-template-columns: minmax(135px, 1.4fr) 90px minmax(99px, 1fr) minmax(135px, 1.3fr) repeat(4, minmax(76px, 1fr));
+    gap: 7px;
     align-items: center;
-    padding: 6px 8px;
+    padding: 5px 7px;
     border-bottom: 1px dashed var(--line);
     white-space: nowrap;
   }
@@ -281,14 +281,14 @@
   .info {
     margin: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 6px 40px;
+    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    gap: 5px 36px;
   }
 
   .info > div {
     display: flex;
     justify-content: space-between;
-    gap: 12px;
+    gap: 11px;
   }
 
   .info dt {
@@ -310,12 +310,12 @@
 
   @media (max-width: 720px) {
     .overview {
-      gap: 12px;
+      gap: 11px;
     }
 
     .grid-top,
     .grid-bottom {
-      gap: 12px;
+      gap: 11px;
     }
 
     .grid-top {
@@ -323,12 +323,12 @@
     }
 
     .panel.card {
-      gap: 8px;
+      gap: 7px;
     }
 
     .panel.disks {
       grid-column: 1 / -1;
-      gap: 8px;
+      gap: 7px;
     }
 
     .disk {
@@ -336,28 +336,28 @@
     }
 
     .panel h3 {
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .big {
-      font-size: 26px;
+      font-size: 23px;
     }
 
     .unit {
-      font-size: 12px;
+      font-size: 11px;
     }
 
     .panel :global(.mini) {
-      height: 32px;
+      height: 29px;
     }
 
     .nic-list li {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 11px;
       min-height: 52px;
-      padding: 6px 0;
+      padding: 5px 0;
       border-top: 2px dashed var(--seg-off);
     }
 

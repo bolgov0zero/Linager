@@ -202,12 +202,12 @@
 <style>
   .auth {
     width: 100%;
-    max-width: 420px;
+    max-width: 378px;
   }
 
   .auth h2 {
-    margin: 0 0 16px;
-    font-size: 22px;
+    margin: 0 0 14px;
+    font-size: 20px;
   }
 
   .stack[hidden] {
@@ -225,7 +225,7 @@
     background: none;
     color: var(--accent);
     font: inherit;
-    font-size: 13px;
+    font-size: 12px;
     text-decoration: underline;
     cursor: pointer;
   }
@@ -237,7 +237,7 @@
   .code {
     letter-spacing: 0.3em;
     text-align: center;
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .sub,
@@ -249,7 +249,7 @@
   @media (max-width: 720px) {
     .auth {
       align-self: flex-start;
-      padding: 12px 0 0;
+      padding: 11px 0 0;
       background: none;
       border: 0;
       box-shadow: none;
@@ -257,16 +257,16 @@
 
     .auth h2 {
       margin: 0 0 4px;
-      font-size: 28px;
+      font-size: 25px;
     }
 
     .sub {
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     .pk {
-      margin-bottom: 16px;
-      gap: 10px;
+      margin-bottom: 14px;
+      gap: 9px;
     }
 
     .or {
@@ -288,11 +288,11 @@
 
     .linkbtn {
       min-height: 44px;
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .code {
-      font-size: 24px;
+      font-size: 22px;
     }
   }
 </style>

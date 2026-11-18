@@ -216,7 +216,7 @@
   .metrics {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
   }
 
   .toolbar {
@@ -224,20 +224,20 @@
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: 11px;
   }
 
   .toolbar .row {
-    gap: 6px;
+    gap: 5px;
   }
 
   .sync {
-    margin-left: 8px;
+    margin-left: 7px;
   }
 
   .charts {
     display: grid;
-    gap: 16px;
+    gap: 14px;
     grid-template-columns: 1fr;
   }
 
@@ -250,20 +250,20 @@
   .chart-card {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 9px;
     min-width: 0;
   }
 
   .chart-card h3 {
     margin: 0;
-    font-size: 16px;
+    font-size: 14px;
     color: var(--muted);
   }
 
   .stats {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 12px;
+    gap: 4px 11px;
     margin: 0;
     color: var(--muted);
   }
@@ -281,13 +281,13 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 11px;
   }
 
   /* Phones: one segmented period control pinned under the header, full-width charts, stats as four cells. */
   @media (max-width: 720px) {
     .metrics {
-      gap: 12px;
+      gap: 11px;
     }
 
     .toolbar,
@@ -300,8 +300,8 @@
       top: var(--top-h);
       z-index: 9;
       display: flex;
-      margin: 0 -12px -12px;
-      padding: 8px 12px 20px;
+      margin: 0 -11px -11px;
+      padding: 7px 11px 18px;
       background: var(--bg);
     }
 
@@ -309,7 +309,7 @@
       flex: 1;
       min-width: 0;
       padding: 0 2px;
-      font-size: 13px;
+      font-size: 12px;
       box-shadow: none;
       border-left-width: 0;
     }
@@ -321,27 +321,27 @@
     .toolbar > .row.end {
       justify-content: space-between;
       flex-wrap: nowrap;
-      gap: 8px;
+      gap: 7px;
     }
 
     .chart-card {
-      gap: 8px;
+      gap: 7px;
     }
 
     .chart-card h3 {
-      font-size: 14px;
+      font-size: 13px;
       text-transform: uppercase;
     }
 
     .stats {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 6px;
+      gap: 5px;
       margin-top: 2px;
     }
 
     .stats.pref {
-      grid-template-columns: 14px repeat(4, minmax(0, 1fr));
+      grid-template-columns: 13px repeat(4, minmax(0, 1fr));
     }
 
     .stats span {
@@ -351,7 +351,7 @@
     }
 
     .stats b {
-      font-size: 14px;
+      font-size: 13px;
       white-space: nowrap;
     }
 

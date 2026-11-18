@@ -159,9 +159,9 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 9px;
     margin: 0;
-    padding: 8px 12px;
+    padding: 7px 11px;
     border: 2px solid var(--warn);
     color: var(--warn);
   }

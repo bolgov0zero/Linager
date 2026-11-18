@@ -429,7 +429,7 @@
   .apt {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
   }
 
@@ -438,7 +438,7 @@
     flex-wrap: wrap;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
+    gap: 11px;
   }
 
   .summary {
@@ -449,7 +449,7 @@
     margin: 0;
     font-variation-settings: "ELSH" 40;
     font-family: var(--font-display);
-    font-size: 36px;
+    font-size: 32px;
     line-height: 1;
   }
 
@@ -460,13 +460,13 @@
   .btns {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 7px;
   }
 
   .notice,
   .banner {
     margin: 0;
-    padding: 8px 12px;
+    padding: 7px 11px;
     border: 2px solid var(--warn);
     color: var(--warn);
   }
@@ -477,15 +477,15 @@
 
   .tbl {
     width: 100%;
-    min-width: 520px;
+    min-width: 468px;
     border-collapse: collapse;
   }
 
   .tbl th {
-    padding: 8px 10px;
+    padding: 7px 9px;
     text-align: left;
     font-weight: 400;
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--muted);
@@ -493,7 +493,7 @@
   }
 
   .tbl td {
-    padding: 10px;
+    padding: 9px;
     vertical-align: middle;
     border-bottom: 1px dashed var(--seg-off);
   }
@@ -510,14 +510,14 @@
   .notes {
     display: inline-flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 5px;
   }
 
   .badge {
     display: inline-block;
-    padding: 1px 6px;
+    padding: 1px 5px;
     border: 2px solid currentColor;
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
   }
 
@@ -533,7 +533,7 @@
   .check {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 9px;
     min-width: 0;
   }
 
@@ -541,7 +541,7 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 12px;
+    gap: 11px;
   }
 
   .run-label {
@@ -553,7 +553,7 @@
   }
 
   .run-wrap {
-    max-height: 420px;
+    max-height: 378px;
     overflow-y: auto;
   }
 
@@ -567,9 +567,9 @@
 
   .st {
     display: inline-block;
-    padding: 1px 6px;
+    padding: 1px 5px;
     border: 2px solid currentColor;
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
   }
 
@@ -633,8 +633,8 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 4px 12px;
-      padding: 8px 4px;
+      gap: 4px 11px;
+      padding: 7px 4px;
       border-bottom: 1px dashed var(--seg-off);
     }
 
@@ -651,7 +651,7 @@
   /* Phones: the list of packages is rows (ui/phone-rows.css); the primary buttons are pinned above the bottom bar. */
   @media (max-width: 720px) {
     .summary .big {
-      font-size: 32px;
+      font-size: 29px;
     }
 
     .chk {
@@ -672,7 +672,7 @@
     }
 
     .run.card {
-      gap: 10px;
+      gap: 9px;
     }
 
     .fill {

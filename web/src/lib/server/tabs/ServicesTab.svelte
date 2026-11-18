@@ -232,7 +232,7 @@
             <span class="badge state {kind}">{stateLabel(unit)}</span>
             {#if isIgnored}<span class="badge state other">{$tStore('svc.badge.ignored')}</span>{/if}
             <button class="more" type="button" aria-label="{$tStore('svc.menu')}: {unit.name}" disabled={busy !== null} onclick={() => openSheet(unit, kind)}>
-              <PixIcon name="more" size={18} />
+              <PixIcon name="more" />
             </button>
             {#if fail}
               <button class="btn restart" type="button" disabled={unreachable || busy !== null} onclick={() => request(unit.name, 'restart')}>
@@ -308,7 +308,7 @@
   .svc {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
   }
 
@@ -317,13 +317,13 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 7px;
   }
 
   .filters {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 5px;
   }
 
   .count {
@@ -332,12 +332,12 @@
     margin-left: 4px;
     padding: 0 4px;
     border: 1px solid currentColor;
-    font-size: 12px;
+    font-size: 11px;
     text-align: center;
   }
 
   .search {
-    max-width: 280px;
+    max-width: 252px;
   }
 
   .meta {
@@ -346,7 +346,7 @@
 
   .notice {
     margin: 0;
-    padding: 8px 12px;
+    padding: 7px 11px;
     border: 2px solid var(--warn);
     color: var(--warn);
   }
@@ -355,7 +355,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 11px;
   }
 
   .table-wrap {
@@ -364,15 +364,15 @@
 
   .tbl {
     width: 100%;
-    min-width: 680px;
+    min-width: 612px;
     border-collapse: collapse;
   }
 
   .tbl th {
-    padding: 8px 10px;
+    padding: 7px 9px;
     text-align: left;
     font-weight: 400;
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--muted);
@@ -380,7 +380,7 @@
   }
 
   .tbl td {
-    padding: 10px;
+    padding: 9px;
     vertical-align: middle;
     border-bottom: 1px dashed var(--seg-off);
   }
@@ -397,13 +397,13 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    min-width: 220px;
+    min-width: 198px;
   }
 
   .unit {
     font-variation-settings: "ELSH" 40;
     font-family: var(--font-display);
-    font-size: 15px;
+    font-size: 14px;
   }
 
   .desc {
@@ -412,9 +412,9 @@
 
   .badge {
     display: inline-block;
-    padding: 1px 6px;
+    padding: 1px 5px;
     border: 2px solid currentColor;
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
   }
 
@@ -448,12 +448,12 @@
     display: inline-flex;
     flex-wrap: nowrap;
     justify-content: flex-end;
-    gap: 6px;
+    gap: 5px;
   }
 
   .small-btn {
-    padding: 4px 8px;
-    font-size: 13px;
+    padding: 4px 7px;
+    font-size: 12px;
     box-shadow: 2px 2px 0 var(--shade);
   }
 
@@ -464,13 +464,13 @@
   /* ---- Phones: search and filter pinned under the header, one row per service ---- */
   .stick {
     position: sticky;
-    top: calc(var(--top-h) - 8px);
+    top: calc(var(--top-h) - 7px);
     z-index: 9;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-bottom: -12px;
-    padding: 8px 0 20px;
+    gap: 7px;
+    margin-bottom: -11px;
+    padding: 7px 0 18px;
     background: var(--bg);
   }
 
@@ -493,7 +493,7 @@
     color: var(--ink);
     cursor: pointer;
     font-family: var(--font-display);
-    font-size: 12.5px;
+    font-size: 11px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -517,9 +517,9 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 6px 8px;
+    gap: 5px 7px;
     min-height: 56px;
-    padding: 6px 4px 6px 12px;
+    padding: 5px 4px 5px 11px;
     border-top: 2px dashed var(--seg-off);
   }
 
@@ -544,13 +544,13 @@
 
   .li .l1 b {
     font-weight: 400;
-    font-size: 14.5px;
+    font-size: 13px;
   }
 
   .li .l2 {
     overflow: hidden;
     color: var(--muted);
-    font-size: 11.5px;
+    font-size: 10px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }

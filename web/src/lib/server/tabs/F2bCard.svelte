@@ -249,8 +249,8 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
-    font-size: 16px;
+    gap: 9px;
+    font-size: 14px;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -258,7 +258,7 @@
 
   h4 {
     font-family: var(--font-display);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -275,22 +275,22 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 9px;
   }
 
   .f2h :global(.btn) {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    height: 36px;
+    gap: 5px;
+    height: 32px;
     padding-block: 0;
   }
 
   .badge {
     display: inline-block;
-    padding: 1px 6px;
+    padding: 1px 5px;
     border: 2px solid currentColor;
-    font-size: 12px;
+    font-size: 11px;
     font-family: var(--font-body);
     letter-spacing: 0;
     text-transform: none;
@@ -317,14 +317,14 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 16px 28px;
-    padding: 12px;
+    gap: 14px 25px;
+    padding: 11px;
     border: 2px dashed var(--line);
   }
 
   .callout .num {
     font-family: var(--font-display);
-    font-size: 30px;
+    font-size: 27px;
     line-height: 1;
   }
 
@@ -335,13 +335,13 @@
 
   .why {
     flex: 1;
-    min-width: 240px;
+    min-width: 216px;
   }
 
   .presets {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
+    gap: 9px;
   }
 
   .preset {
@@ -350,7 +350,7 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
-    padding: 10px 12px;
+    padding: 9px 11px;
     border: 2px solid var(--line);
     background: var(--surface);
     color: inherit;
@@ -370,17 +370,17 @@
   }
 
   .confirm {
-    padding: 12px;
+    padding: 11px;
     border: 2px solid var(--accent);
     background: color-mix(in srgb, var(--accent) 7%, transparent);
   }
 
   .cmd {
     margin: 0;
-    padding: 10px;
+    padding: 9px;
     border: 2px solid var(--line);
     background: var(--bg);
-    font-size: 12px;
+    font-size: 11px;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
@@ -388,14 +388,14 @@
   .stats {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
+    gap: 9px;
   }
 
   .stat {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding: 10px 12px;
+    padding: 9px 11px;
     border: 2px solid var(--line);
     background: none;
     color: inherit;
@@ -405,14 +405,14 @@
 
   .stat b {
     font-family: var(--font-display);
-    font-size: 26px;
+    font-size: 23px;
     font-weight: 400;
     line-height: 1.1;
   }
 
   .stat span {
     color: var(--muted);
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .stat.link {
@@ -428,29 +428,29 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 10px;
+    gap: 7px 9px;
   }
 
   .manual .input {
-    width: 190px;
-    height: 36px;
+    width: 171px;
+    height: 32px;
     padding-block: 0;
   }
 
   .manual :global(.sel) {
-    height: 36px;
+    height: 32px;
     padding-block: 0;
   }
 
   .manual :global(.btn) {
     display: inline-flex;
     align-items: center;
-    height: 36px;
+    height: 32px;
     padding-block: 0;
   }
 
   .notice {
-    padding: 8px 12px;
+    padding: 7px 11px;
     border: 2px solid var(--warn);
     color: var(--warn);
   }
@@ -468,20 +468,20 @@
   @media (max-width: 720px) {
     .stats {
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
+      gap: 7px;
     }
 
     .stat {
-      padding: 8px;
+      padding: 7px;
       min-height: 44px;
     }
 
     .stat b {
-      font-size: 22px;
+      font-size: 20px;
     }
 
     .stat span {
-      font-size: 11.5px;
+      font-size: 10px;
       line-height: 1.25;
     }
 
@@ -510,7 +510,7 @@
     }
 
     .callout {
-      gap: 12px 20px;
+      gap: 11px 18px;
     }
 
     .why {

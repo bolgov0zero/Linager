@@ -114,7 +114,7 @@
     top: calc(100% + 2px);
     left: 0;
     min-width: 100%;
-    max-height: 220px;
+    max-height: 198px;
     overflow: auto;
     margin: 0;
     padding: 0;
@@ -132,14 +132,14 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    gap: 12px;
+    gap: 11px;
     width: 100%;
-    padding: 7px 10px;
+    padding: 6px 9px;
     border: 0;
     background: none;
     color: inherit;
     font: inherit;
-    font-size: 13px;
+    font-size: 12px;
     text-align: left;
     cursor: pointer;
     white-space: nowrap;

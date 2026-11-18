@@ -140,7 +140,7 @@
 <style>
   :global(.sel-list.ctx) {
     margin: 0;
-    min-width: 200px;
+    min-width: 180px;
     outline: none;
     z-index: 50;
   }
@@ -152,7 +152,7 @@
   :global(.sel-list.ctx li.sep) {
     border-top: 1px solid var(--seg-off);
     margin-top: 4px;
-    padding-top: 8px;
+    padding-top: 7px;
   }
 
   :global(.sel-list li.off) {

@@ -41,7 +41,7 @@
   .tiles {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 16px;
+    gap: 14px;
   }
 
   .tile {
@@ -49,13 +49,13 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding: 12px 16px;
+    padding: 11px 14px;
     min-width: 0;
   }
 
   .label {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
   }
@@ -64,7 +64,7 @@
     font-family: var(--font-display);
     font-variation-settings: "ELSH" 40;
     font-weight: 400;
-    font-size: 34px;
+    font-size: 31px;
     line-height: 1.1;
     margin-top: 4px;
   }
@@ -79,15 +79,15 @@
 
   .hint {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .flag {
     position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 8px;
-    height: 8px;
+    top: 5px;
+    right: 5px;
+    width: 7px;
+    height: 7px;
     background: var(--crit);
   }
 
@@ -107,7 +107,7 @@
 
     .tile.card {
       gap: 0;
-      padding: 7px 8px 6px;
+      padding: 6px 7px 5px;
       border: 0;
       border-left: 2px solid var(--line);
       box-shadow: none;
@@ -124,7 +124,7 @@
 
     .val {
       margin-top: 0;
-      font-size: 22px;
+      font-size: 20px;
     }
 
     .hint {
@@ -140,8 +140,8 @@
     .flag {
       top: 0;
       right: 0;
-      width: 7px;
-      height: 7px;
+      width: 6px;
+      height: 6px;
     }
   }
 </style>

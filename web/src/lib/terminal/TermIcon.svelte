@@ -3,7 +3,7 @@
   let { name }: { name: 'copy' | 'paste' | 'window' | 'close' | 'bolt' } = $props();
 </script>
 
-<svg viewBox="0 0 16 16" width="18" height="18" shape-rendering="crispEdges" fill="currentColor" aria-hidden="true">
+<svg viewBox="0 0 16 16" width="16" height="16" shape-rendering="crispEdges" fill="currentColor" aria-hidden="true">
   {#if name === 'copy'}
     <rect x="6" y="1" width="8" height="2" />
     <rect x="12" y="1" width="2" height="9" />

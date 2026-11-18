@@ -38,8 +38,8 @@
 
     .rm :global(.am)::after {
       content: '';
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       background: currentColor;
       -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Cpath d='M0 2h2v2H0zM3 2h2v2H3zM6 2h2v2H6z'/%3E%3C/svg%3E") center / contain no-repeat;
       mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Cpath d='M0 2h2v2H0zM3 2h2v2H3zM6 2h2v2H6z'/%3E%3C/svg%3E") center / contain no-repeat;

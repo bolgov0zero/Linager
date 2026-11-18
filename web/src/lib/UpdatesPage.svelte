@@ -245,7 +245,7 @@
   :global(.upd-page) {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
   }
 
   .upd-head {
@@ -253,21 +253,21 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 11px;
   }
 
   .upd-ttl {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
+    gap: 11px;
   }
 
   .upd-title {
     margin: 0;
     font-variation-settings: "ELSH" 40;
     font-family: var(--font-display);
-    font-size: 30px;
+    font-size: 27px;
     font-weight: 400;
     line-height: 1;
   }
@@ -275,7 +275,7 @@
   :global(.upd-grid) {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 16px;
+    gap: 14px;
     align-items: start;
   }
 
@@ -288,9 +288,9 @@
   :global(.upd-panel) {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
-    padding: 12px;
+    padding: 11px;
     border: 2px solid var(--line);
     background: var(--bg);
   }
@@ -298,7 +298,7 @@
   :global(.upd-h) {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -308,7 +308,7 @@
   :global(.upd-big) {
     font-variation-settings: "ELSH" 40;
     font-family: var(--font-display);
-    font-size: 26px;
+    font-size: 23px;
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
   }
@@ -317,15 +317,15 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
+    gap: 9px;
   }
 
   :global(.upd-kv) {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    gap: 6px 14px;
+    gap: 5px 13px;
     margin: 0;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   :global(.upd-kv dt) {
@@ -343,10 +343,10 @@
     background: var(--surface);
     color: var(--ink);
     border: 2px solid var(--line);
-    padding: 5px 8px;
+    padding: 5px 7px;
     min-width: 0;
     font: inherit;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   :global(.upd-select:disabled) {
@@ -355,8 +355,8 @@
 
   :global(.upd-list) {
     margin: 0;
-    padding-left: 18px;
-    font-size: 12px;
+    padding-left: 16px;
+    font-size: 11px;
     display: flex;
     flex-direction: column;
     gap: 3px;
@@ -365,41 +365,41 @@
   :global(.upd-acts) {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 7px;
   }
 
   :global(.upd-acts-end) {
     justify-content: flex-end;
-    margin-top: 8px;
+    margin-top: 7px;
   }
 
   :global(.upd-bar) {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px 14px;
+    gap: 9px 13px;
   }
 
   :global(.upd-label),
   :global(.upd-check) {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    font-size: 12px;
+    gap: 7px;
+    font-size: 11px;
     color: var(--muted);
   }
 
   :global(.upd-check input),
   :global(.upd-tbl input[type='checkbox']) {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     margin: 0;
     accent-color: var(--accent);
   }
 
   :global(.upd-intro) {
     margin: 0;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--muted);
   }
 
@@ -410,30 +410,30 @@
   :global(.upd-tbl) {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   :global(.upd-tbl th) {
     font-family: var(--font-display);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--muted);
     text-align: left;
-    padding: 6px 8px;
+    padding: 5px 7px;
     border-bottom: 2px solid var(--line);
     white-space: nowrap;
   }
 
   :global(.upd-tbl td) {
-    padding: 7px 8px;
+    padding: 6px 7px;
     border-bottom: 2px dashed var(--seg-off);
     vertical-align: middle;
   }
 
   :global(.upd-tbl .upd-sel) {
-    width: 36px;
+    width: 32px;
   }
 
   :global(.upd-tbl .upd-r) {
@@ -442,19 +442,19 @@
   }
 
   :global(.upd-agents td) {
-    padding-top: 10px;
-    padding-bottom: 10px;
+    padding-top: 9px;
+    padding-bottom: 9px;
   }
 
   :global(.upd-name) {
     font-variation-settings: "ELSH" 40;
     font-family: var(--font-display);
-    font-size: 15px;
+    font-size: 14px;
   }
 
   :global(.upd-sub) {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   :global(.upd-mono) {
@@ -466,9 +466,9 @@
     display: inline-block;
     border: 2px solid var(--muted);
     color: var(--muted);
-    padding: 0 6px;
-    font-size: 11px;
-    line-height: 18px;
+    padding: 0 5px;
+    font-size: 10px;
+    line-height: 16px;
     white-space: nowrap;
   }
 
@@ -496,20 +496,20 @@
   :global(.upd-err-inline) {
     margin: 0;
     color: var(--crit);
-    font-size: 12px;
+    font-size: 11px;
     overflow-wrap: anywhere;
   }
 
   :global(.upd-ok) {
     margin: 0;
     color: var(--good);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   :global(.upd-hint) {
     margin: 0;
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   :global(.upd-modal-text) {
@@ -519,8 +519,8 @@
   :global(.upd-run) {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px;
+    gap: 7px;
+    padding: 9px;
     border: 2px dashed var(--seg-off);
   }
 
@@ -531,13 +531,13 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   :global(.upd-step) {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
   }
 
   :global(.upd-step.pending) {
@@ -586,13 +586,13 @@
   :global(.upd-ico) {
     display: inline-flex;
     justify-content: center;
-    width: 14px;
+    width: 13px;
   }
 
   :global(.upd-spin) {
     display: inline-block;
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
     border: 2px solid currentColor;
     border-right-color: transparent;
     border-radius: 50%;
@@ -609,8 +609,8 @@
   :global(.upd-pb) {
     display: flex;
     gap: 2px;
-    height: 10px;
-    width: 110px;
+    height: 9px;
+    width: 99px;
     margin-bottom: 4px;
   }
 
@@ -625,10 +625,10 @@
 
   .upd-term {
     margin: 0;
-    padding: 12px;
+    padding: 11px;
     overflow: auto;
     white-space: pre;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.5;
     background: #0b0e13;
     color: #d5dae3;
@@ -650,45 +650,45 @@
   /* Phones: the panels are cards, the tables are rows (name and details, status at the right, progress under the row). */
   @media (max-width: 720px) {
     .upd-page {
-      gap: 12px;
+      gap: 11px;
     }
 
     .upd-title {
-      font-size: 24px;
+      font-size: 22px;
     }
 
     :global(.upd-panel) {
       background: var(--surface);
       box-shadow: 3px 3px 0 var(--shade);
-      gap: 10px;
+      gap: 9px;
     }
 
     :global(.upd-h) {
-      font-size: 14px;
+      font-size: 13px;
     }
 
     :global(.upd-cli > summary) {
       cursor: pointer;
-      min-height: 32px;
+      min-height: 29px;
       display: flex;
       align-items: center;
     }
 
     :global(.upd-cli[open] > summary) {
-      margin-bottom: 10px;
+      margin-bottom: 9px;
     }
 
     :global(.upd-big) {
-      font-size: 28px;
+      font-size: 25px;
     }
 
     :global(.upd-kv) {
-      font-size: 13px;
+      font-size: 12px;
       gap: 0;
     }
 
     :global(.upd-kv dt) {
-      padding-right: 14px;
+      padding-right: 13px;
     }
 
     :global(.upd-kv dt),
@@ -716,7 +716,7 @@
     :global(.upd-bar) {
       flex-direction: column;
       align-items: stretch;
-      gap: 10px;
+      gap: 9px;
     }
 
     :global(.upd-label) {
@@ -725,13 +725,13 @@
 
     :global(.upd-check) {
       min-height: 44px;
-      font-size: 13px;
+      font-size: 12px;
     }
 
     :global(.upd-check input),
     :global(.upd-tbl input[type='checkbox']) {
-      width: 22px;
-      height: 22px;
+      width: 20px;
+      height: 20px;
     }
 
     /* The primary "update" button of the server stays in reach at the bottom of the sheet. */
@@ -741,7 +741,7 @@
       right: 0;
       bottom: 0;
       z-index: 3;
-      padding: 10px 12px calc(10px + var(--safe-b));
+      padding: 9px 11px calc(9px + var(--safe-b));
       background: var(--surface);
       border-top: 2px solid var(--line);
     }
@@ -751,7 +751,7 @@
     }
 
     :global(.upd-page:has(.upd-pin)) {
-      padding-bottom: calc(80px + var(--safe-b));
+      padding-bottom: calc(72px + var(--safe-b));
     }
 
     :global(.upd-tw) {
@@ -794,7 +794,7 @@
     :global(.upd-agents thead th.upd-sel) {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 9px;
       width: auto;
       border-bottom: 0;
       padding-left: 4px;
@@ -803,7 +803,7 @@
     :global(.upd-selall-label) {
       display: inline;
       color: var(--muted);
-      font-size: 12px;
+      font-size: 11px;
       text-transform: none;
       letter-spacing: 0;
     }
@@ -812,9 +812,9 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 4px 10px;
+      gap: 4px 9px;
       min-height: 52px;
-      padding: 8px 4px;
+      padding: 7px 4px;
       border-bottom: 2px dashed var(--seg-off);
     }
 
@@ -835,7 +835,7 @@
     :global(.upd-rows tbody tr) {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr) auto;
-      gap: 2px 10px;
+      gap: 2px 9px;
     }
 
     :global(.upd-cache td:nth-child(1)) {
@@ -890,7 +890,7 @@
       display: grid;
       grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: center;
-      gap: 2px 10px;
+      gap: 2px 9px;
     }
 
     :global(.upd-agents tbody td.upd-sel) {
@@ -913,7 +913,7 @@
       grid-column: 2;
       grid-row: 2;
       color: var(--muted);
-      font-size: 11.5px;
+      font-size: 10px;
     }
 
     :global(.upd-agents tbody td:nth-child(3))::before {
@@ -948,7 +948,7 @@
 
     :global(.upd-pb) {
       width: 100%;
-      height: 12px;
+      height: 11px;
       margin: 2px 0 0;
     }
   }

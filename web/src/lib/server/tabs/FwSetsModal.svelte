@@ -191,9 +191,9 @@
 <style>
   .sets {
     display: grid;
-    grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
-    gap: 16px;
-    min-height: 260px;
+    grid-template-columns: minmax(180px, 234px) minmax(0, 1fr);
+    gap: 14px;
+    min-height: 234px;
   }
 
   .side,
@@ -206,7 +206,7 @@
     padding: 0;
     list-style: none;
     border: 2px solid var(--line);
-    max-height: 260px;
+    max-height: 234px;
     overflow: auto;
   }
 
@@ -218,9 +218,9 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    gap: 8px;
+    gap: 7px;
     width: 100%;
-    padding: 8px 10px;
+    padding: 7px 9px;
     border: 0;
     background: none;
     color: inherit;
@@ -244,32 +244,32 @@
   }
 
   .empty {
-    padding: 10px;
+    padding: 9px;
   }
 
   .new {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 7px;
     align-items: center;
   }
 
   .new .input {
     flex: 1 1 100%;
     min-width: 0;
-    height: 36px;
+    height: 32px;
     padding-block: 0;
   }
 
   .new :global(.btn) {
-    height: 36px;
+    height: 32px;
     padding-block: 0;
     display: inline-flex;
     align-items: center;
   }
 
   .new :global(.sel) {
-    height: 36px;
+    height: 32px;
     padding-block: 0;
   }
 
@@ -277,18 +277,18 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 12px;
+    gap: 7px 11px;
   }
 
   .head h3 {
     margin: 0;
-    font-size: 18px;
+    font-size: 16px;
     overflow-wrap: anywhere;
   }
 
   .head :global(.btn) {
     margin-left: auto;
-    height: 36px;
+    height: 32px;
     padding-block: 0;
     display: inline-flex;
     align-items: center;
@@ -296,18 +296,18 @@
 
   .addrow {
     display: flex;
-    gap: 8px;
+    gap: 7px;
   }
 
   .addrow .input {
     flex: 1;
     min-width: 0;
-    height: 36px;
+    height: 32px;
     padding-block: 0;
   }
 
   .addrow :global(.btn) {
-    height: 36px;
+    height: 32px;
     padding-block: 0;
     display: inline-flex;
     align-items: center;
@@ -316,8 +316,8 @@
   .chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    max-height: 220px;
+    gap: 5px;
+    max-height: 198px;
     overflow: auto;
     padding: 2px;
   }
@@ -325,10 +325,10 @@
   .chip2 {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 2px 4px 2px 8px;
+    gap: 5px;
+    padding: 2px 4px 2px 7px;
     border: 2px solid var(--line);
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .chip2 button {
@@ -366,7 +366,7 @@
     .item {
       align-items: center;
       min-height: 52px;
-      padding: 8px 12px;
+      padding: 7px 11px;
     }
 
     .new :global(.sel),
@@ -392,10 +392,10 @@
     .chip2 {
       justify-content: space-between;
       min-height: 48px;
-      padding: 0 0 0 12px;
+      padding: 0 0 0 11px;
       border: 0;
       border-top: 2px dashed var(--seg-off);
-      font-size: 14px;
+      font-size: 13px;
       overflow-wrap: anywhere;
     }
 
@@ -408,7 +408,7 @@
       width: 48px;
       height: 48px;
       padding: 0;
-      font-size: 20px;
+      font-size: 18px;
     }
   }
 </style>

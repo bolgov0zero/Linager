@@ -768,7 +768,7 @@
   .docker {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
   }
 
@@ -777,7 +777,7 @@
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
   }
 
   .toolbar .count {
@@ -786,7 +786,7 @@
 
   .notice {
     margin: 0;
-    padding: 8px 12px;
+    padding: 7px 11px;
     border: 2px solid var(--warn);
     color: var(--warn);
   }
@@ -795,7 +795,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 11px;
   }
 
   .tablewrap {
@@ -804,15 +804,15 @@
 
   table.grid {
     width: 100%;
-    min-width: 520px;
+    min-width: 468px;
     border-collapse: collapse;
   }
 
   th {
-    padding: 8px;
+    padding: 7px;
     border-bottom: 2px solid var(--line);
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 400;
     letter-spacing: 0.04em;
     text-align: left;
@@ -821,7 +821,7 @@
   }
 
   td {
-    padding: 8px;
+    padding: 7px;
     border-bottom: 2px dashed var(--seg-off);
     vertical-align: middle;
   }
@@ -832,7 +832,7 @@
   }
 
   .name {
-    min-width: 150px;
+    min-width: 135px;
     overflow-wrap: anywhere;
   }
 
@@ -847,10 +847,10 @@
 
   .badge {
     display: inline-block;
-    padding: 1px 6px;
+    padding: 1px 5px;
     border: 2px solid var(--muted);
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
   }
 
@@ -875,7 +875,7 @@
   }
 
   .checkbar {
-    gap: 8px;
+    gap: 7px;
   }
 
   .reg {
@@ -898,15 +898,15 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 12px;
-    padding: 8px 12px;
+    gap: 7px 11px;
+    padding: 7px 11px;
     background: var(--seg-off);
   }
 
   .grp-toggle {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
     padding: 0;
     border: 0;
     background: none;
@@ -919,7 +919,7 @@
     margin: 0;
     font-family: var(--font-display);
     font-weight: 400;
-    font-size: 16px;
+    font-size: 14px;
   }
 
   .grp-toggle:focus-visible {
@@ -937,16 +937,16 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
     margin-left: auto;
   }
 
   .grp-acts :global(.btn) {
     display: inline-flex;
     align-items: center;
-    height: 30px;
+    height: 27px;
     padding-block: 0;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .grp-acts .badge {
@@ -972,7 +972,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
-    gap: 8px;
+    gap: 7px;
   }
 
   .pull-field {
@@ -989,17 +989,17 @@
   }
 
   .wide :global(.dialog) {
-    max-width: 900px;
+    max-width: 810px;
   }
 
   .logpanel {
-    height: min(60vh, 520px);
+    height: min(60vh, 468px);
     overflow: auto;
-    padding: 10px;
+    padding: 9px;
     border: 2px solid var(--line);
     background: #0c0f14;
     color: #d8dee9;
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.4;
   }
 
@@ -1060,8 +1060,8 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 6px 12px;
-      padding: 8px 4px;
+      gap: 5px 11px;
+      padding: 7px 4px;
       border-bottom: 2px dashed var(--seg-off);
     }
 
@@ -1094,7 +1094,7 @@
   /* Phones: the lists are rows (see ui/phone-rows.css); logs fill the sheet. */
   @media (max-width: 720px) {
     .mchk {
-      gap: 8px;
+      gap: 7px;
     }
 
     .nowrap {
@@ -1123,7 +1123,7 @@
       flex: 1 1 auto;
       height: auto;
       min-height: 55dvh;
-      font-size: 11.5px;
+      font-size: 10px;
     }
   }
 </style>

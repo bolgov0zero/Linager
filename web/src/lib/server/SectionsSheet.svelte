@@ -30,7 +30,7 @@
         {#each g.tabs as t (t.id)}
           {@const b = badges[t.id]}
           <button class="item" type="button" aria-current={current === t.id ? 'page' : undefined} onclick={() => onselect(t.id)}>
-            <PixIcon name={t.id} size={20} />
+            <PixIcon name={t.id} />
             <span class="lbl">{$tr(t.key)}</span>
             {#if b}<em class="cnt {b.tone}">{b.text}</em>{/if}
           </button>
@@ -43,10 +43,10 @@
 <style>
   .grp {
     margin: 0;
-    padding: 10px 14px 2px;
+    padding: 9px 13px 2px;
     color: var(--muted);
     font-family: var(--font-display);
-    font-size: 12.5px;
+    font-size: 11px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -54,25 +54,25 @@
   .grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    padding: 4px 12px 6px;
+    gap: 7px;
+    padding: 4px 11px 5px;
   }
 
   .item {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 9px;
     min-width: 0;
     height: 50px;
-    padding: 0 10px;
+    padding: 0 9px;
     background: var(--surface);
     border: 2px solid var(--line);
     box-shadow: 2px 2px 0 var(--shade);
     color: var(--ink);
     cursor: pointer;
     font-family: var(--font-display);
-    font-size: 15px;
+    font-size: 14px;
     text-align: left;
   }
 
@@ -90,14 +90,14 @@
   }
 
   .cnt {
-    min-width: 18px;
-    height: 18px;
+    min-width: 16px;
+    height: 16px;
     padding: 0 4px;
     background: var(--warn);
     color: #fff;
-    font-size: 11px;
+    font-size: 10px;
     font-style: normal;
-    line-height: 18px;
+    line-height: 16px;
     text-align: center;
   }
 

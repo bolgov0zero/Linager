@@ -33,14 +33,14 @@
   .tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 5px;
   }
 
   .tag {
-    padding: 2px 6px;
+    padding: 2px 5px;
     border: 2px solid var(--line);
     background: var(--surface);
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.3;
   }
 

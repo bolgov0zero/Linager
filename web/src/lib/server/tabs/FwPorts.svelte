@@ -292,7 +292,7 @@
   .ports {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 9px;
     min-width: 0;
   }
 
@@ -301,7 +301,7 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 7px;
   }
 
   h3 {
@@ -310,7 +310,7 @@
 
   .sect {
     font-family: var(--font-display);
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 600;
   }
 
@@ -330,24 +330,24 @@
   .tbl {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .tbl th {
     font-family: var(--font-display);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--muted);
     text-align: left;
-    padding: 6px 8px;
+    padding: 5px 7px;
     border-bottom: 2px solid var(--line);
     white-space: nowrap;
   }
 
   .tbl td {
-    padding: 7px 8px;
+    padding: 6px 7px;
     border-bottom: 2px dashed var(--seg-off);
     vertical-align: middle;
   }
@@ -378,10 +378,10 @@
 
   .badge {
     display: inline-block;
-    padding: 1px 6px;
+    padding: 1px 5px;
     border: 2px solid var(--muted);
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
   }
 
@@ -403,29 +403,29 @@
   .tbl :global(.btn.sm) {
     display: inline-flex;
     align-items: center;
-    height: 30px;
+    height: 27px;
     padding-block: 0;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .plan {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 12px;
+    gap: 9px;
+    padding: 11px;
     border: 2px solid var(--accent);
     background: color-mix(in srgb, var(--accent) 7%, transparent);
   }
 
   .plan :global(.input) {
-    height: 36px;
+    height: 32px;
     padding-block: 0;
   }
 
   .grid2 {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px;
+    gap: 18px;
   }
 
   .error {
@@ -458,7 +458,7 @@
       padding: 0 2px;
       border-width: 0 0 0 2px;
       box-shadow: none;
-      font-size: 12.5px;
+      font-size: 11px;
       line-height: 1.15;
       text-align: center;
       white-space: normal;
@@ -473,7 +473,7 @@
     }
 
     .pc-l1 .badge {
-      font-size: 11.5px;
+      font-size: 10px;
     }
 
     .plan :global(.input) {
@@ -481,7 +481,7 @@
     }
 
     .plan {
-      scroll-margin-top: calc(var(--top-h) + 8px);
+      scroll-margin-top: calc(var(--top-h) + 7px);
     }
 
     .plan :global(.src) {

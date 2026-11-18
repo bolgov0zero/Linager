@@ -163,7 +163,7 @@
   .ed {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 7px;
     height: 100%;
     min-height: 0;
   }
@@ -171,8 +171,8 @@
   .strip {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px 12px;
+    gap: 7px;
+    padding: 9px 11px;
     border: 2px solid var(--warn);
   }
 
@@ -186,11 +186,11 @@
     }
 
     .strip {
-      margin: 8px;
+      margin: 7px;
     }
 
     .ed > :global(span.small) {
-      padding: 4px 12px;
+      padding: 4px 11px;
       border-top: 2px solid var(--line);
     }
   }

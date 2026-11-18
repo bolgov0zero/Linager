@@ -252,12 +252,12 @@
     background: none;
     color: var(--accent);
     font: inherit;
-    font-size: 12px;
+    font-size: 11px;
     text-decoration: underline;
     cursor: pointer;
   }
 
   .stages {
-    margin-top: 6px;
+    margin-top: 5px;
   }
 </style>

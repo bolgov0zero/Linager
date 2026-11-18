@@ -246,7 +246,7 @@
   .users {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
   }
 
@@ -254,7 +254,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 11px;
   }
 
   h3,
@@ -275,8 +275,8 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px 12px;
-    padding: 10px 0;
+    gap: 7px 11px;
+    padding: 9px 0;
     border-bottom: 1px dashed var(--seg-off);
   }
 
@@ -284,15 +284,15 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 6px 8px;
+    gap: 5px 7px;
     min-width: 0;
   }
 
   .badge {
-    padding: 1px 6px;
+    padding: 1px 5px;
     border: 2px solid var(--muted);
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
   }
 
@@ -312,24 +312,24 @@
   }
 
   .acts {
-    gap: 6px;
+    gap: 5px;
   }
 
   .confirm {
     flex: 1 0 100%;
-    padding: 12px;
+    padding: 11px;
     border: 2px solid var(--line);
   }
 
   /* Phones: every account is a card, its actions are in a sheet, the form buttons are one under another. */
   @media (max-width: 720px) {
     .list {
-      gap: 12px;
+      gap: 11px;
     }
 
     .user {
       flex-wrap: wrap;
-      padding: 10px 6px 10px 12px;
+      padding: 9px 5px 9px 11px;
       background: var(--surface);
       border: 2px solid var(--line);
       box-shadow: 3px 3px 0 var(--shade);
@@ -340,7 +340,7 @@
     }
 
     .confirm {
-      margin-right: 6px;
+      margin-right: 5px;
     }
 
     .users :global(.row.end) {

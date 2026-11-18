@@ -87,13 +87,13 @@
     display: flex;
     flex-direction: column;
     gap: 5px;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .step {
     display: grid;
-    grid-template-columns: 16px 1fr auto;
-    column-gap: 8px;
+    grid-template-columns: 14px 1fr auto;
+    column-gap: 7px;
     align-items: baseline;
     color: var(--ink);
   }
@@ -134,14 +134,14 @@
   .note {
     grid-column: 2 / -1;
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     overflow-wrap: anywhere;
   }
 
   .bar {
     grid-column: 2 / -1;
     display: block;
-    height: 8px;
+    height: 7px;
     margin-top: 4px;
     border: 2px solid var(--line);
     background: var(--seg-off);
@@ -155,8 +155,8 @@
 
   .spin {
     display: inline-block;
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
     border: 2px solid currentColor;
     border-right-color: transparent;
     border-radius: 50%;

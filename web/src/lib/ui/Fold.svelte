@@ -25,7 +25,7 @@
   <button class="fh" type="button" aria-expanded={open} onclick={() => (open = !open)}>
     <h3>{title}</h3>
     {#if meta}<span class="meta {tone}">{meta}</span>{/if}
-    <span class="chev" class:up={open}><PixIcon name="chev" size={20} /></span>
+    <span class="chev" class:up={open}><PixIcon name="chev" /></span>
   </button>
   {#if open}
     <div class="fbody">
@@ -44,9 +44,9 @@
   .fh {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 9px;
     width: 100%;
-    min-height: 36px;
+    min-height: 32px;
     padding: 0;
     background: none;
     color: var(--ink);
@@ -60,7 +60,7 @@
     flex: 1;
     min-width: 0;
     margin: 0;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 400;
     color: var(--muted);
     text-transform: uppercase;
@@ -69,7 +69,7 @@
 
   .meta {
     flex: none;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--muted);
   }
 
@@ -89,8 +89,8 @@
     display: grid;
     place-items: center;
     flex: none;
-    width: 28px;
-    height: 28px;
+    width: 25px;
+    height: 25px;
   }
 
   .chev.up {
@@ -100,8 +100,8 @@
   .fbody {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    margin-top: 12px;
+    gap: 11px;
+    margin-top: 11px;
   }
 
   @media (max-width: 720px) {
@@ -110,7 +110,7 @@
     }
 
     h3 {
-      font-size: 14px;
+      font-size: 13px;
     }
   }
 </style>

@@ -59,9 +59,9 @@
 <style>
   .warnbox {
     margin: 0;
-    padding: 8px 10px;
+    padding: 7px 9px;
     border: 2px solid currentColor;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .crit {
@@ -78,8 +78,8 @@
       bottom: 0;
       z-index: 2;
       flex-wrap: nowrap;
-      margin: 0 -12px calc(-12px - var(--safe-b));
-      padding: 10px 12px calc(10px + var(--safe-b));
+      margin: 0 -11px calc(-11px - var(--safe-b));
+      padding: 9px 11px calc(9px + var(--safe-b));
       background: var(--surface);
       border-top: 2px solid var(--line);
     }

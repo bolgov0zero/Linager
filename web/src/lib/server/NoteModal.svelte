@@ -93,7 +93,7 @@
   {#snippet actions()}
     {#if canEdit && !editing}
       <button class="btn pencil" type="button" aria-label={$tr('srv.note.edit')} title={$tr('srv.note.edit')} onclick={startEdit}>
-        <PixIcon name="pencil" size={20} />
+        <PixIcon name="pencil" />
       </button>
     {/if}
   {/snippet}
@@ -135,9 +135,9 @@
 
 <style>
   .pencil {
-    min-width: 36px;
-    min-height: 36px;
-    padding: 0 8px;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0 7px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -158,18 +158,18 @@
 
   textarea {
     width: 100%;
-    min-height: 240px;
+    min-height: 216px;
     height: auto;
     resize: vertical;
     line-height: 1.45;
-    padding: 10px;
+    padding: 9px;
   }
 
   .row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
   }
 
   .row.between {
@@ -182,7 +182,7 @@
 
   .empty {
     margin: 0;
-    padding: 16px 0;
+    padding: 14px 0;
   }
 
   .meta {
@@ -191,37 +191,37 @@
 
   /* The rendered note: modest headings, the project's mono text, code and quotes in the frame style. */
   .md {
-    min-height: 120px;
+    min-height: 108px;
     overflow-wrap: anywhere;
   }
 
   .md :global(p) {
-    margin: 0 0 10px;
+    margin: 0 0 9px;
   }
 
   .md :global(h3),
   .md :global(h4),
   .md :global(h5) {
-    margin: 14px 0 6px;
-    font-size: 16px;
+    margin: 13px 0 5px;
+    font-size: 14px;
     line-height: 1.2;
   }
 
   .md :global(h3) {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .md :global(h5) {
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .md :global(ul),
   .md :global(ol) {
-    margin: 0 0 10px;
-    padding-left: 22px;
+    margin: 0 0 9px;
+    padding-left: 20px;
   }
 
   .md :global(li) {
@@ -238,8 +238,8 @@
   }
 
   .md :global(pre) {
-    margin: 0 0 10px;
-    padding: 10px;
+    margin: 0 0 9px;
+    padding: 9px;
     border: 2px solid var(--seg-off);
     background: var(--bg);
     overflow-x: auto;
@@ -251,14 +251,14 @@
   }
 
   .md :global(blockquote) {
-    margin: 0 0 10px;
-    padding: 4px 12px;
+    margin: 0 0 9px;
+    padding: 4px 11px;
     border-left: 4px solid var(--seg-off);
     color: var(--muted);
   }
 
   .md :global(hr) {
-    margin: 12px 0;
+    margin: 11px 0;
     border: 0;
     border-top: 2px dashed var(--seg-off);
   }

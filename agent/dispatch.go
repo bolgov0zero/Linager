@@ -83,6 +83,7 @@ func NewRegistry(cfg *config.Agent, col Collector, log *slog.Logger, dataDir str
 	r := &Registry{cmds: map[string]CmdFunc{}, streams: map[string]StreamFunc{}, log: log, live: map[string]*liveStream{}, nStream: map[string]int{}, dataDir: dataDir}
 	r.modules = cfg.List()
 	r.registerPlatform(cfg, col, log, dataDir)
+	r.applyDevOverrides()
 	return r
 }
 

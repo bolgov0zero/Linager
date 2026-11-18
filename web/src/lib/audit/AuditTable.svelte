@@ -166,12 +166,12 @@
   table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   th,
   td {
-    padding: 8px 10px;
+    padding: 7px 9px;
     text-align: left;
     vertical-align: middle;
     border-bottom: 2px dashed var(--seg-off);
@@ -200,7 +200,7 @@
   }
 
   .small {
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .muted {
@@ -214,7 +214,7 @@
 
   .badge {
     display: inline-block;
-    padding: 1px 6px;
+    padding: 1px 5px;
     border: 2px solid currentColor;
     white-space: nowrap;
   }
@@ -239,7 +239,7 @@
     background: var(--surface);
     color: var(--ink);
     border: 2px solid var(--line);
-    padding: 0 6px;
+    padding: 0 5px;
     line-height: 1.4;
     cursor: pointer;
     font: inherit;
@@ -256,16 +256,16 @@
   }
 
   td.details {
-    padding: 0 10px 10px;
+    padding: 0 9px 9px;
   }
 
   .json {
     margin: 0;
-    padding: 10px 12px;
+    padding: 9px 11px;
     background: #0b0d12;
     color: #d7dce6;
     font: inherit;
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.5;
     overflow-x: auto;
     white-space: pre;
@@ -275,7 +275,7 @@
     flex: none;
     width: 0;
     height: 0;
-    margin: 0 6px;
+    margin: 0 5px;
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
     border-top: 6px solid var(--muted);
@@ -287,6 +287,6 @@
   }
 
   .pr-more .json {
-    margin-top: 8px;
+    margin-top: 7px;
   }
 </style>

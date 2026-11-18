@@ -23,7 +23,7 @@
   <button class="ah" type="button" aria-expanded={open} onclick={() => (open = !open)}>
     <b class="at">{title}</b>
     {#if meta}<span class="meta {tone}">{meta}</span>{/if}
-    <span class="chev" class:up={open}><PixIcon name="chev" size={20} /></span>
+    <span class="chev" class:up={open}><PixIcon name="chev" /></span>
   </button>
   {#if open}
     <div class="accbody">
@@ -42,10 +42,10 @@
   .ah {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 9px;
     width: 100%;
     min-height: 52px;
-    padding: 6px 8px 6px 12px;
+    padding: 5px 7px 5px 11px;
     background: none;
     color: var(--ink);
     border: 0;
@@ -58,7 +58,7 @@
     flex: 1;
     min-width: 0;
     font-family: var(--font-display);
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 400;
     overflow-wrap: anywhere;
   }
@@ -66,7 +66,7 @@
   .meta {
     flex: none;
     max-width: 45%;
-    font-size: 12px;
+    font-size: 11px;
     text-align: right;
     color: var(--muted);
   }
@@ -87,8 +87,8 @@
     display: grid;
     place-items: center;
     flex: none;
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
   }
 
   .chev.up {
@@ -101,14 +101,14 @@
 
   /* The section inside is the old card: its frame and caption are replaced by the header above. */
   .accbody > :global(section.card) {
-    padding: 12px;
+    padding: 11px;
     background: none;
     border: 0;
     box-shadow: none;
   }
 
   .accbody :global(.pc-list) {
-    margin: 0 -12px;
+    margin: 0 -11px;
     border-width: 2px 0 0;
     box-shadow: none;
   }

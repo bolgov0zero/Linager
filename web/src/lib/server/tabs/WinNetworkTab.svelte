@@ -147,7 +147,7 @@
               </span>
             </span>
             {#if !open}<span class="sum mono">{a.ipv4[0] ?? '—'}</span>{/if}
-            <span class="chev" class:up={open}><PixIcon name="chev" size={20} /></span>
+            <span class="chev" class:up={open}><PixIcon name="chev" /></span>
           </button>
 
           {#if open}
@@ -197,7 +197,7 @@
 
 <style>
   .wrap { display: flex; flex-direction: column; gap: 12px; }
-  .bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 9px; }
   .bar h3 { margin: 0; }
   .ifaces { display: flex; flex-direction: column; gap: 12px; }
   .iface { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
@@ -205,27 +205,27 @@
   .hname { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
   .hname h3 { margin: 0; }
   .badges { display: flex; flex-wrap: wrap; gap: 6px; }
-  .tag { display: inline-block; padding: 0 6px; border: 2px solid var(--line); background: var(--surface); font-size: 12px; line-height: 1.5; }
+  .tag { display: inline-block; padding: 0 5px; border: 2px solid var(--line); background: var(--surface); font-size: 12px; line-height: 1.5; }
   .tag.up { color: var(--good); border-color: var(--good); }
   .tag.down { color: var(--muted); }
   .sum { flex: 1; text-align: right; margin-left: 6px; overflow-wrap: anywhere; }
-  .chev { display: grid; place-items: center; flex: none; width: 28px; height: 28px; margin-left: auto; }
+  .chev { display: grid; place-items: center; flex: none; width: 25px; height: 28px; margin-left: auto; }
   .sum + .chev { margin-left: 0; }
   .chev.up { transform: rotate(180deg); }
   .facts { margin: 0; display: flex; flex-direction: column; gap: 4px; }
-  .fact { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; min-width: 0; }
+  .fact { display: flex; justify-content: space-between; align-items: baseline; gap: 11px; min-width: 0; }
   .fact dt { color: var(--muted); flex: none; }
   .fact dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
   @media (min-width: 721px) {
-    .iface.open .facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 4px 28px; }
+    .iface.open .facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(234px, 100%), 1fr)); gap: 4px 28px; }
     .form { max-width: 640px; }
   }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; }
-  .warn { padding: 8px 10px; border: 2px solid var(--warn); color: var(--warn); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .row { display: flex; gap: 7px; flex-wrap: wrap; }
+  .warn { padding: 8px 10px; border: 2px solid var(--warn); color: var(--warn); display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
   .warnText { color: var(--warn); }
   .err { color: var(--crit); margin: 0; }
   .form { display: flex; flex-direction: column; gap: 10px; }
-  .form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+  .form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
   .form input, .form select { padding: 8px 10px; font: inherit; color: var(--ink); background: var(--bg); border: 2px solid var(--line); }
   p { margin: 0; }
 </style>

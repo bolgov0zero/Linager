@@ -270,53 +270,53 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 9px;
   }
 
   .bar .input {
-    width: 220px;
-    height: 36px;
+    width: 198px;
+    height: 32px;
     padding-block: 0;
   }
 
   .row :global(.chip) {
     display: inline-flex;
     align-items: center;
-    height: 36px;
+    height: 32px;
     padding-block: 0;
   }
 
   .cnt {
-    margin-left: 6px;
+    margin-left: 5px;
   }
 
   .tw {
     overflow-x: auto;
-    max-height: 340px;
+    max-height: 306px;
     overflow-y: auto;
   }
 
   .tbl {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .tbl th {
     font-family: var(--font-display);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--muted);
     text-align: left;
-    padding: 6px 8px;
+    padding: 5px 7px;
     border-bottom: 2px solid var(--line);
     white-space: nowrap;
   }
 
   .tbl td {
-    padding: 7px 8px;
+    padding: 6px 7px;
     border-bottom: 2px dashed var(--seg-off);
     vertical-align: middle;
   }
@@ -327,16 +327,16 @@
   }
 
   .chk {
-    width: 34px;
+    width: 31px;
   }
 
   .tbl :global(.btn.sm),
   .foot :global(.btn.sm) {
     display: inline-flex;
     align-items: center;
-    height: 30px;
+    height: 27px;
     padding-block: 0;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .foot {
@@ -344,19 +344,19 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 7px;
   }
 
   .confirm {
-    padding: 12px;
+    padding: 11px;
     border: 2px solid var(--crit);
   }
 
   .badge {
     display: inline-block;
-    padding: 1px 6px;
+    padding: 1px 5px;
     border: 2px solid currentColor;
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
   }
 
@@ -418,7 +418,7 @@
     }
 
     .pc-l1 .badge {
-      font-size: 11.5px;
+      font-size: 10px;
     }
 
     .foot .row {

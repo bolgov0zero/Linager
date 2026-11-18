@@ -130,7 +130,7 @@
   .um-btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
   }
 
   .arrow {
@@ -144,8 +144,8 @@
   .list {
     position: fixed;
     z-index: 100001;
-    min-width: 220px;
-    max-width: min(420px, calc(100vw - 16px));
+    min-width: 198px;
+    max-width: min(378px, calc(100vw - 14px));
     margin: 0;
     padding: 4px;
     overflow-y: auto;
@@ -159,14 +159,14 @@
   .item {
     display: flex;
     align-items: baseline;
-    gap: 8px;
+    gap: 7px;
     width: 100%;
-    padding: 8px 10px;
+    padding: 7px 9px;
     border: 0;
     background: none;
     color: inherit;
     font: inherit;
-    font-size: 13px;
+    font-size: 12px;
     text-align: left;
     cursor: pointer;
   }
@@ -184,7 +184,7 @@
 
   .mark {
     flex: none;
-    width: 12px;
+    width: 11px;
   }
 
   .name {
@@ -199,9 +199,9 @@
   }
 
   .empty {
-    padding: 8px 10px;
+    padding: 7px 9px;
     color: var(--muted);
-    font-size: 13px;
+    font-size: 12px;
   }
 
   /* Phones: the button shows the account the shell runs as, the list opens as a sheet from the bottom. */
@@ -232,11 +232,11 @@
       min-height: 50px;
       align-items: center;
       padding: 0;
-      font-size: 15px;
+      font-size: 14px;
     }
 
     .empty {
-      padding: 14px 0;
+      padding: 13px 0;
     }
   }
 </style>

@@ -78,7 +78,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding: 48px 16px 16px;
+    padding: 43px 14px 14px;
     overflow: auto;
   }
 
@@ -94,7 +94,7 @@
   .dialog {
     position: relative;
     width: 100%;
-    max-width: 560px;
+    max-width: 504px;
     background: var(--surface);
     border: 2px solid var(--line);
     box-shadow: 4px 4px 0 var(--shade);
@@ -102,46 +102,46 @@
   }
 
   .dialog.medium {
-    max-width: 920px;
+    max-width: 828px;
   }
 
   .dialog.wide {
-    max-width: min(1360px, 100%);
+    max-width: min(1224px, 100%);
   }
 
   .dialog.fixed {
     display: flex;
     flex-direction: column;
-    max-width: min(1120px, 100%);
-    height: min(760px, calc(100dvh - 64px));
+    max-width: min(1008px, 100%);
+    height: min(684px, calc(100dvh - 58px));
   }
 
   .dialog-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 12px 16px;
+    gap: 11px;
+    padding: 11px 14px;
     border-bottom: 2px solid var(--line);
   }
 
   .dialog-tools {
     display: flex;
     align-items: stretch; /* the pencil and the cross are of one height */
-    gap: 8px;
+    gap: 7px;
   }
 
   .dialog-head h2 {
     margin: 0;
-    font-size: 20px;
+    font-size: 18px;
     line-height: 1.1;
   }
 
   .dialog-body {
-    padding: 16px;
+    padding: 14px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
   }
 
   .dialog-body.fixed {
@@ -173,7 +173,7 @@
 
     .dialog.wide,
     .dialog.fixed {
-      height: calc(100dvh - 12px);
+      height: calc(100dvh - 11px);
       max-height: none;
     }
 
@@ -184,7 +184,7 @@
     .dialog-head {
       flex: none;
       min-height: 52px;
-      padding: 4px 6px 4px 14px;
+      padding: 4px 5px 4px 13px;
     }
 
     .dialog-head .btn {
@@ -195,10 +195,10 @@
     .dialog-body {
       flex: 1 1 auto;
       min-height: 0;
-      gap: 12px;
+      gap: 11px;
       overflow-y: auto;
       overscroll-behavior: contain;
-      padding: 12px 12px 0;
+      padding: 11px 11px 0;
     }
 
     /* The room under the content (home indicator): a spacer, not padding, so that a pinned button bar can sit
@@ -234,8 +234,8 @@
       bottom: 0;
       z-index: 2;
       flex-wrap: nowrap;
-      margin: auto -12px 0;
-      padding: 10px 16px calc(10px + var(--safe-b));
+      margin: auto -11px 0;
+      padding: 9px 14px calc(9px + var(--safe-b));
       background: var(--surface);
       border-top: 2px solid var(--line);
     }

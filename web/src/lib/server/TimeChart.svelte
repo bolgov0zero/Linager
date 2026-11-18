@@ -318,7 +318,7 @@
 
   .ax {
     fill: var(--muted);
-    font-size: 11px;
+    font-size: 10px;
     font-family: var(--font-body);
   }
 
@@ -376,11 +376,11 @@
     display: flex;
     flex-direction: column;
     gap: 3px;
-    padding: 6px 8px;
+    padding: 5px 7px;
     background: var(--ink);
     color: var(--surface);
     border: 2px solid var(--line);
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
     pointer-events: none;
     z-index: 1;
@@ -396,23 +396,23 @@
 
   .key {
     display: inline-block;
-    width: 8px;
-    height: 8px;
-    margin-right: 6px;
+    width: 7px;
+    height: 7px;
+    margin-right: 5px;
   }
 
   .legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 14px;
+    gap: 4px 13px;
     margin: 0 0 4px;
     color: var(--muted);
   }
 
   .sw {
     display: inline-block;
-    width: 14px;
-    margin-right: 6px;
+    width: 13px;
+    margin-right: 5px;
     vertical-align: middle;
   }
 
@@ -427,7 +427,7 @@
 
   .empty {
     margin: 0;
-    padding: 24px 0;
+    padding: 22px 0;
     text-align: center;
   }
 </style>

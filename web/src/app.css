@@ -89,7 +89,7 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.45;
   min-height: 100vh;
 }
@@ -114,20 +114,20 @@ button {
 }
 
 .small {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 11px;
 }
 
 .row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
 }
 
 .row.end {
@@ -138,7 +138,7 @@ button {
   background: var(--surface);
   border: 2px solid var(--line);
   box-shadow: 4px 4px 0 var(--shade);
-  padding: 16px;
+  padding: 14px;
 }
 
 .btn,
@@ -147,10 +147,10 @@ button {
   color: var(--ink);
   border: 2px solid var(--line);
   border-radius: 0;
-  padding: 6px 12px;
+  padding: 5px 11px;
   cursor: pointer;
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 13px;
   letter-spacing: 0.02em;
   box-shadow: 3px 3px 0 var(--shade);
 }
@@ -195,8 +195,8 @@ input[type='checkbox'] {
   display: inline-grid;
   place-content: center;
   flex-shrink: 0;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   margin: 0;
   background: var(--surface);
   border: 2px solid var(--line);
@@ -208,8 +208,8 @@ input[type='checkbox'] {
 
 input[type='checkbox']::after {
   content: '';
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   background: var(--surface);
   transform: scale(0);
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Cpath d='M1 4h1v2H1zM2 5h1v2H2zM3 4h1v2H3zM4 3h1v2H4zM5 2h1v2H5zM6 1h1v2H6z'/%3E%3C/svg%3E") center / contain no-repeat;
@@ -237,7 +237,7 @@ input[type='checkbox']:focus-visible {
 
 .input {
   width: 100%;
-  padding: 8px 10px;
+  padding: 7px 9px;
   background: var(--surface);
   color: var(--ink);
   border: 2px solid var(--line);
@@ -252,7 +252,7 @@ input[type='checkbox']:focus-visible {
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .field > .label {
@@ -262,7 +262,7 @@ input[type='checkbox']:focus-visible {
 .check {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   cursor: pointer;
 }
 
@@ -279,7 +279,7 @@ input[type='checkbox']:focus-visible {
 .hint {
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .mono {
@@ -289,11 +289,11 @@ input[type='checkbox']:focus-visible {
 
 .toast {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  right: 14px;
+  bottom: 14px;
   z-index: 30;
-  max-width: calc(100vw - 32px);
-  padding: 10px 14px;
+  max-width: calc(100vw - 29px);
+  padding: 9px 13px;
   background: var(--ink);
   color: var(--surface);
   border: 2px solid var(--line);
@@ -326,7 +326,7 @@ input[type='checkbox']:focus-visible {
     align-items: center;
     justify-content: center;
     min-height: 44px;
-    padding: 0 14px;
+    padding: 0 13px;
   }
 
   a.btn {
@@ -339,8 +339,8 @@ input[type='checkbox']:focus-visible {
   }
 
   input[type='checkbox'] {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
   }
 
   .check {
@@ -348,14 +348,14 @@ input[type='checkbox']:focus-visible {
   }
 
   .card {
-    padding: 12px;
+    padding: 11px;
     box-shadow: 3px 3px 0 var(--shade);
   }
 
   .toast {
-    left: 12px;
-    right: 12px;
-    bottom: calc(var(--bar-h) + var(--safe-b) + 12px);
+    left: 11px;
+    right: 11px;
+    bottom: calc(var(--bar-h) + var(--safe-b) + 11px);
     max-width: none;
   }
 
@@ -381,7 +381,7 @@ input[type='checkbox']:focus-visible {
     transform: none !important;
     border-width: 2px 0 0;
     box-shadow: 0 -4px 0 var(--shade);
-    font-size: 15px !important;
+    font-size: 14px !important;
   }
 
   .sel-list[aria-label]::before {
@@ -389,18 +389,18 @@ input[type='checkbox']:focus-visible {
     position: sticky;
     top: 0;
     display: block;
-    padding: 12px 14px;
+    padding: 11px 13px;
     background: var(--surface);
     border-bottom: 2px solid var(--line);
     font-family: var(--font-display);
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .sel-list li {
     display: flex;
     align-items: center;
     min-height: 50px;
-    padding: 0 14px !important;
+    padding: 0 13px !important;
     border-top: 2px dashed var(--seg-off);
     white-space: normal !important;
   }
