@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.15 (not released)
+
+- Fix: **the "external" install link used the host name of the server** (`https://homeSRV-linager:43752/...`) instead of the address of the site. A name without a dot was taken for a name from the internet, and it stood first in `agents.hosts`. Now a bare host name counts as local; the external command uses the site address (a domain or a public IP of `agents.hosts`, or the address the panel was opened with), and the local command prefers an IP address of the local network to a name. Test: `TestJoinHostsBareNameIsLocal`.
+
 ## 0.3.0-beta.14
 
 - Fix: **the install link did not work from Windows PowerShell at all** ("Could not create the SSL/TLS secure channel"). Two causes: the certificate of the agent port has an Ed25519 key, which Windows (Schannel) cannot verify in TLS, and Windows 10 and Server 2019 have no TLS 1.3. The server now has a **second certificate with an ECDSA P-256 key** (`agents-ec.crt` and `agents-ec.key` in the data directory; a server that was installed before makes it at the start, for the same hosts). The listener offers both: Go picks the first one the client can verify, so agents and wget keep the Ed25519 certificate and its pins, and a client without Ed25519 gets the ECDSA one. The Windows install command pins the fingerprint of the ECDSA certificate, the script gives the agent the fingerprint of the main one. Tests: which certificate a client with and without Ed25519 gets, the fingerprints in the command.

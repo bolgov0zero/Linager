@@ -283,6 +283,9 @@ func hostKind(h string) string {
 		}
 		return "ext"
 	}
+	if !strings.Contains(h, ".") {
+		return "loc" // a bare host name ("homeSRV") resolves only inside the local network
+	}
 	for _, suf := range []string{".local", ".lan", ".home", ".internal", ".home.arpa", ".localdomain"} {
 		if strings.HasSuffix(h, suf) {
 			return "loc"
@@ -316,6 +319,7 @@ func joinHosts(cfg *config.Server, reqHost string) (ext, loc string) {
 	} else {
 		cand = append(cand, reqHost)
 	}
+	locIP := false
 	for _, h := range cand {
 		switch hostKind(h) {
 		case "ext":
@@ -323,7 +327,10 @@ func joinHosts(cfg *config.Server, reqHost string) (ext, loc string) {
 				ext = strings.Trim(h, "[]")
 			}
 		case "loc":
-			if loc == "" {
+			// an address of the local network is more reliable than a name (Windows does not resolve bare names)
+			if _, err := netip.ParseAddr(strings.Trim(h, "[]")); err == nil && !locIP {
+				loc, locIP = strings.Trim(h, "[]"), true
+			} else if loc == "" {
 				loc = strings.Trim(h, "[]")
 			}
 		}
