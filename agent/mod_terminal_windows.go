@@ -99,6 +99,9 @@ func startConPTY(cmdline string, cols, rows int) (*conPTY, error) {
 
 	var si windows.StartupInfoEx
 	si.Cb = uint32(unsafe.Sizeof(si))
+	// With empty standard handles the pseudo console supplies its own. Without this flag a child of a process whose
+	// output is redirected (the agent run under a test or a pipe) inherits that redirection and bypasses the console.
+	si.Flags = windows.STARTF_USESTDHANDLES
 	si.ProcThreadAttributeList = attrs.List()
 	cl, err := windows.UTF16PtrFromString(cmdline)
 	if err != nil {
