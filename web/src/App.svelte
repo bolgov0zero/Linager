@@ -17,6 +17,8 @@
   import { closeAllTermWindows } from './lib/terminal/windows';
   import Modal from './lib/Modal.svelte';
   import PixIcon from './lib/ui/PixIcon.svelte';
+  import TopMenu from './lib/TopMenu.svelte';
+  import ViewSwitch from './lib/dashboard/ViewSwitch.svelte';
   import TabBar, { type TabBarItem } from './lib/ui/TabBar.svelte';
   import { isPhone } from './lib/ui/viewport';
 
@@ -63,7 +65,6 @@
   let editing = $state(false);
   let addOpen = $state(false);
   let reloadKey = $state(0);
-  let menuOpen = $state(false);
   let moreOpen = $state(false);
   let lastLive = $state<Date | null>(null);
   let hash = $state(location.hash);
@@ -72,6 +73,7 @@
 
   const serverRoute = $derived(parseServerHash(hash));
   const serverName = $derived(serverRoute?.name ?? null);
+  const onDashboard = $derived(phase === 'app' && serverName === null);
   let updatesCount = $state(0);
   /** Only an administrator changes the settings, adds and removes servers and agents, and edits the dashboard. */
   const isAdmin = $derived((session?.role ?? 'admin') === 'admin');
@@ -109,14 +111,12 @@
     settingsList = list && isAdmin;
     settingsSection = isAdmin ? section : 'profile'; // the others only have their profile
     settingsOpen = true;
-    menuOpen = false;
     moreOpen = false;
   }
 
   function onHashChange(): void {
     if (openLegacyHash()) return;
     hash = location.hash;
-    menuOpen = false;
     if (!hash.startsWith(SRV_PREFIX)) openedFromApp = false;
   }
 
@@ -261,59 +261,33 @@
         <span class="dot" class:on={$liveConnected} aria-hidden="true"></span>{$tr('dash.live', { time: clock })}
       </p>
     {/if}
-    {#if phase === 'app' && serverName === null && isAdmin}
-      <button class="btn primary phone-add" type="button" aria-label={$tr('servers.add')} onclick={() => (addOpen = true)}>
-        <PixIcon name="plus" />
-      </button>
-    {/if}
-    <button
-      class="btn menu-btn"
-      class:ink={menuOpen}
-      type="button"
-      aria-label={$tr('app.menu')}
-      aria-expanded={menuOpen}
-      onclick={() => (menuOpen = !menuOpen)}>
-      <svg viewBox="0 0 8 8" width="16" height="16" shape-rendering="crispEdges" aria-hidden="true">
-        <rect x="0" y="1" width="8" height="1.5" fill="currentColor" />
-        <rect x="0" y="3.25" width="8" height="1.5" fill="currentColor" />
-        <rect x="0" y="5.5" width="8" height="1.5" fill="currentColor" />
-      </svg>
-    </button>
-    {#if menuOpen}
-      <button class="scrim" type="button" tabindex="-1" aria-hidden="true" onclick={() => (menuOpen = false)}></button>
-    {/if}
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="controls" class:open={menuOpen} onclick={() => (menuOpen = false)}>
-      {#if phase === 'app'}
-        <button class="btn" type="button" onclick={() => openSettings()}>
-          {isAdmin ? $tr('app.settings') : $tr('app.profile')}{#if isAdmin && updatesCount > 0} <span class="badge">{updatesCount}</span>{/if}
+    {#if onDashboard}
+      <ViewSwitch />
+      {#if editing}
+        <button class="btn ink" type="button" onclick={toggleEdit}>{$tr('dash.done')}</button>
+      {/if}
+      {#if isAdmin}
+        <button class="btn primary add-text" type="button" onclick={() => (addOpen = true)}>{$tr('servers.add')}</button>
+        <button class="btn primary phone-add" type="button" aria-label={$tr('servers.add')} onclick={() => (addOpen = true)}>
+          <PixIcon name="plus" />
         </button>
       {/if}
-      {#if phase === 'app' && serverName === null && isAdmin}
-        <button class="btn" class:ink={editing} type="button" onclick={toggleEdit}>
-          {editing ? $tr('dash.done') : $tr('dash.edit')}
-        </button>
-        <button class="btn primary" type="button" onclick={() => (addOpen = true)}>{$tr('servers.add')}</button>
-      {/if}
-      {#if phase === 'app'}
-        <button class="btn" type="button" onclick={() => void logout()}>{$tr('app.logout')}</button>
-      {/if}
-      <button class="btn" type="button" onclick={toggleTheme}>
-        {theme === 'dark' ? $tr('theme.light') : $tr('theme.dark')}
-      </button>
-      <div class="seg" role="group" aria-label="language">
-        <button
-          class="chip"
-          type="button"
-          aria-pressed={$locale === 'ru'}
-          onclick={() => pickLocale('ru')}>{$tr('lang.ru')}</button>
-        <button
-          class="chip"
-          type="button"
-          aria-pressed={$locale === 'en'}
-          onclick={() => pickLocale('en')}>{$tr('lang.en')}</button>
-      </div>
-    </div>
+    {/if}
+    <!-- Phone: the bottom bar has its own "More" sheet, so the menu is only for the sign-in screen there. -->
+    {#if !($isPhone && phase === 'app')}
+      <TopMenu
+        dark={theme === 'dark'}
+        signedIn={phase === 'app'}
+        {isAdmin}
+        canEdit={onDashboard && isAdmin}
+        {editing}
+        {updatesCount}
+        ontheme={toggleTheme}
+        onlocale={pickLocale}
+        onedit={toggleEdit}
+        onsettings={() => openSettings()}
+        onlogout={() => void logout()} />
+    {/if}
   </div>
 </header>
 
@@ -469,17 +443,17 @@
   .right {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: stretch;
     gap: 8px;
   }
 
-  /* On wide screens the buttons sit in the bar itself; the menu button and its backdrop exist only on phones. */
-  .controls {
-    display: contents;
+  /* :where() keeps this rule weaker than .add-text and .phone-add below. */
+  .right :global(:where(.btn, .chip)) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  .menu-btn,
-  .scrim,
   .phone-add {
     display: none;
   }
@@ -489,7 +463,7 @@
     gap: 6px;
   }
 
-  /* Phones: a compact bar (logo, live indicator, menu button) that stays pinned; the buttons open as a panel under it. */
+  /* Phones: a compact bar (logo, live indicator, view and add buttons) that stays pinned; the rest is in the bottom bar. */
   @media (max-width: 720px) {
     .top {
       flex-wrap: nowrap;
@@ -511,6 +485,7 @@
 
     .right {
       flex-wrap: nowrap;
+      align-items: center;
       gap: 8px;
     }
 
@@ -519,27 +494,8 @@
       white-space: nowrap;
     }
 
-    /* The menu of the bar is the "More" sheet of the bottom bar now; only the sign-in screen has no bar. */
-    .menu-btn,
-    .scrim {
+    .add-text {
       display: none;
-    }
-
-    .controls {
-      display: none;
-    }
-
-    /* Sign-in has no bottom bar: the theme and language buttons stay in the top bar. */
-    .top.guest .controls {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .top.guest .controls :global(.btn),
-    .top.guest .controls :global(.chip) {
-      min-height: 36px;
-      padding: 0 8px;
     }
 
     .phone-add {
@@ -590,26 +546,6 @@
       min-height: calc(100dvh - 52px - var(--safe-t));
     }
   }
-  /* A counter inside a button must not make that button taller than its neighbours. */
-  .controls :global(.btn) {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .badge {
-    background: var(--warn);
-    border-color: var(--warn);
-    color: #fff;
-    line-height: 1.1;
-    display: inline-block;
-    min-width: 1.4em;
-    padding: 0 4px;
-    margin-left: 4px;
-    border: 2px solid currentColor;
-    text-align: center;
-  }
-
   .more .act {
     display: flex;
     align-items: center;

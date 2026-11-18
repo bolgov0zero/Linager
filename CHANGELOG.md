@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.3.1
 
+- Change: **the top bar of the dashboard.** The view switch (Cards, Map) moved from the page into the top bar: view switch, Add server, menu. The menu button (three lines) opens a list: theme and language (they switch in place and keep the menu open), Edit, Settings (Profile) and a red Log out. While the dashboard is being edited, a **Done** button stands in the top bar. The line "27 servers" above the summary is gone (the count is in the Online card). On other pages and on the sign-in screen the top bar has only the menu; on a phone the bottom bar and its "More" sheet stay as they were, the view toggle and Add server are in the top bar.
 - Fix: **"invalid mount" in the Disk tab of a Windows server** when counting the used space: the panel accepted only mount points that start with "/", and a Windows volume is "C:". Test: `TestValidMount`.
 - Fix: the Users tab of a Windows server had a wide horizontal scroll: a long description of a built-in account (it was never wrapped) widened the table. Descriptions and group names wrap now.
 

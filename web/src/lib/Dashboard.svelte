@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import { api, isUnauthorized, type Group, type LiveEvent, type ServerCard } from '../api';
-  import { locale, t, tr } from '../i18n';
+  import { t, tr } from '../i18n';
   import { subscribeLive } from '../live';
   import CardView from './dashboard/CardView.svelte';
-  import { fmtAgo, fmtRate, fmtUptime, pluralForm, type Units } from './dashboard/format';
+  import { fmtAgo, fmtRate, fmtUptime, type Units } from './dashboard/format';
   import Summary from './dashboard/Summary.svelte';
   import OsBadge from './dashboard/OsBadge.svelte';
   import Tags from './dashboard/Tags.svelte';
@@ -17,9 +17,9 @@
   import { isPhone } from './ui/viewport';
   import { openDesktopWindow, openTermWindow } from './terminal/windows';
   import { showToast } from './toast';
+  import { dashView } from './dashboard/view';
 
   type Filter = 'all' | 'problems' | 'offline';
-  type View = 'cards' | 'map';
 
   let {
     editing,
@@ -34,32 +34,12 @@
     onauthlost: () => void;
   } = $props();
 
-  const VIEW_KEY = 'linager.dashboard.view';
   const GROUP_KEY = 'linager.dashboard.group';
   const LIVE_RELOAD_MS = 500;
   const SAFETY_RELOAD_MS = 60_000;
   const TICK_MS = 15_000;
   const ORDER_SAVE_MS = 400;
   const UNDO_MS = 5_000;
-
-  function readView(): View {
-    try {
-      const value = localStorage.getItem(VIEW_KEY);
-      if (value === 'cards') return value;
-      if (value === 'map' || value === 'rows') return 'map'; // the old rows view was replaced by the map
-    } catch {
-      // storage unavailable: fall back to the default view
-    }
-    return 'cards';
-  }
-
-  function storeView(next: View): void {
-    try {
-      localStorage.setItem(VIEW_KEY, next);
-    } catch {
-      // storage unavailable: the choice just is not remembered
-    }
-  }
 
   function readGroup(): string {
     try {
@@ -89,7 +69,7 @@
   let filter = $state<Filter>('all');
   let query = $state('');
   let searchOpen = $state(false);
-  let view = $state<View>(readView());
+  const view = $derived($dashView);
   let now = $state(Date.now());
   /** A card removed from the dashboard whose API call waits for the undo window. */
   let pending = $state<{ card: ServerCard; index: number } | null>(null);
@@ -123,7 +103,6 @@
     ),
   );
   const totals = $derived(summarize(inGroup));
-  const countLabel = $derived($tr(`dash.servers.${pluralForm($locale, inGroup.length)}`, { n: inGroup.length }));
   const groupOptions = $derived([
     { value: 'all', label: $tr('dash.group.all') },
     { value: 'none', label: $tr('dash.group.none') },
@@ -258,11 +237,6 @@
       void persistOrder();
     }
   });
-
-  function setView(next: View): void {
-    view = next;
-    storeView(next);
-  }
 
   // ---- map tiles ----
 
@@ -480,12 +454,10 @@
   {:else if loadFailed && items.length === 0}
     <p class="error" role="alert">{$tr('dash.loadFailed')}</p>
   {:else}
-    <p class="muted small count">{countLabel}</p>
-
     <Summary summary={totals} />
 
     {#if $isPhone}
-      <!-- Phone: one pinned row (filters, search, view); the group picker only when groups exist. -->
+      <!-- Phone: one pinned row (filters, search); the group picker only when groups exist. -->
       <div class="ptool">
         <div class="prow">
           <div class="pseg" role="group" aria-label={$tr('dash.filters')}>
@@ -494,7 +466,6 @@
             <button class="chip" type="button" aria-pressed={filter === 'offline'} onclick={() => (filter = 'offline')}>{$tr('dash.filter.offline')}</button>
           </div>
           <button class="btn ic" type="button" aria-label={$tr('dash.searchOpen')} aria-pressed={searchOpen || query !== ''} onclick={() => (searchOpen = !searchOpen)}><PixIcon name="search" /></button>
-          <button class="btn ic" type="button" aria-label={$tr('dash.viewToggle')} onclick={() => setView(view === 'cards' ? 'map' : 'cards')}><PixIcon name={view === 'cards' ? 'map' : 'cards'} /></button>
         </div>
         {#if searchOpen || query !== ''}
           <input class="input search" type="search" placeholder={$tr('dash.search')} aria-label={$tr('dash.search')} bind:value={query} />
@@ -526,10 +497,6 @@
         {/if}
       </div>
       <div class="group end">
-        <button class="chip" type="button" aria-pressed={view === 'cards'} onclick={() => setView('cards')}
-          >{$tr('dash.view.cards')}</button>
-        <button class="chip" type="button" aria-pressed={view === 'map'} onclick={() => setView('map')}
-          >{$tr('dash.view.map')}</button>
         <input
           class="input search"
           type="search"
@@ -663,10 +630,6 @@
 <style>
   .pick {
     margin-top: 8px;
-  }
-
-  .count {
-    margin: 0 0 12px;
   }
 
   .toolbar {
@@ -1032,10 +995,6 @@
     }
 
     /* The summary strip already shows the number of servers. */
-    .count {
-      display: none;
-    }
-
     .grid {
       grid-template-columns: minmax(0, 1fr);
       gap: 12px;
