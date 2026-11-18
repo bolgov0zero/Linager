@@ -1,0 +1,2 @@
+# the signature fixtures are compared byte for byte: no line-ending conversion on Windows
+internal/release/testdata/* -text

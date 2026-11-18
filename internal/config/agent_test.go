@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -24,6 +25,9 @@ func TestAgentConfigDefaultsAndOverride(t *testing.T) {
 }
 
 func TestCompleteAgent(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the test uses the module list of Linux and unix file modes")
+	}
 	dir := t.TempDir()
 	if added, err := CompleteAgent(filepath.Join(dir, "none.yaml")); err != nil || added != nil {
 		t.Fatalf("a missing file stays missing: %v %v", added, err)

@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -94,30 +95,32 @@ func TestWindowsTerminal(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pty.close()
-	if _, err := pty.in.Write([]byte("echo linager-ok\r\n")); err != nil {
-		t.Fatal(err)
-	}
-	got := make(chan string, 1)
+	var mu sync.Mutex
+	var sb strings.Builder
 	go func() {
-		var sb strings.Builder
 		buf := make([]byte, 4096)
 		for {
 			n, err := pty.out.Read(buf)
+			mu.Lock()
 			sb.Write(buf[:n])
-			if strings.Contains(sb.String(), "linager-ok") && strings.Count(sb.String(), "linager-ok") >= 2 || err != nil {
-				got <- sb.String()
+			mu.Unlock()
+			if err != nil {
 				return
 			}
 		}
 	}()
-	select {
-	case out := <-got:
-		if !strings.Contains(out, "linager-ok") {
-			t.Errorf("no echo in %q", out)
-		}
-	case <-time.After(20 * time.Second):
-		t.Fatal("the shell did not answer")
+	seen := func() string { mu.Lock(); defer mu.Unlock(); return sb.String() }
+	// the text that is typed has a quote in it, the answer has not: only a running shell can print it
+	time.Sleep(3 * time.Second) // the shell starts
+	if _, err := pty.in.Write([]byte("Write-Output ('lin'+'ager-ok')\r\n")); err != nil {
+		t.Fatal(err)
 	}
+	for deadline := time.Now().Add(30 * time.Second); time.Now().Before(deadline); time.Sleep(200 * time.Millisecond) {
+		if strings.Contains(seen(), "linager-ok") {
+			return
+		}
+	}
+	t.Fatalf("the shell did not answer; it printed %q", seen())
 }
 
 func TestWindowsModules(t *testing.T) {
