@@ -149,6 +149,7 @@
         .withExtension(rdp.displayControl(true))
         .build();
       const info = await ui.connect(config);
+      ui.setVisibility(true); // the screen of the client stays hidden until it is asked to show
       try {
         localStorage.setItem(loginKey(), login.trim());
       } catch {
