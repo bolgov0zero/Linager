@@ -128,3 +128,8 @@ export function summarize(cards: ServerCard[]): Totals {
     cpuAvg: cpuCount > 0 ? cpuSum / cpuCount : null,
   };
 }
+
+/** The kind of host an agent runs on, from the OS name it reports (a Windows name starts with "Windows"). */
+export function osKind(os: string): 'windows' | 'linux' {
+  return os.startsWith('Windows') ? 'windows' : 'linux';
+}

@@ -7,6 +7,7 @@
   import Spark from '../ui/Spark.svelte';
   import EditBar from './EditBar.svelte';
   import { fmtAgo, fmtPct, fmtRate, fmtUptime, type Units } from './format';
+  import OsBadge from './OsBadge.svelte';
   import Tags from './Tags.svelte';
   import { isPhone } from '../ui/viewport';
   import { levelOf, tagsOf, type AgentFlag } from './status';
@@ -57,6 +58,7 @@
     <button class="hit" type="button" aria-label={card.name} onclick={() => onopen(card.name)}></button>
     <div class="head">
       <h3 class="name"><span class="sq" aria-hidden="true"></span>{card.name}</h3>
+      <OsBadge os={card.os} />
       <button class="btn ic term" type="button" title={$tr('dash.terminal')} aria-label={$tr('dash.terminal')} disabled={!card.online} onclick={() => onopen(card.name, 'terminal')}><CardIcon name="terminal" /></button>
     </div>
     <p class="sub mono muted small">{card.address} · {card.os} · {$tr('dash.agent')} {card.agent_version}</p>
@@ -81,6 +83,7 @@
 <article class="card srv {level}">
   <div class="head">
     <h3 class="name"><span class="sq" aria-hidden="true"></span>{card.name}</h3>
+    <OsBadge os={card.os} pushed={!editing} />
     {#if editing}
       <EditBar {index} {count} {onmove} {onremove} />
     {/if}
