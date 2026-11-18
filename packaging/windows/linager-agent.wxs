@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  MSI package of the Linager agent for Windows (WiX v4).
+  Build: wix build packaging/windows/linager-agent.wxs -arch x64 -ext WixToolset.Util.wixext -d Version=0.3.0.1 -d ExePath=bin/linager_windows_amd64.exe
+  Install: msiexec /i linager_windows_amd64.msi /qn SERVER=host:9443 [FINGERPRINT=SHA256:...]
+  SERVER and FINGERPRINT are kept in HKLM\SOFTWARE\Linager\Agent; the service reads them to pair with the server.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+  <Package Name="Linager Agent" Manufacturer="Linager" Version="$(Version)" UpgradeCode="833FBE7E-3460-4B6C-A90F-073ECD37A330"
+           Scope="perMachine" Language="1033" InstallerVersion="500" Compressed="yes">
+    <SummaryInformation Description="Linager agent for Windows" />
+
+    <!-- The fourth number of the version (the beta number) is ignored by Windows Installer, so a package of the same
+         version replaces the installed one. -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of the Linager agent is already installed." AllowSameVersionUpgrades="yes" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Property Id="SERVER" Secure="yes" />
+    <Property Id="FINGERPRINT" Secure="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Linager" />
+    </StandardDirectory>
+
+    <ComponentGroup Id="AgentFiles" Directory="INSTALLFOLDER">
+      <Component Id="AgentExe" Bitness="always64">
+        <File Id="LinagerExe" Source="$(ExePath)" Name="linager.exe" KeyPath="yes" />
+        <ServiceInstall Id="LinagerService" Name="LinagerAgent" DisplayName="Linager Agent"
+                        Description="Connects this computer to a Linager server."
+                        Type="ownProcess" Start="auto" ErrorControl="normal" Vital="yes" Arguments="agent run" />
+        <ServiceControl Id="LinagerServiceControl" Name="LinagerAgent" Start="install" Stop="both" Remove="uninstall" Wait="yes" />
+        <!-- if the service stops with an error, Windows starts it again -->
+        <util:ServiceConfig ServiceName="LinagerAgent" FirstFailureActionType="restart" SecondFailureActionType="restart"
+                            ThirdFailureActionType="restart" RestartServiceDelayInSeconds="10" ResetPeriodInDays="1"
+                            FailureActionsWhen="failedToStopOrReturnedError" />
+      </Component>
+
+      <!-- Permanent: an upgrade (which removes the old package first) keeps the address of the server. -->
+      <Component Id="ServerAddress" Bitness="always64" Permanent="yes">
+        <Condition>SERVER</Condition>
+        <RegistryValue Root="HKLM" Key="SOFTWARE\Linager\Agent" Name="Server" Type="string" Value="[SERVER]" KeyPath="yes" />
+      </Component>
+      <Component Id="ServerFingerprint" Bitness="always64" Permanent="yes">
+        <Condition>FINGERPRINT</Condition>
+        <RegistryValue Root="HKLM" Key="SOFTWARE\Linager\Agent" Name="Fingerprint" Type="string" Value="[FINGERPRINT]" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <Feature Id="Main" Title="Linager Agent" Level="1">
+      <ComponentGroupRef Id="AgentFiles" />
+    </Feature>
+  </Package>
+</Wix>

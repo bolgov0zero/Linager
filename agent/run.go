@@ -10,7 +10,6 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"net/http"
-	"slices"
 	"sync"
 	"time"
 
@@ -68,9 +67,7 @@ func Run(ctx context.Context, o RunOptions) error {
 		o.Config = config.DefaultAgent()
 	}
 	reg := NewRegistry(o.Config, o.Collector, o.Log, o.DataDir)
-	if slices.Contains(reg.Modules(), "docker") {
-		startImageChecks(ctx) // the dashboard shows the containers with a newer image
-	}
+	reg.startBackground(ctx)
 	buf := &sampleBuffer{}
 	go sampler(ctx, o, buf)
 	st, cert, err := loadState(o.DataDir)

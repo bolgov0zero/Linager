@@ -354,6 +354,8 @@ export interface AgentUpdateRow {
   step?: number; steps_total: number;
   step_id?: 'download' | 'verify' | 'backup' | 'replace' | 'restart' | 'offline' | 'reconnect' | 'confirm';
   message?: string;
+  /** A Windows agent: a newer version is out, and it is installed with its MSI package, not from the panel. */
+  manual?: boolean;
   /** The stages of the run that is going on or ended badly, and the server clock they are measured by. */
   steps?: AgentUpdateStep[]; now_ms?: number;
   /** Unix seconds: when the agent restores its old binary if the new one has not confirmed itself. */

@@ -88,6 +88,7 @@
   "upd.ag.current": "актуален",
   "upd.ag.available": "доступна {version}",
   "upd.ag.unsupported": "не поддерживается",
+  "upd.ag.manual": "новый MSI {version}",
   "upd.ag.updating": "обновляется",
   "upd.ag.step": "шаг {n} из {total}: {name}",
   "upd.ag.queued": "в очереди",

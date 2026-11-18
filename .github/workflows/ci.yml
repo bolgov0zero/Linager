@@ -49,6 +49,11 @@ jobs:
         run: |
           GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o /dev/null ./cmd/linager
           GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -o /dev/null ./cmd/linager
+      - name: Build and vet the Windows agent (it is tested on a Windows runner by the windows workflow)
+        if: matrix.runner == 'ubuntu-24.04'
+        run: |
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go vet ./agent ./cmd/linager ./internal/...
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o /dev/null ./cmd/linager
   shell:
     runs-on: ubuntu-24.04
     steps:

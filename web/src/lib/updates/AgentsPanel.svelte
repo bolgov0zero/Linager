@@ -185,7 +185,9 @@
             </td>
             <td class="upd-mono" data-label={$trans('upd.agents.colVersion')}>{agent.version}</td>
             <td>
-              {#if agent.status === 'current'}
+              {#if agent.status === 'current' && agent.manual}
+                <span class="upd-badge warn">{$trans('upd.ag.manual', { version: agent.target ?? '' })}</span>
+              {:else if agent.status === 'current'}
                 <span class="upd-badge ok">{$trans('upd.ag.current')}</span>
               {:else if agent.status === 'available'}
                 <span class="upd-badge warn">{$trans('upd.ag.available', { version: agent.target ?? info.server.available ?? '' })}</span>

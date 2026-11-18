@@ -32,7 +32,12 @@ const (
 // ErrNotEnrolled means the agent has no state yet.
 var ErrNotEnrolled = errors.New("agent is not enrolled; run `linager agent enroll` first")
 
-func ensureDir(dir string) error { return os.MkdirAll(dir, 0o700) }
+func ensureDir(dir string) error {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	return secureDir(dir)
+}
 
 func loadOrCreateKey(dir string) (ed25519.PrivateKey, error) {
 	p := filepath.Join(dir, keyFile)

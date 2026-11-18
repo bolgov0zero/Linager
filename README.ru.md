@@ -137,7 +137,8 @@ curl -fsSL https://raw.githubusercontent.com/bolgov0zero/linager/main/install.sh
 | | Сервер | Агент |
 |---|---|---|
 | Debian 12, 13 · Ubuntu 22.04, 24.04, 26.04 | amd64 | amd64, arm64 |
-| Система инициализации | systemd | systemd |
+| Windows 10 / 11, Server 2016+ (beta) | — | amd64 (MSI), см. [docs/ru/windows.md](docs/ru/windows.md) |
+| Система инициализации | systemd | systemd (Windows: служба) |
 
 Админка может работать за Caddy (Let's Encrypt настроит установщик) или за вашим обратным прокси: в [docs/ru/proxy.md](docs/ru/proxy.md) есть примеры для nginx, Caddy и Nginx Proxy Manager.
 

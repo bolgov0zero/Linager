@@ -1,0 +1,246 @@
+//go:build windows
+
+package agent
+
+import (
+	"context"
+	"fmt"
+	"net"
+	"runtime"
+	"slices"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/disk"
+	"github.com/shirou/gopsutil/v4/host"
+	"github.com/shirou/gopsutil/v4/mem"
+	gnet "github.com/shirou/gopsutil/v4/net"
+	"github.com/shirou/gopsutil/v4/process"
+	"golang.org/x/sys/windows/registry"
+
+	"github.com/bolgov0zero/linager/internal/protocol"
+)
+
+type winCollector struct {
+	mu       sync.Mutex
+	prevNet  map[string]gnet.IOCountersStat
+	prevTime time.Time
+
+	slow struct { // values refreshed outside the 5 s loop
+		sync.Mutex
+		failed  int
+		failedN []string
+	}
+}
+
+// NewCollector returns the collector of a Windows host and starts the refresh of the slow values.
+func NewCollector(ctx context.Context) Collector {
+	c := &winCollector{}
+	go c.refreshSlow(ctx)
+	return c
+}
+
+func (c *winCollector) refreshSlow(ctx context.Context) {
+	t := time.NewTicker(30 * time.Second)
+	defer t.Stop()
+	c.updateFailed()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			c.updateFailed()
+		}
+	}
+}
+
+func (c *winCollector) updateFailed() {
+	names := failedServices()
+	c.slow.Lock()
+	c.slow.failed, c.slow.failedN = len(names), names
+	c.slow.Unlock()
+}
+
+// regString and regDWORD read one value of HKLM.
+func regString(path, name string) string {
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, path, registry.QUERY_VALUE)
+	if err != nil {
+		return ""
+	}
+	defer func() { _ = k.Close() }()
+	v, _, _ := k.GetStringValue(name)
+	return v
+}
+
+func regDWORD(path, name string) (uint64, bool) {
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, path, registry.QUERY_VALUE)
+	if err != nil {
+		return 0, false
+	}
+	defer func() { _ = k.Close() }()
+	v, _, err := k.GetIntegerValue(name)
+	return v, err == nil
+}
+
+const ntVersionKey = `SOFTWARE\Microsoft\Windows NT\CurrentVersion`
+
+// kernelVersion is the Windows version number, for example "10.0.20348.2113".
+func kernelVersion() string {
+	major, ok1 := regDWORD(ntVersionKey, "CurrentMajorVersionNumber")
+	minor, ok2 := regDWORD(ntVersionKey, "CurrentMinorVersionNumber")
+	build := regString(ntVersionKey, "CurrentBuild")
+	if !ok1 || !ok2 || build == "" {
+		return build
+	}
+	if ubr, ok := regDWORD(ntVersionKey, "UBR"); ok {
+		return fmt.Sprintf("%d.%d.%s.%d", major, minor, build, ubr)
+	}
+	return fmt.Sprintf("%d.%d.%s", major, minor, build)
+}
+
+// rebootPending reports the markers Windows leaves when an update waits for a restart.
+func rebootPending() bool {
+	for _, path := range []string{
+		`SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired`,
+		`SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending`,
+	} {
+		if k, err := registry.OpenKey(registry.LOCAL_MACHINE, path, registry.QUERY_VALUE); err == nil {
+			_ = k.Close()
+			return true
+		}
+	}
+	return false
+}
+
+func (c *winCollector) System(agentVersion string) protocol.SystemInfo {
+	var total uint64
+	if vm, err := mem.VirtualMemory(); err == nil {
+		total = vm.Total
+	}
+	model := strings.Join(strings.Fields(regString(`HARDWARE\DESCRIPTION\System\CentralProcessor\0`, "ProcessorNameString")), " ")
+	return protocol.SystemInfo{
+		Hostname: hostname(), OS: osName(), Kernel: kernelVersion(), Arch: runtime.GOARCH,
+		CPUModel: model, CPUCores: runtime.NumCPU(), MemTotal: total, AgentVersion: agentVersion,
+	}
+}
+
+func (c *winCollector) Collect(now time.Time) protocol.Sample {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	s := protocol.Sample{TS: now.Unix(), Updates: -1, ImageUpdates: -1}
+
+	if p, err := cpu.Percent(0, false); err == nil && len(p) > 0 {
+		s.CPU = p[0] // the usage since the previous call; the first call (priming) returns 0
+	}
+	if vm, err := mem.VirtualMemory(); err == nil {
+		s.MemTotal, s.MemUsed, s.MemPct = vm.Total, vm.Used, vm.UsedPercent
+	}
+	if sw, err := mem.SwapMemory(); err == nil {
+		s.SwapTotal, s.SwapUsed = sw.Total, sw.Used
+	}
+
+	s.Disks = winDisks()
+	for _, d := range s.Disks {
+		if d.Pct > s.DiskPct {
+			s.DiskPct = d.Pct
+		}
+	}
+	sort.Slice(s.Disks, func(i, j int) bool { return s.Disks[i].Mount < s.Disks[j].Mount })
+
+	s.Net = c.collectNet(now)
+	for _, n := range s.Net {
+		if isPhysicalIface(n.Iface) {
+			s.RxBps += n.RxBps
+			s.TxBps += n.TxBps
+		}
+	}
+
+	if up, err := host.Uptime(); err == nil {
+		s.Uptime = int64(up) //nolint:gosec // seconds since boot fit easily
+		s.BootTime = now.Unix() - s.Uptime
+	}
+	if pids, err := process.Pids(); err == nil {
+		s.Procs = len(pids)
+	}
+	s.RebootRequired = rebootPending()
+
+	c.slow.Lock()
+	s.FailedServices = c.slow.failed
+	s.FailedUnits = append([]string(nil), c.slow.failedN...)
+	c.slow.Unlock()
+	return s
+}
+
+// winDisks lists the fixed and removable volumes that have a file system.
+func winDisks() []protocol.Disk {
+	parts, err := disk.Partitions(false)
+	if err != nil {
+		return nil
+	}
+	var out []protocol.Disk
+	seen := map[string]bool{}
+	for _, p := range parts {
+		if p.Fstype == "" || seen[p.Mountpoint] || slices.Contains(p.Opts, "cdrom") {
+			continue
+		}
+		seen[p.Mountpoint] = true
+		u, err := disk.Usage(p.Mountpoint)
+		if err != nil || u.Total == 0 {
+			continue
+		}
+		mount := strings.TrimRight(p.Mountpoint, `\`)
+		out = append(out, protocol.Disk{Mount: mount, Device: p.Device, FS: p.Fstype, Total: u.Total, Used: u.Used, Pct: u.UsedPercent})
+	}
+	return out
+}
+
+// virtualIfaceNames are adapters of virtual switches and tunnels: they do not count in the total traffic.
+var virtualIfaceNames = []string{"loopback", "vethernet", "virtual", "vmware", "vmnet", "hyper-v", "bluetooth", "isatap", "teredo", "wan miniport", "wsl", "docker", "tunnel"}
+
+func isPhysicalIface(name string) bool {
+	l := strings.ToLower(name)
+	for _, v := range virtualIfaceNames {
+		if strings.Contains(l, v) {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *winCollector) collectNet(now time.Time) []protocol.NetIface {
+	counters, _ := gnet.IOCounters(true)
+	cur := make(map[string]gnet.IOCountersStat, len(counters))
+	for _, cs := range counters {
+		cur[cs.Name] = cs
+	}
+	dt := now.Sub(c.prevTime).Seconds()
+	ifaces, _ := net.Interfaces()
+	var out []protocol.NetIface
+	for _, ifc := range ifaces {
+		if ifc.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+		n := protocol.NetIface{Iface: ifc.Name, Up: ifc.Flags&net.FlagUp != 0, MAC: ifc.HardwareAddr.String()}
+		if addrs, err := ifc.Addrs(); err == nil {
+			for _, a := range addrs {
+				if ipn, ok := a.(*net.IPNet); ok && ipn.IP.To4() != nil {
+					n.IP = ipn.IP.String()
+					break
+				}
+			}
+		}
+		if cc, ok := cur[ifc.Name]; ok {
+			n.RxTotal, n.TxTotal = cc.BytesRecv, cc.BytesSent
+			if p, ok := c.prevNet[ifc.Name]; ok && dt > 0 && cc.BytesRecv >= p.BytesRecv && cc.BytesSent >= p.BytesSent {
+				n.RxBps = float64(cc.BytesRecv-p.BytesRecv) / dt
+				n.TxBps = float64(cc.BytesSent-p.BytesSent) / dt
+			}
+		}
+		out = append(out, n)
+	}
+	c.prevNet, c.prevTime = cur, now
+	return out
+}

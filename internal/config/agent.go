@@ -3,13 +3,24 @@ package config
 import (
 	"errors"
 	"os"
+	"runtime"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
-// AgentModules lists all agent modules in display order.
-var AgentModules = []string{"metrics", "terminal", "services", "apt", "processes", "logs", "files", "disk", "network", "firewall", "security", "users", "docker"}
+// AgentModules lists the agent modules of this platform in display order.
+var AgentModules = ModulesFor(runtime.GOOS)
+
+// ModulesFor lists the agent modules of a platform ("windows" or anything else for Linux). The Windows agent
+// has the modules that map onto Windows directly; the others (apt, firewall, network, users, docker, disk,
+// security) are Linux-only.
+func ModulesFor(goos string) []string {
+	if goos == "windows" {
+		return []string{"metrics", "terminal", "services", "processes", "logs", "files"}
+	}
+	return []string{"metrics", "terminal", "services", "apt", "processes", "logs", "files", "disk", "network", "firewall", "security", "users", "docker"}
+}
 
 // Agent is /etc/linager/agent.yaml. Every module can be switched off.
 type Agent struct {

@@ -455,13 +455,17 @@ func needConfirm(w http.ResponseWriter) {
 
 var unitNameRe = regexp.MustCompile(`^[a-zA-Z0-9:_.@-]{1,120}\.service$`)
 
+// winServiceNameRe is the name of a Windows service: it has no ".service" suffix.
+var winServiceNameRe = regexp.MustCompile(`^[a-zA-Z0-9:_.@$()-]{1,256}$`)
+
 func (a *Admin) serviceAction(w http.ResponseWriter, r *http.Request, u *store.User) {
 	s := a.serverOr404(w, r)
 	if s == nil {
 		return
 	}
 	unit, action := r.PathValue("unit"), r.PathValue("action")
-	if !unitNameRe.MatchString(unit) {
+	win := isWindowsOS(s.OS)
+	if (!win && !unitNameRe.MatchString(unit)) || (win && !winServiceNameRe.MatchString(unit)) {
 		jsonErr(w, http.StatusBadRequest, "invalid unit")
 		return
 	}
@@ -476,6 +480,9 @@ func (a *Admin) serviceAction(w http.ResponseWriter, r *http.Request, u *store.U
 		return
 	}
 	danger := agent.IsDangerousService(unit, action)
+	if win {
+		danger = agent.IsDangerousWinService(unit, action)
+	}
 	if danger && !req.Confirm {
 		needConfirm(w)
 		return

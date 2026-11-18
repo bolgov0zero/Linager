@@ -1,0 +1,89 @@
+name: windows
+# The Windows agent: tests on a Windows runner, the exe and the MSI package, and a smoke test that installs the MSI,
+# checks that the service runs and removes it again. Called by the release workflow; can also be run by hand.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to build, for example v0.3.0-beta.1
+        default: v0.0.0-dev
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+  push:
+    branches: [main]
+    paths: ["agent/**", "cmd/**", "internal/**", "packaging/windows/**", ".github/workflows/windows.yml", "go.mod", "go.sum"]
+  pull_request:
+    paths: ["agent/**", "cmd/**", "internal/**", "packaging/windows/**", ".github/workflows/windows.yml", "go.mod", "go.sum"]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ inputs.version || 'v0.0.0-dev' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Vet and test
+        shell: pwsh
+        run: |
+          go vet ./agent ./cmd/linager ./internal/...
+          go test ./agent ./internal/...
+      - name: Build linager_windows_amd64.exe
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force bin | Out-Null
+          $env:CGO_ENABLED = '0'
+          $pkg = 'github.com/bolgov0zero/linager/internal/version'
+          $date = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+          $sha = (git rev-parse --short HEAD)
+          go build -trimpath -ldflags "-s -w -X $pkg.Version=$env:VERSION -X $pkg.Commit=$sha -X $pkg.Date=$date" -o bin/linager_windows_amd64.exe ./cmd/linager
+          ./bin/linager_windows_amd64.exe version
+      - name: Install WiX
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 4.0.5
+          wix extension add --global WixToolset.Util.wixext/4.0.5
+      - name: Build linager_windows_amd64.msi
+        shell: pwsh
+        run: |
+          # 0.3.0-beta.2 -> 0.3.0.2 (the fourth number is the beta number; a final release has 0)
+          $core, $pre = ($env:VERSION.TrimStart('v') -split '-', 2)
+          $rev = 0
+          if ($pre -match '(\d+)\s*$') { $rev = [int]$Matches[1] }
+          $msiVersion = "$core.$rev"
+          wix build packaging/windows/linager-agent.wxs -arch x64 -ext WixToolset.Util.wixext -d Version=$msiVersion -d ExePath=bin/linager_windows_amd64.exe -o bin/linager_windows_amd64.msi
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          Get-Item bin/linager_windows_amd64.msi | Format-List Name, Length
+      - name: Smoke test (install, run, remove)
+        shell: pwsh
+        run: |
+          $msi = (Resolve-Path bin/linager_windows_amd64.msi).Path
+          $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /l*v install.log SERVER=127.0.0.1:9" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content install.log -Tail 80; throw "install failed: $($p.ExitCode)" }
+          Start-Sleep -Seconds 8
+          $svc = Get-Service LinagerAgent
+          "service: $($svc.Status)"
+          if (Test-Path C:\ProgramData\Linager\agent.log) { Get-Content C:\ProgramData\Linager\agent.log -Tail 20 } else { Write-Warning "no log file" }
+          & "$env:ProgramFiles\Linager\linager.exe" agent status
+          if ($svc.Status -ne 'Running') { throw "the service is not running" }
+          $p = Start-Process msiexec.exe -ArgumentList "/x `"$msi`" /qn /l*v remove.log" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content remove.log -Tail 80; throw "remove failed: $($p.ExitCode)" }
+          if (Get-Service LinagerAgent -ErrorAction SilentlyContinue) { throw "the service is still installed" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            bin/linager_windows_amd64.exe
+            bin/linager_windows_amd64.msi
+          if-no-files-found: error
+          retention-days: 7

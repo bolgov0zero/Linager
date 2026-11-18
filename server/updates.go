@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -363,6 +364,8 @@ type AgentRow struct {
 	StepsTotal int    `json:"steps_total"`
 	StepID     string `json:"step_id,omitempty"`
 	Message    string `json:"message,omitempty"`
+	// Manual marks an agent that is updated by installing a new package (Windows) while a newer version is out.
+	Manual bool `json:"manual,omitempty"`
 	// Steps is the timeline of the run that is going on or ended badly; RollbackAt (Unix time) is when the
 	// agent restores its old binary if the new one has not confirmed itself by then.
 	Steps      []store.UpdateStep `json:"steps,omitempty"`
@@ -393,6 +396,10 @@ func (u *Updates) agentRows(ctx context.Context) ([]AgentRow, int) {
 			r.Status, r.Target, r.Message, r.Steps = "rollback", au.Version, au.Message, au.Steps
 		case has && au.Status == "failed":
 			r.Status, r.Target, r.Message, r.Steps = "failed", au.Version, au.Message, au.Steps
+		case isWindowsOS(s.OS):
+			// a Windows agent has no update in place: the panel shows that a new MSI is out and never queues it
+			r.Status, r.Target = "current", version.Version
+			r.Manual = release.Newer(version.Version, s.AgentVersion)
 		default:
 			r.Status = "current"
 			if release.Newer(version.Version, s.AgentVersion) {
@@ -863,3 +870,6 @@ func countMigrations() int {
 	}
 	return n
 }
+
+// isWindowsOS reports whether the OS name an agent sent is a Windows one (Linux names never start so).
+func isWindowsOS(name string) bool { return strings.HasPrefix(name, "Windows") }

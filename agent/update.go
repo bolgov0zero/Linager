@@ -10,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -283,17 +282,6 @@ var (
 	armRollbackFn  = armRollback
 )
 
-func armRollback(dir, exe string) error {
-	args := []string{"--unit=linager-agent-rollback", "--on-active=" + fmt.Sprint(int(RollbackDelay.Seconds())), "--description=Linager agent update rollback",
-		prevPath(dir), "agent", "rollback-update", "--data-dir", dir, "--binary", exe}
-	_ = exec.Command("systemctl", "stop", "linager-agent-rollback.timer", "linager-agent-rollback.service").Run()
-	_ = exec.Command("systemctl", "reset-failed", "linager-agent-rollback.service").Run()
-	if out, err := exec.Command("systemd-run", args...).CombinedOutput(); err != nil { //nolint:gosec // fixed binary, arguments are paths we built
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
-	}
-	return nil
-}
-
 // ConfirmUpdate is called once the new agent is connected: it cancels the rollback timer. It reports whether
 // there was an unconfirmed update to confirm.
 func ConfirmUpdate(dir string, log func(string, ...any)) bool {
@@ -304,7 +292,7 @@ func ConfirmUpdate(dir string, log func(string, ...any)) bool {
 	var mk updateMarker
 	_ = json.Unmarshal(b, &mk)
 	_ = os.Remove(markerPath(dir))
-	_ = exec.Command("systemctl", "stop", "linager-agent-rollback.timer").Run()
+	stopRollbackTimer()
 	if log != nil {
 		log("update confirmed", "from", mk.From, "to", mk.To)
 	}
@@ -321,14 +309,14 @@ func RollbackUpdate(dir, exe string) error {
 		return err
 	}
 	_ = os.Remove(markerPath(dir))
-	return exec.Command("systemctl", "restart", "linager-agent").Run()
+	return restartService()
 }
 
 // restartSoon restarts the service after the caller had time to answer the server.
 func restartSoon() {
 	go func() {
 		time.Sleep(1500 * time.Millisecond)
-		_ = exec.Command("systemctl", "restart", "linager-agent").Run()
+		_ = restartService()
 	}()
 }
 
@@ -393,12 +381,7 @@ func StatusText(dir, running string) string {
 		return b.String()
 	}
 	fmt.Fprintf(&b, "Server:    %s\nServer id: %s\n", st.Server, st.ServerID)
-	out, _ := exec.Command("systemctl", "is-active", "linager-agent").Output()
-	fmt.Fprintf(&b, "Service:   %s", strings.TrimSpace(string(out)))
-	if strings.TrimSpace(string(out)) == "" {
-		b.WriteString("unknown")
-	}
-	b.WriteString("\n")
+	fmt.Fprintf(&b, "Service:   %s\n", serviceState())
 	if mb, err := os.ReadFile(markerPath(dir)); err == nil {
 		var mk updateMarker
 		_ = json.Unmarshal(mb, &mk)

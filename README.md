@@ -137,7 +137,8 @@ After either install the Linager menu opens on the new host. Details and the sec
 | | Server | Agent |
 |---|---|---|
 | Debian 12, 13 · Ubuntu 22.04, 24.04, 26.04 | amd64 | amd64, arm64 |
-| Init system | systemd | systemd |
+| Windows 10 / 11, Server 2016+ (beta) | — | amd64 (MSI), see [docs/en/windows.md](docs/en/windows.md) |
+| Init system | systemd | systemd (Windows: service) |
 
 The panel can run behind Caddy (Let's Encrypt is set up by the installer) or behind your own reverse proxy: [docs/en/proxy.md](docs/en/proxy.md) has examples for nginx, Caddy and Nginx Proxy Manager.
 

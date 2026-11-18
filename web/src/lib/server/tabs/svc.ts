@@ -2,7 +2,12 @@ import { ApiError, type ServiceAction, type ServiceUnit } from '../../../api';
 import type { Translate } from '../format';
 
 /** Units whose stop, restart or disable needs an explicit confirmation. */
-const PROTECTED = new Set(['ssh', 'sshd', 'linager-agent']);
+const PROTECTED = new Set([
+  'ssh', 'sshd', 'linager-agent',
+  // Windows services (compared in lower case): the agent, remote desktop, remote management and the network core
+  'linageragent', 'termservice', 'winrm', 'rpcss', 'rpceptmapper', 'dcomlaunch', 'lanmanserver', 'lanmanworkstation', 'dhcp', 'dnscache',
+  'nlasvc', 'netlogon', 'bfe', 'mpssvc', 'eventlog', 'winmgmt', 'cryptsvc', 'samss',
+]);
 
 export type StateKind = 'running' | 'failed' | 'stopped' | 'other';
 export type ServiceFilter = 'all' | 'running' | 'stopped' | 'failed';
@@ -19,12 +24,12 @@ export function stateKind(unit: ServiceUnit): StateKind {
 }
 
 export function isDangerous(unit: string, action: ServiceAction): boolean {
-  return (action === 'stop' || action === 'restart' || action === 'disable') && PROTECTED.has(unitBase(unit));
+  return (action === 'stop' || action === 'restart' || action === 'disable') && PROTECTED.has(unitBase(unit).toLowerCase());
 }
 
 export function confirmText(unit: string, action: ServiceAction, tr: Translate): string {
-  const base = unitBase(unit);
-  if (base === 'linager-agent') return tr('svc.confirm.agent');
+  const base = unitBase(unit).toLowerCase();
+  if (base === 'linager-agent' || base === 'linageragent') return tr('svc.confirm.agent');
   if (base === 'ssh' || base === 'sshd') return tr('svc.confirm.ssh');
   return tr('svc.confirm.generic', { action: tr(`svc.act.${action}`), unit });
 }

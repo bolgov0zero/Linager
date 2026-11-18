@@ -8,8 +8,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/bolgov0zero/linager/console"
-	"github.com/bolgov0zero/linager/installer"
 	"github.com/bolgov0zero/linager/internal/version"
 )
 
@@ -17,28 +15,15 @@ func newRootCmd() *cobra.Command {
 	var lang string
 	root := &cobra.Command{
 		Use:           "linager",
-		Short:         "Linager: server management for Debian and Ubuntu",
+		Short:         rootShort,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		// Without arguments in a terminal: the interactive menu. In a script or a pipe: the usual help.
-		RunE: func(c *cobra.Command, _ []string) error {
-			if !console.Interactive() {
-				return c.Help()
-			}
-			return console.Run(c.Context(), console.Options{Lang: installer.ParseLang(lang), Version: version.Version})
-		},
+		RunE: func(c *cobra.Command, _ []string) error { return rootRun(c, lang) },
 	}
 	root.Flags().StringVar(&lang, "lang", "", "menu language: ru or en (default: from LANG)")
-	root.AddCommand(
-		newVersionCmd(),
-		newServerCmd(),
-		newAgentCmd(),
-		newInstallCmd(),
-		newUpdateCmd(),
-		newBackupCmd(),
-		newRestoreCmd(),
-		newAccessCmd(),
-	)
+	root.AddCommand(newVersionCmd(), newAgentCmd())
+	root.AddCommand(platformCommands()...)
 	return root
 }
 

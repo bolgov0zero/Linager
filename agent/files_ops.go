@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/bolgov0zero/linager/internal/protocol"
@@ -66,7 +65,7 @@ func filesRename(_ context.Context, raw json.RawMessage, _ bool) (any, error) {
 	if !validBaseName(p.Name) {
 		return nil, errors.New("invalid name")
 	}
-	if protectedPaths[path] {
+	if isProtected(path) {
 		return nil, errors.New("refusing to rename a system directory")
 	}
 	dst := filepath.Join(filepath.Dir(path), p.Name)
@@ -113,7 +112,7 @@ func transfer(move bool) func(context.Context, json.RawMessage, bool) (any, erro
 		default:
 			return nil, errors.New("invalid mode")
 		}
-		if protectedPaths[src] {
+		if isProtected(src) {
 			return nil, errors.New("refusing to move or copy a system directory")
 		}
 		st, err := os.Lstat(src)
@@ -144,7 +143,7 @@ func transfer(move bool) func(context.Context, json.RawMessage, bool) (any, erro
 			case modeKeep:
 				target = filepath.Join(dir, uniqueName(dir, name, st.IsDir()))
 			case modeOverwrite:
-				if protectedPaths[target] || strings.HasPrefix(src+"/", target+"/") {
+				if isProtected(target) || strings.HasPrefix(src+string(filepath.Separator), target+string(filepath.Separator)) {
 					return nil, errors.New("refusing to replace this target")
 				}
 				if err := os.RemoveAll(target); err != nil {
@@ -156,7 +155,7 @@ func transfer(move bool) func(context.Context, json.RawMessage, bool) (any, erro
 		}
 		if move {
 			if err := os.Rename(src, target); err != nil {
-				if !errors.Is(err, syscall.EXDEV) {
+				if !isCrossDevice(err) {
 					return nil, fsErr(err)
 				}
 				// another file system: copy, then remove the original
@@ -242,19 +241,6 @@ func copyFile(src, dst string, st fs.FileInfo) error {
 	keepOwner(dst, st, false)
 	_ = os.Chtimes(dst, st.ModTime(), st.ModTime())
 	return nil
-}
-
-// keepOwner gives the copy the owner of the original; it only works as root and is ignored otherwise.
-func keepOwner(path string, st fs.FileInfo, link bool) {
-	sys, ok := st.Sys().(*syscall.Stat_t)
-	if !ok {
-		return
-	}
-	if link {
-		_ = os.Lchown(path, int(sys.Uid), int(sys.Gid))
-		return
-	}
-	_ = os.Chown(path, int(sys.Uid), int(sys.Gid))
 }
 
 // chunkWriter sends what is written as stream chunks.

@@ -9,13 +9,9 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"os/user"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
-	"sync"
-	"syscall"
 
 	"github.com/bolgov0zero/linager/internal/protocol"
 )
@@ -39,51 +35,6 @@ type FileEntry struct {
 	LinkTarget string `json:"link_target,omitempty"`
 }
 
-var protectedPaths = map[string]bool{"/": true, "/bin": true, "/boot": true, "/dev": true, "/etc": true, "/home": true, "/lib": true, "/lib64": true,
-	"/opt": true, "/proc": true, "/root": true, "/run": true, "/sbin": true, "/sys": true, "/usr": true, "/var": true}
-
-// cleanPath validates and normalizes an absolute path.
-func cleanPath(p string) (string, error) {
-	if p == "" || !filepath.IsAbs(p) || strings.ContainsRune(p, 0) || len(p) > 4096 {
-		return "", errors.New("invalid path")
-	}
-	return filepath.Clean(p), nil
-}
-
-var (
-	idMu    sync.Mutex
-	uidName = map[uint32]string{}
-	gidName = map[uint32]string{}
-)
-
-func lookupUser(uid uint32) string {
-	idMu.Lock()
-	defer idMu.Unlock()
-	if n, ok := uidName[uid]; ok {
-		return n
-	}
-	n := strconv.FormatUint(uint64(uid), 10)
-	if u, err := user.LookupId(n); err == nil {
-		n = u.Username
-	}
-	uidName[uid] = n
-	return n
-}
-
-func lookupGroup(gid uint32) string {
-	idMu.Lock()
-	defer idMu.Unlock()
-	if n, ok := gidName[gid]; ok {
-		return n
-	}
-	n := strconv.FormatUint(uint64(gid), 10)
-	if g, err := user.LookupGroupId(n); err == nil {
-		n = g.Name
-	}
-	gidName[gid] = n
-	return n
-}
-
 func entryOf(dir, name string, info fs.FileInfo) FileEntry {
 	e := FileEntry{Name: name, Size: info.Size(), Mode: fmt.Sprintf("%04o", info.Mode().Perm()), ModeStr: info.Mode().String(), MTime: info.ModTime().Unix()}
 	switch {
@@ -99,9 +50,7 @@ func entryOf(dir, name string, info fs.FileInfo) FileEntry {
 	default:
 		e.Type = "other"
 	}
-	if st, ok := info.Sys().(*syscall.Stat_t); ok {
-		e.Owner, e.Group = lookupUser(st.Uid), lookupGroup(st.Gid)
-	}
+	e.Owner, e.Group = ownerOf(info)
 	return e
 }
 
@@ -109,6 +58,9 @@ func filesList(_ context.Context, raw json.RawMessage, _ bool) (any, error) {
 	var p struct{ Path string }
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return nil, errors.New("invalid request")
+	}
+	if res, ok := listRoot(p.Path); ok {
+		return res, nil
 	}
 	dir, err := cleanPath(p.Path)
 	if err != nil {
@@ -135,7 +87,7 @@ func filesList(_ context.Context, raw json.RawMessage, _ bool) (any, error) {
 		}
 		return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name)
 	})
-	return map[string]any{"path": dir, "entries": out}, nil
+	return map[string]any{"path": outPath(dir), "entries": out}, nil
 }
 
 func fsErr(err error) error {
@@ -178,7 +130,7 @@ func filesRead(_ context.Context, raw json.RawMessage, _ bool) (any, error) {
 	if bytes.IndexByte(b, 0) >= 0 {
 		return nil, errors.New(protocol.ErrBinary)
 	}
-	return map[string]any{"path": path, "content": string(b), "size": info.Size(), "mtime": info.ModTime().UnixMilli(), "mode": fmt.Sprintf("%04o", info.Mode().Perm())}, nil
+	return map[string]any{"path": outPath(path), "content": string(b), "size": info.Size(), "mtime": info.ModTime().UnixMilli(), "mode": fmt.Sprintf("%04o", info.Mode().Perm())}, nil
 }
 
 // filesWrite replaces a file atomically, keeping mode and ownership.
@@ -208,8 +160,8 @@ func filesWrite(_ context.Context, raw json.RawMessage, _ bool) (any, error) {
 			return nil, errors.New(protocol.ErrConflict)
 		}
 		mode = st.Mode().Perm()
-		if sys, ok := st.Sys().(*syscall.Stat_t); ok {
-			uid, gid = int(sys.Uid), int(sys.Gid)
+		if u, g, ok := ownerIDs(st); ok {
+			uid, gid = u, g
 		}
 	} else if p.MTime != 0 {
 		return nil, errors.New(protocol.ErrConflict)
@@ -281,7 +233,7 @@ func filesDelete(_ context.Context, raw json.RawMessage, dangerous bool) (any, e
 	if !dangerous {
 		return nil, errDangerous
 	}
-	if protectedPaths[path] {
+	if isProtected(path) {
 		return nil, errors.New("refusing to delete a system directory")
 	}
 	if err := os.RemoveAll(path); err != nil {

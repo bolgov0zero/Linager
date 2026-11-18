@@ -88,6 +88,7 @@
   "upd.ag.current": "current",
   "upd.ag.available": "available {version}",
   "upd.ag.unsupported": "not supported",
+  "upd.ag.manual": "new MSI {version}",
   "upd.ag.updating": "updating",
   "upd.ag.step": "step {n} of {total}: {name}",
   "upd.ag.queued": "queued",
