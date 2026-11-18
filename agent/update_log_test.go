@@ -101,11 +101,13 @@ func TestDownloadJournalShowsTheProgress(t *testing.T) {
 	pr := &progressReader{r: &slowReader{left: 12}, size: 12}
 	stop := make(chan struct{})
 	started := time.Now()
-	go u.watchDownload(pr, started, stop)
+	done := make(chan struct{})
+	go func() { u.watchDownload(pr, started, stop); close(done) }()
 	if _, err := io.Copy(io.Discard, pr); err != nil {
 		t.Fatal(err)
 	}
 	close(stop)
+	<-done // the journal is read only after the last line was written
 	out := buf.String()
 	if !strings.Contains(out, "update: downloading") || !strings.Contains(out, "percent=") || !strings.Contains(out, "idle_s=") {
 		t.Fatalf("the progress is not in the journal:\n%s", out)
