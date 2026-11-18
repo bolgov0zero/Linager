@@ -1,8 +1,12 @@
 # Changelog
 
+## 0.3.6
+
+- Fix: **0.3.4 and 0.3.5 were published without the Windows files** (the MSI and the Windows agent): a new test did not build on Windows (0.3.4), then one of its checks (the file mode 600) does not apply to Windows (0.3.5), so the Windows part of the release failed, and the rest was published anyway. This release has the changes of 0.3.4 and all the files. Use 0.3.6 instead of 0.3.4 and 0.3.5.
+
 ## 0.3.5
 
-- Fix: **0.3.4 was published without the Windows files** (the MSI and the Windows agent): a new test did not build on Windows, the Windows part of the release failed, and the rest was published anyway. This release has the same changes as 0.3.4 and all the files. The tests of the Linux-only counting of updates now live in a file for Linux only.
+- Fix: the tests of the Linux-only counting of updates live in a file for Linux only. (This release still lacks the Windows files, see 0.3.6.)
 
 ## 0.3.4
 

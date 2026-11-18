@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -26,7 +27,7 @@ func TestIgnoreListSurvivesARestartAndIsPrivate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fi.Mode().Perm() != 0o600 {
+	if runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 { // Windows has no Unix modes
 		t.Fatalf("the file must be private, got %v", fi.Mode().Perm())
 	}
 	if err := ignores.set("apt", "openssl", false); err != nil || ignores.isApt("openssl") {
