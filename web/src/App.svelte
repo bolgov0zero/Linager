@@ -267,14 +267,6 @@
     </div>
   {/if}
   <div class="right">
-    {#if serverName !== null && $serverBar}
-      {@const sb = $serverBar}
-      <button class="btn tb-ic note" class:has={sb.hasNote} type="button" title={$tr('srv.note.open')} aria-label={$tr('srv.note.open')} onclick={sb.onnote}><PixIcon name="note" /></button>
-      {#if sb.isAdmin}
-        <RebootButton server={sb.detail} icon />
-        <button class="btn tb-ic danger" type="button" title={$tr('srv.delete')} aria-label={$tr('srv.delete')} onclick={sb.ondelete}><PixIcon name="trash" /></button>
-      {/if}
-    {/if}
     {#if phase === 'app'}
       <p class="live mono small">
         <span class="dot" class:on={$liveConnected} aria-hidden="true"></span>{$tr('dash.live', { time: clock })}
@@ -290,6 +282,14 @@
         <button class="btn primary phone-add" type="button" aria-label={$tr('servers.add')} onclick={() => (addOpen = true)}>
           <PixIcon name="plus" />
         </button>
+      {/if}
+    {/if}
+    {#if serverName !== null && $serverBar}
+      {@const sb = $serverBar}
+      <button class="btn tb-ic note" class:has={sb.hasNote} type="button" title={$tr('srv.note.open')} aria-label={$tr('srv.note.open')} onclick={sb.onnote}><PixIcon name="note" /></button>
+      {#if sb.isAdmin}
+        <RebootButton server={sb.detail} icon />
+        <button class="btn tb-ic danger" type="button" title={$tr('srv.delete')} aria-label={$tr('srv.delete')} onclick={sb.ondelete}><PixIcon name="trash" /></button>
       {/if}
     {/if}
     <!-- Phone: the bottom bar has its own "More" sheet, so the menu is only for the sign-in screen there. -->
