@@ -3,7 +3,3 @@ Copyright 2026 bolgov0zero
 
 This product includes the Medeo Mono and Medeo Pixel fonts, licensed under
 the SIL Open Font License 1.1. See docs/design/mockup/fonts/LICENSE-Medeo-OFL.txt.
-
-The table of network card manufacturers in server/oui/oui.tsv.gz is derived from
-the public MA-L registry of the IEEE Registration Authority
-(https://standards-oui.ieee.org/oui/oui.csv).

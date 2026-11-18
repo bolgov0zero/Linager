@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.8
+
+- Change: **the Scheme view of the dashboard (0.2.4, 0.2.5) and the Gateway module (0.2.6, 0.2.7) are taken out again.** The project is back to the functionality of 0.2.3: the code, the tab, the module, the tests and the docs of those releases are gone (their entries below stay as history). Servers, metrics, users, notes and the ways to add a server are as they were in 0.2.3.
+- Upgrade from 0.2.4 to 0.2.7 without leftovers. The migration `00017` removes what those releases added to the database: the tables `gateways`, `gateway_devices` and `gateway_events`, the column `dashboards.scheme` and the module "gateway" in the access of operators. Metrics, servers, users and the audit log are not touched (the entries `gateway.*` and `dashboard.scheme` stay in the log, it is history). The migrations `00014` to `00016` no longer exist; a fresh install goes from `00013` to `00017`, and the cleanup finds nothing to remove there. An agent removes its own leftovers when it starts: the line `gateway:` in the `modules:` block of `agent.yaml` and the file `gateway.json` in its data directory. The browser forgets the stored link style of the removed view.
+- Tests: the cleanup migration (`TestRetiredLeftoversAreRemoved`) and the cleanup of an agent (`TestRemoveRetiredAgentModules`, `TestRemoveRetiredData`). Checked by hand: a database at schema version 16 made by the 0.2.7 binary, with a server, a metrics row, gateway data, a layout and an operator with the module, was migrated by the new binary to version 17: the leftovers are gone, the metrics, the server and the audit entry are intact, and the server starts on it.
+
 ## 0.2.7
 
 - Fix: the gateway module of an agent could start a second pass right after the first one: a wake-up (a new configuration) that came before the loop of passes had read the configuration stayed in the channel and was taken for a new request. The loop now drops such a wake-up when it reads the configuration. The extra pass was harmless, only a repeated scan.

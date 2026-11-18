@@ -3,13 +3,14 @@ package config
 import (
 	"errors"
 	"os"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
 // AgentModules lists all agent modules in display order.
-var AgentModules = []string{"metrics", "terminal", "services", "apt", "processes", "logs", "files", "disk", "network", "firewall", "security", "users", "docker", "gateway"}
+var AgentModules = []string{"metrics", "terminal", "services", "apt", "processes", "logs", "files", "disk", "network", "firewall", "security", "users", "docker"}
 
 // Agent is /etc/linager/agent.yaml. Every module can be switched off.
 type Agent struct {
@@ -123,4 +124,55 @@ func CompleteAgent(path string) ([]string, error) {
 		return nil, err
 	}
 	return missing, nil
+}
+
+// retiredModules are modules of past releases that were taken out again; their lines are removed from agent.yaml.
+var retiredModules = []string{"gateway"}
+
+// RemoveRetiredAgentModules deletes the lines of retired modules from the `modules:` block of agent.yaml (a release
+// that had them wrote them there), and leaves the rest of the file as it is. A missing file, a flow-style mapping or
+// a file without `modules:` stay untouched. It returns the names that were removed.
+func RemoveRetiredAgentModules(path string) ([]string, error) {
+	b, err := os.ReadFile(path) //nolint:gosec // operator-supplied path
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	lines := strings.Split(string(b), "\n")
+	in := false
+	var out, removed []string
+	for _, l := range lines {
+		t := strings.TrimRight(l, " \t\r")
+		switch {
+		case t == "modules:":
+			in = true
+		case in && t != "" && t[0] != ' ' && t[0] != '\t' && !strings.HasPrefix(t, "#"):
+			in = false // the next top-level key
+		}
+		if in {
+			key, _, _ := strings.Cut(strings.TrimLeft(t, " \t"), ":")
+			if l != "" && (l[0] == ' ' || l[0] == '\t') && slices.Contains(retiredModules, key) {
+				removed = append(removed, key)
+				continue
+			}
+		}
+		out = append(out, l)
+	}
+	if len(removed) == 0 {
+		return nil, nil
+	}
+	st, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	tmp := path + ".linager-new"
+	if err := os.WriteFile(tmp, []byte(strings.Join(out, "\n")), st.Mode().Perm()); err != nil { //nolint:gosec // the mode mirrors the existing file
+		return nil, err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return nil, err
+	}
+	return removed, nil
 }

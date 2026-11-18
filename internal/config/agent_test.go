@@ -61,3 +61,44 @@ func TestCompleteAgent(t *testing.T) {
 		t.Fatalf("flow style is not edited: %v", added)
 	}
 }
+
+func TestRemoveRetiredAgentModules(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, body string) string {
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	p := write("a.yaml", "# my agent\nmodules:\n  terminal: true\n  gateway: true  # added by 0.2.6\n  docker: false\n\nother:\n  gateway: keep\n")
+	got, err := RemoveRetiredAgentModules(p)
+	if err != nil || len(got) != 1 || got[0] != "gateway" {
+		t.Fatalf("removed: %v %v", got, err)
+	}
+	b, _ := os.ReadFile(p) //nolint:gosec // a file of this test
+	if string(b) != "# my agent\nmodules:\n  terminal: true\n  docker: false\n\nother:\n  gateway: keep\n" {
+		t.Errorf("only the line in the modules block goes, the rest is as it was:\n%s", b)
+	}
+	if st, _ := os.Stat(p); st.Mode().Perm() != 0o600 {
+		t.Errorf("the mode of the file is kept: %v", st.Mode())
+	}
+	c, err := LoadAgent(p)
+	if err != nil || !c.Enabled("terminal") || c.Enabled("docker") {
+		t.Errorf("the file still loads: %v %v", c, err)
+	}
+	if got, err := RemoveRetiredAgentModules(p); err != nil || len(got) != 0 {
+		t.Errorf("nothing left: %v %v", got, err)
+	}
+	flow := write("f.yaml", "modules: {terminal: true, gateway: true}\n")
+	if got, _ := RemoveRetiredAgentModules(flow); len(got) != 0 {
+		t.Errorf("a flow-style mapping is left alone: %v", got)
+	}
+	none := write("n.yaml", "gateway: true\n")
+	if got, _ := RemoveRetiredAgentModules(none); len(got) != 0 {
+		t.Errorf("a key outside the modules block is not a module: %v", got)
+	}
+	if got, err := RemoveRetiredAgentModules(filepath.Join(dir, "missing.yaml")); err != nil || got != nil {
+		t.Errorf("a missing file: %v %v", got, err)
+	}
+}

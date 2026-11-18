@@ -80,6 +80,15 @@ func newAgentCmd() *cobra.Command {
 			} else if len(added) > 0 {
 				log.Info("added the new modules to the agent configuration", "modules", added)
 			}
+			// what a module that was taken out again left behind (the gateway of 0.2.6 and 0.2.7)
+			if gone, err := config.RemoveRetiredAgentModules(cfgPath); err != nil {
+				log.Warn("could not remove the retired modules from the agent configuration", "err", err)
+			} else if len(gone) > 0 {
+				log.Info("removed the retired modules from the agent configuration", "modules", gone)
+			}
+			if gone := agent.RemoveRetiredData(dataDir); len(gone) > 0 {
+				log.Info("removed the files of a retired module", "files", gone)
+			}
 			cfg, err := config.LoadAgent(cfgPath)
 			if err != nil {
 				return err

@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"encoding/csv"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -100,9 +99,7 @@ func (a *Admin) dashboard(w http.ResponseWriter, r *http.Request, u *store.User)
 		}
 		items = append(items, c)
 	}
-	// the saved layout of the scheme view (null: the automatic one)
-	scheme, _ := a.DB.DashboardScheme(r.Context(), did)
-	writeJSON(w, http.StatusOK, map[string]any{"items": items, "scheme": json.RawMessage(scheme)})
+	writeJSON(w, http.StatusOK, map[string]any{"items": items})
 }
 
 func (a *Admin) dashboardAvailable(w http.ResponseWriter, r *http.Request, u *store.User) {

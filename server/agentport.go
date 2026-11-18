@@ -35,8 +35,6 @@ type AgentPort struct {
 	Hub     *Hub
 	Metrics *Metrics
 	Updates *Updates
-	// Gateway takes the results of the gateway module (nil in tests that do not need it).
-	Gateway *Gateway
 	Log     *slog.Logger
 	// CertLifetime is the validity of renewed agent certificates (0 = the default).
 	CertLifetime time.Duration
@@ -289,9 +287,6 @@ func (a *AgentPort) ws(w http.ResponseWriter, r *http.Request) {
 	if a.Updates != nil {
 		a.Updates.AgentHello(ctx, id, h.AgentVersion)
 	}
-	if a.Gateway != nil {
-		go a.Gateway.OnHello(ctx, id, h.Modules)
-	}
 	a.Log.Info("agent connected", "server", srv.Name, "version", h.AgentVersion)
 	certLife := a.CertLifetime
 	if certLife <= 0 {
@@ -312,11 +307,6 @@ func (a *AgentPort) ws(w http.ResponseWriter, r *http.Request) {
 			var ev protocol.UpdateEvent
 			if json.Unmarshal(env.Payload, &ev) == nil && a.Updates != nil {
 				a.Updates.AgentEvent(ctx, id, ev)
-			}
-		case protocol.TypeGatewayPass:
-			var p protocol.GatewayPass
-			if json.Unmarshal(env.Payload, &p) == nil && a.Gateway != nil {
-				a.Gateway.Ingest(ctx, id, p)
 			}
 		case protocol.TypeMetrics:
 			var batch protocol.MetricsBatch
