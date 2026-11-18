@@ -22,7 +22,7 @@
   import UsersTab from './tabs/UsersTab.svelte';
   import DockerTab from './tabs/DockerTab.svelte';
   import { formatDateTime } from './format';
-  import { openTermWindow } from '../terminal/windows';
+  import { openDesktopWindow, openTermWindow } from '../terminal/windows';
   import AgentUpdateBanner from './AgentUpdateBanner.svelte';
   import SideNav from './SideNav.svelte';
   import SectionsSheet from './SectionsSheet.svelte';
@@ -66,6 +66,7 @@
   const online = $derived(detail?.online ?? false);
   const isAdmin = $derived(role === 'admin');
   // a terminal as a user needs the terminal module too, on the agent and in the rights of the operator
+  const canDesktop = $derived((detail?.modules ?? []).includes('desktop') && (isAdmin || (role === 'operator' && userModules.includes('desktop'))));
   const canTerminal = $derived((detail?.modules ?? []).includes('terminal') && (isAdmin || (role === 'operator' && userModules.includes('terminal'))));
   const tabs = $derived(visibleTabs(detail?.modules ?? [], isAdmin ? null : role === 'operator' ? userModules : []));
   const tab = $derived<TabId>(tabs.find((x) => x.id === requestedTab)?.id ?? 'overview');
@@ -247,6 +248,7 @@
         failedServices={sample?.failed_services ?? 0}
         agentVersion={detail.agent_version ? `agent ${detail.agent_version}` : ''}
         onterminalwindow={canTerminal && online ? () => openTermWindow(detail!.id, detail!.name) : undefined}
+        ondesktopwindow={canDesktop && online ? () => openDesktopWindow(detail!.id, detail!.name, detail!.address) : undefined}
       />
       <div class="main">
         <div class="crumb">{$tr(currentGroupKey)}</div>

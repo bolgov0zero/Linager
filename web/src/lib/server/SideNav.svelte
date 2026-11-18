@@ -12,6 +12,7 @@
     failedServices = 0,
     agentVersion = '',
     onterminalwindow,
+    ondesktopwindow,
   }: {
     tabs: readonly (typeof TABS)[number][];
     current: TabId;
@@ -23,6 +24,8 @@
     agentVersion?: string;
     /** Opens the terminal of the server in a floating window; the button sits next to the Terminal item. */
     onterminalwindow?: () => void;
+    /** Opens the remote desktop in a floating window; the button sits next to the Desktop item (Windows servers). */
+    ondesktopwindow?: () => void;
   } = $props();
 
   const GROUPS_KEY = 'linager.side.groups';
@@ -169,7 +172,7 @@
               <div class="entry">
                 <button
                   class="item"
-                  class:withwin={t.id === 'terminal' && !!onterminalwindow}
+                  class:withwin={(t.id === 'terminal' && !!onterminalwindow) || (t.id === 'desktop' && !!ondesktopwindow)}
                   type="button"
                   role="tab"
                   aria-selected={current === t.id}
@@ -188,6 +191,15 @@
                     title={$tr('termwin.openWindow')}
                     aria-label={$tr('termwin.openWindow')}
                     onclick={onterminalwindow}><TermIcon name="window" /></button>
+                {/if}
+                {#if t.id === 'desktop' && ondesktopwindow}
+                  <button
+                    class="winbtn"
+                    class:on={current === t.id}
+                    type="button"
+                    title={$tr('termwin.openWindow')}
+                    aria-label={$tr('termwin.openWindow')}
+                    onclick={ondesktopwindow}><TermIcon name="window" /></button>
                 {/if}
               </div>
             {/each}

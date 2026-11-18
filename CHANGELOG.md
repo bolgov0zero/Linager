@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.8
+
+- New: the button "open in a window" next to the item "Desktop" in the side menu of a Windows server, like the one next to "Terminal". It opens the remote desktop in a floating window (one per server). Checked in the browser.
+
 ## 0.3.0-beta.7
 
 - Fix: the remote desktop showed a black screen after the sign-in: the screen of the RDP client stays hidden until the page asks it to show (`setVisibility(true)`), and the page did not. Found on the first real session. Only the screen was affected: the connection, the sign-in and the audit rows were fine.
