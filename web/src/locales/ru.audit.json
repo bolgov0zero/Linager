@@ -72,6 +72,7 @@
   "audit.action.docker.container.stop": "Docker: остановка контейнера",
   "audit.action.docker.container.restart": "Docker: перезапуск контейнера",
   "audit.action.docker.container.remove": "Docker: удаление контейнера",
+  "audit.action.docker.container.edit": "Docker: изменение контейнера",
   "audit.action.docker.image.remove": "Docker: удаление образа",
   "audit.action.update.check": "Обновления: проверка",
   "audit.action.update.channel": "Обновления: канал",

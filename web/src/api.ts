@@ -245,7 +245,7 @@ export interface DiskScan { scanned_at: number; mount: string; partial: boolean;
 
 export interface ProcessInfo { pid: number; user: string; cpu: number; mem_pct: number; rss: number; state: string; cmd: string }
 export interface ProcessList { processes: ProcessInfo[]; total: number }
-export type StreamKind = 'terminal' | 'logs' | 'apt' | 'docker-logs' | 'docker-pull' | 'docker-update' | 'docker-project-logs' | 'f2b-install' | 'winupdate';
+export type StreamKind = 'terminal' | 'logs' | 'apt' | 'docker-logs' | 'docker-pull' | 'docker-update' | 'docker-edit' | 'docker-project-logs' | 'f2b-install' | 'winupdate';
 
 // ---- files (stage 5) ----
 export interface FileEntry {
@@ -337,6 +337,25 @@ export interface DockerContainer {
 }
 export interface DockerImage { id: string; repo_tags: string[]; size: number; created: number; used: boolean }
 export interface DockerInfo { available: boolean; containers: DockerContainer[]; images: DockerImage[]; checked_at?: number }
+/** The editable settings of a container (the "Edit container" dialog). ip "0.0.0.0" means all addresses. */
+export interface DockerEditPort { ip: string; host: number; cont: number; proto: 'tcp' | 'udp' }
+export interface DockerEditMount { type: 'bind' | 'volume'; src: string; dst: string; ro: boolean }
+export interface DockerEditEnv { k: string; v: string }
+export interface DockerEditSpec {
+  name: string; image: string;
+  /** retries only matters for on-failure. */
+  restart: 'no' | 'always' | 'unless-stopped' | 'on-failure'; retries: number;
+  /** Command line; empty means the command from the image. */
+  cmd: string;
+  /** 0 means no limit. */
+  mem_mb: number; cpus: number;
+  ports: DockerEditPort[]; mounts: DockerEditMount[]; env: DockerEditEnv[];
+}
+export interface DockerEditConfig extends DockerEditSpec {
+  running: boolean;
+  /** Set for a compose container: only restart, mem_mb and cpus are editable. */
+  compose?: { project: string; file: string };
+}
 export interface DockerCheckResult { checked_at: number; new: number; current: number; unknown: number }
 
 // ---- updates and audit (stage 6) ----
@@ -740,6 +759,11 @@ export const api = {
   aptIgnore: (id: string, name: string, ignore: boolean) => request<{ ok: boolean }>('PUT', `api/servers/${enc(id)}/apt-ignore`, { name, ignore }),
   dockerIgnore: (id: string, name: string, ignore: boolean) => request<{ ok: boolean }>('PUT', `api/servers/${enc(id)}/docker-ignore`, { name, ignore }),
   dockerCheck: (id: string) => request<DockerCheckResult>('POST', `api/servers/${enc(id)}/docker/check`, {}),
+  dockerConfig: (id: string, cid: string) =>
+    request<DockerEditConfig>('GET', `api/servers/${enc(id)}/docker/containers/${enc(cid)}/config`),
+  /** Starts the change; the progress comes over the `docker-edit` stream opened with the returned token. */
+  dockerEdit: (id: string, cid: string, spec: DockerEditSpec) =>
+    request<{ token: string }>('POST', `api/servers/${enc(id)}/docker/containers/${enc(cid)}/edit`, { spec, confirm: true }),
   dockerRemoveImage: (id: string, imageId: string) =>
     request<{ ok: boolean }>('DELETE', `api/servers/${enc(id)}/docker/images/${enc(imageId)}`),
   // updates (stage 6)

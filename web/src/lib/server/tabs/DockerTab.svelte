@@ -1,9 +1,10 @@
 <script lang="ts">
   import { get } from 'svelte/store';
   import { untrack } from 'svelte';
-  import { api, openStream, type DockerContainer, type DockerImage, type DockerInfo, type ServerDetail } from '../../../api';
+  import { api, openStream, type DockerContainer, type DockerEditConfig, type DockerImage, type DockerInfo, type ServerDetail } from '../../../api';
   import { locale, t, tr as tStore, type Vars } from '../../../i18n';
   import Modal from '../../Modal.svelte';
+  import DockerEditModal from './DockerEditModal.svelte';
   import ActionMenu from '../../ui/ActionMenu.svelte';
   import RowMenu from '../../ui/RowMenu.svelte';
   import { isPhone } from '../../ui/viewport';
@@ -72,6 +73,8 @@
   let updateFor = $state<{ c: DockerContainer; image: string } | null>(null);
   /** Open groups by key; compose projects start collapsed, the containers without a project open. */
   let openGroups = $state<Record<string, boolean>>({});
+  /** The "edit the container" dialog with the settings read from the agent. */
+  let editFor = $state<{ c: DockerContainer; config: DockerEditConfig } | null>(null);
   let checking = $state(false);
   let pullInput = $state('');
   let pullError = $state('');
@@ -204,6 +207,31 @@
     connect(stream, openStream(serverId, 'docker-update', params));
   }
 
+  /** Reads the settings of the container from the agent and opens the editor. */
+  async function requestEdit(c: DockerContainer): Promise<void> {
+    if (busy !== null || editFor) return;
+    const id = serverId;
+    busy = `${c.id}:edit`;
+    try {
+      const config = await api.dockerConfig(id, c.id);
+      if (id === serverId) editFor = { c, config };
+    } catch (e) {
+      showToast(errorText(e, T));
+    } finally {
+      busy = null;
+    }
+  }
+
+  /** The change was accepted: the editor closes and the progress opens as a stream. */
+  function startEdit(token: string): void {
+    const target = editFor;
+    if (!target) return;
+    editFor = null;
+    stopStream();
+    stream = { kind: 'update', title: T('dockerEdit.streamTitle', { name: target.c.name }), lines: [], state: 'connecting' };
+    connect(stream, openStream(serverId, 'docker-edit', { token }));
+  }
+
   function isOpen(g: ContainerGroup): boolean {
     return openGroups[g.key] ?? g.key === '';
   }
@@ -331,6 +359,7 @@
         : { key: 'start', label: $tStore('docker.act.start'), disabled: busy, onselect: () => void containerAction(c, 'start') },
       { key: 'restart', label: $tStore('docker.act.restart'), disabled: busy || !running, onselect: () => void containerAction(c, 'restart') },
       { key: 'update', label: $tStore('docker.act.update'), disabled: busy, onselect: () => requestUpdate(c) },
+      { key: 'edit', label: $tStore('docker.act.edit'), disabled: busy, onselect: () => void requestEdit(c) },
       { key: 'ignore', label: c.ignored ? $tStore('docker.ignore.off') : $tStore('docker.ignore.on'), disabled: readOnly, onselect: () => void toggleIgnore(c) },
       { key: 'remove', label: $tStore('docker.act.remove'), disabled: busy, onselect: () => requestRemove(c) },
     ];
@@ -738,6 +767,18 @@
       </div>
     </Modal>
   </div>
+{/if}
+
+{#if editFor}
+  {@const ed = editFor}
+  <DockerEditModal
+    {serverId}
+    container={ed.c}
+    config={ed.config}
+    others={containers.filter((x) => x.id !== ed.c.id)}
+    onclose={() => (editFor = null)}
+    onapply={startEdit}
+  />
 {/if}
 
 {#if updateFor}

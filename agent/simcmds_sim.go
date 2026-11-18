@@ -42,8 +42,9 @@ func init() {
 		"users.state":   ok(simUsers()),
 		"apt.ignore":    ignoreCmd("apt", nil),
 		"docker.ignore": ignoreCmd("docker", nil),
+		"docker.config": simDockerConfig,
 	}
-	devStreams = map[string]StreamFunc{"logs": simLogs}
+	devStreams = map[string]StreamFunc{"logs": simLogs, "docker.edit": simDockerEdit}
 }
 
 func simLogs(ctx context.Context, _ json.RawMessage, io *StreamIO) error {
@@ -220,3 +221,43 @@ func simUsers() usersState {
 }
 
 var _ = fmt.Sprint
+
+// simDockerConfig answers the editor of a container: "web" is a compose container, the others are plain.
+func simDockerConfig(_ context.Context, raw json.RawMessage, _ bool) (any, error) {
+	var p struct{ ID string }
+	_ = json.Unmarshal(raw, &p)
+	cfg := editConfig{Running: true, editSpec: editSpec{Name: "db", Image: "postgres:16", Restart: "unless-stopped", MemMB: 1024, CPUs: 2,
+		Cmd:    "postgres -c max_connections=200",
+		Ports:  []editPort{{IP: "127.0.0.1", Host: 5432, Cont: 5432, Proto: "tcp"}},
+		Mounts: []editMount{{Type: "volume", Src: "pgdata", Dst: "/var/lib/postgresql/data"}, {Type: "bind", Src: "/srv/backup", Dst: "/backup", RO: true}},
+		Env:    []editEnv{{K: "POSTGRES_USER", V: "app"}, {K: "POSTGRES_PASSWORD", V: "s3cret-pass"}, {K: "TZ", V: "UTC"}}}}
+	switch p.ID {
+	case "web", "a1b2c3d4e5f6":
+		cfg.Name, cfg.Image, cfg.Cmd, cfg.MemMB, cfg.CPUs = "web", "nginx:1.25", "", 0, 0
+		cfg.Ports = []editPort{{IP: "0.0.0.0", Host: 8080, Cont: 80, Proto: "tcp"}}
+		cfg.Mounts = []editMount{}
+		cfg.Env = []editEnv{{K: "NGINX_HOST", V: "example.lan"}}
+		cfg.Compose = &editCompose{Project: "shop", File: "/opt/shop/docker-compose.yml"}
+	case "cache", "c1b2c3d4e5f6":
+		cfg.Name, cfg.Image, cfg.Cmd, cfg.MemMB, cfg.CPUs, cfg.Running = "cache", "redis:7", "redis-server --save '' --appendonly no", 128, 0, false
+		cfg.Ports, cfg.Mounts, cfg.Env = []editPort{}, []editMount{}, []editEnv{}
+	}
+	return cfg, nil
+}
+
+// simDockerEdit shows a log like the real agent does.
+func simDockerEdit(ctx context.Context, raw json.RawMessage, io *StreamIO) error {
+	var p struct{ Spec editSpec }
+	_ = json.Unmarshal(raw, &p)
+	for _, l := range []string{"Changes: (simulator)", "Stopping " + p.Spec.Name, "Creating the new container", "Starting the new container", "Done: the simulator changed nothing."} {
+		if err := io.Out([]byte(l + "\n")); err != nil {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(400 * time.Millisecond):
+		}
+	}
+	return nil
+}

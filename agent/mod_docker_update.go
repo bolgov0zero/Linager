@@ -40,8 +40,13 @@ type dInspect struct {
 		Networks map[string]map[string]any `json:"Networks"`
 	} `json:"NetworkSettings"`
 	Mounts []struct {
-		Type string
-		Name string
+		Type        string
+		Name        string
+		Source      string
+		Destination string
+		Mode        string
+		RW          bool
+		Propagation string
 	}
 }
 
@@ -158,6 +163,17 @@ func plainUpdate(ctx context.Context, old *dInspect, override string, say func(s
 	}
 	_ = say("New image %s (was %s)", shortImageID(img.ID), shortImageID(old.Image))
 
+	if err := swapContainer(ctx, old, name, func() (map[string]any, []extraNet) { return buildCreateBody(old, ref) }, say); err != nil {
+		return err
+	}
+	return say("Done: %s now runs %s. The previous image %s stays on the host.", name, ref, shortImageID(old.Image))
+}
+
+// swapContainer replaces a plain container by a new one made from build(): the old one is stopped and renamed,
+// the new one is created under newName, started and checked, then the old one is removed. If anything fails the
+// old one is brought back under its own name.
+func swapContainer(ctx context.Context, old *dInspect, newName string, build func() (map[string]any, []extraNet), say func(string, ...any) error) error {
+	name := strings.TrimPrefix(old.Name, "/")
 	wasRunning := old.State.Running
 	oldName := fmt.Sprintf("%s-linager-old-%d", name, time.Now().Unix())
 	if wasRunning {
@@ -184,12 +200,12 @@ func plainUpdate(ctx context.Context, old *dInspect, override string, say func(s
 		_ = say("The old container was restored.")
 	}
 
-	body, extra := buildCreateBody(old, ref)
+	body, extra := build()
 	_ = say("Creating the new container")
 	var created struct {
 		ID string `json:"Id"`
 	}
-	if err := dockerSend(ctx, http.MethodPost, "/containers/create?name="+url.QueryEscape(name), body, &created); err != nil {
+	if err := dockerSend(ctx, http.MethodPost, "/containers/create?name="+url.QueryEscape(newName), body, &created); err != nil {
 		restore("")
 		return fmt.Errorf("create: %w", err)
 	}
@@ -213,7 +229,7 @@ func plainUpdate(ctx context.Context, old *dInspect, override string, say func(s
 	if err := dockerSend(ctx, http.MethodDelete, "/containers/"+old.ID, nil, nil); err != nil {
 		_ = say("The old container %s could not be removed: %v", oldName, err)
 	}
-	return say("Done: %s now runs %s. The previous image %s stays on the host.", name, ref, shortImageID(old.Image))
+	return nil
 }
 
 func shortImageID(id string) string {

@@ -72,6 +72,7 @@
   "audit.action.docker.container.stop": "Docker: stop container",
   "audit.action.docker.container.restart": "Docker: restart container",
   "audit.action.docker.container.remove": "Docker: remove container",
+  "audit.action.docker.container.edit": "Docker: edit container",
   "audit.action.docker.image.remove": "Docker: remove image",
   "audit.action.update.check": "Updates: check",
   "audit.action.update.channel": "Updates: channel",

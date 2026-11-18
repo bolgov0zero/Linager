@@ -56,6 +56,8 @@ type Admin struct {
 	terms  map[string]int
 	desks  map[string]int // open remote desktops per server (guarded by termMu)
 
+	editJobs dockerEditJobs // settings of a container waiting for their stream (api_docker_edit.go)
+
 	// passkey ceremonies in progress (the challenge must survive between begin and finish)
 	cerMu sync.Mutex
 	cers  map[string]*ceremony
@@ -214,6 +216,8 @@ func (a *Admin) Handler() http.Handler {
 	a.route(mux, "POST /api/servers/{id}/firewall/confirm", "srv:firewall", a.confirmOrRollback("firewall", "confirm"))
 	a.route(mux, "POST /api/servers/{id}/firewall/rollback", "srv:firewall", a.confirmOrRollback("firewall", "rollback"))
 	a.route(mux, "GET /api/servers/{id}/docker", "srv:docker", a.dockerState)
+	a.route(mux, "GET /api/servers/{id}/docker/containers/{cid}/config", "srv:docker", a.dockerConfig)
+	a.route(mux, "POST /api/servers/{id}/docker/containers/{cid}/edit", "srv:docker", a.dockerEdit)
 	a.route(mux, "POST /api/servers/{id}/docker/containers/{cid}/{action}", "srv:docker", a.dockerContainerAction)
 	a.route(mux, "DELETE /api/servers/{id}/docker/images/{iid}", "srv:docker", a.dockerRemoveImage)
 	a.route(mux, "POST /api/servers/{id}/docker/check", "srv:docker", a.dockerCheck)

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.7
+
+- New: **editing a Docker container.** The menu of a container has an "Edit..." item with a window of five tabs: Main (name, image, restart policy, command), Ports, Volumes, Environment, Resources (memory and CPU limits). Every field is marked "in place" or "recreate". The name, the restart policy and the limits are changed in place, the container keeps running; the image, the command, ports, volumes and variables recreate it the same way "Update image" does (stop, rename, create, start, check; if anything fails the old container comes back). Before applying, the window lists the changes and asks for confirmation; the work is shown in a live log. The checks (names, image, ports including ports taken by another container, absolute paths, variable names) are made in the window and again on the agent. A compose container changes only the restart policy and the limits. The settings are sent in a request body and the stream carries a one-time token, so passwords in variables are not in URLs or in the audit log (it gets the names); the action is journaled as `docker.container.edit`. Tests: the command split/join, the checks, the plan (in place or recreate, compose), reading the settings, the in-place update, the recreate with ports/volumes/variables, a port taken by another container, the rollback, and the one-time token. See `docs/*/modules.md`.
+- Dev: the image update (`plainUpdate`) and the editor share one replacement routine (`swapContainer`); the simulator (`linager-sim`) answers `docker.config` and `docker.edit`.
+
 ## 0.3.6
 
 - Fix: **0.3.4 and 0.3.5 were published without the Windows files** (the MSI and the Windows agent): a new test did not build on Windows (0.3.4), then one of its checks (the file mode 600) does not apply to Windows (0.3.5), so the Windows part of the release failed, and the rest was published anyway. This release has the changes of 0.3.4 and all the files. Use 0.3.6 instead of 0.3.4 and 0.3.5.

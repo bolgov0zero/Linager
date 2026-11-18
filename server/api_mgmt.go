@@ -697,6 +697,12 @@ func (a *Admin) streamParams(r *http.Request) (module string, params map[string]
 			}
 			return "docker.update", p, true
 		}
+	case "docker-edit":
+		if tok := q.Get("token"); len(tok) == 32 {
+			if job := a.editJobs.take(r.PathValue("id"), tok); job != nil {
+				return "docker.edit", map[string]any{"container": job.container, "spec": job.spec}, true
+			}
+		}
 	case "docker-project-logs":
 		if c := q.Get("container"); c != "" && len(c) <= 128 {
 			return "docker.composeLogs", map[string]any{"container": c, "lines": atoiClamp(q.Get("lines"), 0, 1000, 200)}, true
@@ -764,7 +770,11 @@ func (a *Admin) streamWS(w http.ResponseWriter, r *http.Request, u *store.User) 
 	defer sh.Close()
 	start := time.Now()
 	var bytesIn, bytesOut int64
-	a.audit(r, u, "stream.open", "server", s.ID, s.Name, "ok", map[string]any{"kind": module, "params": params, "sid": sh.SID})
+	auditParams := params
+	if module == "docker.edit" { // the settings hold variable values: the journal gets the container only
+		auditParams = map[string]any{"container": params["container"]}
+	}
+	a.audit(r, u, "stream.open", "server", s.ID, s.Name, "ok", map[string]any{"kind": module, "params": auditParams, "sid": sh.SID})
 	defer func() {
 		a.audit(r, u, "stream.close", "server", s.ID, s.Name, "ok", map[string]any{"kind": module, "sid": sh.SID,
 			"seconds": int(time.Since(start).Seconds()), "bytes_in": bytesIn, "bytes_out": bytesOut})

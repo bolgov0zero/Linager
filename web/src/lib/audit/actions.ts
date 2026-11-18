@@ -11,7 +11,7 @@ export const KNOWN_ACTIONS: ReadonlySet<string> = new Set([
   'files.write', 'files.mkdir', 'files.create', 'files.delete', 'files.upload', 'files.download', 'files.rename', 'files.chmod', 'files.chown', 'files.copy', 'files.move', 'files.zip',
   'network.apply', 'network.config.apply', 'network.confirm', 'network.rollback', 'network.draft.save', 'network.draft.reset',
   'firewall.apply', 'firewall.confirm', 'firewall.rollback', 'firewall.draft.save', 'firewall.draft.reset',
-  'docker.container.start', 'docker.container.stop', 'docker.container.restart', 'docker.container.remove',
+  'docker.container.start', 'docker.container.stop', 'docker.container.restart', 'docker.container.remove', 'docker.container.edit',
   'docker.image.remove', 'docker.ignore', 'docker.unignore', 'apt.ignore', 'apt.unignore',
   'update.check', 'update.channel', 'update.prefetch', 'update.cache.prune', 'update.server', 'update.agents',
   'stream.open', 'stream.close',

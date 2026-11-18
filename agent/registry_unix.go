@@ -112,12 +112,14 @@ func (r *Registry) registerPlatform(cfg *config.Agent, col Collector, log *slog.
 		r.cmds["docker.state"] = dockerState
 		r.cmds["docker.ignore"] = ignoreCmd("docker", recountImages)
 		r.cmds["docker.container"] = dockerContainerAction
+		r.cmds["docker.config"] = dockerConfig
 		r.cmds["docker.imageRemove"] = dockerImageRemove
 		r.cmds["docker.check"] = dockerCheck
 		r.streams["docker.composeLogs"] = dockerComposeLogs
 		r.streams["docker.logs"] = dockerLogs
 		r.streams["docker.pull"] = dockerPull
 		r.streams["docker.update"] = dockerUpdate
+		r.streams["docker.edit"] = dockerEdit
 	} else {
 		r.modules = without(r.modules, "docker")
 	}

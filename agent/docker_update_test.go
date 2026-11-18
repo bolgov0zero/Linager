@@ -29,6 +29,12 @@ type fakeDocker struct {
 	failNewStart bool
 	labels       map[string]any
 	configImage  string
+
+	// for the tests of editing a container
+	mounts       []map[string]any // more entries of the inspect "Mounts"
+	portBindings map[string]any   // HostConfig.PortBindings
+	others       []map[string]any // the answer of /containers/json
+	updateBody   map[string]any   // the body of the last "update" call
 }
 
 func (f *fakeDocker) called(prefix string) bool {
@@ -76,14 +82,26 @@ func startFakeDocker(t *testing.T, f *fakeDocker) {
 		p := r.URL.Path
 		switch {
 		case r.Method == "GET" && p == "/containers/web/json":
+			hc := map[string]any{"NetworkMode": "mynet", "Binds": []string{"/data:/data"}}
+			if f.portBindings != nil {
+				hc["PortBindings"] = f.portBindings
+			}
+			mounts := append([]map[string]any{{"Type": "volume", "Name": strings.Repeat("c", 64)}}, f.mounts...)
 			write(map[string]any{"Id": testOldID, "Name": "/web", "Image": "sha256:oldimage",
 				"Config":     map[string]any{"Image": f.configImage, "Hostname": testOldID[:12], "Env": []string{"A=1"}, "Labels": f.labels},
-				"HostConfig": map[string]any{"NetworkMode": "mynet", "Binds": []string{"/data:/data"}},
+				"HostConfig": hc,
 				"State":      map[string]any{"Running": true},
 				"NetworkSettings": map[string]any{"Networks": map[string]any{
 					"mynet": map[string]any{"Aliases": []string{"web", testOldID[:12]}, "IPAMConfig": nil},
 					"other": map[string]any{"Aliases": []string{"web"}}}},
-				"Mounts": []map[string]any{{"Type": "volume", "Name": strings.Repeat("c", 64)}}})
+				"Mounts": mounts})
+		case r.Method == "GET" && p == "/containers/json":
+			write(f.others)
+		case r.Method == "POST" && p == "/containers/"+testOldID+"/update":
+			f.mu.Lock()
+			_ = json.NewDecoder(r.Body).Decode(&f.updateBody)
+			f.mu.Unlock()
+			write(map[string]any{"Warnings": []string{}})
 		case r.Method == "GET" && p == "/containers/"+testNewID+"/json":
 			write(map[string]any{"Id": testNewID, "State": map[string]any{"Running": true}})
 		case r.Method == "POST" && p == "/images/create":
@@ -97,6 +115,9 @@ func startFakeDocker(t *testing.T, f *fakeDocker) {
 		case r.Method == "POST" && p == "/containers/"+testNewID+"/start" && f.failNewStart:
 			w.WriteHeader(500)
 			write(map[string]string{"message": "port is already allocated"})
+		case r.Method == "GET" && strings.HasPrefix(p, "/containers/") && strings.HasSuffix(p, "/json"):
+			w.WriteHeader(404) // a name nobody uses
+			write(map[string]string{"message": "No such container"})
 		default: // stop, rename, start, connect, delete
 			w.WriteHeader(204)
 		}
