@@ -178,7 +178,7 @@ func TestWindowsModules(t *testing.T) {
 	reg := NewRegistry(config.DefaultAgent(), NewCollector(context.Background()), nil, t.TempDir())
 	for _, m := range reg.Modules() {
 		switch m {
-		case "apt", "firewall", "network", "users", "docker", "disk", "security":
+		case "apt", "firewall", "docker", "disk", "security":
 			t.Errorf("a Linux-only module is enabled: %s", m)
 		}
 	}

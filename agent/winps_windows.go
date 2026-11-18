@@ -17,8 +17,10 @@ const psPrelude = `$ErrorActionPreference = 'Stop'; $ProgressPreference = 'Silen
 // runPS runs a PowerShell script and returns what it wrote. Values from the panel reach the script only through the
 // environment (the script reads $env:LINAGER_...), never as part of its text.
 func runPS(ctx context.Context, script string, env map[string]string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, powerShellPath(), "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", //nolint:gosec // fixed binary, constant script text
-		"-EncodedCommand", encodePowerShell(psPrelude+script))
+	// An error is written as plain text on stderr: with a redirected stderr PowerShell would write CLIXML.
+	wrapped := psPrelude + "try {\n" + script + "\n} catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }"
+	cmd := exec.CommandContext(ctx, powerShellPath(), "-NoLogo", "-NoProfile", "-NonInteractive", "-OutputFormat", "Text", "-ExecutionPolicy", "Bypass", //nolint:gosec // fixed binary, constant script text
+		"-EncodedCommand", encodePowerShell(wrapped))
 	cmd.Env = os.Environ()
 	for k, v := range env {
 		cmd.Env = append(cmd.Env, "LINAGER_"+k+"="+v)
