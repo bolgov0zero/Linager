@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.3
+
+- Fix: Windows network counters (rates and totals of the adapters) were still missing on some machines. The agent now reads the whole table of adapters in one call (`GetIfTable2Ex`) and matches it to the adapters by index and by name, falling back to a call per adapter. If an adapter that is up still has no counters, the agent writes the adapter and the reason once to `C:\ProgramData\Linager\agent.log` (search for `network counters`): send those lines if the numbers are still empty. Checked on a Windows runner (two adapters, counters present). The reason on the machine that showed no numbers was not found.
+
 ## 0.3.0-beta.2
 
 - Fix: the Windows agent now reports network metrics. The counters of each adapter are read on their own (`GetIfEntry2Ex`, with the link speed), so one adapter that does not answer no longer takes all the others with it. Checked on a Windows runner.
