@@ -135,6 +135,9 @@ func virtualIface(name string) bool {
 // countApt counts the upgradable packages and how many of them are security updates.
 func countApt(pk []AptPackage) (total, security int) {
 	for _, p := range pk {
+		if ignores.isApt(p.Name) {
+			continue // an ignored package stays in the list of the Updates tab but is not counted
+		}
 		total++
 		if p.Security {
 			security++

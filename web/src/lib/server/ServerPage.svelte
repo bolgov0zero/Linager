@@ -26,6 +26,7 @@
   import { osKind } from '../dashboard/status';
   import DockerTab from './tabs/DockerTab.svelte';
   import { formatDateTime } from './format';
+  import { serverBar } from './serverbar';
   import { openDesktopWindow, openTermWindow } from '../terminal/windows';
   import AgentUpdateBanner from './AgentUpdateBanner.svelte';
   import SideNav from './SideNav.svelte';
@@ -164,6 +165,26 @@
       }
     });
   });
+
+  // The top bar shows the name, the status and the actions of this server.
+  $effect(() => {
+    if (!detail) {
+      serverBar.set(null);
+      return;
+    }
+    const d = detail;
+    serverBar.set({
+      detail: d,
+      online,
+      isAdmin,
+      lastSeen: !online && d.last_seen_at ? $tr('srv.lastSeen', { date: formatDateTime(d.last_seen_at, $locale) }) : '',
+      hasNote: Boolean(d.note?.trim()),
+      onback: onBack,
+      onnote: () => (noteOpen = true),
+      ondelete: () => (deleteOpen = true),
+    });
+  });
+  $effect(() => () => serverBar.set(null));
 </script>
 
 <section class="srv" data-tab={tab}>
@@ -181,47 +202,6 @@
     {/if}
     {#if detail && isAdmin}
       <button class="btn ic" type="button" aria-label={$tr('srv.menu')} onclick={() => (menuOpen = true)}><PixIcon name="more" /></button>
-    {/if}
-  </header>
-  <header class="titlebar">
-    <div class="title-row">
-      <button class="btn" type="button" onclick={onBack}>{$tr('srv.back')}</button>
-      <div class="name">
-        {#if detail}
-          <span class="dot" class:online aria-hidden="true"></span>
-        {/if}
-        <h1>{detail?.name ?? name}</h1>
-        {#if detail}
-          <span class="state" class:online>{online ? $tr('srv.online') : $tr('srv.offline')}</span>
-        {/if}
-      </div>
-      {#if detail}
-        <div class="row actions">
-          <button
-            class="btn note"
-            class:has={Boolean(detail.note?.trim())}
-            type="button"
-            aria-label={$tr('srv.note.open')}
-            title={$tr('srv.note.open')}
-            onclick={() => (noteOpen = true)}><PixIcon name="note" /></button>
-          {#if isAdmin}
-            <RebootButton server={detail} />
-            <button class="btn danger" type="button" onclick={() => (deleteOpen = true)}>{$tr('srv.delete')}</button>
-          {/if}
-        </div>
-      {/if}
-    </div>
-    {#if detail}
-      {#if !online && detail.last_seen_at}
-        <p class="muted small">{$tr('srv.lastSeen', { date: formatDateTime(detail.last_seen_at, $locale) })}</p>
-      {/if}
-      <p class="muted small mono">
-        {$tr('srv.subline', {
-          os: detail.system?.os ?? detail.os,
-          address: detail.address,
-          version: detail.agent_version,
-        })}
-      </p>
     {/if}
   </header>
 
@@ -358,88 +338,6 @@
     margin: 0 auto;
   }
 
-  .titlebar {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-
-  .title-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 11px;
-  }
-
-  .name {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 9px;
-    min-width: 0;
-    flex: 1 1 auto;
-  }
-
-  .titlebar h1 {
-    margin: 0;
-    font-variation-settings: "ELSH" 40;
-    font-size: 27px;
-    line-height: 1.1;
-    overflow-wrap: anywhere;
-  }
-
-  .actions {
-    margin-left: auto;
-    /* the buttons of the row are of one height, whatever the font metrics of the text buttons are */
-    align-items: stretch;
-  }
-
-  /* The note button is only an icon; a small square in the corner says that the server has a note. */
-  .btn.note {
-    position: relative;
-    min-width: 32px;
-    min-height: 32px;
-    padding: 0 7px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .btn.note.has::after {
-    content: '';
-    position: absolute;
-    top: 3px;
-    right: 3px;
-    width: 5px;
-    height: 5px;
-    background: var(--accent);
-  }
-
-  .dot {
-    flex: none;
-    width: 11px;
-    height: 11px;
-    background: var(--muted);
-  }
-
-  .dot.online {
-    background: var(--good);
-  }
-
-  /* Status pill next to the server name, like the design's "в норме" tag. */
-  .state {
-    padding: 1px 7px;
-    border: 2px solid var(--muted);
-    color: var(--muted);
-    font-size: 11px;
-    line-height: 1.4;
-  }
-
-  .state.online {
-    border-color: var(--good);
-    color: var(--good);
-  }
-
   .banner {
     margin: 0;
     padding: 7px 11px;
@@ -519,7 +417,6 @@
     }
 
     /* One header (the global bar is hidden on a server page); the side menu became the bottom bar. */
-    .titlebar,
     .crumb,
     .page-title {
       display: none;

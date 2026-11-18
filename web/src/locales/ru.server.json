@@ -3,7 +3,6 @@
   "srv.online": "в сети",
   "srv.offline": "не в сети",
   "srv.lastSeen": "был в сети: {date}",
-  "srv.subline": "{os} · {address} · linager-agent {version}",
   "srv.reboot": "Перезагрузить",
   "srv.delete": "Удалить сервер",
   "srv.deleted": "Сервер удалён",

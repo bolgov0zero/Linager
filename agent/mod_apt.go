@@ -23,6 +23,7 @@ type AptPackage struct {
 	Candidate string `json:"candidate"`
 	Security  bool   `json:"security"`
 	Reboot    bool   `json:"reboot"`
+	Ignored   bool   `json:"ignored,omitempty"` // the user does not want to be told about this package
 }
 
 var instRe = regexp.MustCompile(`^Inst (\S+)(?: \[([^\]]+)\])? \((\S+) ([^)]*?)(?: \[[^\]]*\])?\)`)
@@ -81,6 +82,9 @@ func aptList(ctx context.Context, _ json.RawMessage, _ bool) (any, error) {
 	}
 	if pk == nil {
 		pk = []AptPackage{}
+	}
+	for i := range pk {
+		pk[i].Ignored = ignores.isApt(pk[i].Name)
 	}
 	_, rerr := os.Stat("/var/run/reboot-required")
 	return map[string]any{"packages": pk, "reboot_required": rerr == nil, "last_check": lastAptCheck(), "busy": aptBusy()}, nil

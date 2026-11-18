@@ -23,6 +23,7 @@ import (
 // reload. An entry is dropped once the container runs another image than it did at the check.
 
 type checkEntry struct {
+	name    string // container name, to match the list of the ignored ones
 	imageID string // image id of the container at the time of the check
 	status  string // "new", "current" or "unknown"
 	local   string // short digest on the host
@@ -50,7 +51,7 @@ const (
 func countNewImages(entries map[string]checkEntry) int {
 	n := 0
 	for _, e := range entries {
-		if e.status == "new" {
+		if e.status == "new" && !ignores.isDocker(e.name) {
 			n++
 		}
 	}
@@ -98,6 +99,15 @@ func startImageChecks(ctx context.Context) {
 			cancel()
 		}
 	}()
+}
+
+// recountImages recounts the stored result after the list of the ignored containers changed.
+func recountImages() {
+	dockerChecks.mu.Lock()
+	defer dockerChecks.mu.Unlock()
+	if dockerChecks.at != 0 {
+		dockerChecks.updates = countNewImages(dockerChecks.entries)
+	}
 }
 
 // checkFor returns the stored result for a container, if it is still valid.
@@ -225,6 +235,7 @@ func checkImages(ctx context.Context) (any, error) {
 		} else {
 			e = classifyImage(c.ImageID, res.local, res.remote)
 		}
+		e.name = strings.TrimPrefix(first(c.Names), "/")
 		entries[c.ID] = e
 		counts[e.status]++
 	}

@@ -16,6 +16,7 @@ import (
 // registerPlatform registers the modules of a Linux host (apt, systemd, nftables, Docker and so on).
 func (r *Registry) registerPlatform(cfg *config.Agent, col Collector, log *slog.Logger, dataDir string) {
 	r.cmds["update.apply"] = r.updateApplyCmd(version.Version)
+	loadIgnores(dataDir)
 	if cfg.Enabled("terminal") {
 		r.streams["terminal"] = termStream
 	}
@@ -25,6 +26,7 @@ func (r *Registry) registerPlatform(cfg *config.Agent, col Collector, log *slog.
 	}
 	if cfg.Enabled("apt") {
 		r.cmds["apt.list"] = aptList
+		r.cmds["apt.ignore"] = ignoreCmd("apt", func() { refreshUpdates(col) })
 		r.streams["apt"] = func(ctx context.Context, p json.RawMessage, io *StreamIO) error {
 			return aptStream(ctx, p, io, func() { refreshUpdates(col) })
 		}
@@ -108,6 +110,7 @@ func (r *Registry) registerPlatform(cfg *config.Agent, col Collector, log *slog.
 	}
 	if cfg.Enabled("docker") && dockerAvailable() {
 		r.cmds["docker.state"] = dockerState
+		r.cmds["docker.ignore"] = ignoreCmd("docker", recountImages)
 		r.cmds["docker.container"] = dockerContainerAction
 		r.cmds["docker.imageRemove"] = dockerImageRemove
 		r.cmds["docker.check"] = dockerCheck

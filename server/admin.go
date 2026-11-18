@@ -154,6 +154,7 @@ func (a *Admin) Handler() http.Handler {
 	a.route(mux, "PUT /api/servers/{id}/services-ignored", "srv:services", a.servicesIgnore)
 	a.route(mux, "POST /api/servers/{id}/services/{unit}/{action}", "srv:services", a.serviceAction)
 	a.route(mux, "GET /api/servers/{id}/apt", "srv:apt", a.aptList)
+	a.route(mux, "PUT /api/servers/{id}/apt-ignore", "srv:apt", a.ignoreUpdates("apt"))
 	a.route(mux, "POST /api/servers/{id}/reboot", "srv:admin", a.reboot)
 	a.route(mux, "GET /api/servers/{id}/disk", "srv:disk", a.diskState)
 	a.route(mux, "POST /api/servers/{id}/disk/scan", "srv:disk", a.diskScan)
@@ -216,6 +217,7 @@ func (a *Admin) Handler() http.Handler {
 	a.route(mux, "POST /api/servers/{id}/docker/containers/{cid}/{action}", "srv:docker", a.dockerContainerAction)
 	a.route(mux, "DELETE /api/servers/{id}/docker/images/{iid}", "srv:docker", a.dockerRemoveImage)
 	a.route(mux, "POST /api/servers/{id}/docker/check", "srv:docker", a.dockerCheck)
+	a.route(mux, "PUT /api/servers/{id}/docker-ignore", "srv:docker", a.ignoreUpdates("docker"))
 	if a.Static != nil {
 		mux.Handle("/", a.static())
 	}

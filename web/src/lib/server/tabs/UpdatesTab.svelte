@@ -2,14 +2,17 @@
   import { untrack } from 'svelte';
   import { get } from 'svelte/store';
   import { api, type AptList, type ServerDetail } from '../../../api';
-  import { locale, tr as tStore } from '../../../i18n';
+  import { locale, t, tr as tStore } from '../../../i18n';
+  import ActionMenu from '../../ui/ActionMenu.svelte';
+  import RowMenu from '../../ui/RowMenu.svelte';
+  import { showToast } from '../../toast';
   import Modal from '../../Modal.svelte';
   import Segments from '../../ui/Segments.svelte';
   import { isPhone } from '../../ui/viewport';
   import '../../ui/phone-rows.css';
   import AptConsole from './AptConsole.svelte';
   import { aptRun, startAptRun, type AptMode } from './apt';
-  import { unavailableKind } from './svc';
+  import { errorText, unavailableKind } from './svc';
   import { formatDateTime } from '../format';
 
   let { server }: { server: ServerDetail } = $props();
@@ -59,6 +62,27 @@
   const unreachable = $derived(!server.online || loadState === 'offline' || loadState === 'disabled');
   const securityCount = $derived(apt ? apt.packages.filter((p) => p.security).length : 0);
   const total = $derived(apt?.packages.length ?? 0);
+  // What the dashboard and the side menu count: the ignored packages stay in the list but are left out.
+  const activeTotal = $derived(apt ? apt.packages.filter((p) => !p.ignored).length : 0);
+  const activeSecurity = $derived(apt ? apt.packages.filter((p) => p.security && !p.ignored).length : 0);
+  const ignoredCount = $derived(total - activeTotal);
+
+  /** The actions menu of a package row (as in the other tabs). */
+  function menuItems(pkg: { name: string; ignored?: boolean }) {
+    return [{ key: 'ignore', label: get(tStore)(pkg.ignored ? 'apt.act.unignore' : 'apt.act.ignore'), onselect: () => void toggleIgnore(pkg) }];
+  }
+
+  async function toggleIgnore(pkg: { name: string; ignored?: boolean }) {
+    if (!apt) return;
+    const next = !pkg.ignored;
+    try {
+      await api.aptIgnore(server.id, pkg.name, next);
+      apt.packages = apt.packages.map((p) => (p.name === pkg.name ? { ...p, ignored: next } : p));
+      showToast(get(tStore)(next ? 'apt.ignoredDone' : 'apt.unignoredDone', { name: pkg.name }));
+    } catch (e) {
+      showToast(errorText(e, (k, v) => t(k, get(locale), v)));
+    }
+  }
   const shown = $derived(apt ? (filter === 'security' ? apt.packages.filter((p) => p.security) : apt.packages) : []);
 
   // An install run is shown in place of the package list, a check run in a modal.
@@ -89,7 +113,7 @@
     }
     if (!checkRun.ok) return $tStore('apt.checking.failed');
     return reloadedRun === checkRun.id && apt
-      ? `${$tStore('apt.checkDone')} · ${$tStore('apt.summary', { n: total, s: securityCount })}`
+      ? `${$tStore('apt.checkDone')} · ${$tStore('apt.summary', { n: activeTotal, s: activeSecurity })}`
       : $tStore('apt.checkDone');
   });
   const checkPct = $derived(!checkRun ? 0 : !checkRun.active ? 100 : (checkRun.progress?.total ?? 0) > 0 ? checkRun.progress!.pct : null);
@@ -179,8 +203,8 @@
       <div class="row nowrap between">
         <div class="summary">
           {#if apt}
-            <p class="big">{total}</p>
-            <p class="muted small">{$tStore('apt.summary', { n: total, s: securityCount })}</p>
+            <p class="big">{activeTotal}</p>
+            <p class="muted small">{$tStore('apt.summary', { n: activeTotal, s: activeSecurity })}{#if ignoredCount > 0} · {$tStore('apt.ignoredNote', { n: ignoredCount })}{/if}</p>
           {:else if loadState === 'loading'}
             <p class="muted">{$tStore('common.loading')}</p>
           {:else if loadState === 'error'}
@@ -199,9 +223,9 @@
   <div class="head">
     <div class="summary">
       {#if apt}
-        <p class="big">{total}</p>
+        <p class="big">{activeTotal}</p>
         <p class="muted small">
-          {$tStore('apt.summary', { n: total, s: securityCount })}
+          {$tStore('apt.summary', { n: activeTotal, s: activeSecurity })}{#if ignoredCount > 0} · {$tStore('apt.ignoredNote', { n: ignoredCount })}{/if}
           {#if apt.last_check > 0}
             · {$tStore('apt.checked', { date: formatDateTime(apt.last_check, $locale) })}
           {:else}
@@ -305,13 +329,15 @@
       </div>
       <div class="pr-list">
         {#each shown as pkg (pkg.name)}
-          <div class="pr-li">
+          <div class="pr-li" class:ign={pkg.ignored}>
             <div class="pr-mn">
               <div class="pr-l1"><b class="mono">{pkg.name}</b></div>
               <div class="pr-l2 mono">{pkg.current} → {pkg.candidate}</div>
             </div>
+            {#if pkg.ignored}<span class="pr-tag">{$tStore('apt.badge.ignored')}</span>{/if}
             {#if pkg.security}<span class="pr-tag crit">{$tStore('apt.badge.security')}</span>{/if}
             {#if pkg.reboot}<span class="pr-tag warn">{$tStore('apt.badge.reboot')}</span>{/if}
+            <RowMenu label={$tStore('apt.menu')} title={pkg.name} items={menuItems(pkg)} />
           </div>
         {/each}
       </div>
@@ -335,18 +361,23 @@
               <th scope="col">{$tStore('apt.col.name')}</th>
               <th scope="col">{$tStore('apt.col.version')}</th>
               <th scope="col">{$tStore('apt.col.notes')}</th>
+              <th scope="col" class="act"><span class="sr-only">{$tStore('apt.menu')}</span></th>
             </tr>
           </thead>
           <tbody>
             {#each apt.packages as pkg (pkg.name)}
-              <tr>
+              <tr class:ign={pkg.ignored}>
                 <td class="mono name">{pkg.name}</td>
                 <td class="mono small version">{pkg.current} → {pkg.candidate}</td>
                 <td>
                   <span class="notes">
+                    {#if pkg.ignored}<span class="badge">{$tStore('apt.badge.ignored')}</span>{/if}
                     {#if pkg.security}<span class="badge security">{$tStore('apt.badge.security')}</span>{/if}
                     {#if pkg.reboot}<span class="badge reboot">{$tStore('apt.badge.reboot')}</span>{/if}
                   </span>
+                </td>
+                <td class="act">
+                  <ActionMenu label={$tStore('apt.menu')} items={menuItems(pkg)} />
                 </td>
               </tr>
             {/each}
@@ -443,6 +474,30 @@
 
   .summary {
     min-width: 0;
+  }
+
+  /* An ignored package stays in the list but is dimmed: it is not counted in the badges. */
+  .tbl tr.ign .name,
+  .tbl tr.ign .version {
+    color: var(--muted);
+  }
+
+  .tbl .act {
+    width: 1%;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .pr-li.ign .pr-mn {
+    opacity: 0.6;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
   }
 
   .big {

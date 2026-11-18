@@ -197,7 +197,7 @@ func dockerState(ctx context.Context, _ json.RawMessage, _ bool) (any, error) {
 	valid := map[string]checkEntry{}
 	for _, r := range rows {
 		m := map[string]any{"id": r.ID, "name": r.Name, "image": r.Image, "state": r.State, "status": r.Status, "ports": r.Ports,
-			"created": r.Created, "compose": r.Compose, "cpu": r.CPU, "mem_used": r.MemUsed, "mem_limit": r.MemLimit}
+			"created": r.Created, "compose": r.Compose, "cpu": r.CPU, "mem_used": r.MemUsed, "mem_limit": r.MemLimit, "ignored": ignores.isDocker(r.Name)}
 		if r.Compose {
 			m["project"], m["service"], m["workdir"], m["config_file"] = r.Project, r.Service, r.Dir, r.File
 		}

@@ -88,7 +88,8 @@
   const groups = $derived(groupContainers(containers));
   const hasProjects = $derived(groups.some((g) => g.key !== ''));
   const projects = $derived(groups.filter((g) => g.key !== ''));
-  const updatable = $derived(containers.filter((c) => c.upd === 'new'));
+  // Marked for an update: the containers with a newer image whose updates are not ignored.
+  const updatable = $derived(containers.filter((c) => c.upd === 'new' && !c.ignored));
   const offline = $derived(loadState === 'offline' || !server.online);
   const readOnly = $derived(offline || loadState === 'disabled');
 
@@ -310,6 +311,16 @@
     return busy !== null && busy.startsWith(`${c.id}:`);
   }
 
+  async function toggleIgnore(c: DockerContainer): Promise<void> {
+    const next = !c.ignored;
+    try {
+      await api.dockerIgnore(serverId, c.name, next);
+      if (info) info.containers = info.containers.map((x) => (x.name === c.name ? { ...x, ignored: next } : x));
+    } catch (e) {
+      showToast(errorText(e, T));
+    }
+  }
+
   /** Items of the actions menu of a container row. */
   function containerMenu(c: DockerContainer, running: boolean) {
     const busy = readOnly || rowBusy(c);
@@ -320,6 +331,7 @@
         : { key: 'start', label: $tStore('docker.act.start'), disabled: busy, onselect: () => void containerAction(c, 'start') },
       { key: 'restart', label: $tStore('docker.act.restart'), disabled: busy || !running, onselect: () => void containerAction(c, 'restart') },
       { key: 'update', label: $tStore('docker.act.update'), disabled: busy, onselect: () => requestUpdate(c) },
+      { key: 'ignore', label: c.ignored ? $tStore('docker.ignore.off') : $tStore('docker.ignore.on'), disabled: readOnly, onselect: () => void toggleIgnore(c) },
       { key: 'remove', label: $tStore('docker.act.remove'), disabled: busy, onselect: () => requestRemove(c) },
     ];
   }
@@ -468,12 +480,12 @@
         <div class="pr-list">
           {#each containers as c (c.id)}
             {@const running = isRunning(c)}
-            <div class="pr-li" class:bad={stateTone(c.state) === 'crit'} class:wn={c.state === 'restarting'} class:hl={c.upd === 'new'}>
+            <div class="pr-li" class:bad={stateTone(c.state) === 'crit'} class:wn={c.state === 'restarting'} class:hl={c.upd === 'new' && !c.ignored}>
               <div class="pr-mn">
                 <div class="pr-l1">
                   <b>{c.name}</b>
                   <span class="pr-tag {stateTone(c.state)}">{c.state}</span>
-                  {#if c.upd === 'new'}<span class="pr-tag warn">{$tStore('docker.upd.new')}</span>{/if}
+                  {#if c.upd === 'new'}<span class="pr-tag" class:warn={!c.ignored}>{c.ignored ? $tStore('docker.badge.ignored') : $tStore('docker.upd.new')}</span>{/if}
                 </div>
                 <div class="pr-l2 mono">{c.image}</div>
                 <div class="pr-l2">{usageText(c)} · {$tStore('docker.mob.ports')} {c.ports.length ? c.ports.join(', ') : '—'}</div>
@@ -670,7 +682,7 @@
       <tbody>
         {#each list as c (c.id)}
           {@const running = isRunning(c)}
-          <tr class:hl={c.upd === 'new'}>
+          <tr class:hl={c.upd === 'new' && !c.ignored}>
             <td class="name">
               <div>{c.name}</div>
               <div class="muted small mono">{c.image}</div>
@@ -684,7 +696,7 @@
             <td class="small">{c.status}</td>
             <td class="reg small">
               {#if c.upd === 'new'}
-                <span class="badge warn">{$tStore('docker.upd.new')}</span>
+                <span class="badge" class:warn={!c.ignored}>{c.ignored ? $tStore('docker.badge.ignored') : $tStore('docker.upd.new')}</span>
                 {#if c.upd_local && c.upd_remote}<span class="muted mono">{c.upd_local} → {c.upd_remote}</span>{/if}
               {:else if c.upd === 'current'}
                 <span class="badge good">{$tStore('docker.upd.current')}</span>

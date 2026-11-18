@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.4
+
+- Change: **the server page has its header in the top bar.** The back button, the name and the state of the server stand next to the logo, and the note, reboot and delete buttons are icons on the right (with tooltips). The block under the top bar and the line "Debian... · address · linager-agent..." are gone: the system is in the "System" card of the Overview, the address in the table of the interfaces, the version at the bottom of the side menu. The "last seen" time of an offline server is the tooltip of its badge. The phone keeps its own header.
+- New: **ignoring updates of single packages and Docker containers.** The "Actions" menu of a package (Updates tab) and the menu of a container have an "Ignore" item, like the services: the item stays in the list (dimmed, marked "ignored") but is not counted in the dashboard, in the badges of the side menu and in the "can be updated" numbers. The agent keeps the lists (`ignored.json`, mode 600) and counts without them, so it works with the real numbers; "Install all" still installs everything, "Update marked" skips ignored containers. The actions are in the audit log. Tests: the lists survive a restart and are private, bad names are refused, ignored packages and containers are left out of the counts, the command.
+
 ## 0.3.3
 
 - Change: **the whole interface is about 10% smaller**, on the computer and on the phone. Done in whole pixels, not with a zoom, so the 2 px lines, the shadows and the pixel font stay sharp: the font sizes go down by a step (12 to 11, 13 to 12, 14 to 13, 16 to 14), the paddings, gaps, widths and heights by a tenth. On the phone the buttons and rows keep their 44 px touch size and the fields keep 16 px (iOS would zoom the page otherwise).

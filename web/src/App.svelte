@@ -18,6 +18,8 @@
   import Modal from './lib/Modal.svelte';
   import PixIcon from './lib/ui/PixIcon.svelte';
   import TopMenu from './lib/TopMenu.svelte';
+  import RebootButton from './lib/server/tabs/RebootButton.svelte';
+  import { serverBar } from './lib/server/serverbar';
   import ViewSwitch from './lib/dashboard/ViewSwitch.svelte';
   import TabBar, { type TabBarItem } from './lib/ui/TabBar.svelte';
   import { isPhone } from './lib/ui/viewport';
@@ -255,7 +257,24 @@
     </svg>
     <h1>{$tr('app.title')}</h1>
   </div>
+  {#if serverName !== null && $serverBar}
+    {@const sb = $serverBar}
+    <div class="here">
+      <button class="btn" type="button" onclick={sb.onback}>{$tr('srv.back')}</button>
+      <span class="sdot" class:online={sb.online} aria-hidden="true"></span>
+      <h2 class="sname" title={sb.detail.name}>{sb.detail.name}</h2>
+      <span class="sstate" class:online={sb.online} class:hint={sb.lastSeen !== ''} title={sb.lastSeen || undefined}>{sb.online ? $tr('srv.online') : $tr('srv.offline')}</span>
+    </div>
+  {/if}
   <div class="right">
+    {#if serverName !== null && $serverBar}
+      {@const sb = $serverBar}
+      <button class="btn tb-ic note" class:has={sb.hasNote} type="button" title={$tr('srv.note.open')} aria-label={$tr('srv.note.open')} onclick={sb.onnote}><PixIcon name="note" /></button>
+      {#if sb.isAdmin}
+        <RebootButton server={sb.detail} icon />
+        <button class="btn tb-ic danger" type="button" title={$tr('srv.delete')} aria-label={$tr('srv.delete')} onclick={sb.ondelete}><PixIcon name="trash" /></button>
+      {/if}
+    {/if}
     {#if phase === 'app'}
       <p class="live mono small">
         <span class="dot" class:on={$liveConnected} aria-hidden="true"></span>{$tr('dash.live', { time: clock })}
@@ -419,6 +438,79 @@
     font-size: 23px;
     letter-spacing: 0.02em;
     line-height: 1;
+  }
+
+  /* The server page: back, the name and the state stand next to the logo, the actions are icons on the right. */
+  .here {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex: 1 1 0;
+    min-width: 0;
+    margin-left: 4px;
+  }
+
+  .here .btn {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .sdot {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    background: var(--muted);
+  }
+
+  .sdot.online {
+    background: var(--good);
+  }
+
+  .sname {
+    margin: 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-variation-settings: "ELSH" 40;
+    font-size: 22px;
+    line-height: 1.1;
+  }
+
+  .sstate {
+    flex: none;
+    padding: 1px 7px;
+    border: 2px solid var(--muted);
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .sstate.online {
+    border-color: var(--good);
+    color: var(--good);
+  }
+
+  /* An offline server tells when it was last seen in a tooltip. */
+  .sstate.hint {
+    cursor: help;
+  }
+
+  /* The icon buttons of the server page; the note button has a small square when the server has a note. */
+  .right :global(.tb-ic) {
+    position: relative;
+    min-width: 32px;
+    padding: 0 7px;
+  }
+
+  .right :global(.tb-ic.has)::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 5px;
+    height: 5px;
+    background: var(--accent);
   }
 
   .live {

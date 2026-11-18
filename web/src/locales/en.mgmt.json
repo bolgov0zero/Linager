@@ -92,5 +92,15 @@
   "svc.badge.ignored": "ignored",
   "svc.ignoredDone": "{unit}: ignored, the server status no longer counts it",
   "svc.unignoredDone": "{unit}: counted in the server status again",
-  "svc.ignoreHint": "An ignored failed service does not affect the server status or the dashboard counters. Needs agent 0.1.20 or newer."
+  "svc.ignoreHint": "An ignored failed service does not affect the server status or the dashboard counters. Needs agent 0.1.20 or newer.",
+  "apt.badge.ignored": "ignored",
+  "apt.ignoredNote": "ignored: {n}",
+  "docker.ignore.on": "Ignore updates",
+  "docker.ignore.off": "Stop ignoring updates",
+  "docker.badge.ignored": "ignored",
+  "apt.menu": "Actions",
+  "apt.act.ignore": "Ignore",
+  "apt.act.unignore": "Stop ignoring",
+  "apt.ignoredDone": "{name}: ignored, left out of the update numbers",
+  "apt.unignoredDone": "{name}: counted in the update numbers again"
 }

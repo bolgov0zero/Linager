@@ -20,14 +20,28 @@ func init() {
 		"services.list":   ok(simServices()),
 		"services.action": ok(map[string]bool{"ok": true}),
 		"processes.list":  ok(simProcesses()),
-		"apt.list":        ok(map[string]any{"packages": simPackages(), "reboot_required": true, "last_check": time.Now().Add(-3 * time.Hour).Unix(), "busy": false}),
-		"network.state":   ok(simNetwork()),
-		"firewall.state":  ok(simFirewall()),
-		"security.state":  ok(simSecurity()),
-		"docker.state":    ok(simDocker()),
-		"disk.state":      ok(simDisk()),
-		"disk.scan":       ok(simScan()),
-		"users.state":     ok(simUsers()),
+		"apt.list": func(context.Context, json.RawMessage, bool) (any, error) {
+			pk := simPackages()
+			for i := range pk {
+				pk[i].Ignored = ignores.isApt(pk[i].Name)
+			}
+			return map[string]any{"packages": pk, "reboot_required": true, "last_check": time.Now().Add(-3 * time.Hour).Unix(), "busy": false}, nil
+		},
+		"network.state":  ok(simNetwork()),
+		"firewall.state": ok(simFirewall()),
+		"security.state": ok(simSecurity()),
+		"docker.state": func(context.Context, json.RawMessage, bool) (any, error) {
+			d := simDocker()
+			for _, c := range d["containers"].([]map[string]any) {
+				c["ignored"] = ignores.isDocker(c["name"].(string))
+			}
+			return d, nil
+		},
+		"disk.state":    ok(simDisk()),
+		"disk.scan":     ok(simScan()),
+		"users.state":   ok(simUsers()),
+		"apt.ignore":    ignoreCmd("apt", nil),
+		"docker.ignore": ignoreCmd("docker", nil),
 	}
 	devStreams = map[string]StreamFunc{"logs": simLogs}
 }
@@ -161,6 +175,9 @@ func simDocker() map[string]any {
 	}
 	cont := []map[string]any{c("a1b2c3d4e5f6", "web", "nginx:1.25", "running", "Up 3 days", 1.4, 64), c("b1b2c3d4e5f6", "db", "postgres:16", "running", "Up 3 days", 4.2, 512), c("c1b2c3d4e5f6", "cache", "redis:7", "exited", "Exited (1) 2 hours ago", 0, 0)}
 	cont[0]["compose"], cont[0]["project"], cont[0]["service"] = true, "shop", "web"
+	cont[0]["upd"], cont[0]["upd_local"], cont[0]["upd_remote"] = "new", "aaaa11112222", "bbbb33334444"
+	cont[1]["upd"], cont[1]["upd_local"], cont[1]["upd_remote"] = "new", "cccc11112222", "dddd33334444"
+	cont[2]["upd"] = "current"
 	imgs := []map[string]any{{"id": "111111111111", "repo_tags": []string{"nginx:1.25"}, "size": 190 << 20, "created": time.Now().Add(-100 * 24 * time.Hour).Unix(), "used": true}, {"id": "222222222222", "repo_tags": []string{"postgres:16"}, "size": 430 << 20, "created": time.Now().Add(-60 * 24 * time.Hour).Unix(), "used": true}, {"id": "333333333333", "repo_tags": []string{}, "size": 80 << 20, "created": time.Now().Add(-200 * 24 * time.Hour).Unix(), "used": false}}
 	return map[string]any{"available": true, "containers": cont, "images": imgs, "checked_at": time.Now().Add(-time.Hour).Unix()}
 }

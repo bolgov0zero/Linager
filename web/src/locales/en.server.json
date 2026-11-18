@@ -3,7 +3,6 @@
   "srv.online": "online",
   "srv.offline": "offline",
   "srv.lastSeen": "last seen: {date}",
-  "srv.subline": "{os} · {address} · linager-agent {version}",
   "srv.reboot": "Reboot",
   "srv.delete": "Delete server",
   "srv.deleted": "Server deleted",

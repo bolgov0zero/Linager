@@ -130,6 +130,44 @@ func (a *Admin) servicesIgnore(w http.ResponseWriter, r *http.Request, u *store.
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
+// ignoreUpdates adds a package (module "apt") or a container (module "docker") to the list the agent keeps of the
+// ignored ones, or removes it: the item stays in the lists of the panel but is not counted in the badges.
+func (a *Admin) ignoreUpdates(module string) func(w http.ResponseWriter, r *http.Request, u *store.User) {
+	return func(w http.ResponseWriter, r *http.Request, u *store.User) {
+		s := a.serverOr404(w, r)
+		if s == nil {
+			return
+		}
+		var req struct {
+			Name   string `json:"name"`
+			Ignore bool   `json:"ignore"`
+		}
+		if !decode(w, r, &req) {
+			return
+		}
+		if req.Name == "" || len(req.Name) > 128 || strings.ContainsAny(req.Name, " \t\n/") {
+			jsonErr(w, http.StatusBadRequest, "invalid name")
+			return
+		}
+		_, err := a.Hub.Call(r.Context(), s.ID, module, "ignore", map[string]any{"name": req.Name, "ignore": req.Ignore}, false, 30*time.Second)
+		action := module + ".ignore"
+		if !req.Ignore {
+			action = module + ".unignore"
+		}
+		res := "ok"
+		if err != nil {
+			res = "failed"
+		}
+		a.audit(r, u, action, "server", s.ID, s.Name, res, map[string]any{"name": req.Name})
+		if err != nil {
+			callErr(w, err)
+			return
+		}
+		a.Live.Publish("dashboard", map[string]any{})
+		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+	}
+}
+
 func (a *Admin) aptList(w http.ResponseWriter, r *http.Request, _ *store.User) {
 	a.proxyCall(w, r, "apt", "list", nil, 90*time.Second)
 }

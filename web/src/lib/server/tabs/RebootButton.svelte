@@ -2,10 +2,18 @@
   import { api, type ServerDetail } from '../../../api';
   import { tr } from '../../../i18n';
   import Modal from '../../Modal.svelte';
+  import PixIcon from '../../ui/PixIcon.svelte';
   import { showToast } from '../../toast';
   import { errorText } from './svc';
 
-  let { server }: { server: ServerDetail } = $props();
+  /** icon: only the power icon (for the top bar); the label becomes the tooltip. */
+  let { server, icon = false }: { server: ServerDetail; icon?: boolean } = $props();
+
+  // The button may sit in the pinned top bar; the dialog must not live inside its stacking context.
+  function portal(node: HTMLElement) {
+    document.body.appendChild(node);
+    return { destroy: () => node.remove() };
+  }
 
   let open = $state(false);
   let typed = $state('');
@@ -37,9 +45,14 @@
   }
 </script>
 
-<button class="btn" type="button" disabled={!server.online} onclick={openModal}>{$tr('reboot.button')}</button>
+{#if icon}
+  <button class="btn tb-ic" type="button" title={$tr('reboot.button')} aria-label={$tr('reboot.button')} disabled={!server.online} onclick={openModal}><PixIcon name="reboot" /></button>
+{:else}
+  <button class="btn" type="button" disabled={!server.online} onclick={openModal}>{$tr('reboot.button')}</button>
+{/if}
 
 {#if open}
+  <div use:portal>
   <Modal title={$tr('reboot.title')} labelId="reboot-dialog-title" onclose={close}>
     {#snippet children()}
       <p class="text">{$tr('reboot.text')}</p>
@@ -64,6 +77,7 @@
       </div>
     {/snippet}
   </Modal>
+  </div>
 {/if}
 
 <style>

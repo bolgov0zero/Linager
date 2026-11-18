@@ -206,7 +206,7 @@ export function groupContainers(list: DockerContainer[]): ContainerGroup[] {
     }
     g.items.push(c);
     if (isRunning(c)) g.running++;
-    if (c.upd === 'new') g.updatable++;
+    if (c.upd === 'new' && !c.ignored) g.updatable++;
     if (!g.file && key) g.file = c.config_file || c.workdir || '';
   }
   return [...map.values()].sort((a, b) => (a.key === '' ? 1 : b.key === '' ? -1 : a.key.localeCompare(b.key)));

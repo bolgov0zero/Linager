@@ -173,7 +173,7 @@ export interface ServiceUnit {
   enabled: string; // enabled | disabled | static | masked | indirect | ...
 }
 export type ServiceAction = 'start' | 'stop' | 'restart' | 'enable' | 'disable';
-export interface AptPackage { name: string; current: string; candidate: string; security: boolean; reboot: boolean }
+export interface AptPackage { name: string; current: string; candidate: string; security: boolean; reboot: boolean; ignored?: boolean }
 export interface AptList { packages: AptPackage[]; reboot_required: boolean; last_check: number; busy?: boolean }
 // ---- users, passkeys, snippets ----
 export interface UserRow {
@@ -332,6 +332,8 @@ export interface DockerContainer {
   /** Result of the last image check: new (a newer image exists), current, unknown. Empty if not checked. */
   upd?: 'new' | 'current' | 'unknown' | '';
   upd_local?: string; upd_remote?: string; upd_error?: string;
+  /** Updates of this container are ignored: it stays in the list but is not counted in the badges. */
+  ignored?: boolean;
 }
 export interface DockerImage { id: string; repo_tags: string[]; size: number; created: number; used: boolean }
 export interface DockerInfo { available: boolean; containers: DockerContainer[]; images: DockerImage[]; checked_at?: number }
@@ -735,6 +737,8 @@ export const api = {
   docker: (id: string) => request<DockerInfo>('GET', `api/servers/${enc(id)}/docker`),
   dockerContainerAction: (id: string, cid: string, action: 'start' | 'stop' | 'restart' | 'remove') =>
     request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/docker/containers/${enc(cid)}/${action}`, { confirm: action === 'remove' }),
+  aptIgnore: (id: string, name: string, ignore: boolean) => request<{ ok: boolean }>('PUT', `api/servers/${enc(id)}/apt-ignore`, { name, ignore }),
+  dockerIgnore: (id: string, name: string, ignore: boolean) => request<{ ok: boolean }>('PUT', `api/servers/${enc(id)}/docker-ignore`, { name, ignore }),
   dockerCheck: (id: string) => request<DockerCheckResult>('POST', `api/servers/${enc(id)}/docker/check`, {}),
   dockerRemoveImage: (id: string, imageId: string) =>
     request<{ ok: boolean }>('DELETE', `api/servers/${enc(id)}/docker/images/${enc(imageId)}`),
