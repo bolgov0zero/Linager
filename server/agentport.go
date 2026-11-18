@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -128,8 +129,12 @@ func (a *AgentPort) enroll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	if d := time.Since(time.Unix(req.TS, 0)); d > protocol.MaxSkew || d < -protocol.MaxSkew ||
-		!ed25519.Verify(req.Pubkey, protocol.EnrollSigningBytes(req.Pubkey, req.Hostname, req.TS), req.Sig) {
+	if d := time.Since(time.Unix(req.TS, 0)); d > protocol.MaxSkew || d < -protocol.MaxSkew {
+		// the clock of the new host is off: say so, "bad signature" sends a person looking in the wrong place
+		http.Error(w, fmt.Sprintf("the clock of this host differs from the server's by %s: set the time and the time zone, then try again", d.Round(time.Second)), http.StatusUnauthorized)
+		return
+	}
+	if !ed25519.Verify(req.Pubkey, protocol.EnrollSigningBytes(req.Pubkey, req.Hostname, req.TS), req.Sig) {
 		http.Error(w, "bad signature", http.StatusUnauthorized)
 		return
 	}

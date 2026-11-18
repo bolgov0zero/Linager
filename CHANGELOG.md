@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Change: a new host whose clock differs from the server's by more than two minutes is refused with a clear message ("the clock of this host differs from the server's by ...: set the time and the time zone") instead of "bad signature".
+
 ## 0.3.0-beta.15
 
 - Fix: **the "external" install link used the host name of the server** (`https://homeSRV-linager:43752/...`) instead of the address of the site. A name without a dot was taken for a name from the internet, and it stood first in `agents.hosts`. Now a bare host name counts as local; the external command uses the site address (a domain or a public IP of `agents.hosts`, or the address the panel was opened with), and the local command prefers an IP address of the local network to a name. Test: `TestJoinHostsBareNameIsLocal`.
