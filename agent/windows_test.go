@@ -193,15 +193,23 @@ func TestWindowsModules(t *testing.T) {
 func TestWindowsReplaceRunningStyleAndRestore(t *testing.T) {
 	dir := t.TempDir()
 	exe := filepath.Join(dir, "linager.exe")
-	if err := os.WriteFile(exe, []byte("old"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	// the file is open, like a running program: it cannot be overwritten, but it can be renamed
-	held, err := os.Open(exe)
+	// a program that really runs from this file, as the agent does: its file cannot be overwritten or deleted
+	src, err := os.ReadFile(filepath.Join(os.Getenv("SystemRoot"), "System32", "cmd.exe"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = held.Close() }()
+	if err := os.WriteFile(exe, src, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	running := exec.Command(exe, "/c", "ping -n 60 127.0.0.1 >nul")
+	if err := running.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = running.Process.Kill(); _ = running.Wait() }()
+	time.Sleep(500 * time.Millisecond)
+	if err := os.WriteFile(exe, []byte("x"), 0o600); err == nil {
+		t.Fatal("a running program must not be overwritable: the test would prove nothing")
+	}
 	tmp := exe + ".linager-new"
 	if err := os.WriteFile(tmp, []byte("new"), 0o600); err != nil {
 		t.Fatal(err)
@@ -212,16 +220,16 @@ func TestWindowsReplaceRunningStyleAndRestore(t *testing.T) {
 	if b, _ := os.ReadFile(exe); string(b) != "new" {
 		t.Fatalf("not replaced: %q", b)
 	}
-	if b, _ := os.ReadFile(exe + ".old"); string(b) != "old" {
-		t.Fatalf("the old file must be kept aside: %q", b)
+	if b, _ := os.ReadFile(exe + ".old"); len(b) != len(src) {
+		t.Fatalf("the old file must be kept aside, got %d bytes", len(b))
 	}
-	_ = held.Close()
-	CleanupOldBinary() // only removes the file next to the test binary: nothing to do here
-	// restore from the saved copy
+	// restore from the saved copy (the file that is aside is still in use: the second replacement must cope)
 	prev := filepath.Join(dir, prevFileName)
 	if err := os.WriteFile(prev, []byte("old"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	_ = running.Process.Kill()
+	_ = running.Wait()
 	if err := restoreExecutable(prev, exe); err != nil {
 		t.Fatal(err)
 	}
