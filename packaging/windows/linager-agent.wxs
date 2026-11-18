@@ -15,8 +15,14 @@
     <MajorUpgrade DowngradeErrorMessage="A newer version of the Linager agent is already installed." AllowSameVersionUpgrades="yes" />
     <MediaTemplate EmbedCab="yes" />
 
-    <Property Id="SERVER" Secure="yes" />
-    <Property Id="FINGERPRINT" Secure="yes" />
+    <!-- Secure: a value given on the command line wins over the search. The search brings back what an earlier
+         install stored, so an upgrade without SERVER keeps the address. -->
+    <Property Id="SERVER" Secure="yes">
+      <RegistrySearch Id="ServerSearch" Root="HKLM" Key="SOFTWARE\Linager\Agent" Name="Server" Type="raw" Bitness="always64" />
+    </Property>
+    <Property Id="FINGERPRINT" Secure="yes">
+      <RegistrySearch Id="FingerprintSearch" Root="HKLM" Key="SOFTWARE\Linager\Agent" Name="Fingerprint" Type="raw" Bitness="always64" />
+    </Property>
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="Linager" />
@@ -29,19 +35,16 @@
                         Description="Connects this computer to a Linager server."
                         Type="ownProcess" Start="auto" ErrorControl="normal" Vital="yes" Arguments="agent run" />
         <ServiceControl Id="LinagerServiceControl" Name="LinagerAgent" Start="install" Stop="both" Remove="uninstall" Wait="yes" />
-        <!-- if the service stops with an error, Windows starts it again -->
+        <!-- if the service process crashes, Windows starts it again (the agent itself retries every failure inside) -->
         <util:ServiceConfig ServiceName="LinagerAgent" FirstFailureActionType="restart" SecondFailureActionType="restart"
-                            ThirdFailureActionType="restart" RestartServiceDelayInSeconds="10" ResetPeriodInDays="1"
-                            FailureActionsWhen="failedToStopOrReturnedError" />
+                            ThirdFailureActionType="restart" RestartServiceDelayInSeconds="10" ResetPeriodInDays="1" />
       </Component>
 
-      <!-- Permanent: an upgrade (which removes the old package first) keeps the address of the server. -->
+      <!-- Permanent: the address of the server stays after the package is removed or replaced. -->
       <Component Id="ServerAddress" Bitness="always64" Permanent="yes">
-        <Condition>SERVER</Condition>
         <RegistryValue Root="HKLM" Key="SOFTWARE\Linager\Agent" Name="Server" Type="string" Value="[SERVER]" KeyPath="yes" />
       </Component>
       <Component Id="ServerFingerprint" Bitness="always64" Permanent="yes">
-        <Condition>FINGERPRINT</Condition>
         <RegistryValue Root="HKLM" Key="SOFTWARE\Linager\Agent" Name="Fingerprint" Type="string" Value="[FINGERPRINT]" KeyPath="yes" />
       </Component>
     </ComponentGroup>
