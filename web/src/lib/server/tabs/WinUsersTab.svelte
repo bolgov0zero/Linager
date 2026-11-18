@@ -135,9 +135,9 @@
         <tbody>
           {#each rows as u (u.sid)}
             <tr class="u">
-              <td class="nw">
+              <td class="who">
                 <div class="uname">{u.name}{#if u.builtin}<span class="badge tone-muted">{$T('wu.builtin')}</span>{/if}</div>
-                <div class="muted small">{u.full_name || u.description}</div>
+                <div class="muted small desc">{u.full_name || u.description}</div>
               </td>
               <td><span class="badge" class:tone-ok={u.enabled} class:tone-muted={!u.enabled}>{u.enabled ? $T('wu.enabled') : $T('wu.disabled')}</span></td>
               <td><div class="gl">{#each u.groups as g (g)}<span class="gtag" class:hot={HOT_GROUPS.includes(g)}>{g}</span>{:else}<span class="muted">—</span>{/each}</div></td>
@@ -220,14 +220,17 @@
   .search { flex: 1 1 200px; max-width: 320px; height: 36px; padding-block: 0; }
   .add { margin-left: auto; }
   .table-wrap { overflow-x: auto; }
-  .tbl { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 13px; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
   .tbl th { padding: 6px 8px; text-align: left; font-family: var(--font-display); font-weight: 400; font-size: 12px; color: var(--muted); border-bottom: 2px solid var(--line); white-space: nowrap; }
   .tbl td { padding: 8px; vertical-align: middle; border-bottom: 1px dashed var(--seg-off); }
   .tbl tr.u:hover td { background: var(--seg-off); }
   .nw { white-space: nowrap; }
+  /* a long description (Windows has some) wraps inside its column and never widens the table */
+  .who { max-width: 380px; }
+  .desc { overflow-wrap: anywhere; }
   .uname { display: flex; align-items: center; gap: 8px; font-weight: 600; white-space: nowrap; }
   .gl { display: flex; flex-wrap: wrap; gap: 4px; }
-  .gtag { padding: 0 6px; white-space: nowrap; border: 1px solid var(--muted); color: var(--muted); font-size: 12px; }
+  .gtag { padding: 0 6px; overflow-wrap: anywhere; border: 1px solid var(--muted); color: var(--muted); font-size: 12px; }
   .gtag.hot { border-color: var(--warn); color: var(--warn); }
   .badge { display: inline-block; padding: 0 6px; border: 2px solid currentColor; font-size: 12px; line-height: 1.35; white-space: nowrap; }
   .tone-ok { color: var(--good); }

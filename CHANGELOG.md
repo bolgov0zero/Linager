@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fix: **"invalid mount" in the Disk tab of a Windows server** when counting the used space: the panel accepted only mount points that start with "/", and a Windows volume is "C:". Test: `TestValidMount`.
+- Fix: the Users tab of a Windows server had a wide horizontal scroll: a long description of a built-in account (it was never wrapped) widened the table. Descriptions and group names wrap now.
+
 ## 0.3.0
 
 The first stable release with the **Windows agent** (beta feature, see `docs/en/windows.md`). It gathers everything of 0.3.0-beta.1 to beta.15 below; there is no database migration, a server and its Linux agents update as usual.

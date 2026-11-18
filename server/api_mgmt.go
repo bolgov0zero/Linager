@@ -387,6 +387,18 @@ func (a *Admin) diskState(w http.ResponseWriter, r *http.Request, _ *store.User)
 	a.proxyCall(w, r, "disk", "state", nil, 40*time.Second)
 }
 
+// validMount accepts a mount point of Linux ("/", "/var") and a volume of Windows ("C:"). The agent checks that the
+// volume is one it lists itself.
+func validMount(m string) bool {
+	if m == "" || len(m) > 512 {
+		return false
+	}
+	if strings.HasPrefix(m, "/") {
+		return true
+	}
+	return len(m) >= 2 && len(m) <= 3 && m[1] == ':' && (m[0]|0x20) >= 'a' && (m[0]|0x20) <= 'z' && (len(m) == 2 || m[2] == '\\' || m[2] == '/')
+}
+
 // diskScan measures what takes the space on one filesystem; it can take a minute on a big one.
 func (a *Admin) diskScan(w http.ResponseWriter, r *http.Request, u *store.User) {
 	s := a.serverOr404(w, r)
@@ -400,7 +412,7 @@ func (a *Admin) diskScan(w http.ResponseWriter, r *http.Request, u *store.User) 
 	if !decode(w, r, &req) {
 		return
 	}
-	if req.Mount == "" || len(req.Mount) > 512 || !strings.HasPrefix(req.Mount, "/") {
+	if !validMount(req.Mount) {
 		jsonErr(w, http.StatusBadRequest, "invalid mount")
 		return
 	}
