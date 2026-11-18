@@ -38,7 +38,7 @@ type updateMarker struct {
 }
 
 func markerPath(dir string) string { return filepath.Join(dir, "update.json") }
-func prevPath(dir string) string   { return filepath.Join(dir, "linager.prev") }
+func prevPath(dir string) string   { return filepath.Join(dir, prevFileName) }
 
 type updater struct {
 	dir     string
@@ -189,7 +189,7 @@ func (u *updater) Apply(ctx context.Context, version string, key *release.Key) e
 		return fail(0, err)
 	}
 	defer func() { _ = os.Remove(tmp) }()
-	brc, size, err := fetchSized(ctx, c, root+"/binary?arch="+release.HostArch, 200<<20)
+	brc, size, err := fetchSized(ctx, c, root+"/binary?arch="+release.HostKey(), 200<<20)
 	if err != nil {
 		_ = f.Close()
 		return fail(0, err)
@@ -215,9 +215,9 @@ func (u *updater) Apply(ctx context.Context, version string, key *release.Key) e
 	if strings.TrimPrefix(m.Version, "v") != strings.TrimPrefix(version, "v") {
 		return fail(1, errors.New("manifest version mismatch"))
 	}
-	asset, ok := m.Asset(release.HostArch)
+	asset, ok := m.HostAsset()
 	if !ok {
-		return fail(1, fmt.Errorf("the release has no binary for %s", release.HostArch))
+		return fail(1, fmt.Errorf("the release has no binary for %s", release.HostKey()))
 	}
 	if hex.EncodeToString(h.Sum(nil)) != strings.ToLower(asset.SHA256) || (asset.Size > 0 && n != asset.Size) {
 		return fail(1, errors.New("binary does not match the signed manifest"))
@@ -241,13 +241,13 @@ func (u *updater) Apply(ctx context.Context, version string, key *release.Key) e
 	if err := os.WriteFile(markerPath(u.dir), mb2, 0o600); err != nil {
 		return fail(3, err)
 	}
-	if err := os.Rename(tmp, exe); err != nil {
+	if err := replaceExecutable(tmp, exe); err != nil {
 		_ = os.Remove(markerPath(u.dir))
 		return fail(3, err)
 	}
 	if err := armRollbackFn(u.dir, exe); err != nil {
 		// without the safety net the update is not allowed to proceed
-		_ = copyExecutable(prevPath(u.dir), exe)
+		_ = restoreExecutable(prevPath(u.dir), exe)
 		_ = os.Remove(markerPath(u.dir))
 		return fail(3, fmt.Errorf("cannot arm the rollback timer: %w", err))
 	}
@@ -305,10 +305,12 @@ func RollbackUpdate(dir, exe string) error {
 	if _, err := os.Stat(markerPath(dir)); err != nil {
 		return nil // already confirmed
 	}
-	if err := copyExecutable(prevPath(dir), exe); err != nil {
+	prepareRollback() // Windows: the service is stopped first, so that its file can be replaced
+	if err := restoreExecutable(prevPath(dir), exe); err != nil {
 		return err
 	}
 	_ = os.Remove(markerPath(dir))
+	rollbackDone()
 	return restartService()
 }
 

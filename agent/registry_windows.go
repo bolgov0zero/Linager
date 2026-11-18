@@ -7,12 +7,14 @@ import (
 	"log/slog"
 
 	"github.com/bolgov0zero/linager/internal/config"
+	"github.com/bolgov0zero/linager/internal/version"
 )
 
 // registerPlatform registers the modules of a Windows host: terminal, services, processes, event log and files.
 // The other modules of the Linux agent (apt, firewall, network, users, docker, disk, security) have no Windows
-// counterpart yet, and updates of the agent itself go through the MSI package.
+// counterpart yet.
 func (r *Registry) registerPlatform(cfg *config.Agent, _ Collector, _ *slog.Logger, _ string) {
+	r.cmds["update.apply"] = r.updateApplyCmd(version.Version) // the panel updates the agent: the signed exe replaces the running one
 	if cfg.Enabled("terminal") {
 		r.streams["terminal"] = termStream
 	}

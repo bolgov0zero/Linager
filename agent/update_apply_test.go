@@ -1,5 +1,3 @@
-//go:build !windows
-
 package agent
 
 import (
@@ -18,6 +16,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -49,14 +48,16 @@ func newApplyFixture(t *testing.T, newBinary, servedBinary string) *applyFixture
 	copy(key.ID[:], "applykey")
 
 	sum := sha256.Sum256([]byte(newBinary))
-	asset := release.Asset{Name: release.BinaryAsset(release.HostArch), SHA256: hex.EncodeToString(sum[:]), Size: int64(len(newBinary))}
-	m := release.Manifest{Version: "0.2.0", Channel: "stable", SHA256: asset.SHA256, Size: asset.Size, Assets: map[string]release.Asset{release.HostArch: asset}}
-	mb, _ := json.Marshal(m)
-	if release.HostArch != release.ArchAMD64 { // the top-level fields describe the amd64 binary
-		a := release.Asset{Name: release.BinaryAsset(release.ArchAMD64), SHA256: asset.SHA256, Size: asset.Size}
-		m.Assets[release.ArchAMD64] = a
-		mb, _ = json.Marshal(m)
+	name := release.BinaryAsset(release.HostArch)
+	if runtime.GOOS == "windows" {
+		name = release.WindowsBinaryAsset
 	}
+	asset := release.Asset{Name: name, SHA256: hex.EncodeToString(sum[:]), Size: int64(len(newBinary))}
+	m := release.Manifest{Version: "0.2.0", Channel: "stable", SHA256: asset.SHA256, Size: asset.Size, Assets: map[string]release.Asset{release.HostKey(): asset}}
+	if runtime.GOOS != "windows" && release.HostArch != release.ArchAMD64 { // the top-level fields describe the amd64 binary
+		m.Assets[release.ArchAMD64] = release.Asset{Name: release.BinaryAsset(release.ArchAMD64), SHA256: asset.SHA256, Size: asset.Size}
+	}
+	mb, _ := json.Marshal(m)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/v1/release/0.2.0/manifest.json", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write(mb) })
@@ -84,7 +85,11 @@ func newApplyFixture(t *testing.T, newBinary, servedBinary string) *applyFixture
 		t.Fatal(err)
 	}
 
-	f := &applyFixture{dir: dir, exe: filepath.Join(dir, "linager"), key: key}
+	exeName := "linager"
+	if runtime.GOOS == "windows" {
+		exeName = "linager.exe"
+	}
+	f := &applyFixture{dir: dir, exe: filepath.Join(dir, exeName), key: key}
 	mustWrite(t, f.exe, []byte("old binary"))
 	oldExe, oldArm := executablePath, armRollbackFn
 	executablePath = func() (string, error) { return f.exe, nil }
@@ -128,7 +133,7 @@ func TestApplyReportsEveryStage(t *testing.T) {
 	if b, _ := os.ReadFile(f.exe); string(b) != "new binary" {
 		t.Fatalf("the binary was not replaced: %q", b)
 	}
-	if fi, _ := os.Stat(f.exe); fi.Mode().Perm()&0o100 == 0 {
+	if fi, _ := os.Stat(f.exe); runtime.GOOS != "windows" && fi.Mode().Perm()&0o100 == 0 {
 		t.Fatalf("the new binary is not executable: %v", fi.Mode())
 	}
 	if b, _ := os.ReadFile(prevPath(f.dir)); string(b) != "old binary" {

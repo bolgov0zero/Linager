@@ -126,3 +126,81 @@ func TestLoadCachedChecksEveryArchitecture(t *testing.T) {
 		t.Fatal("a missing binary must be rejected")
 	}
 }
+
+// publishWindows adds the Windows agent to a release that was published with publishArches. tamper serves a file
+// that differs from the signed checksum.
+func (r *fakeRepo) publishWindows(tag, body string, tamper bool) {
+	var rel map[string]any
+	for _, x := range r.rels {
+		if x["tag_name"] == tag {
+			rel = x
+		}
+	}
+	var m release.Manifest
+	_ = json.Unmarshal(r.data[tag+"/m"], &m)
+	sum := sha256.Sum256([]byte(body))
+	m.Assets[release.WindowsKey] = release.Asset{Name: release.WindowsBinaryAsset, SHA256: hex.EncodeToString(sum[:]), Size: int64(len(body))}
+	mb, _ := json.Marshal(m)
+	r.data[tag+"/m"], r.data[tag+"/s"] = mb, []byte(signFile(r.priv, r.key.ID, mb))
+	served := body
+	if tamper {
+		served += "evil"
+	}
+	r.data[tag+"/"+release.WindowsBinaryAsset] = []byte(served)
+	rel["assets"] = append(rel["assets"].([]map[string]string), map[string]string{"name": release.WindowsBinaryAsset, "browser_download_url": r.srv.URL + "/dl/" + tag + "/" + release.WindowsBinaryAsset})
+}
+
+func TestDownloadStoresTheWindowsAgent(t *testing.T) {
+	r := newFakeRepo(t)
+	r.publishArches("v0.2.0", map[string]string{"amd64": "AMD64-binary", "arm64": "ARM64-binary"}, "", "")
+	r.publishWindows("v0.2.0", "WINDOWS-exe", false)
+	rels, _ := URL(r.srv.URL).Releases(context.Background())
+	dir := t.TempDir()
+	c, err := Download(context.Background(), rels[0], r.key, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b, err := os.ReadFile(c.Dir + "/" + release.WindowsBinaryAsset); err != nil || string(b) != "WINDOWS-exe" {
+		t.Fatalf("the Windows file is not in the cache: %q %v", b, err)
+	}
+	if _, ok := c.Manifest.WindowsAsset(); !ok {
+		t.Fatal("the manifest must carry the Windows asset")
+	}
+	// the architectures that servers know are not confused by the Windows key
+	if got := len(c.Manifest.AssetList()); got != 2 {
+		t.Fatalf("AssetList must list the Linux architectures only, got %d", got)
+	}
+	if _, err := LoadCached(r.key, dir, "v0.2.0"); err != nil {
+		t.Fatal(err)
+	}
+	// a file that no longer matches its signed checksum is not distributed
+	if err := os.WriteFile(c.Dir+"/"+release.WindowsBinaryAsset, []byte("tampered"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadCached(r.key, dir, "v0.2.0"); err == nil {
+		t.Fatal("a tampered Windows file must fail the check")
+	}
+}
+
+func TestDownloadRefusesATamperedWindowsAgent(t *testing.T) {
+	r := newFakeRepo(t)
+	r.publishArches("v0.2.0", map[string]string{"amd64": "AMD64-binary"}, "", "")
+	r.publishWindows("v0.2.0", "WINDOWS-exe", true)
+	rels, _ := URL(r.srv.URL).Releases(context.Background())
+	if _, err := Download(context.Background(), rels[0], r.key, t.TempDir()); err == nil || !strings.Contains(err.Error(), release.WindowsBinaryAsset) {
+		t.Fatalf("a tampered Windows file must be refused: %v", err)
+	}
+}
+
+func TestReleaseWithoutTheWindowsFileStillServesLinux(t *testing.T) {
+	r := newFakeRepo(t)
+	r.publishArches("v0.2.0", map[string]string{"amd64": "AMD64-binary"}, "", "")
+	rels, _ := URL(r.srv.URL).Releases(context.Background())
+	c, err := Download(context.Background(), rels[0], r.key, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := c.Manifest.WindowsAsset(); ok {
+		t.Fatal("this release has no Windows file")
+	}
+}

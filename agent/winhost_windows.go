@@ -48,6 +48,7 @@ func RunHost(ctx context.Context, o HostOptions) error {
 			return true
 		}
 	}
+	CleanupOldBinary() // the file an earlier update moved aside
 	notified := false
 	for ctx.Err() == nil {
 		if !enrolled(o.DataDir) {

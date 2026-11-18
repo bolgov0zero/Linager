@@ -120,6 +120,12 @@ func Download(ctx context.Context, rel Release, key *release.Key, cacheDir strin
 		return nil, errors.New("the release has no binary for this machine (" + release.HostArch + ")")
 	}
 	var hostSize int64
+	// The Windows agent is optional: a release that failed to build it still serves Linux.
+	if wa, ok := m.WindowsAsset(); ok && rel.Assets[wa.Name] != "" {
+		if _, err := downloadAsset(ctx, rel, wa, filepath.Join(tmp, wa.Name)); err != nil {
+			return nil, fmt.Errorf("%s: %w", wa.Name, err)
+		}
+	}
 	for arch, a := range assets {
 		n, err := downloadAsset(ctx, rel, a, filepath.Join(tmp, a.Name))
 		if err != nil {
@@ -219,6 +225,14 @@ func LoadCached(key *release.Key, cacheDir, version string) (*Cached, error) {
 		}
 		if arch == release.HostArch {
 			c.Size = n
+		}
+	}
+	if wa, ok := m.WindowsAsset(); ok {
+		// optional: a release without the file is still good for Linux, a file that is there must match
+		if _, err := os.Stat(filepath.Join(dir, wa.Name)); err == nil {
+			if _, err := checkFile(filepath.Join(dir, wa.Name), wa); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if st, err := os.Stat(c.BinaryPath()); err == nil {

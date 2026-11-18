@@ -378,8 +378,10 @@ func (u *Updates) agentRows(ctx context.Context) ([]AgentRow, int) {
 	servers, _ := u.DB.Servers(ctx)
 	rows, _ := u.DB.AgentUpdates(ctx)
 	minAgent := ""
+	winBuild := false // the cached release has the Windows agent
 	if c, err := update.LoadCached(u.Key, u.Cache, version.Version); err == nil {
 		minAgent = c.Manifest.MinAgent
+		_, winBuild = c.Manifest.WindowsAsset()
 	}
 	out := make([]AgentRow, 0, len(servers))
 	count := 0
@@ -396,8 +398,9 @@ func (u *Updates) agentRows(ctx context.Context) ([]AgentRow, int) {
 			r.Status, r.Target, r.Message, r.Steps = "rollback", au.Version, au.Message, au.Steps
 		case has && au.Status == "failed":
 			r.Status, r.Target, r.Message, r.Steps = "failed", au.Version, au.Message, au.Steps
-		case isWindowsOS(s.OS):
-			// a Windows agent has no update in place: the panel shows that a new MSI is out and never queues it
+		case windowsByHand(s.OS, s.AgentVersion, winBuild):
+			// An agent older than the first one that updates itself, or a release without the Windows file: a new MSI
+			// is installed by hand, the panel only shows that one is out and never queues the agent.
 			r.Status, r.Target = "current", version.Version
 			r.Manual = release.Newer(version.Version, s.AgentVersion)
 		default:
@@ -869,6 +872,15 @@ func countMigrations() int {
 		}
 	}
 	return n
+}
+
+// MinWindowsUpdateAgent is the first Windows agent that can update itself from the panel; older ones need a new MSI.
+const MinWindowsUpdateAgent = "v0.3.0-beta.4"
+
+// windowsByHand reports a Windows agent that cannot be updated from the panel: it is older than the first one that
+// updates itself, or the release has no Windows file.
+func windowsByHand(osName, agentVersion string, releaseHasWindows bool) bool {
+	return isWindowsOS(osName) && (!releaseHasWindows || release.Compare(release.ParseVersion(agentVersion), release.ParseVersion(MinWindowsUpdateAgent)) < 0)
 }
 
 // isWindowsOS reports whether the OS name an agent sent is a Windows one (Linux names never start so).

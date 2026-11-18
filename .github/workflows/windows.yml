@@ -77,6 +77,13 @@ jobs:
           if (Test-Path C:\ProgramData\Linager\agent.log) { Get-Content C:\ProgramData\Linager\agent.log -Tail 20 } else { Write-Warning "no log file" }
           & "$env:ProgramFiles\Linager\linager.exe" agent status
           if ($svc.Status -ne 'Running') { throw "the service is not running" }
+          # the restart that an update starts: the service stops and starts again with a new process id
+          $before = (Get-CimInstance Win32_Service -Filter "Name='LinagerAgent'").ProcessId
+          & "$env:ProgramFiles\Linager\linager.exe" agent restart-service
+          Start-Sleep -Seconds 3
+          $after = (Get-CimInstance Win32_Service -Filter "Name='LinagerAgent'").ProcessId
+          "restart: process $before -> $after"
+          if ((Get-Service LinagerAgent).Status -ne 'Running' -or $after -eq 0 -or $after -eq $before) { throw "the service was not restarted" }
           $p = Start-Process msiexec.exe -ArgumentList "/x `"$msi`" /qn /l*v remove.log" -Wait -PassThru
           if ($p.ExitCode -ne 0) { Get-Content remove.log -Tail 80; throw "remove failed: $($p.ExitCode)" }
           if (Get-Service LinagerAgent -ErrorAction SilentlyContinue) { throw "the service is still installed" }

@@ -36,3 +36,19 @@ func TestReleaseBinaryByArch(t *testing.T) {
 		}
 	}
 }
+
+func TestReleaseBinaryServesTheWindowsFile(t *testing.T) {
+	m := release.Manifest{Assets: map[string]release.Asset{
+		"amd64":            {Name: "linager_linux_amd64", SHA256: "a"},
+		release.WindowsKey: {Name: release.WindowsBinaryAsset, SHA256: "b"},
+	}}
+	if got, ok := releaseBinary(m, release.WindowsKey); !ok || got != release.WindowsBinaryAsset {
+		t.Fatalf("windows: %q %v", got, ok)
+	}
+	if got, ok := releaseBinary(m, ""); !ok || got != "linager_linux_amd64" {
+		t.Fatalf("an agent that names nothing is amd64: %q %v", got, ok)
+	}
+	if _, ok := releaseBinary(release.Manifest{Assets: map[string]release.Asset{"amd64": {Name: "x", SHA256: "a"}}}, release.WindowsKey); ok {
+		t.Fatal("a release without the Windows file has none to give")
+	}
+}

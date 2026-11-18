@@ -210,6 +210,10 @@ func releaseBinary(m release.Manifest, arch string) (string, bool) {
 	if arch == "" {
 		arch = release.ArchAMD64
 	}
+	if arch == release.WindowsKey {
+		a, ok := m.WindowsAsset()
+		return a.Name, ok
+	}
 	a, ok := m.AssetList()[arch]
 	return a.Name, ok
 }

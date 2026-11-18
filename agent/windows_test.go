@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -184,7 +185,83 @@ func TestWindowsModules(t *testing.T) {
 	if _, ok := reg.cmds["system.reboot"]; !ok {
 		t.Error("reboot is missing")
 	}
-	if _, ok := reg.cmds["update.apply"]; ok {
-		t.Error("a Windows agent must not take update.apply")
+	if _, ok := reg.cmds["update.apply"]; !ok {
+		t.Error("the panel updates a Windows agent: update.apply is missing")
+	}
+}
+
+func TestWindowsReplaceRunningStyleAndRestore(t *testing.T) {
+	dir := t.TempDir()
+	exe := filepath.Join(dir, "linager.exe")
+	if err := os.WriteFile(exe, []byte("old"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// the file is open, like a running program: it cannot be overwritten, but it can be renamed
+	held, err := os.Open(exe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = held.Close() }()
+	tmp := exe + ".linager-new"
+	if err := os.WriteFile(tmp, []byte("new"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := replaceExecutable(tmp, exe); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(exe); string(b) != "new" {
+		t.Fatalf("not replaced: %q", b)
+	}
+	if b, _ := os.ReadFile(exe + ".old"); string(b) != "old" {
+		t.Fatalf("the old file must be kept aside: %q", b)
+	}
+	_ = held.Close()
+	CleanupOldBinary() // only removes the file next to the test binary: nothing to do here
+	// restore from the saved copy
+	prev := filepath.Join(dir, prevFileName)
+	if err := os.WriteFile(prev, []byte("old"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := restoreExecutable(prev, exe); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(exe); string(b) != "old" {
+		t.Fatalf("not restored: %q", b)
+	}
+}
+
+func TestWindowsRollbackTask(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(prevPath(dir), []byte("old"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	exe := filepath.Join(dir, "linager.exe")
+	if err := armRollback(dir, exe); err != nil {
+		t.Fatalf("the task was not created: %v", err)
+	}
+	if err := exec.Command("schtasks.exe", "/Query", "/TN", rollbackTask).Run(); err != nil {
+		t.Fatalf("the task is not there: %v", err)
+	}
+	stopRollbackTimer()
+	if err := exec.Command("schtasks.exe", "/Query", "/TN", rollbackTask).Run(); err == nil {
+		t.Fatal("the task must be gone after the confirmation")
+	}
+}
+
+func TestWindowsRollbackUpdateRestoresTheOldBinary(t *testing.T) {
+	dir := t.TempDir()
+	exe := filepath.Join(dir, "linager.exe")
+	for path, content := range map[string]string{exe: "broken new", prevPath(dir): "good old", markerPath(dir): "{}"} {
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// there is no service in the test, so the final restart fails; the binary must be back anyway
+	_ = RollbackUpdate(dir, exe)
+	if b, _ := os.ReadFile(exe); string(b) != "good old" {
+		t.Fatalf("the old binary was not restored: %q", b)
+	}
+	if _, err := os.Stat(markerPath(dir)); err == nil {
+		t.Fatal("the marker must be removed")
 	}
 }

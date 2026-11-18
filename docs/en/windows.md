@@ -45,9 +45,13 @@ The same works from a console: `& "C:\Program Files\Linager\linager.exe" agent e
 - Remove: `msiexec /x linager_windows_amd64.msi /qn`. The keys, the log and the address of the server stay; to remove them as well, delete `C:\ProgramData\Linager` and the key `HKLM\SOFTWARE\Linager`. "Delete server" in the panel makes the agent remove its identity and service.
 
 ## Updating
-**The panel does not update a Windows agent**: it shows "new MSI X" in the table of agents on the Updates page. Install the new MSI over the old one (`msiexec /i ... /qn`): the service is stopped and started again, the pairing and the settings stay. The server of the same release should be updated first, as with Linux agents.
+From the panel, like a Linux agent: the "Updates" page (one agent, selected ones or all). The server gives the agent the signed `linager_windows_amd64.exe` of its release (the same file the MSI installs). The agent checks the signature of the manifest and the checksum, saves the running exe as `C:\ProgramData\Linager\agent\linager.prev.exe`, moves the running file aside (Windows allows renaming a running program, not overwriting it), puts the new one in its place and restarts the service. The stages are the same as on Linux (download, verify, backup, replace, restart, offline, reconnect, confirm).
+
+**Rollback.** Before the restart the agent creates a one-shot task of the Windows Task Scheduler, `LinagerAgentRollback` (runs as SYSTEM, about 70 seconds later). The new version confirms itself with its first connection to the server and deletes the task. If it does not (it cannot start, or cannot reach the server), the task runs the OLD exe: it stops the service, puts the old file back and starts the service again. By hand: `linager.exe agent update`, `linager.exe agent status`.
+
+**Agents of beta.1 to beta.3 cannot update from the panel** (they do not have the code for it): the table says "new MSI X". Install the MSI of `0.3.0-beta.4` or newer once; after that the panel updates the agent. The same table message appears when a release has no Windows file. The program list of Windows (the MSI product) keeps showing the version of the MSI after an update from the panel; this changes nothing in how the agent works, and the next MSI installs over it as usual. The server of the release must be updated first, as with Linux agents.
 
 ## Limits of the beta
-- Only x64. The exe and the MSI are not signed with a code signing certificate, so SmartScreen or an antivirus may warn about them.
+- Only x64. The agent is updated from the panel from `0.3.0-beta.4`; the rollback of a failed update was tested on a Windows runner and on one test machine only. The exe and the MSI are not signed with a code signing certificate, so SmartScreen or an antivirus may warn about them.
 - Checked: the code is built and tested on a Windows runner of GitHub Actions (metrics, services, processes, files, terminal, install and removal of the MSI). Not checked on a real fleet.
 - Windows reports one product name "Windows 10" for Windows 11; the agent tells them apart by the build number (22000 and up).

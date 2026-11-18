@@ -208,6 +208,35 @@ func SupportedArch(arch string) bool {
 	return false
 }
 
+// WindowsKey is the key of the Windows (amd64) binary in Manifest.Assets. It is not a GOARCH value, so servers and
+// agents of earlier releases, which read only the architectures they know, ignore the entry.
+const WindowsKey = "windows_amd64"
+
+// WindowsBinaryAsset is the release asset name of the Windows agent (the same file the MSI package installs).
+const WindowsBinaryAsset = "linager_windows_amd64.exe"
+
+// WindowsAsset returns the Windows binary of the release, when it has one.
+func (m Manifest) WindowsAsset() (Asset, bool) {
+	a, ok := m.Assets[WindowsKey]
+	return a, ok && a.SHA256 != ""
+}
+
+// HostKey is the name this process asks the server for: the Windows key on Windows, the architecture elsewhere.
+func HostKey() string {
+	if runtime.GOOS == "windows" {
+		return WindowsKey
+	}
+	return HostArch
+}
+
+// HostAsset returns the binary of the release for this process (see HostKey).
+func (m Manifest) HostAsset() (Asset, bool) {
+	if runtime.GOOS == "windows" {
+		return m.WindowsAsset()
+	}
+	return m.Asset(HostArch)
+}
+
 // BinaryAsset is the release asset name of the binary for arch.
 func BinaryAsset(arch string) string { return "linager_linux_" + arch }
 
