@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0-beta.14
+
+- Fix: **the install link did not work from Windows PowerShell at all** ("Could not create the SSL/TLS secure channel"). Two causes: the certificate of the agent port has an Ed25519 key, which Windows (Schannel) cannot verify in TLS, and Windows 10 and Server 2019 have no TLS 1.3. The server now has a **second certificate with an ECDSA P-256 key** (`agents-ec.crt` and `agents-ec.key` in the data directory; a server that was installed before makes it at the start, for the same hosts). The listener offers both: Go picks the first one the client can verify, so agents and wget keep the Ed25519 certificate and its pins, and a client without Ed25519 gets the ECDSA one. The Windows install command pins the fingerprint of the ECDSA certificate, the script gives the agent the fingerprint of the main one. Tests: which certificate a client with and without Ed25519 gets, the fingerprints in the command.
+- Fix: the Windows install command left its filter of certificates switched on for the whole PowerShell window, so every later HTTPS request in it failed ("could not establish trust"). The command now switches it off at the end, and the script does so before the installation.
+- Docs: `docs/*/windows.md` tell how to install from a local file (a computer that cannot reach the panel over HTTPS, or an offline one).
+
 ## 0.3.0-beta.13
 
 - Fix: the Windows install command failed with "Could not create the SSL/TLS secure channel". The agent port accepts only TLS 1.3, and Windows PowerShell on older systems (Windows 10 before 2004, Windows Server 2019) has none, and the command only asked for TLS 1.2. Now the command asks for TLS 1.3 and 1.2 (the first where the system has it), and **the agent port serves a client that cannot speak TLS 1.3 with TLS 1.2, without a client certificate, and only on the install link routes** (`/v1/join/...`); every other route answers such a client with 403, and agents always use TLS 1.3, so the protection of the agent connection is unchanged. Tested: a TLS 1.2 client gets the install script and is refused on the agent routes.

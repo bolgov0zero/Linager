@@ -24,14 +24,15 @@ func PinSetup(fp string) string {
 }
 
 // InstallCommand is the line a person runs in PowerShell as administrator on the new computer.
-func InstallCommand(host, port, fp, secret string) string {
-	return PinSetup(fp) + "; iex ((New-Object Net.WebClient).DownloadString(" + psq("https://"+net.JoinHostPort(host, port)+"/v1/join/"+secret+"/windows") + "))"
+func InstallCommand(host, port, pinFp, secret string) string {
+	// the filter of certificates is switched off again at the end: it would refuse every other HTTPS site in this window
+	return PinSetup(pinFp) + "; try { iex ((New-Object Net.WebClient).DownloadString(" + psq("https://"+net.JoinHostPort(host, port)+"/v1/join/"+secret+"/windows") + ")) } finally { [Net.ServicePointManager]::ServerCertificateValidationCallback = $null }"
 }
 
-func ScriptText(server, fp, token, msiSHA256 string) string {
+func ScriptText(server, fp, pinFp, token, msiSHA256 string) string {
 	return `# Linager: install the Windows agent by a link made in the admin panel.
 # The script comes from your Linager server; read it before you run it.
-` + PinSetup(fp) + `
+` + PinSetup(pinFp) + `
 $server = ` + psq(server) + `
 $fp = ` + psq(fp) + `
 $token = ` + psq(token) + `
@@ -52,6 +53,8 @@ New-Item -ItemType Directory -Force -Path $dir | Out-Null
 & icacls.exe (Split-Path $dir) /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null
 Set-Content -LiteralPath (Join-Path $dir 'join.token') -Value $token -NoNewline -Encoding ASCII
 
+# the certificate filter is not needed any more (the installer comes from this server only)
+[Net.ServicePointManager]::ServerCertificateValidationCallback = $null
 "Installing ..."
 $p = Start-Process -FilePath msiexec.exe -ArgumentList ('/i "' + $msi + '" /qn SERVER=' + $server + ' FINGERPRINT=' + $fp) -Wait -PassThru
 Remove-Item -LiteralPath $msi -Force -ErrorAction SilentlyContinue

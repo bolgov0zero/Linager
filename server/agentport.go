@@ -60,10 +60,12 @@ func (a *AgentPort) TLSConfig() *tls.Config {
 	// A client that cannot speak TLS 1.3 (Windows PowerShell on Windows 10 before 2004 and on Windows Server 2019 has
 	// no TLS 1.3) may still fetch the installer through an install link: it gets TLS 1.2 without a client
 	// certificate, and Handler lets it reach the install link routes only. Agents always speak TLS 1.3.
-	legacy := &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{a.Keys.TLS}, ClientAuth: tls.NoClientCert}
+	legacy := &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{a.Keys.TLS, a.Keys.TLSAlt}, ClientAuth: tls.NoClientCert}
 	return &tls.Config{
-		MinVersion:   tls.VersionTLS13,
-		Certificates: []tls.Certificate{a.Keys.TLS},
+		MinVersion: tls.VersionTLS13,
+		// the Ed25519 certificate first: Go picks the first one the client can verify, so an agent or wget gets it, and
+		// a client without Ed25519 (Windows PowerShell) gets the ECDSA one
+		Certificates: []tls.Certificate{a.Keys.TLS, a.Keys.TLSAlt},
 		ClientAuth:   tls.VerifyClientCertIfGiven,
 		ClientCAs:    pool,
 		GetConfigForClient: func(hi *tls.ClientHelloInfo) (*tls.Config, error) {

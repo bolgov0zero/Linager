@@ -30,6 +30,21 @@ msiexec /i linager_windows_amd64.msi /qn SERVER=panel.example.com:9443
 ### Install by a link (one command)
 The easiest way: in the panel open "Add server", tab "Install by a link", create a link and switch the command to **Windows**. On the new computer open PowerShell **as administrator** and paste the command. It checks the certificate of your server by its fingerprint (carried in the command), downloads the installer from the server, compares it with the signed release, hands the one-time code of the link to the service through a file that only SYSTEM and the administrators can read (`C:\ProgramData\Linager\agent\join.token`), installs and starts the service. The computer appears in the "Confirmations" tab and is confirmed in one click: no key to copy and no file to open. The script can be read first at `https://<server>/v1/join/<link>/windows`. It needs a release that has the installer package (`linager_windows_amd64.msi`, `0.3.0-beta.11` and newer).
 
+### Install from a local file
+Download `linager_windows_amd64.msi` and `SHA256SUMS` from the release (or take the file from the server: `https://<server>/v1/join/<link>/msi`), compare the checksum (`Get-FileHash -Algorithm SHA256 .\linager_windows_amd64.msi`), copy the MSI to the computer and, in PowerShell as administrator:
+
+```powershell
+msiexec /i C:\path\linager_windows_amd64.msi /qn SERVER=host:port FINGERPRINT=SHA256:...
+```
+
+The address is the agent port of the server, the fingerprint is shown in the panel (the install link command carries it). Then confirm the computer in "Confirmations" with the key from `C:\ProgramData\Linager\agent\enroll.txt`. For the confirmation in one click without a key, create a link in the panel and write its code to the protected file before the installation:
+
+```powershell
+New-Item -ItemType Directory -Force C:\ProgramData\Linager\agent | Out-Null
+icacls C:\ProgramData\Linager /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F'
+Set-Content C:\ProgramData\Linager\agent\join.token 'lk_...' -NoNewline -Encoding ASCII
+```
+
 ### Pairing
 1. In the panel open "Add server", tab "Confirmations": the host appears there a few seconds after the service starts.
 2. On the Windows host read the key and the check code (administrators only):

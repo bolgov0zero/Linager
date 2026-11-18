@@ -3,7 +3,9 @@
 package pki
 
 import (
+	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
@@ -148,6 +150,44 @@ func NewServerCert(hosts []string) (certPEM, keyPEM []byte, err error) {
 		return nil, nil, err
 	}
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), MarshalPrivateKey(priv), nil
+}
+
+// NewServerCertECDSA creates a second self-signed certificate for the agent listener, with an ECDSA P-256 key. The
+// listener offers it to clients that cannot verify an Ed25519 signature (Schannel, so Windows PowerShell), which is how
+// an install link works from Windows. Agents and wget keep getting the Ed25519 certificate.
+func NewServerCertECDSA(hosts []string) (certPEM, keyPEM []byte, err error) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, nil, err
+	}
+	sn, err := serial()
+	if err != nil {
+		return nil, nil, err
+	}
+	tpl := &x509.Certificate{
+		SerialNumber: sn,
+		Subject:      pkix.Name{CommonName: "linager-server"},
+		NotBefore:    time.Now().Add(-time.Minute),
+		NotAfter:     time.Now().AddDate(10, 0, 0),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	}
+	for _, h := range hosts {
+		if ip := net.ParseIP(h); ip != nil {
+			tpl.IPAddresses = append(tpl.IPAddresses, ip)
+		} else {
+			tpl.DNSNames = append(tpl.DNSNames, h)
+		}
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tpl, tpl, &key.PublicKey, key)
+	if err != nil {
+		return nil, nil, err
+	}
+	kder, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		return nil, nil, err
+	}
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: kder}), nil
 }
 
 // MarshalPrivateKey encodes an Ed25519 key as PKCS#8 PEM.

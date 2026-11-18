@@ -143,7 +143,7 @@ func (a *Admin) joinCreate(w http.ResponseWriter, r *http.Request, u *store.User
 		return
 	}
 	out := joinCreated{joinView: a.joinViewOf(r.Context(), t), Token: secret}
-	fp := pki.Fingerprint(a.Keys.TLSDER)
+	fp := pki.Fingerprint(a.Keys.TLSAltDER) // the pin of the Windows command: the certificate a Windows client is given
 	if ext != "" {
 		out.Commands = append(out.Commands, joinCommand{Kind: "external", Platform: "linux", Host: ext, Command: installCommand(ext, port, pin, secret)},
 			joinCommand{Kind: "external", Platform: "windows", Host: ext, Command: winjoin.InstallCommand(ext, port, fp, secret)})

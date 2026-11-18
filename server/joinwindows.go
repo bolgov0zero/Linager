@@ -57,5 +57,5 @@ func (a *AgentPort) joinWindowsScript(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
-	_, _ = fmt.Fprint(w, winjoin.ScriptText(a.serverAddr(r), pki.Fingerprint(a.Keys.TLSDER), r.PathValue("token"), msiSum)) //nolint:gosec // plain text for a shell: the token is checked above, the address is made safe by serverAddr, the fingerprint is base64
+	_, _ = fmt.Fprint(w, winjoin.ScriptText(a.serverAddr(r), pki.Fingerprint(a.Keys.TLSDER), pki.Fingerprint(a.Keys.TLSAltDER), r.PathValue("token"), msiSum)) //nolint:gosec // plain text for a shell: the token is checked above, the address is made safe by serverAddr, the fingerprint is base64
 }

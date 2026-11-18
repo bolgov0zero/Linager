@@ -116,7 +116,8 @@ func TestInstallLinks(t *testing.T) {
 	for _, c := range l1.Commands {
 		if c.Platform == "windows" {
 			winCmds++
-			if !strings.Contains(c.Command, "/v1/join/"+l1.Token+"/windows") || !strings.Contains(c.Command, "LinagerPin") || strings.Contains(c.Command, "\n") {
+			if !strings.Contains(c.Command, "/v1/join/"+l1.Token+"/windows") || !strings.Contains(c.Command, "LinagerPin") || strings.Contains(c.Command, "\n") ||
+				!strings.Contains(c.Command, "[LinagerPin]::Fp='"+pki.Fingerprint(keys.TLSAltDER)+"'") {
 				t.Fatalf("the Windows command: %s", c.Command)
 			}
 			continue
