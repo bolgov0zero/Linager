@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.12
+
+- Fix: **a release such as `beta.11` was taken for older than `beta.9`.** The label after the dash was compared as text ("beta.11" is below "beta.9" letter by letter), so a server on beta.9 did not offer beta.10 or beta.11, and an agent refused an update to them as a "downgrade". The numbers in the label are now compared by value, like semantic versioning does (beta.9 < beta.10 < beta.11, a number below a word, a label without a number below one with a number). Test: `TestPreReleaseNumbersAreCompared`. **A server or an agent of beta.9 or older still has the old comparison**, so it cannot update to this release from the panel: update the server by hand with `sudo linager update --version v0.3.0-beta.12 --allow-downgrade`, and an agent by installing the new MSI over the old one (or, on Linux, `linager agent update --version v0.3.0-beta.12` after the server is updated; the agent of a beta older than beta.10 may need the same by hand). From this release on the updates from the panel work as usual.
+
 ## 0.3.0-beta.11
 
 - New (beta): **the "Disk" tab for Windows servers**, the same tab as on Linux: the volumes with a forecast of when they fill up (the agent keeps a history), the tree of folders and the pie (system and programs, user profiles, temporary files, other, free), and the confirmed ways to free space: temporary files, the downloads of Windows Update, the Recycle Bin, the Delivery Optimization cache, crash dumps and reports, `Windows.old`. The Windows agent speaks the Linux protocol (`disk.state`, `disk.scan`, `disk.clean`); the server allows the new kinds of cleanup.

@@ -137,10 +137,45 @@ func Compare(a, b Version) int {
 		return 1
 	case b.Pre == "":
 		return -1
-	case a.Pre < b.Pre:
-		return -1
 	}
-	return 1
+	return comparePre(a.Pre, b.Pre)
+}
+
+// comparePre orders two pre-release labels as semantic versioning does: the dot-separated parts one by one, a number
+// by its value (beta.9 is below beta.11), a number below a word, a word by its letters, and the label with fewer
+// parts below one that begins the same way (beta is below beta.1).
+func comparePre(a, b string) int {
+	as, bs := strings.Split(a, "."), strings.Split(b, ".")
+	for i := 0; i < len(as) && i < len(bs); i++ {
+		x, y := as[i], bs[i]
+		xn, xerr := strconv.ParseUint(x, 10, 64)
+		yn, yerr := strconv.ParseUint(y, 10, 64)
+		switch {
+		case xerr == nil && yerr == nil:
+			if xn != yn {
+				if xn < yn {
+					return -1
+				}
+				return 1
+			}
+		case xerr == nil: // a number is below a word
+			return -1
+		case yerr == nil:
+			return 1
+		case x != y:
+			if x < y {
+				return -1
+			}
+			return 1
+		}
+	}
+	switch {
+	case len(as) < len(bs):
+		return -1
+	case len(as) > len(bs):
+		return 1
+	}
+	return 0
 }
 
 // Newer reports whether candidate is a higher version than current.
