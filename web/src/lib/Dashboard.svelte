@@ -6,6 +6,7 @@
   import CardView from './dashboard/CardView.svelte';
   import { fmtAgo, fmtRate, fmtUptime, pluralForm, type Units } from './dashboard/format';
   import Summary from './dashboard/Summary.svelte';
+  import OsBadge from './dashboard/OsBadge.svelte';
   import Tags from './dashboard/Tags.svelte';
   import { levelOf, summarize, tagsOf, toneOfPct, type AgentFlag } from './dashboard/status';
   import ContextMenu, { type MenuItem } from './ui/ContextMenu.svelte';
@@ -598,7 +599,10 @@
             ondragover={(e) => onDragOver(e, card.id)}
             ondrop={(e) => onDrop(e, card.id)}
             ondragend={onDragEnd}>
-            <b class="tname">{card.name}</b>
+            <div class="thead">
+              <b class="tname">{card.name}</b>
+              <OsBadge os={card.os} />
+            </div>
             <span class="tsub mono">{card.address}</span>
             {#if sample}
               <div class="tmeters">
@@ -739,6 +743,17 @@
     .map {
       grid-template-columns: repeat(6, minmax(0, 1fr));
     }
+  }
+
+  .thead {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .thead .tname {
+    min-width: 0;
   }
 
   .tile {

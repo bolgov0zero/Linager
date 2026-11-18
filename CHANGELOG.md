@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.6
+
+- Fix: the badge "Linux" / "Windows" is now also on the tiles of the **Map** view of the dashboard (beta.5 had it on the cards only). It sits in the top right corner of the tile next to the name, which is cut with an ellipsis when it does not fit. Checked in the browser.
+
 ## 0.3.0-beta.5
 
 - New: **a badge "Linux" or "Windows" in the corner of every server card** of the dashboard (the card view and the phone card; in the edit mode it sits after the name, next to the edit buttons). The platform comes from the OS name the agent reported (a Windows name starts with "Windows"); the Windows badge uses the accent colour, the Linux one is muted; the full OS name is in the tooltip. The map tiles and the list are not changed. Checked in the browser against the real server with one server marked as Windows. Docs: `docs/design/ui-spec.md`.
