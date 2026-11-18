@@ -78,5 +78,7 @@
   "wn.reverted": "The settings are restored",
   "wn.kept": "The settings are kept",
   "wn.lost": "The connection may have dropped: the change rolls back by itself, wait about a minute.",
-  "wn.warnCarrier": "This is probably the adapter that connects the panel to the computer. Wrong settings cut the connection, but the agent restores the old ones after 30 seconds."
+  "wn.warnCarrier": "This is probably the adapter that connects the panel to the computer. Wrong settings cut the connection, but the agent restores the old ones after 30 seconds.",
+  "wn.desc": "Description",
+  "wn.physical": "physical"
 }

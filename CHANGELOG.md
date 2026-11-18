@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0-beta.10
+
+- Fix: the Windows tabs had red buttons with red text, so the confirmation button and the "Delete" and "End session" buttons showed no label. The confirmation is the solid red button with a readable label again; the row buttons of dangerous actions are outlined. Checked in the browser.
+- Change: the adapters of the Windows "Network" tab look like the Linux ones: a card per adapter with its name, the tags UP or DOWN, physical or virtual, DHCP or static and the address in the folded line; the open card has the facts (description, MAC, MTU, mode, IPv4, gateway, DNS, speed) and the edit form inside it instead of a window.
+
 ## 0.3.0-beta.9
 
 - New (beta): **Users, Updates and Network tabs for Windows servers.** *Users:* local accounts and groups (add with a required password, set a password, enable or disable, change groups, delete) and the signed-in sessions with "End session"; the built-in administrator (SID -500) and the last enabled administrator are protected. *Updates:* Windows Update on the computer itself (title, KB, size, severity, security), install the selected or all updates with a live log, the number of updates and "restart required" on the dashboard (searched once an hour). *Network:* the adapters (state, DHCP or static, IPv4, gateway, DNS, MAC, speed, MTU) and the change of one adapter with **an automatic rollback after 30 seconds unless confirmed**, done by the agent through a one-shot Task Scheduler task and by `recoverNetChange` after a restart. New agent modules `users`, `winupdate`, `network` (Windows only; an agent of beta.8 or older gets them with the update from the panel); one server route `POST /api/servers/{id}/win/{module}/{action}` with the table of allowed actions, the operator rights `users`, `apt`, `network`, and audit entries `win.users.*`, `win.network.*`. Docs: `docs/en/windows.md`, `docs/ru/windows.md`, section 12o of the architecture.

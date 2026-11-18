@@ -105,7 +105,7 @@
             <button class="btn sm" type="button" disabled={busy || (u.builtin && u.enabled)} onclick={() => (u.enabled ? ask($tr('wu.confirm.disable', { name: u.name }), false, () => act('update', { name: u.name, enabled: false })) : void act('update', { name: u.name, enabled: true }))}>{u.enabled ? $tr('wu.disable') : $tr('wu.enable')}</button>
             <button class="btn sm" type="button" disabled={busy} onclick={() => { fPass = ''; dialog = { kind: 'password', user: u }; }}>{$tr('wu.setPassword')}</button>
             <button class="btn sm" type="button" disabled={busy} onclick={() => { fGroups = [...u.groups]; dialog = { kind: 'groups', user: u }; }}>{$tr('wu.editGroups')}</button>
-            <button class="btn sm danger" type="button" disabled={busy || u.builtin} onclick={() => ask($tr('wu.confirm.delete', { name: u.name }), true, () => act('delete', { name: u.name }))}>{$tr('wu.delete')}</button>
+            <button class="btn sm crit" type="button" disabled={busy || u.builtin} onclick={() => ask($tr('wu.confirm.delete', { name: u.name }), true, () => act('delete', { name: u.name }))}>{$tr('wu.delete')}</button>
           </div>
         </div>
       {/each}
@@ -118,7 +118,7 @@
       {#each data.sessions as s (s.id)}
         <div class="card urow">
           <div class="who"><b>{s.user}</b> <span class="muted small">· {$tr(`wu.type.${s.type}`)} · {s.state} · #{s.id}</span></div>
-          <button class="btn sm danger" type="button" disabled={busy} onclick={() => ask($tr('wu.confirm.logoff', { name: s.user }), true, () => act('logoff', { id: s.id }))}>{$tr('wu.logoff')}</button>
+          <button class="btn sm crit" type="button" disabled={busy} onclick={() => ask($tr('wu.confirm.logoff', { name: s.user }), true, () => act('logoff', { id: s.id }))}>{$tr('wu.logoff')}</button>
         </div>
       {/each}
     {/if}
@@ -174,7 +174,9 @@
   .acts { display: flex; gap: 6px; flex-wrap: wrap; }
   .chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
   .chip { padding: 1px 6px; border: 2px solid var(--line); font-size: 12px; }
-  .danger { color: var(--crit); border-color: var(--crit); }
+  /* a row button of a dangerous action: an outline, the solid red one is for the confirmation */
+  .crit { background: var(--surface); color: var(--crit); border-color: var(--crit); }
+  .crit:disabled { color: var(--muted); border-color: var(--line); }
   .err { color: var(--crit); }
   .form { display: flex; flex-direction: column; gap: 10px; min-width: min(360px, 80vw); }
   .form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }

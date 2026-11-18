@@ -13,7 +13,6 @@
     <button class="btn" class:danger type="button" onclick={onyes}>{$tr('win.confirm')}</button>
   </div>
 </Modal>
-
 <style>
   .row {
     display: flex;
@@ -22,8 +21,4 @@
     margin-top: 12px;
   }
 
-  .danger {
-    color: var(--crit);
-    border-color: var(--crit);
-  }
 </style>
