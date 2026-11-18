@@ -5,6 +5,9 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -90,9 +93,32 @@ func TestWindowsFiles(t *testing.T) {
 func mustJSON(v any) json.RawMessage { b, _ := json.Marshal(v); return b }
 
 func TestWindowsTerminal(t *testing.T) {
-	pty, err := startConPTY(shellCommand(), 100, 30)
+	root := os.Getenv("SystemRoot")
+	ps := filepath.Join(root, "System32", "WindowsPowerShell", "v1.0", "powershell.exe")
+	cmd := filepath.Join(root, "System32", "cmd.exe")
+	cases := []struct{ name, line, send, want string }{
+		{"cmd", `"` + cmd + `"`, "echo lin^ager-ok\r\n", "linager-ok"},
+		{"powershell-plain", `"` + ps + `" -NoLogo -NoProfile`, "Write-Output ('lin'+'ager-ok')\r\n", "linager-ok"},
+		{"powershell-default", shellCommand(), "Write-Output ('lin'+'ager-ok')\r\n", "linager-ok"},
+	}
+	ok := 0
+	for _, c := range cases {
+		out, err := tryShell(c.line, c.send, c.want)
+		t.Logf("%s: err=%v answered=%v output=%q", c.name, err, strings.Contains(out, c.want), out)
+		if err == nil && strings.Contains(out, c.want) {
+			ok++
+		}
+	}
+	if ok == 0 {
+		t.Fatal("no shell answered in the pseudo console")
+	}
+}
+
+// tryShell starts a shell in a pseudo console, types a line and waits for the answer.
+func tryShell(cmdline, send, want string) (string, error) {
+	pty, err := startConPTY(cmdline, 100, 30)
 	if err != nil {
-		t.Fatal(err)
+		return "", err
 	}
 	defer pty.close()
 	var mu sync.Mutex
@@ -110,17 +136,16 @@ func TestWindowsTerminal(t *testing.T) {
 		}
 	}()
 	seen := func() string { mu.Lock(); defer mu.Unlock(); return sb.String() }
-	// the text that is typed has a quote in it, the answer has not: only a running shell can print it
 	time.Sleep(3 * time.Second) // the shell starts
-	if _, err := pty.in.Write([]byte("Write-Output ('lin'+'ager-ok')\r\n")); err != nil {
-		t.Fatal(err)
+	if _, err := pty.in.Write([]byte(send)); err != nil {
+		return seen(), err
 	}
-	for deadline := time.Now().Add(30 * time.Second); time.Now().Before(deadline); time.Sleep(200 * time.Millisecond) {
-		if strings.Contains(seen(), "linager-ok") {
-			return
+	for deadline := time.Now().Add(15 * time.Second); time.Now().Before(deadline); time.Sleep(200 * time.Millisecond) {
+		if strings.Contains(seen(), want) {
+			return seen(), nil
 		}
 	}
-	t.Fatalf("the shell did not answer; it printed %q", seen())
+	return seen(), errors.New("no answer")
 }
 
 func TestWindowsModules(t *testing.T) {

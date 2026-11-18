@@ -37,6 +37,7 @@ jobs:
         shell: pwsh
         run: |
           go vet ./agent ./cmd/linager ./internal/...
+          go test -v -run 'TestWindows' ./agent
           go test ./agent ./internal/...
       - name: Build linager_windows_amd64.exe
         shell: pwsh
