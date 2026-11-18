@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.5
+
+- Fix: **0.3.4 was published without the Windows files** (the MSI and the Windows agent): a new test did not build on Windows, the Windows part of the release failed, and the rest was published anyway. This release has the same changes as 0.3.4 and all the files. The tests of the Linux-only counting of updates now live in a file for Linux only.
+
 ## 0.3.4
 
 - Change: **the server page has its header in the top bar.** The back button, the name and the state of the server stand next to the logo, and the note, reboot and delete buttons are icons on the right (with tooltips). The block under the top bar and the line "Debian... · address · linager-agent..." are gone: the system is in the "System" card of the Overview, the address in the table of the interfaces, the version at the bottom of the side menu. The "last seen" time of an offline server is the tooltip of its badge. The phone keeps its own header.
