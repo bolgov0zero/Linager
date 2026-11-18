@@ -220,12 +220,30 @@ type ifCounters struct {
 	speedMbps int
 }
 
+// octets picks the byte counters of an adapter row. Some drivers (for example the emulated Intel PRO/1000 of
+// a hypervisor) leave the total in InOctets / OutOctets empty and report only the parts, so the larger of the total
+// and the sum of the parts is taken.
+func octets(r *windows.MibIfRow2) (rx, tx uint64) {
+	rx = max(r.InOctets, r.InUcastOctets+r.InMulticastOctets+r.InBroadcastOctets)
+	tx = max(r.OutOctets, r.OutUcastOctets+r.OutMulticastOctets+r.OutBroadcastOctets)
+	return rx, tx
+}
+
+func rowCounters(r *windows.MibIfRow2) ifCounters {
+	rx, tx := octets(r)
+	c := ifCounters{rx: rx, tx: tx}
+	if sp := r.ReceiveLinkSpeed; sp > 0 && sp != ^uint64(0) {
+		c.speedMbps = int(sp / 1_000_000) //nolint:gosec // a link speed in Mbit/s fits an int
+	}
+	return c
+}
+
 // readIfTable reads the counters of every adapter in one call, by interface index and by name (the alias that
 // net.Interfaces reports). One table is more robust than one call per adapter: an adapter that cannot be queried
-// alone is still in the table.
-func readIfTable() (byIndex map[int]ifCounters, byName map[string]ifCounters, err error) {
+// alone is still in the table. level is MibIfTableNormal or MibIfTableRaw (the numbers as the driver reports them).
+func readIfTable(level uint32) (byIndex map[int]ifCounters, byName map[string]ifCounters, err error) {
 	var t *windows.MibIfTable2
-	if err := windows.GetIfTable2Ex(windows.MibIfTableNormal, &t); err != nil || t == nil {
+	if err := windows.GetIfTable2Ex(level, &t); err != nil || t == nil {
 		if err == nil {
 			err = errors.New("no table")
 		}
@@ -235,15 +253,29 @@ func readIfTable() (byIndex map[int]ifCounters, byName map[string]ifCounters, er
 	rows := unsafe.Slice(&t.Table[0], int(t.NumEntries))
 	byIndex, byName = make(map[int]ifCounters, len(rows)), make(map[string]ifCounters, len(rows))
 	for i := range rows {
-		r := &rows[i]
-		c := ifCounters{rx: r.InOctets, tx: r.OutOctets}
-		if sp := r.ReceiveLinkSpeed; sp > 0 && sp != ^uint64(0) {
-			c.speedMbps = int(sp / 1_000_000) //nolint:gosec // a link speed in Mbit/s fits an int
-		}
-		byIndex[int(r.InterfaceIndex)] = c
-		byName[windows.UTF16ToString(r.Alias[:])] = c
+		c := rowCounters(&rows[i])
+		byIndex[int(rows[i].InterfaceIndex)] = c
+		byName[windows.UTF16ToString(rows[i].Alias[:])] = c
 	}
 	return byIndex, byName, nil
+}
+
+// legacyCounters reads the old 32-bit counters (they wrap at 4 GB; used only when the others are empty).
+func legacyCounters(index int) (ifCounters, bool) {
+	row := windows.MibIfRow{Index: uint32(index)} //nolint:gosec // an interface index is small and positive
+	if err := windows.GetIfEntry(&row); err != nil {
+		return ifCounters{}, false
+	}
+	return ifCounters{rx: uint64(row.InOctets), tx: uint64(row.OutOctets)}, true
+}
+
+// bigger merges two readings of one adapter: the larger counter of each pair, the speed that is known.
+func bigger(a, b ifCounters) ifCounters {
+	a.rx, a.tx = max(a.rx, b.rx), max(a.tx, b.tx)
+	if a.speedMbps == 0 {
+		a.speedMbps = b.speedMbps
+	}
+	return a
 }
 
 // readIfCounters asks Windows for the counters of one adapter (used when the table is not available).
@@ -252,18 +284,25 @@ func readIfCounters(index int) (ifCounters, bool) {
 	if err := windows.GetIfEntry2Ex(windows.MibIfTableNormal, &row); err != nil {
 		return ifCounters{}, false
 	}
-	c := ifCounters{rx: row.InOctets, tx: row.OutOctets}
-	if sp := row.ReceiveLinkSpeed; sp > 0 && sp != ^uint64(0) {
-		c.speedMbps = int(sp / 1_000_000) //nolint:gosec // a link speed in Mbit/s fits an int
-	}
-	return c, true
+	return rowCounters(&row), true
 }
 
 func (c *winCollector) collectNet(now time.Time) []protocol.NetIface {
 	dt := now.Sub(c.prevTime).Seconds()
 	ifaces, _ := net.Interfaces()
 	cur := make(map[string]ifCounters, len(ifaces))
-	byIndex, byName, terr := readIfTable()
+	byIndex, byName, terr := readIfTable(windows.MibIfTableNormal)
+	if byIndex == nil {
+		byIndex, byName = map[int]ifCounters{}, map[string]ifCounters{}
+	}
+	if rawIdx, rawName, rerr := readIfTable(windows.MibIfTableRaw); rerr == nil {
+		for k, v := range rawIdx {
+			byIndex[k] = bigger(byIndex[k], v)
+		}
+		for k, v := range rawName {
+			byName[k] = bigger(byName[k], v)
+		}
+	}
 	if terr != nil {
 		c.warnOnce("table", "network counters: the adapter table is not available, asking adapter by adapter", "err", terr)
 	}
@@ -287,6 +326,14 @@ func (c *winCollector) collectNet(now time.Time) []protocol.NetIface {
 		}
 		if !ok {
 			cc, ok = readIfCounters(ifc.Index)
+		}
+		if ok && cc.rx == 0 && cc.tx == 0 {
+			if lc, lok := legacyCounters(ifc.Index); lok {
+				cc = bigger(cc, lc)
+			}
+		}
+		if ok && n.Up && n.IP != "" && cc.rx == 0 && cc.tx == 0 {
+			c.warnOnce(ifc.Name+"/zero", "network counters: the driver reports no bytes for an adapter that is up", "adapter", ifc.Name, "index", ifc.Index)
 		}
 		if !ok && n.Up && n.IP != "" {
 			c.warnOnce(ifc.Name, "network counters: no counters for an adapter that is up", "adapter", ifc.Name, "index", ifc.Index)

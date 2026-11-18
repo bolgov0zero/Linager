@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/sys/windows"
+
 	"github.com/bolgov0zero/linager/internal/config"
 )
 
@@ -47,6 +49,17 @@ func TestWindowsCollector(t *testing.T) {
 	si := c.System("test")
 	if !strings.HasPrefix(si.OS, "Windows") || si.CPUCores == 0 || si.Hostname == "" || si.Kernel == "" {
 		t.Errorf("system info: %+v", si)
+	}
+}
+
+func TestWindowsOctetsUsesTheParts(t *testing.T) {
+	row := windows.MibIfRow2{InUcastOctets: 100, InMulticastOctets: 20, InBroadcastOctets: 3, OutUcastOctets: 50}
+	if rx, tx := octets(&row); rx != 123 || tx != 50 {
+		t.Errorf("parts only: rx=%d tx=%d", rx, tx)
+	}
+	row.InOctets, row.OutOctets = 500, 40
+	if rx, tx := octets(&row); rx != 500 || tx != 50 {
+		t.Errorf("the larger one: rx=%d tx=%d", rx, tx)
 	}
 }
 
