@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/coder/websocket"
@@ -56,11 +57,23 @@ func NewAgentPort(db *store.Store, keys *Keys, hub *Hub, metrics *Metrics, updat
 func (a *AgentPort) TLSConfig() *tls.Config {
 	pool := x509.NewCertPool()
 	pool.AddCert(a.Keys.CA.Cert)
+	// A client that cannot speak TLS 1.3 (Windows PowerShell on Windows 10 before 2004 and on Windows Server 2019 has
+	// no TLS 1.3) may still fetch the installer through an install link: it gets TLS 1.2 without a client
+	// certificate, and Handler lets it reach the install link routes only. Agents always speak TLS 1.3.
+	legacy := &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{a.Keys.TLS}, ClientAuth: tls.NoClientCert}
 	return &tls.Config{
 		MinVersion:   tls.VersionTLS13,
 		Certificates: []tls.Certificate{a.Keys.TLS},
 		ClientAuth:   tls.VerifyClientCertIfGiven,
 		ClientCAs:    pool,
+		GetConfigForClient: func(hi *tls.ClientHelloInfo) (*tls.Config, error) {
+			for _, v := range hi.SupportedVersions {
+				if v == tls.VersionTLS13 {
+					return nil, nil // the configuration above
+				}
+			}
+			return legacy, nil
+		},
 	}
 }
 
@@ -76,7 +89,18 @@ func (a *AgentPort) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/join/{token}/msi", a.joinMSI)
 	mux.HandleFunc("GET /v1/release/latest", a.releaseLatest)
 	mux.HandleFunc("GET /v1/release/{ver}/{file}", a.releaseFile)
-	return mux
+	return onlyJoinBelowTLS13(mux)
+}
+
+// onlyJoinBelowTLS13 lets a connection that negotiated less than TLS 1.3 reach the install link routes and nothing else.
+func onlyJoinBelowTLS13(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.TLS != nil && r.TLS.Version < tls.VersionTLS13 && !strings.HasPrefix(r.URL.Path, "/v1/join/") {
+			http.Error(w, "TLS 1.3 is required", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func writeJSON(w http.ResponseWriter, code int, v any) {

@@ -18,7 +18,7 @@ const pinCode = `using System;using System.Net.Security;using System.Security.Cr
 
 // PinSetup is the PowerShell that turns the pin on; the command and the script both use it.
 func PinSetup(fp string) string {
-	return "$ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; " +
+	return "$ErrorActionPreference='Stop'; try { [Net.ServicePointManager]::SecurityProtocol = 3072 -bor 12288 } catch { [Net.ServicePointManager]::SecurityProtocol = 3072 }; " +
 		"if (-not ('LinagerPin' -as [type])) { Add-Type -TypeDefinition " + psq(pinCode) + " }; [LinagerPin]::Fp=" + psq(fp) +
 		"; [Net.ServicePointManager]::ServerCertificateValidationCallback=[LinagerPin]::Callback"
 }

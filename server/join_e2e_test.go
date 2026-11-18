@@ -142,6 +142,18 @@ func TestInstallLinks(t *testing.T) {
 
 	// the script comes from the agent port, needs the token and shows what it does
 	pinned := &http.Client{Timeout: 10 * time.Second, Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}} //nolint:gosec // a test against the server's own certificate
+	// a client without TLS 1.3 (an older Windows PowerShell) may fetch the install link and nothing else
+	old := &http.Client{Timeout: 10 * time.Second, Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true, MaxVersion: tls.VersionTLS12}}} //nolint:gosec // a test against the server's own certificate
+	if resp, err := old.Get("https://" + cfg.Agents.Listen + "/v1/join/" + l1.Token); err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("a TLS 1.2 client must get the install script: %v %v", err, resp)
+	} else {
+		_ = resp.Body.Close()
+	}
+	if resp, err := old.Get("https://" + cfg.Agents.Listen + "/v1/release/latest"); err != nil || resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("a TLS 1.2 client must not reach the agent routes: %v %v", err, resp)
+	} else {
+		_ = resp.Body.Close()
+	}
 	get := func(path string) (int, string) {
 		resp, err := pinned.Get("https://" + cfg.Agents.Listen + path)
 		if err != nil {

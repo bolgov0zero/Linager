@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.13
+
+- Fix: the Windows install command failed with "Could not create the SSL/TLS secure channel". The agent port accepts only TLS 1.3, and Windows PowerShell on older systems (Windows 10 before 2004, Windows Server 2019) has none, and the command only asked for TLS 1.2. Now the command asks for TLS 1.3 and 1.2 (the first where the system has it), and **the agent port serves a client that cannot speak TLS 1.3 with TLS 1.2, without a client certificate, and only on the install link routes** (`/v1/join/...`); every other route answers such a client with 403, and agents always use TLS 1.3, so the protection of the agent connection is unchanged. Tested: a TLS 1.2 client gets the install script and is refused on the agent routes.
+
 ## 0.3.0-beta.12
 
 - Fix: **a release such as `beta.11` was taken for older than `beta.9`.** The label after the dash was compared as text ("beta.11" is below "beta.9" letter by letter), so a server on beta.9 did not offer beta.10 or beta.11, and an agent refused an update to them as a "downgrade". The numbers in the label are now compared by value, like semantic versioning does (beta.9 < beta.10 < beta.11, a number below a word, a label without a number below one with a number). Test: `TestPreReleaseNumbersAreCompared`. **A server or an agent of beta.9 or older still has the old comparison**, so it cannot update to this release from the panel: update the server by hand with `sudo linager update --version v0.3.0-beta.12 --allow-downgrade`, and an agent by installing the new MSI over the old one (or, on Linux, `linager agent update --version v0.3.0-beta.12` after the server is updated; the agent of a beta older than beta.10 may need the same by hand). From this release on the updates from the panel work as usual.
