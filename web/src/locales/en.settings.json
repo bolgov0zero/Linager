@@ -121,6 +121,7 @@
   "acc.modules.rootWarn": "The modules marked \"root access\" let a user do almost anything on the host: for example, an operator with the terminal can delete the agent or add their own key. Give them only to those you trust like an administrator.",
   "acc.modules.total": "Modules chosen: {n}",
   "acc.mod.terminal": "A root shell on the server and snippets.",
+  "acc.mod.desktop": "The screen of a Windows computer in the browser (remote desktop).",
   "acc.mod.files": "View and edit any file, upload and download.",
   "acc.mod.services": "systemd services: start, stop, restart.",
   "acc.mod.apt": "apt package updates.",

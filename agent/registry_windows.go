@@ -29,6 +29,11 @@ func (r *Registry) registerPlatform(cfg *config.Agent, _ Collector, _ *slog.Logg
 	if cfg.Enabled("logs") {
 		r.streams["logs"] = logsStream
 	}
+	if cfg.Enabled("desktop") {
+		r.streams["desktop"] = desktopStream
+		r.cmds["desktop.state"] = desktopStateCmd
+		r.cmds["desktop.enable"] = desktopEnableCmd
+	}
 	if cfg.Enabled("files") {
 		r.cmds["files.list"] = filesList
 		r.cmds["files.read"] = filesRead

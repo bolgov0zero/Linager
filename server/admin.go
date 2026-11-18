@@ -54,6 +54,7 @@ type Admin struct {
 
 	termMu sync.Mutex
 	terms  map[string]int
+	desks  map[string]int // open remote desktops per server (guarded by termMu)
 
 	// passkey ceremonies in progress (the challenge must survive between begin and finish)
 	cerMu sync.Mutex
@@ -173,6 +174,9 @@ func (a *Admin) Handler() http.Handler {
 	a.route(mux, "GET /api/servers/{id}/processes", "srv:processes", a.processesList)
 	a.route(mux, "POST /api/servers/{id}/processes/{pid}/kill", "srv:processes", a.killProcess)
 	a.route(mux, "GET /api/servers/{id}/stream", "srv", a.streamWS)
+	a.route(mux, "GET /api/servers/{id}/desktop", "srv:desktop", a.desktopWS)
+	a.route(mux, "GET /api/servers/{id}/desktop/state", "srv:desktop", a.desktopState)
+	a.route(mux, "POST /api/servers/{id}/desktop/enable", "srv:desktop", a.desktopEnable)
 	a.route(mux, "GET /api/servers/{id}/files", "srv:files", a.filesList)
 	a.route(mux, "GET /api/servers/{id}/files/content", "srv:files", a.filesContent)
 	a.route(mux, "PUT /api/servers/{id}/files/content", "srv:files", a.simpleFileOp("write", "files.write", false))
@@ -230,7 +234,9 @@ func (a *Admin) secureHeaders(next http.Handler) http.Handler {
 		if a.Trust.IsHTTPS(r) {
 			h.Set("Strict-Transport-Security", "max-age=31536000")
 		}
-		h.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+		// The remote desktop client is WebAssembly (it needs wasm-unsafe-eval, which allows no script from a string) and
+		// loads its module from a data: address, so connect-src lists data: as well.
+		h.Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' data:; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Referrer-Policy", "no-referrer")
@@ -245,7 +251,11 @@ func (a *Admin) static() http.Handler {
 	// Not every system mime table knows the web app manifest; nosniff is set, so the type must be right.
 	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
 	files := http.FileServerFS(a.Static)
+	gz := &gzipAssets{fsys: a.Static}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if gz.serve(w, r) {
+			return
+		}
 		p := strings.TrimPrefix(r.URL.Path, "/")
 		if p != "" {
 			if _, err := fs.Stat(a.Static, p); err != nil {

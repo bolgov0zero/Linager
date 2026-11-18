@@ -7,6 +7,7 @@
   import { showToast } from '../toast';
   import MetricsTab from './MetricsTab.svelte';
   import OverviewTab from './OverviewTab.svelte';
+  import DesktopTab from './tabs/DesktopTab.svelte';
   import TerminalTab from './tabs/TerminalTab.svelte';
   import LogsTab from './tabs/LogsTab.svelte';
   import ProcessesTab from './tabs/ProcessesTab.svelte';
@@ -267,6 +268,8 @@
         <DockerTab server={detail} />
       {:else if tab === 'terminal'}
         <TerminalTab server={detail} />
+      {:else if tab === 'desktop'}
+        <DesktopTab server={detail} />
       {:else if tab === 'services'}
         <ServicesTab server={detail} />
       {:else if tab === 'updates'}

@@ -40,6 +40,7 @@ export const ACTION_GROUPS: Option[] = [
   { value: 'files.', key: 'audit.group.files' },
   { value: 'service.', key: 'audit.group.services' },
   { value: 'stream.', key: 'audit.group.stream' },
+  { value: 'desktop.', key: 'audit.group.desktop' },
   { value: 'update.', key: 'audit.group.updates' },
   { value: 'docker.', key: 'audit.group.docker' },
   { value: 'process.', key: 'audit.group.process' },

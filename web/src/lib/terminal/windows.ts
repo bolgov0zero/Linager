@@ -8,7 +8,7 @@ export const TERM_LIMIT = 3;
 /** Floating windows share one store, z-order and dock: terminals and file editors. */
 export interface TermWindow {
   key: number;
-  kind: 'terminal' | 'editor';
+  kind: 'terminal' | 'editor' | 'desktop';
   serverId: string;
   /** Terminal: server name. Editor: file name. */
   name: string;
@@ -17,6 +17,8 @@ export interface TermWindow {
   serverName?: string;
   /** Terminal: the account the shell runs as (the Users tab); empty for root. */
   asUser?: string;
+  /** Desktop: how the computer is called inside the connection (its address in the panel). */
+  address?: string;
   initialText?: string;
   initialMtime?: number;
   x: number;
@@ -70,6 +72,16 @@ export function setTermUser(key: number, user: string): void {
   updateTermWindow(key, { asUser: user || undefined, name: termWindowName(win.serverName ?? win.name, user || undefined) });
 }
 
+/** Opens the remote desktop of a Windows server in a floating window; one per server (a Windows client edition lets one person in). */
+export function openDesktopWindow(serverId: string, serverName: string, address: string): void {
+  const open = get(termWindows).find((w) => w.kind === 'desktop' && w.serverId === serverId);
+  if (open) {
+    focusTermWindow(open.key);
+    return;
+  }
+  addWindow({ kind: 'desktop', serverId, name: serverName, serverName, address });
+}
+
 /** Opens a file in a floating editor; an already open file of the same server is brought to the front. */
 export function openEditorWindow(serverId: string, serverName: string, path: string, name: string, text: string, mtime: number): void {
   const list = get(termWindows);
@@ -95,8 +107,9 @@ function addWindow(init: Pick<TermWindow, 'kind' | 'serverId' | 'name'> & Partia
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const editor = init.kind === 'editor';
-  const w = Math.min(editor ? 760 : DEFAULT_W, vw - 32);
-  const h = Math.min(editor ? 520 : DEFAULT_H, vh - 96);
+  const desktop = init.kind === 'desktop';
+  const w = Math.min(desktop ? 1100 : editor ? 760 : DEFAULT_W, vw - 32);
+  const h = Math.min(desktop ? 740 : editor ? 520 : DEFAULT_H, vh - 96);
   const step = (list.length % 8) * CASCADE;
   const x = Math.max(16, Math.min(Math.round((vw - w) / 2) + step - 3 * CASCADE, vw - w - 16));
   const y = Math.max(16, Math.min(72 + step, vh - h - 16));

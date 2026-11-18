@@ -777,3 +777,21 @@ export function openStream(id: string, kind: StreamKind, params: Record<string, 
   ws.binaryType = 'arraybuffer';
   return ws;
 }
+// ---- remote desktop (RDP through the agent) ----
+
+export interface DesktopState {
+  enabled: boolean; listening: boolean; port: number; nla: boolean; service: string; supported: boolean; edition: string;
+}
+
+/** The WebSocket of the remote desktop client (RDCleanPath over binary messages). login is only written to the audit log. */
+export function desktopSocketUrl(id: string, login: string): string {
+  const url = new URL(`api/servers/${enc(id)}/desktop`, location.href);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  if (login) url.searchParams.set('login', login.slice(0, 64));
+  return url.toString();
+}
+
+export const desktopApi = {
+  state: (id: string) => request<DesktopState>('GET', `api/servers/${enc(id)}/desktop/state`),
+  enable: (id: string) => request<DesktopState>('POST', `api/servers/${enc(id)}/desktop/enable`, { confirm: true }),
+};

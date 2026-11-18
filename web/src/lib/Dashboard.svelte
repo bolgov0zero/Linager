@@ -8,14 +8,14 @@
   import Summary from './dashboard/Summary.svelte';
   import OsBadge from './dashboard/OsBadge.svelte';
   import Tags from './dashboard/Tags.svelte';
-  import { levelOf, summarize, tagsOf, toneOfPct, type AgentFlag } from './dashboard/status';
+  import { levelOf, osKind, summarize, tagsOf, toneOfPct, type AgentFlag } from './dashboard/status';
   import ContextMenu, { type MenuItem } from './ui/ContextMenu.svelte';
   import DeleteServerModal from './DeleteServerModal.svelte';
   import Segments from './ui/Segments.svelte';
   import PixIcon from './ui/PixIcon.svelte';
   import Select from './ui/Select.svelte';
   import { isPhone } from './ui/viewport';
-  import { openTermWindow } from './terminal/windows';
+  import { openDesktopWindow, openTermWindow } from './terminal/windows';
   import { showToast } from './toast';
 
   type Filter = 'all' | 'problems' | 'offline';
@@ -325,15 +325,19 @@
   function showMenu(x: number, y: number, card: ServerCard): void {
     const items: MenuItem[] = [
       { key: 'term', label: $tr('dash.terminal'), disabled: !card.online, onselect: () => openTermWindow(card.id, card.name) },
-      { key: 'open', label: $tr('dash.open'), onselect: () => onopen(card.name) },
     ];
+    // The remote desktop is for Windows computers only.
+    if (osKind(card.os) === 'windows') {
+      items.push({ key: 'desk', label: $tr('dash.desktop'), disabled: !card.online, onselect: () => openDesktopWindow(card.id, card.name, card.address) });
+    }
+    items.push({ key: 'open', label: $tr('dash.open'), onselect: () => onopen(card.name) });
     // Choosing the group of a server is part of editing the dashboard.
     if (editing && groups.length > 0) {
       for (const g of groups) {
         items.push({
           key: `g${g.id}`,
           label: `${card.group_id === g.id ? '✓ ' : ''}${$tr('dash.group.label')}: ${g.name}`,
-          separated: items.length === 2,
+          separated: items.length === (osKind(card.os) === 'windows' ? 3 : 2),
           onselect: () => void setCardGroup(card, String(g.id)),
         });
       }

@@ -26,6 +26,7 @@ export const TABS = [
   { id: 'overview', key: 'srv.tab.overview' },
   { id: 'metrics', key: 'srv.tab.metrics' },
   { id: 'terminal', key: 'srv.tab.terminal' },
+  { id: 'desktop', key: 'srv.tab.desktop' },
   { id: 'files', key: 'srv.tab.files' },
   { id: 'disk', key: 'srv.tab.disk' },
   { id: 'services', key: 'srv.tab.services' },
@@ -44,6 +45,7 @@ export type TabId = (typeof TABS)[number]['id'];
 /** Agent module that backs a tab; tabs not listed here (overview, metrics) are always shown. */
 const TAB_MODULE: Partial<Record<TabId, string>> = {
   terminal: 'terminal',
+  desktop: 'desktop',
   files: 'files',
   disk: 'disk',
   services: 'services',
@@ -74,7 +76,7 @@ export function visibleTabs(modules: readonly string[], allowed: readonly string
 
 /** Sidebar groups of the server page; every tab belongs to exactly one group, in the order shown. */
 export const TAB_GROUPS: readonly { id: string; key: string; tabs: readonly TabId[] }[] = [
-  { id: 'general', key: 'srv.group.general', tabs: ['overview', 'metrics', 'terminal'] },
+  { id: 'general', key: 'srv.group.general', tabs: ['overview', 'metrics', 'terminal', 'desktop'] },
   { id: 'system', key: 'srv.group.system', tabs: ['services', 'processes', 'logs', 'updates'] },
   { id: 'fs', key: 'srv.group.fs', tabs: ['files', 'disk'] },
   { id: 'net', key: 'srv.group.net', tabs: ['network', 'firewall', 'security', 'users'] },
@@ -95,6 +97,7 @@ export const TAB_ICONS: Record<TabId, readonly string[]> = {
   overview: ['11100111', '10100101', '11100111', '00000000', '11100111', '10100101', '11100111', '00000000'],
   metrics: ['00000001', '00000001', '00010001', '00010101', '01010101', '01010101', '01010101', '11111111'],
   terminal: ['00000000', '10000000', '01000000', '00100000', '01000000', '10000000', '00011110', '00000000'],
+  desktop: ['11111111', '10000001', '10111101', '10111101', '10000001', '11111111', '00011000', '01111110'],
   services: ['00000000', '11001111', '11001111', '00000000', '11110011', '11110011', '00000000', '00000000'],
   processes: ['01010100', '01111110', '11000011', '01000010', '11000011', '01111110', '00101010', '00000000'],
   logs: ['00000000', '11111100', '00000000', '11111111', '00000000', '11110000', '00000000', '11111111'],

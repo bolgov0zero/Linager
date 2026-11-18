@@ -1,0 +1,100 @@
+<script lang="ts">
+  import type { ServerDetail } from '../../../api';
+  import { tr } from '../../../i18n';
+  import DesktopSession, { type DeskPhase } from '../../desktop/DesktopSession.svelte';
+  import DesktopTools from '../../desktop/DesktopTools.svelte';
+  import { openDesktopWindow } from '../../terminal/windows';
+
+  let { server }: { server: ServerDetail } = $props();
+
+  let phase = $state<DeskPhase>('form');
+  let autoResize = $state(true);
+  let session = $state<DesktopSession | null>(null);
+
+  // Derived primitives: the parent replaces `server` on every live metrics event, which must not restart the session.
+  const serverId = $derived(server.id);
+  const address = $derived(server.address);
+
+  const statusText = $derived(
+    phase === 'connecting' ? $tr('desk.connecting') : phase === 'open' ? $tr('desk.open') : $tr('desk.closed'),
+  );
+
+  /** Moves the desktop into a floating window: this tab's own connection ends first (one desktop per computer). */
+  function popOut(): void {
+    session?.disconnect();
+    setTimeout(() => openDesktopWindow(serverId, server.name, address), 150);
+  }
+</script>
+
+<div class="deskTab">
+  <div class="head">
+    <p class="meta">
+      <span class="dot" class:on={server.online && phase === 'open'} aria-hidden="true"></span>
+      <span class="hdr">{$tr('desk.header', { name: server.name })}</span>
+      {#if server.online}<span class="muted">· {statusText}</span>{/if}
+    </p>
+    {#if server.online}
+      <div class="actions">
+        <DesktopTools {session} {phase} bind:autoResize />
+        <button class="btn sm" type="button" onclick={popOut}>{$tr('termwin.openWindow')}</button>
+      </div>
+    {/if}
+  </div>
+  {#if !server.online}
+    <p class="note">{$tr('desk.offline')}</p>
+  {:else}
+    <div class="box"><DesktopSession {serverId} {address} bind:phase bind:autoResize bind:this={session} /></div>
+  {/if}
+</div>
+
+<style>
+  .deskTab {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: calc(100vh - 220px);
+    min-height: 420px;
+  }
+
+  .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    background: var(--muted);
+  }
+
+  .dot.on {
+    background: var(--good);
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .box {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    border: 2px solid var(--line);
+  }
+
+  .note {
+    margin: 0;
+  }
+</style>

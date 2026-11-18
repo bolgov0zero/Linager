@@ -273,3 +273,14 @@ func TestWindowsRollbackUpdateRestoresTheOldBinary(t *testing.T) {
 		t.Fatal("the marker must be removed")
 	}
 }
+
+func TestWindowsDesktopState(t *testing.T) {
+	st := desktopState()
+	if st.Port <= 0 || st.Port > 65535 || st.Edition == "" {
+		t.Fatalf("state: %+v", st)
+	}
+	t.Logf("remote desktop: enabled=%v listening=%v port=%d nla=%v service=%s supported=%v", st.Enabled, st.Listening, st.Port, st.NLA, st.Service, st.Supported)
+	if _, err := desktopEnableCmd(context.Background(), nil, false); err == nil {
+		t.Fatal("turning the remote desktop on is a dangerous action: it needs the confirmation")
+	}
+}

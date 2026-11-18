@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tr } from '../../i18n';
+  import DesktopWindowView from '../desktop/DesktopWindowView.svelte';
   import EditorWindowView from './EditorWindowView.svelte';
   import TermWindowView from './TermWindowView.svelte';
   import { lockScroll } from '../ui/scrolllock';
@@ -56,6 +57,8 @@
     {#each $termWindows as win (win.key)}
       {#if win.kind === 'editor'}
         <EditorWindowView {win} top={win.key === topKey} />
+      {:else if win.kind === 'desktop'}
+        <DesktopWindowView {win} top={win.key === topKey} />
       {:else}
         <TermWindowView {win} top={win.key === topKey} {canUsers} />
       {/if}

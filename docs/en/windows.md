@@ -8,6 +8,7 @@ The agent runs on Windows 10 / 11 and Windows Server 2016 and newer (x64) and co
 |---|---|
 | Metrics | CPU, memory, swap, disks (every volume with a file system), network adapters and their speed, uptime, processes, "restart required" (Windows Update). Windows has no load average: it is shown as 0. |
 | Terminal | PowerShell (cmd.exe if it is missing) in a pseudo console (ConPTY, Windows 10 1809 / Server 2019 and newer). The shell runs as **SYSTEM**, the full access of the agent, like the root shell on Linux. Everything is written to the audit journal. |
+| Desktop | the screen of the computer in the browser (RDP through the agent), see "Remote desktop" below. |
 | Services | the list from the Service Control Manager: start, stop, restart, startup type (enable = automatic, disable = disabled). The agent itself, remote desktop, WinRM, sshd, the RPC, DHCP, DNS and firewall services ask for confirmation. A service that stopped with an error and starts automatically counts as failed. |
 | Processes | the list with CPU, memory, user and command line; "end process" (Windows has one way to end a process, so "terminate" and "kill" do the same). System processes (csrss, lsass, services, wininit, winlogon, smss, System) are refused. |
 | Logs | Windows event logs, followed live: System and Application by default; as "unit" a classic log (`Security`, `Setup`), an operational log (`Microsoft-Windows-TaskScheduler/Operational`) or the name of a source (for example `Service Control Manager`). "Kernel" shows the kernel sources. The priority is mapped to the level (error, warning, information). |
@@ -37,6 +38,17 @@ msiexec /i linager_windows_amd64.msi /qn SERVER=panel.example.com:9443
 3. Enter the key ("Confirmation key") and **make sure the check code is the same**: it ties the key to the certificate the agent saw, so it protects the pairing against a man in the middle when no fingerprint was given. Confirm.
 
 The same works from a console: `& "C:\Program Files\Linager\linager.exe" agent enroll --server panel.example.com:9443`. The service notices the new identity within 10 seconds.
+
+## Remote desktop
+The "Desktop" tab of a Windows server (and "Remote desktop" in the context menu of a tile on the "Map") shows the screen of the computer and lets you work with it, in the page or in a floating window like the terminal. Nothing is installed: the RDP client is part of the panel (WebAssembly, loaded when the desktop is first opened, about 2 MB compressed).
+
+How it works: the panel's browser client speaks RDP over a WebSocket to the panel; the panel carries the connection through the agent to the Remote Desktop service of the computer (`127.0.0.1:3389`, or the port set in Windows). Port 3389 is not opened to the network. You sign in with a Windows account (login, password, domain if any); the client signs in by itself (CredSSP), so the password is not stored and does not appear in the log. Only the login is remembered in the browser. Every open and close is written to the audit log with the login that was typed.
+
+What you can do: mouse, keyboard, text clipboard in both directions (the browser asks for permission; over plain HTTP the browser gives no clipboard access, then the menu items are off), the resolution follows the window ("More" > "Change resolution with the window"), scale "fit the window" or 100%, full screen. The bar of the window has **Ctrl+Alt+Del** and a "More" menu: Task Manager, Windows key, lock, Run, Alt+Tab, clipboard, scale, full screen, disconnect. Files go through the file manager.
+
+Needs: Remote Desktop turned on in Windows (Pro, Enterprise and Server editions; not Home). If it is off, the window offers "Turn remote desktop on" (a confirmed action in the audit log: the setting, the firewall group "Remote Desktop" and the service). An account with a password that may sign in over Remote Desktop (administrators or the group "Remote Desktop Users"). One person at a time: a Windows client edition pushes the person at the console out; the panel opens at most one desktop per computer. For an operator the module "desktop" is given like the others (off by default).
+
+Limits: no sound, no printers or disks (use the file manager), sign-in by NTLM (an account of a domain with "Restrict NTLM" will be refused), no Kerberos. The panel needs a CSP that allows WebAssembly (`wasm-unsafe-eval`); this is set by the server itself.
 
 ## Files, log and removal
 - `C:\ProgramData\Linager\agent\` keys and state; `C:\ProgramData\Linager\agent.yaml` (modules, optional, the same format as on Linux: `modules:` with `true` / `false`); `C:\ProgramData\Linager\agent.log` the log (a file over 5 MB is moved to `agent.log.1`). The folder `C:\ProgramData\Linager` is open to SYSTEM and the administrators only; this is the counterpart of the mode 600 of the Linux agent.

@@ -124,5 +124,9 @@
   "audit.group.access": "Admin panel access",
   "audit.action.access.update": "Admin panel access: settings changed",
   "audit.action.access.retention": "Admin panel access: journal retention",
-  "audit.action.access.reset": "Admin panel access: reset from the command line"
+  "audit.action.access.reset": "Admin panel access: reset from the command line",
+  "audit.group.desktop": "Remote desktop",
+  "audit.action.desktop.open": "Remote desktop: opened",
+  "audit.action.desktop.close": "Remote desktop: closed",
+  "audit.action.desktop.enable": "Remote desktop: turned on"
 }
