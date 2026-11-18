@@ -17,8 +17,8 @@ import (
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/shirou/gopsutil/v4/mem"
-	gnet "github.com/shirou/gopsutil/v4/net"
 	"github.com/shirou/gopsutil/v4/process"
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 
 	"github.com/bolgov0zero/linager/internal/protocol"
@@ -26,7 +26,7 @@ import (
 
 type winCollector struct {
 	mu       sync.Mutex
-	prevNet  map[string]gnet.IOCountersStat
+	prevNet  map[string]ifCounters
 	prevTime time.Time
 
 	slow struct { // values refreshed outside the 5 s loop
@@ -210,14 +210,30 @@ func isPhysicalIface(name string) bool {
 	return true
 }
 
-func (c *winCollector) collectNet(now time.Time) []protocol.NetIface {
-	counters, _ := gnet.IOCounters(true)
-	cur := make(map[string]gnet.IOCountersStat, len(counters))
-	for _, cs := range counters {
-		cur[cs.Name] = cs
+// ifCounters are the byte counters and the speed of one adapter, as Windows keeps them.
+type ifCounters struct {
+	rx, tx    uint64
+	speedMbps int
+}
+
+// readIfCounters asks Windows for the counters of one adapter. An adapter that does not answer is skipped on
+// its own: the others still report.
+func readIfCounters(index int) (ifCounters, bool) {
+	row := windows.MibIfRow2{InterfaceIndex: uint32(index)} //nolint:gosec // an interface index is small and positive
+	if err := windows.GetIfEntry2Ex(windows.MibIfTableNormal, &row); err != nil {
+		return ifCounters{}, false
 	}
+	c := ifCounters{rx: row.InOctets, tx: row.OutOctets}
+	if sp := row.ReceiveLinkSpeed; sp > 0 && sp != ^uint64(0) {
+		c.speedMbps = int(sp / 1_000_000) //nolint:gosec // a link speed in Mbit/s fits an int
+	}
+	return c, true
+}
+
+func (c *winCollector) collectNet(now time.Time) []protocol.NetIface {
 	dt := now.Sub(c.prevTime).Seconds()
 	ifaces, _ := net.Interfaces()
+	cur := make(map[string]ifCounters, len(ifaces))
 	var out []protocol.NetIface
 	for _, ifc := range ifaces {
 		if ifc.Flags&net.FlagLoopback != 0 {
@@ -232,11 +248,12 @@ func (c *winCollector) collectNet(now time.Time) []protocol.NetIface {
 				}
 			}
 		}
-		if cc, ok := cur[ifc.Name]; ok {
-			n.RxTotal, n.TxTotal = cc.BytesRecv, cc.BytesSent
-			if p, ok := c.prevNet[ifc.Name]; ok && dt > 0 && cc.BytesRecv >= p.BytesRecv && cc.BytesSent >= p.BytesSent {
-				n.RxBps = float64(cc.BytesRecv-p.BytesRecv) / dt
-				n.TxBps = float64(cc.BytesSent-p.BytesSent) / dt
+		if cc, ok := readIfCounters(ifc.Index); ok {
+			cur[ifc.Name] = cc
+			n.RxTotal, n.TxTotal, n.SpeedMbps = cc.rx, cc.tx, cc.speedMbps
+			if p, ok := c.prevNet[ifc.Name]; ok && dt > 0 && cc.rx >= p.rx && cc.tx >= p.tx {
+				n.RxBps = float64(cc.rx-p.rx) / dt
+				n.TxBps = float64(cc.tx-p.tx) / dt
 			}
 		}
 		out = append(out, n)

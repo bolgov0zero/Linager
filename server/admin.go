@@ -249,8 +249,20 @@ func (a *Admin) static() http.Handler {
 		p := strings.TrimPrefix(r.URL.Path, "/")
 		if p != "" {
 			if _, err := fs.Stat(a.Static, p); err != nil {
+				// A script or style that is gone (a page opened before an update asks for the old file) must be a
+				// 404: the page of the application in its place cannot be loaded as a module and the window that
+				// needed it stays empty.
+				if strings.HasPrefix(p, "assets/") {
+					http.NotFound(w, r)
+					return
+				}
 				r.URL.Path = "/" // SPA fallback
+				p = ""
 			}
+		}
+		// The page itself names the files of this build: it is always asked again, so a new release is picked up.
+		if p == "" || p == "index.html" {
+			w.Header().Set("Cache-Control", "no-cache")
 		}
 		files.ServeHTTP(w, r)
 	})

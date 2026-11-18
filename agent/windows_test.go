@@ -29,6 +29,15 @@ func TestWindowsCollector(t *testing.T) {
 	if len(s.Disks) == 0 || s.Disks[0].Total == 0 {
 		t.Errorf("no disks: %+v", s.Disks)
 	}
+	counted := false
+	for _, n := range s.Net {
+		if n.RxTotal > 0 || n.TxTotal > 0 {
+			counted = true
+		}
+	}
+	if !counted {
+		t.Errorf("no network counters: %+v", s.Net)
+	}
 	if s.Uptime <= 0 || s.Procs <= 0 {
 		t.Errorf("uptime %d, procs %d", s.Uptime, s.Procs)
 	}

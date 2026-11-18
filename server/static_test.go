@@ -32,3 +32,20 @@ func TestStaticServesHomeScreenAssets(t *testing.T) {
 		}
 	}
 }
+
+func TestStaticMissingAssetIsNotThePage(t *testing.T) {
+	a := &Admin{Static: fstest.MapFS{"index.html": {Data: []byte("<html></html>")}, "assets/new.js": {Data: []byte("export {}")}}}
+	h := a.static()
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/assets/old-123.js", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("a missing asset: status %d, want 404", rec.Code)
+	}
+	for _, path := range []string{"/", "/srv-unknown"} {
+		rec = httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != http.StatusOK || rec.Header().Get("Cache-Control") != "no-cache" {
+			t.Errorf("%s: status %d, cache %q", path, rec.Code, rec.Header().Get("Cache-Control"))
+		}
+	}
+}
