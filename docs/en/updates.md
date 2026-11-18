@@ -38,6 +38,13 @@ The progress is shown as a list of stages: on the server page (in a frame under 
 
 The first five stages are reported by the agent itself; the server sees the last three: the connection dropping, the hello of the new version and the "confirmed" event. So the restart is no longer a black box. When the agent comes back with its old version, the "connected" stage is marked as failed, and an error at any stage shows where and why it stopped (the error text under the stage). The list is kept for the current run only: it disappears after a success and stays after an error or a rollback until the next run. An agent older than this version does not report the beginning and the end of its stages: its list is built from its events, and the last three stages are fully visible.
 
+### Time limit and the journal of an update
+The agent has **10 minutes** for the whole update (the download of the release, the check, the backup, the replacement); other commands are limited to two. The server waits 2 minutes longer. When the download does not fit, the "Download" stage ends with the error `context deadline exceeded` and the time it took to break.
+
+To look into a failed update:
+- **The journal of the agent** (`journalctl -u linager-agent`) has `update: …` lines for every stage: the start with the versions and the architecture, the answer of the server to the request of the binary and how long it took, every 10 seconds the progress of the download (bytes, percent, the average rate and the rate of the interval; `idle_s` is how many seconds no byte has arrived), the end of a stage and how long it was, and on an error the stage, the reason and `timed_out=true` when time ran out. The last line of a successful update is `update: installed, the rollback timer is armed`, after the restart `update confirmed`.
+- **The journal of the server** (`journalctl -u linager`) has `agent update: …` lines: the command and how long it waits, the stages the agent reported, a dropped connection during the update (with the step and the time since the last message), the agent coming back on the new or on the old version, the confirmation, an error or a rollback. The `release file: sent` lines show how many bytes were really given to the agent, in how many milliseconds and at what rate; `release file: the transfer did not finish` says the agent broke off the download.
+
 ## Channels and release source
 The `stable` channel (tags `vX.Y.Z`) or `beta` channel (`vX.Y.Z-beta.N`) is selected in the admin panel. In `/etc/linager/server.yaml`:
 

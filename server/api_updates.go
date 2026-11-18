@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/bolgov0zero/linager/internal/release"
 	"github.com/bolgov0zero/linager/internal/version"
@@ -172,22 +173,46 @@ func (a *Admin) auditList(w http.ResponseWriter, r *http.Request, _ *store.User)
 
 // agentAuth verifies the client certificate and that the server still exists.
 func (a *AgentPort) agentAuth(w http.ResponseWriter, r *http.Request) bool {
+	_, ok := a.agentServer(w, r)
+	return ok
+}
+
+// agentServer is agentAuth that also returns the server the certificate belongs to.
+func (a *AgentPort) agentServer(w http.ResponseWriter, r *http.Request) (*store.Server, bool) {
 	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
 		http.Error(w, "client certificate required", http.StatusUnauthorized)
-		return false
+		return nil, false
 	}
 	id, err := a.Keys.CA.VerifyAgentCert(r.TLS.PeerCertificates[0])
 	if err != nil {
 		http.Error(w, "invalid certificate", http.StatusUnauthorized)
-		return false
+		return nil, false
 	}
 	srv, err := a.DB.ServerByID(r.Context(), id)
 	if err != nil || !bytes.Equal(srv.AgentPubkey, r.TLS.PeerCertificates[0].PublicKey.(ed25519.PublicKey)) {
 		http.Error(w, "server is not registered", http.StatusUnauthorized)
-		return false
+		return nil, false
 	}
-	return true
+	return srv, true
 }
+
+// countingWriter counts the bytes that were really written to the agent and remembers the first error.
+type countingWriter struct {
+	http.ResponseWriter
+	n   int64
+	err error
+}
+
+func (c *countingWriter) Write(b []byte) (int, error) {
+	n, err := c.ResponseWriter.Write(b)
+	c.n += int64(n)
+	if err != nil && c.err == nil {
+		c.err = err
+	}
+	return n, err
+}
+
+func (c *countingWriter) Unwrap() http.ResponseWriter { return c.ResponseWriter }
 
 func (a *AgentPort) releaseLatest(w http.ResponseWriter, r *http.Request) {
 	if !a.agentAuth(w, r) || a.Updates == nil {
@@ -219,7 +244,8 @@ func releaseBinary(m release.Manifest, arch string) (string, bool) {
 }
 
 func (a *AgentPort) releaseFile(w http.ResponseWriter, r *http.Request) {
-	if !a.agentAuth(w, r) || a.Updates == nil {
+	srv, ok := a.agentServer(w, r)
+	if !ok || a.Updates == nil {
 		return
 	}
 	ver := r.PathValue("ver")
@@ -228,11 +254,14 @@ func (a *AgentPort) releaseFile(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	began := time.Now()
 	c, err := update.LoadCached(a.Updates.Key, a.Updates.Cache, ver) // verified before every distribution
 	if err != nil {
+		a.Log.Warn("release file: the cache of the release cannot be used", "server", srv.Name, "version", ver, "err", err.Error())
 		http.NotFound(w, r)
 		return
 	}
+	checked := time.Since(began)
 	if file == "" {
 		name, ok := releaseBinary(c.Manifest, r.URL.Query().Get("arch"))
 		if !ok {
@@ -242,5 +271,26 @@ func (a *AgentPort) releaseFile(w http.ResponseWriter, r *http.Request) {
 		file = name
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	http.ServeFile(w, r, filepath.Join(c.Dir, file)) //nolint:gosec // path is built from a verified cache entry and a fixed file name
+	// The journal tells how much was really sent and how fast: it is what a slow or cut update of an agent is judged by.
+	cw := &countingWriter{ResponseWriter: w}
+	sendStart := time.Now()
+	http.ServeFile(cw, r, filepath.Join(c.Dir, file)) //nolint:gosec // path is built from a verified cache entry and a fixed file name
+	took := time.Since(sendStart)
+	fields := []any{"server", srv.Name, "version", ver, "file", file, "sent", cw.n, "ms", took.Milliseconds(),
+		"kib_s", kibPerSec(cw.n, took), "cache_check_ms", checked.Milliseconds(), "remote", r.RemoteAddr}
+	if cw.err != nil || r.Context().Err() != nil {
+		if cw.err != nil {
+			fields = append(fields, "err", cw.err.Error())
+		}
+		a.Log.Warn("release file: the transfer did not finish", fields...)
+		return
+	}
+	a.Log.Info("release file: sent", fields...)
+}
+
+func kibPerSec(n int64, d time.Duration) int64 {
+	if d <= 0 {
+		return 0
+	}
+	return int64(float64(n) / 1024 / d.Seconds())
 }

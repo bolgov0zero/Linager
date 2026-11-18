@@ -8,12 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bolgov0zero/linager/internal/protocol"
@@ -44,8 +46,27 @@ type updater struct {
 	dir     string
 	version string // running version
 	emit    func(protocol.UpdateEvent)
+	log     *slog.Logger // the journal of the update (nil: silent, as in the tests)
 	mu      sync.Mutex
 	busy    bool
+}
+
+func (u *updater) logger() *slog.Logger {
+	if u.log != nil {
+		return u.log
+	}
+	return slog.New(slog.DiscardHandler)
+}
+
+// downloadLogEvery is how often the journal gets a line while the release is downloading. A line with no new
+// bytes since the previous one shows a stalled link; a slow one shows a low rate.
+var downloadLogEvery = 10 * time.Second
+
+func kibPerSec(n int64, d time.Duration) int64 {
+	if d <= 0 {
+		return 0
+	}
+	return int64(float64(n) / 1024 / d.Seconds())
 }
 
 func serverClient(dir string) (*http.Client, string, error) {
@@ -99,47 +120,95 @@ func LatestFromServer(ctx context.Context, dir string) (string, error) {
 	return out.Version, nil
 }
 
-// progressReader reports how much of a download has arrived, at most once a second.
+// progressReader reports how much of a download has arrived, at most once a second. The counters are read by
+// the journal goroutine while the download goes on.
 type progressReader struct {
-	r     io.Reader
-	size  int64
-	n     int64
-	last  time.Time
-	every func(n, size int64)
+	r      io.Reader
+	size   int64
+	n      atomic.Int64
+	lastNs atomic.Int64 // when the last bytes arrived
+	last   time.Time
+	every  func(n, size int64)
 }
 
 func (p *progressReader) Read(b []byte) (int, error) {
 	n, err := p.r.Read(b)
-	p.n += int64(n)
+	if n > 0 {
+		p.n.Add(int64(n))
+		p.lastNs.Store(time.Now().UnixNano())
+	}
 	if p.every != nil && time.Since(p.last) >= time.Second {
 		p.last = time.Now()
-		p.every(p.n, p.size)
+		p.every(p.n.Load(), p.size)
 	}
 	return n, err
+}
+
+// idle is how long no bytes have arrived (since the start when none has).
+func (p *progressReader) idle(started time.Time) time.Duration {
+	if ns := p.lastNs.Load(); ns != 0 {
+		return time.Since(time.Unix(0, ns))
+	}
+	return time.Since(started)
+}
+
+// watchDownload writes a line to the journal every downloadLogEvery until stop is closed.
+func (u *updater) watchDownload(pr *progressReader, started time.Time, stop <-chan struct{}) {
+	t := time.NewTicker(downloadLogEvery)
+	defer t.Stop()
+	prev, prevAt := int64(0), started
+	for {
+		select {
+		case <-stop:
+			return
+		case now := <-t.C:
+			n := pr.n.Load()
+			pct := int64(-1)
+			if pr.size > 0 {
+				pct = n * 100 / pr.size
+			}
+			u.logger().Info("update: downloading", "bytes", n, "size", pr.size, "percent", pct,
+				"avg_kib_s", kibPerSec(n, now.Sub(started)), "interval_kib_s", kibPerSec(n-prev, now.Sub(prevAt)),
+				"idle_s", int64(pr.idle(started).Seconds()))
+			prev, prevAt = n, now
+		}
+	}
 }
 
 // Apply downloads, verifies and installs a release from the server, then arms the rollback timer.
 // It does not restart: the caller restarts the service after reporting success. Every stage is reported twice,
 // when it begins and when it ends, so the panel can show a timeline.
 func (u *updater) Apply(ctx context.Context, version string, key *release.Key) error {
+	log := u.logger()
+	refuse := func(err error) error {
+		log.Warn("update: refused", "version", version, "from", u.version, "err", err.Error())
+		return err
+	}
 	if !agentVersionRe.MatchString(version) {
-		return errors.New("invalid version")
+		return refuse(errors.New("invalid version"))
 	}
 	// A signed but older release must not replace a newer agent: old versions may have known flaws.
 	if release.Compare(release.ParseVersion(version), release.ParseVersion(u.version)) < 0 {
-		return fmt.Errorf("refusing to downgrade from %s to %s", u.version, version)
+		return refuse(fmt.Errorf("refusing to downgrade from %s to %s", u.version, version))
 	}
 	u.mu.Lock()
 	if u.busy {
 		u.mu.Unlock()
-		return errBusy
+		return refuse(errBusy)
 	}
 	u.busy = true
 	u.mu.Unlock()
 	defer func() { u.mu.Lock(); u.busy = false; u.mu.Unlock() }()
 	if _, err := os.Stat(markerPath(u.dir)); err == nil {
-		return errors.New("a previous update is still waiting for confirmation")
+		return refuse(errors.New("a previous update is still waiting for confirmation"))
 	}
+	started := time.Now()
+	stageAt := started
+	var deadline time.Duration
+	if d, ok := ctx.Deadline(); ok {
+		deadline = time.Until(d).Round(time.Second)
+	}
+	log.Info("update: started", "from", u.version, "to", version, "arch", release.HostKey(), "time_left_s", int64(deadline.Seconds()))
 
 	send := func(i int, state string, err error, bytes, size int64) {
 		if u.emit == nil {
@@ -151,9 +220,23 @@ func (u *updater) Apply(ctx context.Context, version string, key *release.Key) e
 		}
 		u.emit(e)
 	}
-	begin := func(i int) { send(i, protocol.UpdateRunning, nil, 0, 0) }
-	end := func(i int) { send(i, protocol.UpdateDone, nil, 0, 0) }
-	fail := func(i int, err error) error { send(i, protocol.UpdateFailed, err, 0, 0); return err }
+	begin := func(i int) {
+		stageAt = time.Now()
+		log.Info("update: stage started", "stage", updateSteps[i])
+		send(i, protocol.UpdateRunning, nil, 0, 0)
+	}
+	end := func(i int) {
+		log.Info("update: stage done", "stage", updateSteps[i], "ms", time.Since(stageAt).Milliseconds())
+		send(i, protocol.UpdateDone, nil, 0, 0)
+	}
+	fail := func(i int, err error) error {
+		log.Warn("update: stage failed", "stage", updateSteps[i], "ms", time.Since(stageAt).Milliseconds(),
+			"total_ms", time.Since(started).Milliseconds(),
+			"timed_out", errors.Is(err, context.DeadlineExceeded) || errors.Is(ctx.Err(), context.DeadlineExceeded),
+			"err", err.Error())
+		send(i, protocol.UpdateFailed, err, 0, 0)
+		return err
+	}
 
 	c, base, err := serverClient(u.dir)
 	if err != nil {
@@ -167,6 +250,7 @@ func (u *updater) Apply(ctx context.Context, version string, key *release.Key) e
 		exe = r
 	}
 	root := base + "/v1/release/" + version
+	log.Info("update: source", "server", base, "exe", exe)
 
 	// download: the signed manifest and the binary. The binary stays in a temporary file that is not
 	// executable and is not touched until the next stage has checked it.
@@ -183,27 +267,38 @@ func (u *updater) Apply(ctx context.Context, version string, key *release.Key) e
 	}
 	sb, _ := io.ReadAll(src)
 	_ = src.Close()
+	log.Info("update: manifest fetched", "ms", time.Since(started).Milliseconds(), "manifest_bytes", len(mb))
 	tmp := exe + ".linager-new"
 	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600) //nolint:gosec // becomes executable only after the check
 	if err != nil {
 		return fail(0, err)
 	}
 	defer func() { _ = os.Remove(tmp) }()
+	dlStart := time.Now()
 	brc, size, err := fetchSized(ctx, c, root+"/binary?arch="+release.HostKey(), 200<<20)
 	if err != nil {
 		_ = f.Close()
+		log.Warn("update: no answer to the binary request", "waited_ms", time.Since(dlStart).Milliseconds(), "err", err.Error())
 		return fail(0, err)
 	}
+	log.Info("update: binary answered", "size", size, "wait_ms", time.Since(dlStart).Milliseconds())
 	h := sha256.New()
 	pr := &progressReader{r: brc, size: size, every: func(n, total int64) { send(0, protocol.UpdateRunning, nil, n, total) }}
+	stop := make(chan struct{})
+	go u.watchDownload(pr, dlStart, stop)
 	n, err := io.Copy(io.MultiWriter(f, h), pr)
+	close(stop)
 	_ = brc.Close()
 	if cerr := f.Close(); err == nil {
 		err = cerr
 	}
 	if err != nil {
+		log.Warn("update: download interrupted", "bytes", pr.n.Load(), "size", size, "ms", time.Since(dlStart).Milliseconds(),
+			"avg_kib_s", kibPerSec(pr.n.Load(), time.Since(dlStart)), "idle_s", int64(pr.idle(dlStart).Seconds()))
 		return fail(0, err)
 	}
+	log.Info("update: stage done", "stage", updateSteps[0], "ms", time.Since(stageAt).Milliseconds(), "bytes", n,
+		"download_ms", time.Since(dlStart).Milliseconds(), "avg_kib_s", kibPerSec(n, time.Since(dlStart)))
 	send(0, protocol.UpdateDone, nil, n, n)
 
 	// verify: the signature of the manifest, then the checksum of the binary, before anything is replaced
@@ -220,6 +315,7 @@ func (u *updater) Apply(ctx context.Context, version string, key *release.Key) e
 		return fail(1, fmt.Errorf("the release has no binary for %s", release.HostKey()))
 	}
 	if hex.EncodeToString(h.Sum(nil)) != strings.ToLower(asset.SHA256) || (asset.Size > 0 && n != asset.Size) {
+		log.Warn("update: the binary does not match the manifest", "got_bytes", n, "want_bytes", asset.Size)
 		return fail(1, errors.New("binary does not match the signed manifest"))
 	}
 	if err := os.Chmod(tmp, 0o755); err != nil { //nolint:gosec // the executable of the agent
@@ -252,6 +348,8 @@ func (u *updater) Apply(ctx context.Context, version string, key *release.Key) e
 		return fail(3, fmt.Errorf("cannot arm the rollback timer: %w", err))
 	}
 	end(3)
+	log.Info("update: installed, the rollback timer is armed", "from", u.version, "to", version,
+		"total_ms", time.Since(started).Milliseconds(), "rollback_after_s", int64(RollbackDelay.Seconds()))
 	return nil
 }
 
@@ -364,8 +462,15 @@ func (r *Registry) updateApplyCmd(running string) CmdFunc {
 			return nil, err
 		}
 		u.emit = r.emitUpdate
+		u.log = r.log
+		if r.log != nil {
+			r.log.Info("update: command received", "to", p.Version, "from", running)
+		}
 		if err := u.Apply(ctx, p.Version, key); err != nil {
 			return nil, err
+		}
+		if r.log != nil {
+			r.log.Info("update: restarting the service", "to", p.Version)
 		}
 		restartSoon()
 		r.emitUpdate(protocol.UpdateEvent{Version: p.Version, Step: 5, Total: 5, ID: "restart", State: protocol.UpdateRunning})

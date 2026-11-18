@@ -89,6 +89,14 @@ func NewRegistry(cfg *config.Agent, col Collector, log *slog.Logger, dataDir str
 // Modules lists the enabled module names (reported in hello).
 func (r *Registry) Modules() []string { return r.modules }
 
+// defaultCmdTimeout is the limit of a command; cmdTimeouts lists the ones that may run longer.
+const defaultCmdTimeout = 2 * time.Minute
+
+var cmdTimeouts = map[string]time.Duration{
+	// the update downloads a release of tens of megabytes: on a slow link two minutes are not enough
+	"update.apply": protocol.AgentUpdateTimeout,
+}
+
 // HandleCmd executes a command and returns the result message payload.
 func (r *Registry) HandleCmd(ctx context.Context, c protocol.Cmd) protocol.CmdResult {
 	res := protocol.CmdResult{ID: c.ID}
@@ -97,10 +105,17 @@ func (r *Registry) HandleCmd(ctx context.Context, c protocol.Cmd) protocol.CmdRe
 		res.Error = protocol.ErrModuleDisabled
 		return res
 	}
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	limit := defaultCmdTimeout
+	if d, ok := cmdTimeouts[c.Module+"."+c.Action]; ok {
+		limit = d
+	}
+	ctx, cancel := context.WithTimeout(ctx, limit)
 	defer cancel()
 	data, err := fn(ctx, c.Params, c.Dangerous)
 	if err != nil {
+		if r.log != nil && errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			r.log.Warn("command timed out", "cmd", c.Module+"."+c.Action, "limit_s", int64(limit.Seconds()))
+		}
 		res.Error = err.Error()
 		return res
 	}

@@ -1,7 +1,9 @@
 package server
 
 import (
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/bolgov0zero/linager/internal/release"
 )
@@ -50,5 +52,18 @@ func TestReleaseBinaryServesTheWindowsFile(t *testing.T) {
 	}
 	if _, ok := releaseBinary(release.Manifest{Assets: map[string]release.Asset{"amd64": {Name: "x", SHA256: "a"}}}, release.WindowsKey); ok {
 		t.Fatal("a release without the Windows file has none to give")
+	}
+}
+
+func TestCountingWriterCountsWhatWasWritten(t *testing.T) {
+	rec := httptest.NewRecorder()
+	cw := &countingWriter{ResponseWriter: rec}
+	_, _ = cw.Write([]byte("hello"))
+	_, _ = cw.Write([]byte(" world"))
+	if cw.n != 11 || cw.err != nil || rec.Body.String() != "hello world" {
+		t.Fatalf("n=%d err=%v body=%q", cw.n, cw.err, rec.Body.String())
+	}
+	if kibPerSec(2048, time.Second) != 2 || kibPerSec(10, 0) != 0 {
+		t.Fatal("kibPerSec")
 	}
 }

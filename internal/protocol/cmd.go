@@ -84,6 +84,10 @@ const TypeUpdateEvent = "update.event"
 // has not confirmed itself. The agent must reconnect within 60 seconds; the extra time covers the restart.
 const AgentRollbackDelay = 70 * time.Second
 
+// AgentUpdateTimeout is how long an agent may take for the whole update command (download of the release, check,
+// backup, replace). Other commands have a shorter limit of their own. The server waits a little longer than this.
+const AgentUpdateTimeout = 10 * time.Minute
+
 // Update event states. An empty state is an event of an agent older than the stages: "this step is reached".
 const (
 	UpdateRunning = "running"

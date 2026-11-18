@@ -582,18 +582,45 @@ func (u *Updates) finishRollout(ctx context.Context) {
 func (u *Updates) dispatch(ctx context.Context, id string) {
 	ctx = context.WithoutCancel(ctx)
 	_ = u.DB.SetAgentUpdate(ctx, store.AgentUpdate{ServerID: id, Version: version.Version, Status: "updating", Step: 1, Steps: newTimeline()})
-	_, err := u.Hub.Call(ctx, id, "update", "apply", map[string]string{"version": version.Version}, true, 4*time.Minute)
+	wait := protocol.AgentUpdateTimeout + 2*time.Minute
+	name := u.srvName(ctx, id)
+	began := time.Now()
+	u.Log.Info("agent update: command sent", "server", name, "to", version.Version, "wait_s", int64(wait.Seconds()))
+	_, err := u.Hub.Call(ctx, id, "update", "apply", map[string]string{"version": version.Version}, true, wait)
+	took := time.Since(began).Milliseconds()
 	if err != nil {
 		var ae *AgentError
 		msg := err.Error()
-		if errors.As(err, &ae) {
-			msg = ae.Msg
+		kind := "server"
+		switch {
+		case errors.As(err, &ae):
+			msg, kind = ae.Msg, "agent"
+		case errors.Is(err, ErrCallTimeout):
+			kind = "no answer in time"
+		case errors.Is(err, ErrOffline), errors.Is(err, ErrAgentDisconect):
+			kind = "connection lost"
 		}
+		u.Log.Warn("agent update: the command failed", "server", name, "to", version.Version, "ms", took, "kind", kind, "err", msg)
 		u.fail(ctx, id, msg)
+		return
 	}
+	u.Log.Info("agent update: the agent accepted the new binary and restarts", "server", name, "to", version.Version, "ms", took)
+}
+
+// srvName is the name of a server for the journal (the id when it cannot be read).
+func (u *Updates) srvName(ctx context.Context, id string) string {
+	if srv, err := u.DB.ServerByID(ctx, id); err == nil && srv != nil && srv.Name != "" {
+		return srv.Name
+	}
+	return id
 }
 
 func (u *Updates) fail(ctx context.Context, id, msg string) {
+	step := 0
+	if au, ok := u.DB.AgentUpdate(ctx, id); ok {
+		step = au.Step
+	}
+	u.Log.Warn("agent update: failed", "server", u.srvName(ctx, id), "step", step, "err", msg)
 	u.endRun(ctx, id, "failed", msg, func(st []store.UpdateStep) []store.UpdateStep { return failRunning(st, time.Now().UnixMilli(), msg) })
 	u.mu.Lock()
 	ro := u.ro
@@ -661,6 +688,11 @@ func (u *Updates) AgentEvent(ctx context.Context, id string, e protocol.UpdateEv
 		au.Steps = applyEvent(au.Steps, e, now)
 		return true
 	})
+	// the progress of the download comes every second: only the stages themselves go to the journal
+	if e.State != protocol.UpdateRunning || e.Bytes == 0 {
+		u.Log.Info("agent update: stage", "server", u.srvName(ctx, id), "stage", e.ID, "step", e.Step, "state", e.State,
+			"bytes", e.Bytes, "size", e.Size, "err", e.Error)
+	}
 	switch {
 	case e.Error != "":
 		u.fail(ctx, id, e.Error)
@@ -673,6 +705,10 @@ func (u *Updates) AgentEvent(ctx context.Context, id string, e protocol.UpdateEv
 func (u *Updates) AgentOnline(ctx context.Context, id string, online bool) {
 	if online {
 		return
+	}
+	if au, ok := u.DB.AgentUpdate(ctx, id); ok && au.Status == "updating" {
+		u.Log.Info("agent update: the agent went offline during the update", "server", u.srvName(ctx, id), "step", au.Step,
+			"since_last_event_s", int64(time.Since(au.UpdatedAt).Seconds()))
 	}
 	u.timeline(ctx, id, func(au *store.AgentUpdate) bool {
 		var changed bool
@@ -691,6 +727,7 @@ func (u *Updates) finish(ctx context.Context, id string) {
 	}
 	_ = u.DB.DeleteAgentUpdate(ctx, id)
 	u.smu.Unlock()
+	u.Log.Info("agent update: confirmed", "server", u.srvName(ctx, id), "version", au.Version)
 	u.mu.Lock()
 	if u.ro != nil && u.ro.state == "running" {
 		u.ro.ok++
@@ -708,6 +745,7 @@ func (u *Updates) AgentHello(ctx context.Context, id, agentVersion string) {
 		now := time.Now().UnixMilli()
 		switch {
 		case !release.Newer(r.Version, agentVersion): // agent runs the target version (or newer)
+			u.Log.Info("agent update: the agent is back on the new version", "server", u.srvName(ctx, id), "version", agentVersion)
 			// it still has to confirm itself; finish() runs on its event or, for an agent that does not send
 			// one, when the watchdog sees the grace period over
 			u.timeline(ctx, id, func(au *store.AgentUpdate) bool {
@@ -715,6 +753,7 @@ func (u *Updates) AgentHello(ctx context.Context, id, agentVersion string) {
 				return true
 			})
 		case restartReached(r.Steps): // restarted but still the old version: the agent rolled itself back
+			u.Log.Warn("agent update: the agent is back on the OLD version (rolled itself back)", "server", u.srvName(ctx, id), "version", agentVersion, "wanted", r.Version)
 			u.timeline(ctx, id, func(au *store.AgentUpdate) bool {
 				au.Steps = markOldVersionBack(au.Steps, now, agentVersion)
 				return true
@@ -727,6 +766,11 @@ func (u *Updates) AgentHello(ctx context.Context, id, agentVersion string) {
 
 func (u *Updates) markRolledBack(ctx context.Context, id, ver string) {
 	const msg = "agent did not reconnect in time and rolled back"
+	step, silent := 0, int64(0)
+	if au, ok := u.DB.AgentUpdate(ctx, id); ok {
+		step, silent = au.Step, int64(time.Since(au.UpdatedAt).Seconds())
+	}
+	u.Log.Warn("agent update: reported as rolled back", "server", u.srvName(ctx, id), "version", ver, "step", step, "silent_s", silent)
 	u.endRun(ctx, id, "rolled_back", msg, func(st []store.UpdateStep) []store.UpdateStep { return failRunning(st, time.Now().UnixMilli(), msg) })
 	u.mu.Lock()
 	if u.ro != nil && u.ro.state == "running" {
