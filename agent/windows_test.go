@@ -29,6 +29,9 @@ func TestWindowsCollector(t *testing.T) {
 	if len(s.Disks) == 0 || s.Disks[0].Total == 0 {
 		t.Errorf("no disks: %+v", s.Disks)
 	}
+	for _, n := range s.Net {
+		t.Logf("adapter %q up=%v ip=%s rx=%d tx=%d speed=%d", n.Iface, n.Up, n.IP, n.RxTotal, n.TxTotal, n.SpeedMbps)
+	}
 	counted := false
 	for _, n := range s.Net {
 		if n.RxTotal > 0 || n.TxTotal > 0 {

@@ -28,6 +28,7 @@ func runAgent(c *cobra.Command, dataDir, cfgPath string) error {
 		}
 	}
 	log := slog.New(slog.NewTextHandler(out, nil))
+	slog.SetDefault(log) // the collector reports its problems through the default logger
 	run := func(ctx context.Context) error {
 		return agent.RunHost(ctx, agent.HostOptions{DataDir: dataDir, ConfigPath: cfgPath, AgentVersion: version.Version, Log: log})
 	}

@@ -4,7 +4,9 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"runtime"
 	"slices"
@@ -12,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
@@ -27,6 +30,7 @@ import (
 type winCollector struct {
 	mu       sync.Mutex
 	prevNet  map[string]ifCounters
+	warned   map[string]bool
 	prevTime time.Time
 
 	slow struct { // values refreshed outside the 5 s loop
@@ -216,8 +220,33 @@ type ifCounters struct {
 	speedMbps int
 }
 
-// readIfCounters asks Windows for the counters of one adapter. An adapter that does not answer is skipped on
-// its own: the others still report.
+// readIfTable reads the counters of every adapter in one call, by interface index and by name (the alias that
+// net.Interfaces reports). One table is more robust than one call per adapter: an adapter that cannot be queried
+// alone is still in the table.
+func readIfTable() (byIndex map[int]ifCounters, byName map[string]ifCounters, err error) {
+	var t *windows.MibIfTable2
+	if err := windows.GetIfTable2Ex(windows.MibIfTableNormal, &t); err != nil || t == nil {
+		if err == nil {
+			err = errors.New("no table")
+		}
+		return nil, nil, err
+	}
+	defer windows.FreeMibTable(unsafe.Pointer(t))
+	rows := unsafe.Slice(&t.Table[0], int(t.NumEntries))
+	byIndex, byName = make(map[int]ifCounters, len(rows)), make(map[string]ifCounters, len(rows))
+	for i := range rows {
+		r := &rows[i]
+		c := ifCounters{rx: r.InOctets, tx: r.OutOctets}
+		if sp := r.ReceiveLinkSpeed; sp > 0 && sp != ^uint64(0) {
+			c.speedMbps = int(sp / 1_000_000) //nolint:gosec // a link speed in Mbit/s fits an int
+		}
+		byIndex[int(r.InterfaceIndex)] = c
+		byName[windows.UTF16ToString(r.Alias[:])] = c
+	}
+	return byIndex, byName, nil
+}
+
+// readIfCounters asks Windows for the counters of one adapter (used when the table is not available).
 func readIfCounters(index int) (ifCounters, bool) {
 	row := windows.MibIfRow2{InterfaceIndex: uint32(index)} //nolint:gosec // an interface index is small and positive
 	if err := windows.GetIfEntry2Ex(windows.MibIfTableNormal, &row); err != nil {
@@ -234,6 +263,10 @@ func (c *winCollector) collectNet(now time.Time) []protocol.NetIface {
 	dt := now.Sub(c.prevTime).Seconds()
 	ifaces, _ := net.Interfaces()
 	cur := make(map[string]ifCounters, len(ifaces))
+	byIndex, byName, terr := readIfTable()
+	if terr != nil {
+		c.warnOnce("table", "network counters: the adapter table is not available, asking adapter by adapter", "err", terr)
+	}
 	var out []protocol.NetIface
 	for _, ifc := range ifaces {
 		if ifc.Flags&net.FlagLoopback != 0 {
@@ -248,7 +281,17 @@ func (c *winCollector) collectNet(now time.Time) []protocol.NetIface {
 				}
 			}
 		}
-		if cc, ok := readIfCounters(ifc.Index); ok {
+		cc, ok := byIndex[ifc.Index]
+		if !ok {
+			cc, ok = byName[ifc.Name]
+		}
+		if !ok {
+			cc, ok = readIfCounters(ifc.Index)
+		}
+		if !ok && n.Up && n.IP != "" {
+			c.warnOnce(ifc.Name, "network counters: no counters for an adapter that is up", "adapter", ifc.Name, "index", ifc.Index)
+		}
+		if ok {
 			cur[ifc.Name] = cc
 			n.RxTotal, n.TxTotal, n.SpeedMbps = cc.rx, cc.tx, cc.speedMbps
 			if p, ok := c.prevNet[ifc.Name]; ok && dt > 0 && cc.rx >= p.rx && cc.tx >= p.tx {
@@ -260,4 +303,15 @@ func (c *winCollector) collectNet(now time.Time) []protocol.NetIface {
 	}
 	c.prevNet, c.prevTime = cur, now
 	return out
+}
+
+// warnOnce writes a problem to the log of the agent the first time it is seen.
+func (c *winCollector) warnOnce(key, msg string, args ...any) {
+	if c.warned == nil {
+		c.warned = map[string]bool{}
+	}
+	if !c.warned[key] {
+		c.warned[key] = true
+		slog.Warn(msg, args...)
+	}
 }
