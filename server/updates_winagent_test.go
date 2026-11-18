@@ -21,3 +21,28 @@ func TestWindowsByHand(t *testing.T) {
 		}
 	}
 }
+
+func TestWinActionsUseRealOperatorRights(t *testing.T) {
+	for key, act := range winActions {
+		if !validModule(act.right) {
+			t.Errorf("%s needs the right %q, which an operator cannot be given", key, act.right)
+		}
+		if act.timeout <= 0 {
+			t.Errorf("%s has no timeout", key)
+		}
+	}
+	// reading is never dangerous, changing always is, except the two calls that settle a network change
+	for _, read := range []string{"users.state", "winupdate.list", "network.state"} {
+		if winActions[read].dangerous {
+			t.Errorf("%s only reads", read)
+		}
+	}
+	for _, change := range []string{"users.add", "users.update", "users.passwd", "users.delete", "users.logoff", "network.apply"} {
+		if !winActions[change].dangerous {
+			t.Errorf("%s changes the computer and needs the confirmation", change)
+		}
+	}
+	if !winUpdateIDRe.MatchString("0f3a2b1c-1234-5678-9abc-def012345678") || winUpdateIDRe.MatchString("x; rm") {
+		t.Error("update ids are GUIDs")
+	}
+}

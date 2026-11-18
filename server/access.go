@@ -106,6 +106,8 @@ func streamModule(kind string) string {
 	switch {
 	case kind == "terminal", kind == "logs", kind == "apt":
 		return kind
+	case kind == "winupdate":
+		return "apt" // Windows Update is the updates right of the operator
 	case strings.HasPrefix(kind, "docker-"):
 		return "docker"
 	case kind == "f2b-install":

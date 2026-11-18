@@ -50,6 +50,8 @@ func NewCollector(ctx context.Context) Collector {
 func (c *winCollector) refreshSlow(ctx context.Context) {
 	t := time.NewTicker(30 * time.Second)
 	defer t.Stop()
+	upd := time.NewTimer(3 * time.Minute) // the first search of Windows Update waits, the start of the service is busy enough
+	defer upd.Stop()
 	c.updateFailed()
 	for {
 		select {
@@ -57,6 +59,9 @@ func (c *winCollector) refreshSlow(ctx context.Context) {
 			return
 		case <-t.C:
 			c.updateFailed()
+		case <-upd.C:
+			refreshUpdateCounts(ctx)
+			upd.Reset(time.Hour)
 		}
 	}
 }
@@ -170,6 +175,7 @@ func (c *winCollector) Collect(now time.Time) protocol.Sample {
 		s.Procs = len(pids)
 	}
 	s.RebootRequired = rebootPending()
+	s.Updates, s.SecurityUpdates = updateCounts()
 
 	c.slow.Lock()
 	s.FailedServices = c.slow.failed

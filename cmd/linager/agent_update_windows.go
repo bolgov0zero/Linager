@@ -61,5 +61,11 @@ func newAgentUpdateCmds(dataDir *string) []*cobra.Command {
 			return agent.RestartService()
 		},
 	}
-	return []*cobra.Command{upd, status, rollback, restart}
+	rollbackChange := &cobra.Command{
+		Use:    "rollback-change",
+		Short:  "Roll back an unconfirmed network change (run by the scheduled task)",
+		Hidden: true,
+		RunE:   func(*cobra.Command, []string) error { return agent.RollbackNetworkChange(*dataDir) },
+	}
+	return []*cobra.Command{upd, status, rollback, restart, rollbackChange}
 }

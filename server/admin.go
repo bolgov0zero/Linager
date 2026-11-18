@@ -174,6 +174,7 @@ func (a *Admin) Handler() http.Handler {
 	a.route(mux, "GET /api/servers/{id}/processes", "srv:processes", a.processesList)
 	a.route(mux, "POST /api/servers/{id}/processes/{pid}/kill", "srv:processes", a.killProcess)
 	a.route(mux, "GET /api/servers/{id}/stream", "srv", a.streamWS)
+	a.route(mux, "POST /api/servers/{id}/win/{module}/{action}", "srv", a.winCall) // the rights are checked by the action
 	a.route(mux, "GET /api/servers/{id}/desktop", "srv:desktop", a.desktopWS)
 	a.route(mux, "GET /api/servers/{id}/desktop/state", "srv:desktop", a.desktopState)
 	a.route(mux, "POST /api/servers/{id}/desktop/enable", "srv:desktop", a.desktopEnable)

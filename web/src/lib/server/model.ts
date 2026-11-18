@@ -67,6 +67,8 @@ export function visibleTabs(modules: readonly string[], allowed: readonly string
   return TABS.filter((tab) => {
     const module = TAB_MODULE[tab.id];
     if (!module) return true;
+    // Windows Update has its own agent module behind the same tab
+    if (tab.id === 'updates' && modules.includes('winupdate') && (allowed === null || allowed.includes('apt'))) return true;
     // an operator only gets the modules that were given (an administrator: null), an auditor none
     if (allowed !== null && !allowed.includes(module)) return false;
     if (modules.length === 0) return module !== 'docker' && module !== 'security' && module !== 'disk' && module !== 'users';

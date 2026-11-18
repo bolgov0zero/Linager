@@ -284,3 +284,108 @@ func TestWindowsDesktopState(t *testing.T) {
 		t.Fatal("turning the remote desktop on is a dangerous action: it needs the confirmation")
 	}
 }
+
+func TestWindowsUsersLifecycle(t *testing.T) {
+	ctx := context.Background()
+	res, err := usersStateCmd(ctx, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := res.(map[string]any)
+	users := m["users"].([]WinUser)
+	if len(users) == 0 || len(m["groups"].([]string)) == 0 {
+		t.Fatalf("no users or groups: %d", len(users))
+	}
+	foundBuiltin := false
+	for _, u := range users {
+		if u.Builtin {
+			foundBuiltin = true
+		}
+	}
+	if !foundBuiltin {
+		t.Error("the built-in administrator must be recognised by its SID")
+	}
+	const name = "lgrtest1"
+	_, _ = userDeleteCmd(ctx, mustJSON(map[string]any{"name": name}), true) // a leftover of an earlier run
+	if _, err := userAddCmd(ctx, mustJSON(map[string]any{"name": name, "password": "Lgr-T3st-Pa55w0rd!", "full_name": "Linager test", "groups": []string{"Users"}}), false); err == nil {
+		t.Fatal("creating a user needs the confirmation")
+	}
+	if _, err := userAddCmd(ctx, mustJSON(map[string]any{"name": name, "password": "Lgr-T3st-Pa55w0rd!", "full_name": "Linager test", "groups": []string{"Users"}}), true); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _, _ = userDeleteCmd(ctx, mustJSON(map[string]any{"name": name}), true) }()
+	find := func() *WinUser {
+		res, _ := usersStateCmd(ctx, nil, false)
+		for _, u := range res.(map[string]any)["users"].([]WinUser) {
+			if u.Name == name {
+				return &u
+			}
+		}
+		return nil
+	}
+	u := find()
+	if u == nil || !u.Enabled || u.FullName != "Linager test" || !containsFold(u.Groups, "Users") {
+		t.Fatalf("the new user: %+v", u)
+	}
+	if _, err := userUpdateCmd(ctx, mustJSON(map[string]any{"name": name, "enabled": false, "groups": []string{"Remote Desktop Users"}}), true); err != nil {
+		t.Fatal(err)
+	}
+	u = find()
+	if u == nil || u.Enabled || containsFold(u.Groups, "Users") || !containsFold(u.Groups, "Remote Desktop Users") {
+		t.Fatalf("after the change: %+v", u)
+	}
+	if _, err := userPasswdCmd(ctx, mustJSON(map[string]any{"name": name, "password": "Lgr-N3w-Pa55w0rd!"}), true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := userDeleteCmd(ctx, mustJSON(map[string]any{"name": name}), true); err != nil {
+		t.Fatal(err)
+	}
+	if find() != nil {
+		t.Fatal("the user must be gone")
+	}
+	// the built-in administrator is never deleted from here
+	for _, u := range users {
+		if u.Builtin {
+			if _, err := userDeleteCmd(ctx, mustJSON(map[string]any{"name": u.Name}), true); err == nil {
+				t.Fatal("the built-in administrator must not be deleted")
+			}
+		}
+	}
+	if _, err := userAddCmd(ctx, mustJSON(map[string]any{"name": `bad\name`, "password": "x"}), true); err == nil {
+		t.Fatal("an invalid name must be refused")
+	}
+	_ = winSessions() // must not crash even with no interactive session
+}
+
+func TestWindowsNetworkState(t *testing.T) {
+	res, err := networkStateCmd(context.Background(), nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ads := res.(map[string]any)["adapters"].([]WinAdapter)
+	if len(ads) == 0 {
+		t.Fatal("no adapters")
+	}
+	for _, a := range ads {
+		t.Logf("adapter %d %q up=%v dhcp=%v ip=%v gw=%q dns=%v", a.Index, a.Name, a.Up, a.DHCP, a.IPv4, a.Gateway, a.DNS)
+	}
+	// a change needs the confirmation and a valid request; nothing here touches an adapter
+	if _, err := networkApplyCmd(context.Background(), mustJSON(netApply{Index: ads[0].Index, Mode: "dhcp"}), false); err == nil {
+		t.Fatal("a network change needs the confirmation")
+	}
+	if _, err := networkApplyCmd(context.Background(), mustJSON(netApply{Index: ads[0].Index, Mode: "static", IP: "999.1.1.1", Prefix: 24}), true); err == nil {
+		t.Fatal("an invalid address must be refused before anything changes")
+	}
+}
+
+func TestWindowsUpdateSearch(t *testing.T) {
+	if testing.Short() {
+		t.Skip("the search of Windows Update takes long")
+	}
+	res, err := winUpdateListCmd(context.Background(), nil, false)
+	if err != nil {
+		t.Logf("Windows Update did not answer on this host: %v", err) // a runner may have no update service
+		return
+	}
+	t.Logf("updates offered: %d", len(res.(map[string]any)["updates"].([]WinUpdate)))
+}

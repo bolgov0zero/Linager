@@ -245,7 +245,7 @@ export interface DiskScan { scanned_at: number; mount: string; partial: boolean;
 
 export interface ProcessInfo { pid: number; user: string; cpu: number; mem_pct: number; rss: number; state: string; cmd: string }
 export interface ProcessList { processes: ProcessInfo[]; total: number }
-export type StreamKind = 'terminal' | 'logs' | 'apt' | 'docker-logs' | 'docker-pull' | 'docker-update' | 'docker-project-logs' | 'f2b-install';
+export type StreamKind = 'terminal' | 'logs' | 'apt' | 'docker-logs' | 'docker-pull' | 'docker-update' | 'docker-project-logs' | 'f2b-install' | 'winupdate';
 
 // ---- files (stage 5) ----
 export interface FileEntry {
@@ -795,3 +795,24 @@ export const desktopApi = {
   state: (id: string) => request<DesktopState>('GET', `api/servers/${enc(id)}/desktop/state`),
   enable: (id: string) => request<DesktopState>('POST', `api/servers/${enc(id)}/desktop/enable`, { confirm: true }),
 };
+
+// ---- Windows modules: users, Windows Update, network adapters ----
+
+export interface WinUser {
+  name: string; full_name: string; description: string; enabled: boolean; sid: string; builtin: boolean;
+  last_logon: number; pw_last_set: number; pw_expires: number; groups: string[];
+}
+export interface WinSession { id: number; user: string; state: string; type: 'console' | 'rdp' | 'other' }
+export interface WinUsersState { users: WinUser[]; groups: string[]; sessions: WinSession[] }
+export interface WinUpdate { id: string; title: string; kb: string; size: number; severity: string; security: boolean; downloaded: boolean; need_reboot: boolean }
+export interface WinAdapter {
+  index: number; name: string; description: string; mac: string; up: boolean; virtual: boolean; mtu: number; speed_mbps: number;
+  dhcp: boolean; ipv4: string[]; gateway: string; dns: string[];
+}
+export interface WinNetState { adapters: WinAdapter[]; pending: { id: string; deadline: number } | null }
+export interface WinNetApply { index: number; mode: 'dhcp' | 'static'; ip?: string; prefix?: number; gateway?: string; dns: string[] }
+
+/** One call to a Windows module of the agent. The dangerous ones are sent with the confirmation the person gave. */
+export function winCall<T>(id: string, module: string, action: string, params: Record<string, unknown> = {}, confirm = false): Promise<T> {
+  return request<T>('POST', `api/servers/${enc(id)}/win/${module}/${action}`, confirm ? { ...params, confirm: true } : params);
+}

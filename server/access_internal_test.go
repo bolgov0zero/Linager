@@ -28,7 +28,8 @@ func TestRouteTableIsComplete(t *testing.T) {
 	}
 	srvOK := map[string]bool{
 		"GET /api/servers/{id}": true, "GET /api/servers/{id}/metrics": true, "GET /api/servers/{id}/metrics.csv": true,
-		"GET /api/servers/{id}/stream": true, // the module is checked by the kind of the stream
+		"GET /api/servers/{id}/stream":                 true, // the module is checked by the kind of the stream
+		"POST /api/servers/{id}/win/{module}/{action}": true, // the right is checked by the action (the table winActions)
 	}
 	seen := map[string]bool{}
 	for _, r := range a.routes {

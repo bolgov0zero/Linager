@@ -605,6 +605,20 @@ func (a *Admin) streamParams(r *http.Request) (module string, params map[string]
 			p["kernel"] = "1"
 		}
 		return "logs", p, true
+	case "winupdate":
+		ids := []string{}
+		if raw := q.Get("ids"); raw != "" {
+			ids = strings.Split(raw, ",")
+			if len(ids) > 200 {
+				return "", nil, false
+			}
+			for _, id := range ids {
+				if !winUpdateIDRe.MatchString(id) {
+					return "", nil, false
+				}
+			}
+		}
+		return "winupdate", map[string]any{"ids": ids}, true
 	case "docker-logs":
 		if c := q.Get("container"); c != "" && len(c) <= 128 {
 			return "docker.logs", map[string]any{"container": c, "lines": atoiClamp(q.Get("lines"), 0, 1000, 200)}, true

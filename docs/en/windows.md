@@ -15,7 +15,7 @@ The agent runs on Windows 10 / 11 and Windows Server 2016 and newer (x64) and co
 | Files | the file manager. The top of the tree is the list of drives, paths look like `/C:/Users/x`. Owner and group are not shown, and permissions cannot be changed from the panel (Windows keeps ACLs). The drive roots and `C:\Windows`, `C:\Program Files`, `C:\ProgramData`, `C:\Users` cannot be renamed, deleted or replaced. |
 | Reboot | `shutdown /r`, with confirmation. |
 
-Not available on Windows (the tabs are hidden): updates (apt), disk cleanup, network, firewall, security (fail2ban, keys), users, Docker.
+Not available on Windows (the tabs are hidden): disk cleanup, firewall, security (fail2ban, keys), Docker. Users, updates and network have their own Windows views, see below.
 
 ## Install
 
@@ -38,6 +38,13 @@ msiexec /i linager_windows_amd64.msi /qn SERVER=panel.example.com:9443
 3. Enter the key ("Confirmation key") and **make sure the check code is the same**: it ties the key to the certificate the agent saw, so it protects the pairing against a man in the middle when no fingerprint was given. Confirm.
 
 The same works from a console: `& "C:\Program Files\Linager\linager.exe" agent enroll --server panel.example.com:9443`. The service notices the new identity within 10 seconds.
+
+## Users, updates and network
+These tabs work on Windows too, with their own views (no shells or sudo): **Users** (local accounts and groups), **Updates** (Windows Update) and **Network** (adapters).
+
+- **Users.** The list of local accounts: name, full name, enabled or not, last sign-in, groups. Add a user (a password is required: Windows lets nobody in over the network without one), set a password, enable or disable, change the groups (for example Administrators or Remote Desktop Users), delete. The sessions that are signed in now (the console and remote desktops) with "End session". Guards: the built-in administrator (the account whose SID ends in -500) is not deleted or disabled from here, and the last enabled administrator is not removed or disabled. Domain accounts are not managed. Every change is confirmed and written to the audit log (`win.users.*`, without passwords).
+- **Updates.** The search of Windows Update on the computer itself (it can take a minute; where the computer uses WSUS the answer comes from there): title, KB, size, severity, "security". Install the selected or all updates with a live log (download, installation, result codes, whether a restart is needed). The dashboard shows the number of updates and "restart required" like it does for apt; the agent searches once an hour, the first time 3 minutes after the start. Programs of other makers (winget) are not covered.
+- **Network.** The adapters: state, DHCP or static, IPv4 addresses, gateway, DNS, MAC, speed, MTU. Change one adapter (DHCP, or an address with the prefix and the gateway, and the DNS servers). **The agent undoes a change by itself after 30 seconds unless you confirm it**: it saves the old settings and creates a one-shot task of the Task Scheduler (`LinagerNetRollback`), so the rollback works even if the connection is lost. A change left unconfirmed by a restart is undone when the agent starts. Only IPv4; no Wi-Fi, VLANs or teaming. A change is refused while another one waits for its confirmation. The audit log has `win.network.apply` and `win.network.rollback`.
 
 ## Remote desktop
 The "Desktop" tab of a Windows server (and "Remote desktop" in the context menu of a tile on the "Map") shows the screen of the computer and lets you work with it, in the page or in a floating window like the terminal. Nothing is installed: the RDP client is part of the panel (WebAssembly, loaded when the desktop is first opened, about 2 MB compressed).

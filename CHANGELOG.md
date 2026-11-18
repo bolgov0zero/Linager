@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0-beta.9
+
+- New (beta): **Users, Updates and Network tabs for Windows servers.** *Users:* local accounts and groups (add with a required password, set a password, enable or disable, change groups, delete) and the signed-in sessions with "End session"; the built-in administrator (SID -500) and the last enabled administrator are protected. *Updates:* Windows Update on the computer itself (title, KB, size, severity, security), install the selected or all updates with a live log, the number of updates and "restart required" on the dashboard (searched once an hour). *Network:* the adapters (state, DHCP or static, IPv4, gateway, DNS, MAC, speed, MTU) and the change of one adapter with **an automatic rollback after 30 seconds unless confirmed**, done by the agent through a one-shot Task Scheduler task and by `recoverNetChange` after a restart. New agent modules `users`, `winupdate`, `network` (Windows only; an agent of beta.8 or older gets them with the update from the panel); one server route `POST /api/servers/{id}/win/{module}/{action}` with the table of allowed actions, the operator rights `users`, `apt`, `network`, and audit entries `win.users.*`, `win.network.*`. Docs: `docs/en/windows.md`, `docs/ru/windows.md`, section 12o of the architecture.
+- Tests: the validation of names, groups and network changes (every platform); on a Windows runner the whole life of a local user (create, groups, disable, password, delete, refusal to delete the built-in administrator), the adapters, the confirmation rules, the search of Windows Update. **Not checked:** installing updates and changing an adapter (a real rollback after a cut connection) on a real machine; take a snapshot of the virtual machine before you try the network change.
+
 ## 0.3.0-beta.8
 
 - New: the button "open in a window" next to the item "Desktop" in the side menu of a Windows server, like the one next to "Terminal". It opens the remote desktop in a floating window (one per server). Checked in the browser.

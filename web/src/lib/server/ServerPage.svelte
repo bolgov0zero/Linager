@@ -20,6 +20,10 @@
   import FirewallTab from './tabs/FirewallTab.svelte';
   import SecurityTab from './tabs/SecurityTab.svelte';
   import UsersTab from './tabs/UsersTab.svelte';
+  import WinNetworkTab from './tabs/WinNetworkTab.svelte';
+  import WinUpdatesTab from './tabs/WinUpdatesTab.svelte';
+  import WinUsersTab from './tabs/WinUsersTab.svelte';
+  import { osKind } from '../dashboard/status';
   import DockerTab from './tabs/DockerTab.svelte';
   import { formatDateTime } from './format';
   import { openDesktopWindow, openTermWindow } from '../terminal/windows';
@@ -66,6 +70,7 @@
   const online = $derived(detail?.online ?? false);
   const isAdmin = $derived(role === 'admin');
   // a terminal as a user needs the terminal module too, on the agent and in the rights of the operator
+  const isWin = $derived(osKind(detail?.os ?? '') === 'windows');
   const canDesktop = $derived((detail?.modules ?? []).includes('desktop') && (isAdmin || (role === 'operator' && userModules.includes('desktop'))));
   const canTerminal = $derived((detail?.modules ?? []).includes('terminal') && (isAdmin || (role === 'operator' && userModules.includes('terminal'))));
   const tabs = $derived(visibleTabs(detail?.modules ?? [], isAdmin ? null : role === 'operator' ? userModules : []));
@@ -263,7 +268,7 @@
       {:else if tab === 'disk'}
         <DiskTab server={detail} />
       {:else if tab === 'network'}
-        <NetworkTab server={detail} />
+        {#if isWin}<WinNetworkTab server={detail} />{:else}<NetworkTab server={detail} />{/if}
       {:else if tab === 'firewall'}
         <FirewallTab server={detail} />
       {:else if tab === 'docker'}
@@ -275,13 +280,13 @@
       {:else if tab === 'services'}
         <ServicesTab server={detail} />
       {:else if tab === 'updates'}
-        <UpdatesTab server={detail} />
+        {#if isWin}<WinUpdatesTab server={detail} />{:else}<UpdatesTab server={detail} />{/if}
       {:else if tab === 'processes'}
         <ProcessesTab server={detail} />
       {:else if tab === 'security'}
         <SecurityTab server={detail} />
       {:else if tab === 'users'}
-        <UsersTab server={detail} canTerminal={canTerminal} />
+        {#if isWin}<WinUsersTab server={detail} />{:else}<UsersTab server={detail} canTerminal={canTerminal} />{/if}
       {:else if tab === 'logs'}
         <LogsTab server={detail} />
       {:else}

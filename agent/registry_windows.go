@@ -13,7 +13,7 @@ import (
 // registerPlatform registers the modules of a Windows host: terminal, services, processes, event log and files.
 // The other modules of the Linux agent (apt, firewall, network, users, docker, disk, security) have no Windows
 // counterpart yet.
-func (r *Registry) registerPlatform(cfg *config.Agent, _ Collector, _ *slog.Logger, _ string) {
+func (r *Registry) registerPlatform(cfg *config.Agent, _ Collector, _ *slog.Logger, dataDir string) {
 	r.cmds["update.apply"] = r.updateApplyCmd(version.Version) // the panel updates the agent: the signed exe replaces the running one
 	if cfg.Enabled("terminal") {
 		r.streams["terminal"] = termStream
@@ -33,6 +33,26 @@ func (r *Registry) registerPlatform(cfg *config.Agent, _ Collector, _ *slog.Logg
 		r.streams["desktop"] = desktopStream
 		r.cmds["desktop.state"] = desktopStateCmd
 		r.cmds["desktop.enable"] = desktopEnableCmd
+	}
+	if cfg.Enabled("users") {
+		r.cmds["users.state"] = usersStateCmd
+		r.cmds["users.add"] = userAddCmd
+		r.cmds["users.update"] = userUpdateCmd
+		r.cmds["users.passwd"] = userPasswdCmd
+		r.cmds["users.delete"] = userDeleteCmd
+		r.cmds["users.logoff"] = userLogoffCmd
+	}
+	if cfg.Enabled("winupdate") {
+		r.cmds["winupdate.list"] = winUpdateListCmd
+		r.streams["winupdate"] = winUpdateStream
+	}
+	if cfg.Enabled("network") {
+		r.cmds["network.state"] = networkStateCmd
+		r.cmds["network.apply"] = networkApplyCmd
+		r.cmds["network.confirm"] = networkConfirmCmd
+		r.cmds["network.rollback"] = networkRollbackCmd
+		netDataDir = func() string { return dataDir }
+		go recoverNetChange() // a change left unconfirmed by a restart is undone
 	}
 	if cfg.Enabled("files") {
 		r.cmds["files.list"] = filesList
