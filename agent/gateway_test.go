@@ -161,15 +161,16 @@ func TestBanners(t *testing.T) {
 		t.Errorf("control characters out and the text cut: %q", got)
 	}
 
-	a, b := net.Pipe()
-	go func() { _, _ = b.Write([]byte("SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3\r\nrest")); _ = b.Close() }()
-	if got := readSSHBanner(a); got != "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3" {
-		t.Errorf("ssh banner: %q", got)
-	}
-	a, b = net.Pipe()
-	go func() { _, _ = b.Write([]byte("220 smtp ready\r\n")); _ = b.Close() }()
-	if got := readSSHBanner(a); got != "" {
-		t.Errorf("not SSH: %q", got)
+	for _, c := range []struct{ in, want string }{
+		{"SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3\r\nrest", "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3"},
+		{"220 smtp ready\r\n", ""}, // not SSH
+	} {
+		a, b := net.Pipe()
+		go func(b net.Conn, data string) { _, _ = b.Write([]byte(data)); _ = b.Close() }(b, c.in)
+		if got := readSSHBanner(a); got != c.want {
+			t.Errorf("banner of %q: %q, want %q", c.in, got, c.want)
+		}
+		_ = a.Close()
 	}
 }
 

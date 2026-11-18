@@ -115,6 +115,12 @@ func enabledNets(c protocol.GatewayConfig) []protocol.GatewayNetCfg {
 // loop waits for the time of the next pass, a change of the configuration or "scan now", and runs a pass.
 func (m *gwModule) loop(ctx context.Context) {
 	for {
+		// A wake-up that came before this read is covered by the configuration read now; keeping it would start a
+		// second pass right after the first.
+		select {
+		case <-m.wake:
+		default:
+		}
 		m.mu.Lock()
 		cfg := m.cfg
 		m.mu.Unlock()
