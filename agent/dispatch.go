@@ -202,6 +202,21 @@ func NewRegistry(cfg *config.Agent, col Collector, log *slog.Logger, dataDir str
 		r.cmds["users.passwd"] = um.passwd
 		r.cmds["users.kill"] = um.kill
 	}
+	if cfg.Enabled("gateway") {
+		gm := newGatewayModule(dataDir, func(typ string, payload any) error {
+			r.emitMu.Lock()
+			f := r.emitFn
+			r.emitMu.Unlock()
+			if f == nil {
+				return errors.New("no link to the server")
+			}
+			return f(typ, payload)
+		})
+		gm.start()
+		r.cmds["gateway.state"] = gm.stateCmd
+		r.cmds["gateway.configure"] = gm.configureCmd
+		r.cmds["gateway.scan"] = gm.scanCmd
+	}
 	r.cmds["system.reboot"] = sysReboot // always available: rebooting is not a toggleable module
 	return r
 }

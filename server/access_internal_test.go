@@ -9,7 +9,7 @@ import (
 	"github.com/bolgov0zero/linager/internal/config"
 )
 
-var specRe = regexp.MustCompile(`^(any|admin|srv|srv:admin|srv:(services|apt|disk|security|users|processes|files|network|firewall|docker)|mod:terminal)$`)
+var specRe = regexp.MustCompile(`^(any|admin|srv|srv:admin|srv:(services|apt|disk|security|users|processes|files|network|firewall|docker|gateway)|mod:terminal)$`)
 
 // Every authenticated route has an access rule, and the loose ones ("any", "srv") are only the ones that are
 // meant to be: a new route cannot slip in open to an operator or an auditor by accident.

@@ -140,6 +140,99 @@ export interface Group { id: number; name: string }
 
 /** A place on the scheme plane: pixels at 100% zoom, the panel's own place is 0,0. */
 export interface SchemePoint { x: number; y: number }
+// ---- gateway: devices found in the networks of an agent ----
+
+/** What the last pass found in a network. */
+export interface GwNetLast { finished_at: number; probed: number; answered: number; found: number; error?: string }
+/** A network of the gateway as the server keeps it. */
+export interface GwNet {
+  cidr: string;
+  on: boolean;
+  /** Connected to the agent directly: ARP works and MAC addresses are real. */
+  own: boolean;
+  ports: boolean;
+  names: boolean;
+  /** A public network whose scanning the administrator confirmed. */
+  public: boolean;
+  iface?: string;
+  /** "VLAN 20" for eth0.20. */
+  vlan?: string;
+  /** The router of a network that is not own: "192.168.1.1 (eth0)". */
+  via?: string;
+  last?: GwNetLast;
+}
+/** A network as the administrator saves it. */
+export interface GwNetEdit { cidr: string; on: boolean; ports: boolean; names: boolean; confirm_public?: boolean }
+export interface GwPort { port: number; banner?: string }
+/** The kind of a device, decided by the panel from what is known about it. */
+export type GwType = 'router' | 'hypervisor' | 'nas' | 'printer' | 'camera' | 'phone' | 'tv' | 'speaker' | 'iot' | 'windows' | 'server';
+/**
+ * One reason for the type. `value` is the port number ("554"), the manufacturer, the mDNS service ("_ipp._tcp"), the
+ * UPnP device type ("MediaRenderer") or the word that was found in a banner ("proxmox"); absent for gateway and
+ * random_mac.
+ */
+export interface GwWhy { kind: 'gateway' | 'port' | 'vendor' | 'service' | 'upnp' | 'banner' | 'random_mac' | 'name'; value?: string }
+export interface GwUpnp { type?: string; model?: string; maker?: string }
+export interface GwDevice {
+  id: number;
+  ip: string;
+  mac?: string;
+  vendor?: string;
+  /** The MAC is a random (locally administered) one: there is no vendor. */
+  random_mac?: boolean;
+  /** The best name found automatically and where it came from (ptr, mdns, netbios, ssdp). */
+  name?: string;
+  name_src?: string;
+  /** A name the administrator gave; it is shown instead of the found ones. */
+  own_name?: string;
+  ports: GwPort[];
+  /** How it was found: arp, ping, ports. */
+  via: string[];
+  net: string;
+  first_seen: number;
+  last_seen: number;
+  online: boolean;
+  excluded: boolean;
+  /** Appeared within the last 24 hours in a network that had been scanned before. */
+  is_new: boolean;
+  hints?: ('debian' | 'proxmox')[];
+  /** The name of the server (an agent) this device is. */
+  known_server?: string;
+  /** What kind of device it is, and why: absent when nothing says. */
+  type?: GwType;
+  why?: GwWhy[];
+  /** The services it announces over mDNS ("_ipp._tcp"). */
+  svc?: string[];
+  upnp?: GwUpnp;
+}
+export interface GwEvent { id: number; ts: number; kind: 'appeared' | 'disappeared'; ip: string; name?: string; vendor?: string; net: string }
+export interface GwOwnNet { cidr: string; iface: string; vlan?: string }
+/** What the agent says right now; absent when the agent is offline. */
+export interface GwLive {
+  running: boolean;
+  index?: number;
+  total?: number;
+  cidr?: string;
+  phase?: string;
+  last_pass_at?: number;
+  next_pass_at?: number;
+  /** false: raw ICMP is not available on the host, so liveness comes from ARP and ports. */
+  ping_ok: boolean;
+  own_nets: GwOwnNet[];
+}
+export interface GwState {
+  enabled: boolean;
+  interval_s: number;
+  agent_online: boolean;
+  /** When the last pass result arrived. */
+  last_data_at?: number;
+  nets: GwNet[];
+  devices: GwDevice[];
+  events: GwEvent[];
+  live?: GwLive;
+}
+export interface GwConfigEdit { enabled: boolean; interval_s: number; nets: GwNetEdit[]; confirm: boolean }
+
 /** Where the user dragged the panel and the servers on the scheme view of the dashboard (by server id). */
 export interface SchemeLayout { panel?: SchemePoint; nodes: Record<string, SchemePoint> }
 
@@ -617,6 +710,11 @@ export const api = {
   serviceAction: (id: string, unit: string, action: ServiceAction, confirm: boolean) =>
     request<{ ok: boolean }>('POST', `api/servers/${enc(id)}/services/${enc(unit)}/${action}`, { confirm }),
   apt: (id: string) => request<AptList>('GET', `api/servers/${enc(id)}/apt`),
+  gateway: (id: string) => request<GwState>('GET', `api/servers/${enc(id)}/gateway`),
+  gatewaySave: (id: string, c: GwConfigEdit) => request<GwState>('PUT', `api/servers/${enc(id)}/gateway`, c),
+  gatewayScan: (id: string) => request<void>('POST', `api/servers/${enc(id)}/gateway/scan`),
+  gatewayDevice: (id: string, deviceId: number, patch: { own_name?: string; excluded?: boolean }) =>
+    request<void>('PATCH', `api/servers/${enc(id)}/gateway/devices/${deviceId}`, patch),
   hostUsers: (id: string) => request<HostUsersState>('GET', `api/servers/${enc(id)}/users`),
   hostUserAdd: (id: string, u: HostUserAdd) =>
     request<{ ok: boolean; warnings: string[] }>('POST', `api/servers/${enc(id)}/users`, { ...u, confirm: true }),

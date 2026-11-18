@@ -1,6 +1,6 @@
 <script lang="ts" module>
   /** The agent modules an operator can get, and the ones that give the access of root on the host. */
-  export const MODULES = ['terminal', 'files', 'services', 'apt', 'processes', 'logs', 'disk', 'network', 'firewall', 'security', 'users', 'docker'] as const;
+  export const MODULES = ['terminal', 'files', 'services', 'apt', 'processes', 'logs', 'disk', 'network', 'firewall', 'security', 'users', 'docker', 'gateway'] as const;
   export const ROOT_MODULES: readonly string[] = ['terminal', 'files', 'network', 'firewall', 'security', 'users', 'docker'];
 </script>
 

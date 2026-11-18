@@ -92,6 +92,7 @@ func Run(ctx context.Context, cfg *config.Server, static fs.FS, log *slog.Logger
 	agents := NewAgentPort(db, keys, hub, metrics, updates, log)
 	agents.CertLifetime = cfg.AgentCertLifetime()
 	agents.Live = live
+	agents.Gateway = admin.Gateway
 	if _, port, err := net.SplitHostPort(cfg.Agents.Listen); err == nil {
 		agents.ListenPort = port
 	}

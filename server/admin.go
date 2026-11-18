@@ -42,6 +42,7 @@ type Admin struct {
 	Live    *Live
 	Metrics *Metrics
 	Updates *Updates
+	Gateway *Gateway
 	Log     *slog.Logger
 	Cfg     *config.Server
 	Trust   *ProxyTrust
@@ -69,7 +70,7 @@ func NewAdmin(db *store.Store, keys *Keys, hub *Hub, live *Live, metrics *Metric
 	guard := newAccessGuard(db, trust, cfg.Admin.TrustedProxies, log)
 	guard.loadHosts(context.Background()) // the last known addresses of host names, before the first request
 	guard.Load(context.Background())
-	ad := &Admin{DB: db, Keys: keys, Hub: hub, Live: live, Metrics: metrics, Updates: updates, Log: log, Cfg: cfg, Trust: trust, Access: guard, Static: static, loginL: newLimiter(max(cfg.Admin.LoginRate, 10), time.Minute), terms: map[string]int{}, cers: map[string]*ceremony{}, sshL: newLimiter(10, 10*time.Minute)}
+	ad := &Admin{DB: db, Keys: keys, Hub: hub, Live: live, Metrics: metrics, Updates: updates, Gateway: NewGateway(db, hub, log), Log: log, Cfg: cfg, Trust: trust, Access: guard, Static: static, loginL: newLimiter(max(cfg.Admin.LoginRate, 10), time.Minute), terms: map[string]int{}, cers: map[string]*ceremony{}, sshL: newLimiter(10, 10*time.Minute)}
 	ad.SSH = ad.newSSHInstaller()
 	return ad, nil
 }
@@ -166,6 +167,10 @@ func (a *Admin) Handler() http.Handler {
 	a.route(mux, "PUT /api/servers/{id}/security/fail2ban", "srv:security", a.securityF2bSettings)
 	a.route(mux, "GET /api/servers/{id}/security/bans", "srv:security", a.securityBanHistory)
 	a.route(mux, "POST /api/servers/{id}/security/keys/remove", "srv:security", a.securityKeyRemove)
+	a.route(mux, "GET /api/servers/{id}/gateway", "srv:gateway", a.gatewayGet)
+	a.route(mux, "PUT /api/servers/{id}/gateway", "srv:admin", a.gatewaySave)
+	a.route(mux, "POST /api/servers/{id}/gateway/scan", "srv:admin", a.gatewayScan)
+	a.route(mux, "PATCH /api/servers/{id}/gateway/devices/{did}", "srv:admin", a.gatewayDevice)
 	a.route(mux, "GET /api/servers/{id}/users", "srv:users", a.hostUsersState)
 	a.route(mux, "POST /api/servers/{id}/users", "srv:users", a.hostUserAdd)
 	a.route(mux, "PUT /api/servers/{id}/users/{name}", "srv:users", a.hostUserUpdate)

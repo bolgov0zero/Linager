@@ -19,6 +19,7 @@
   import FirewallTab from './tabs/FirewallTab.svelte';
   import SecurityTab from './tabs/SecurityTab.svelte';
   import UsersTab from './tabs/UsersTab.svelte';
+  import GatewayTab from './tabs/GatewayTab.svelte';
   import DockerTab from './tabs/DockerTab.svelte';
   import { formatDateTime } from './format';
   import { openTermWindow } from '../terminal/windows';
@@ -277,6 +278,8 @@
         <SecurityTab server={detail} />
       {:else if tab === 'users'}
         <UsersTab server={detail} canTerminal={canTerminal} />
+      {:else if tab === 'gateway'}
+        <GatewayTab server={detail} canWrite={isAdmin} />
       {:else if tab === 'logs'}
         <LogsTab server={detail} />
       {:else}
