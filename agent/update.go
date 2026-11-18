@@ -152,9 +152,9 @@ func (p *progressReader) idle(started time.Time) time.Duration {
 	return time.Since(started)
 }
 
-// watchDownload writes a line to the journal every downloadLogEvery until stop is closed.
-func (u *updater) watchDownload(pr *progressReader, started time.Time, stop <-chan struct{}) {
-	t := time.NewTicker(downloadLogEvery)
+// watchDownload writes a line to the journal every `every` until stop is closed.
+func (u *updater) watchDownload(pr *progressReader, started time.Time, every time.Duration, stop <-chan struct{}) {
+	t := time.NewTicker(every)
 	defer t.Stop()
 	prev, prevAt := int64(0), started
 	for {
@@ -284,10 +284,12 @@ func (u *updater) Apply(ctx context.Context, version string, key *release.Key) e
 	log.Info("update: binary answered", "size", size, "wait_ms", time.Since(dlStart).Milliseconds())
 	h := sha256.New()
 	pr := &progressReader{r: brc, size: size, every: func(n, total int64) { send(0, protocol.UpdateRunning, nil, n, total) }}
-	stop := make(chan struct{})
-	go u.watchDownload(pr, dlStart, stop)
+	stop, watched := make(chan struct{}), make(chan struct{})
+	every := downloadLogEvery
+	go func() { u.watchDownload(pr, dlStart, every, stop); close(watched) }()
 	n, err := io.Copy(io.MultiWriter(f, h), pr)
 	close(stop)
+	<-watched // no line of the progress comes after the end of the download
 	_ = brc.Close()
 	if cerr := f.Close(); err == nil {
 		err = cerr

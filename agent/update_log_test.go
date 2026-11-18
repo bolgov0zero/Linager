@@ -102,7 +102,7 @@ func TestDownloadJournalShowsTheProgress(t *testing.T) {
 	stop := make(chan struct{})
 	started := time.Now()
 	done := make(chan struct{})
-	go func() { u.watchDownload(pr, started, stop); close(done) }()
+	go func() { u.watchDownload(pr, started, downloadLogEvery, stop); close(done) }()
 	if _, err := io.Copy(io.Discard, pr); err != nil {
 		t.Fatal(err)
 	}
