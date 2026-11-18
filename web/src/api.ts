@@ -63,7 +63,7 @@ export interface JoinLink {
   used: { host: string; at: number }[];
 }
 export interface JoinLinkInput { ttl_seconds: number; max_uses: number; auto_approve: boolean; networks: string[]; group_id: number | null }
-export interface JoinCommand { kind: 'external' | 'local'; host: string; command: string }
+export interface JoinCommand { kind: 'external' | 'local'; platform?: 'linux' | 'windows'; host: string; command: string }
 /** The answer of the creation: the token and the commands exist only in this answer. */
 export interface JoinLinkCreated extends JoinLink { token: string; commands: JoinCommand[] }
 
@@ -238,7 +238,7 @@ export interface DiskFS {
   /** Growth in bytes per day and days until the free space is used up (0: unknown or not growing). */
   per_day: number; days_left: number; history_days: number; trend: number[];
 }
-export interface DiskCleanItem { kind: 'journal' | 'apt' | 'docker-images' | 'docker-build' | 'kernels'; size: number; frees: number; count?: number; items?: string[]; keep?: string }
+export interface DiskCleanItem { kind: 'journal' | 'apt' | 'docker-images' | 'docker-build' | 'kernels' | 'win-temp' | 'win-update-cache' | 'win-recycle' | 'win-delivery' | 'win-dumps' | 'win-old'; size: number; frees: number; count?: number; items?: string[]; keep?: string }
 export interface DiskState { filesystems: DiskFS[]; cleanup: DiskCleanItem[]; docker: boolean }
 export interface DiskNode { name: string; size: number; children?: DiskNode[] }
 export interface DiskScan { scanned_at: number; mount: string; partial: boolean; tree: DiskNode; categories: { id: string; size: number }[] }

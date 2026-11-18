@@ -15,7 +15,7 @@ The agent runs on Windows 10 / 11 and Windows Server 2016 and newer (x64) and co
 | Files | the file manager. The top of the tree is the list of drives, paths look like `/C:/Users/x`. Owner and group are not shown, and permissions cannot be changed from the panel (Windows keeps ACLs). The drive roots and `C:\Windows`, `C:\Program Files`, `C:\ProgramData`, `C:\Users` cannot be renamed, deleted or replaced. |
 | Reboot | `shutdown /r`, with confirmation. |
 
-Not available on Windows (the tabs are hidden): disk cleanup, firewall, security (fail2ban, keys), Docker. Users, updates and network have their own Windows views, see below.
+Not available on Windows (the tabs are hidden): firewall, security (fail2ban, keys), Docker. Users, updates and network have their own Windows views, see below.
 
 ## Install
 
@@ -26,6 +26,9 @@ msiexec /i linager_windows_amd64.msi /qn SERVER=panel.example.com:9443
 ```
 
 `SERVER` is the agent port of the server (`host:port`). `FINGERPRINT=SHA256:...` is optional: with it the agent trusts only that server certificate; without it the pairing is protected by the check code (see below). The package installs `C:\Program Files\Linager\linager.exe`, registers the service **Linager Agent** (`LinagerAgent`, automatic start, runs as SYSTEM, started again after a failure) and starts it.
+
+### Install by a link (one command)
+The easiest way: in the panel open "Add server", tab "Install by a link", create a link and switch the command to **Windows**. On the new computer open PowerShell **as administrator** and paste the command. It checks the certificate of your server by its fingerprint (carried in the command), downloads the installer from the server, compares it with the signed release, hands the one-time code of the link to the service through a file that only SYSTEM and the administrators can read (`C:\ProgramData\Linager\agent\join.token`), installs and starts the service. The computer appears in the "Confirmations" tab and is confirmed in one click: no key to copy and no file to open. The script can be read first at `https://<server>/v1/join/<link>/windows`. It needs a release that has the installer package (`linager_windows_amd64.msi`, `0.3.0-beta.11` and newer).
 
 ### Pairing
 1. In the panel open "Add server", tab "Confirmations": the host appears there a few seconds after the service starts.
@@ -45,6 +48,9 @@ These tabs work on Windows too, with their own views (no shells or sudo): **User
 - **Users.** The list of local accounts: name, full name, enabled or not, last sign-in, groups. Add a user (a password is required: Windows lets nobody in over the network without one), set a password, enable or disable, change the groups (for example Administrators or Remote Desktop Users), delete. The sessions that are signed in now (the console and remote desktops) with "End session". Guards: the built-in administrator (the account whose SID ends in -500) is not deleted or disabled from here, and the last enabled administrator is not removed or disabled. Domain accounts are not managed. Every change is confirmed and written to the audit log (`win.users.*`, without passwords).
 - **Updates.** The search of Windows Update on the computer itself (it can take a minute; where the computer uses WSUS the answer comes from there): title, KB, size, severity, "security". Install the selected or all updates with a live log (download, installation, result codes, whether a restart is needed). The dashboard shows the number of updates and "restart required" like it does for apt; the agent searches once an hour, the first time 3 minutes after the start. Programs of other makers (winget) are not covered.
 - **Network.** The adapters: state, DHCP or static, IPv4 addresses, gateway, DNS, MAC, speed, MTU. Change one adapter (DHCP, or an address with the prefix and the gateway, and the DNS servers). **The agent undoes a change by itself after 30 seconds unless you confirm it**: it saves the old settings and creates a one-shot task of the Task Scheduler (`LinagerNetRollback`), so the rollback works even if the connection is lost. A change left unconfirmed by a restart is undone when the agent starts. Only IPv4; no Wi-Fi, VLANs or teaming. A change is refused while another one waits for its confirmation. The audit log has `win.network.apply` and `win.network.rollback`.
+
+## Disk
+The "Disk" tab is the same as for Linux: the volumes with the used and free space and a forecast of when the space runs out (from a history the agent keeps itself, a point every half hour), what takes the space on a volume (a tree of folders with sizes and a pie: system and programs, user profiles, temporary files, other, free; the scan can take a minute and is marked partial when it did not finish), and the ways to free space. Each way is confirmed, shows the size in advance and is written to the audit log: temporary files of the system and the users, the downloads of Windows Update (the update service stops for the moment), the Recycle Bin, the Delivery Optimization cache, crash dumps and error reports, `Windows.old`. Nothing else is touched.
 
 ## Remote desktop
 The "Desktop" tab of a Windows server (and "Remote desktop" in the context menu of a tile on the "Map") shows the screen of the computer and lets you work with it, in the page or in a floating window like the terminal. Nothing is installed: the RDP client is part of the panel (WebAssembly, loaded when the desktop is first opened, about 2 MB compressed).

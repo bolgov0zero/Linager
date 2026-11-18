@@ -126,6 +126,11 @@ func Download(ctx context.Context, rel Release, key *release.Key, cacheDir strin
 			return nil, fmt.Errorf("%s: %w", wa.Name, err)
 		}
 	}
+	if ma, ok := m.WindowsMSI(); ok && rel.Assets[ma.Name] != "" {
+		if _, err := downloadAsset(ctx, rel, ma, filepath.Join(tmp, ma.Name)); err != nil {
+			return nil, fmt.Errorf("%s: %w", ma.Name, err)
+		}
+	}
 	for arch, a := range assets {
 		n, err := downloadAsset(ctx, rel, a, filepath.Join(tmp, a.Name))
 		if err != nil {
@@ -231,6 +236,13 @@ func LoadCached(key *release.Key, cacheDir, version string) (*Cached, error) {
 		// optional: a release without the file is still good for Linux, a file that is there must match
 		if _, err := os.Stat(filepath.Join(dir, wa.Name)); err == nil {
 			if _, err := checkFile(filepath.Join(dir, wa.Name), wa); err != nil {
+				return nil, err
+			}
+		}
+	}
+	if ma, ok := m.WindowsMSI(); ok {
+		if _, err := os.Stat(filepath.Join(dir, ma.Name)); err == nil {
+			if _, err := checkFile(filepath.Join(dir, ma.Name), ma); err != nil {
 				return nil, err
 			}
 		}

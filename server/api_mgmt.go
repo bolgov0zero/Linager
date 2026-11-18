@@ -418,7 +418,9 @@ func (a *Admin) diskScan(w http.ResponseWriter, r *http.Request, u *store.User) 
 	_, _ = w.Write(data)
 }
 
-var diskCleanKinds = map[string]bool{"journal": true, "apt": true, "docker-images": true, "docker-build": true, "kernels": true}
+var diskCleanKinds = map[string]bool{"journal": true, "apt": true, "docker-images": true, "docker-build": true, "kernels": true,
+	// Windows
+	"win-temp": true, "win-update-cache": true, "win-recycle": true, "win-delivery": true, "win-dumps": true, "win-old": true}
 
 // diskClean frees space in one of a few fixed ways; the agent works out what to remove itself.
 func (a *Admin) diskClean(w http.ResponseWriter, r *http.Request, u *store.User) {

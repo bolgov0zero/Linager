@@ -48,8 +48,10 @@
     { value: 0, label: $trans('asv.group.none') },
     ...groups.map((g) => ({ value: g.id, label: g.name })),
   ]);
-  const commands = $derived(created?.commands.filter((c) => c.kind === 'external' || c.kind === 'local') ?? []);
-  const scriptText = $derived(created && commands.length > 0 ? joinScriptText(created.token, commands[0].command, fingerprint) : '');
+  /** The system of the new computer: the install command differs. */
+  let platform = $state<'linux' | 'windows'>('linux');
+  const commands = $derived(created?.commands.filter((c) => (c.kind === 'external' || c.kind === 'local') && (c.platform ?? 'linux') === platform) ?? []);
+  const scriptText = $derived(created && platform === 'linux' && commands.length > 0 ? joinScriptText(created.token, commands[0].command, fingerprint) : '');
 
   function parseNets(text: string): string[] | null {
     const list = text.split(',').map((s) => s.trim()).filter(Boolean);
@@ -209,6 +211,11 @@
             mode: createdWith.auto ? $trans('asv.link.modeAuto') : $trans('asv.link.modeManual'),
           })}
         </p>
+        <div class="seg" role="tablist" aria-label={$trans('asv.link.platform')}>
+          <button class="btn sm" class:ink={platform === 'linux'} type="button" role="tab" aria-selected={platform === 'linux'} onclick={() => (platform = 'linux')}>Linux</button>
+          <button class="btn sm" class:ink={platform === 'windows'} type="button" role="tab" aria-selected={platform === 'windows'} onclick={() => (platform = 'windows')}>Windows</button>
+        </div>
+        {#if platform === 'windows'}<p class="muted small">{$trans('asv.link.winHint')}</p>{/if}
         {#each commands as cmd (cmd.kind)}
           <div class="cmdblock">
             <div class="row between">
@@ -219,13 +226,15 @@
             <pre class="cmd">{cmd.command}</pre>
           </div>
         {/each}
-        <div class="row between">
-          <button class="btn sm" type="button" onclick={() => (showScript = !showScript)}>
-            {$trans(showScript ? 'asv.link.hideScript' : 'asv.link.showScript')}
-          </button>
-          <span class="muted small">{$trans('asv.link.scriptHint')}</span>
-        </div>
-        {#if showScript}<pre class="cmd code">{scriptText}</pre>{/if}
+        {#if platform === 'linux'}
+          <div class="row between">
+            <button class="btn sm" type="button" onclick={() => (showScript = !showScript)}>
+              {$trans(showScript ? 'asv.link.hideScript' : 'asv.link.showScript')}
+            </button>
+            <span class="muted small">{$trans('asv.link.scriptHint')}</span>
+          </div>
+          {#if showScript}<pre class="cmd code">{scriptText}</pre>{/if}
+        {/if}
         <p class="box info">
           <strong>{$trans('asv.link.whyTitle')}</strong>
           {$trans('asv.link.why')}
@@ -335,5 +344,9 @@
 
   .nowrap {
     flex-wrap: nowrap;
+  }
+  .seg {
+    display: flex;
+    gap: 6px;
   }
 </style>

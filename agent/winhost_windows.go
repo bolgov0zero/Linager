@@ -103,8 +103,15 @@ func RunHost(ctx context.Context, o HostOptions) error {
 func pairHost(ctx context.Context, o HostOptions, server, fp string) error {
 	note := filepath.Join(o.DataDir, "enroll.txt")
 	defer func() { _ = os.Remove(note) }()
-	return Enroll(ctx, EnrollOptions{
-		Server: server, Fingerprint: fp, DataDir: o.DataDir, AgentVersion: o.AgentVersion,
+	// The install by a link leaves the one-time code of the link in a file that only SYSTEM and the administrators can
+	// read: with it the host appears in the panel ready to be confirmed in one click, without a key to copy.
+	joinFile := filepath.Join(o.DataDir, joinTokenFile)
+	token := ""
+	if b, err := os.ReadFile(joinFile); err == nil { //nolint:gosec // a fixed name inside the data directory
+		token = strings.TrimSpace(string(b))
+	}
+	err := Enroll(ctx, EnrollOptions{
+		Server: server, Fingerprint: fp, DataDir: o.DataDir, AgentVersion: o.AgentVersion, JoinToken: token,
 		Confirm: func(string) bool { return true },
 		Show: func(key, code, f string) {
 			text := fmt.Sprintf("Key:         %s\r\nCheck code:  %s\r\nFingerprint: %s\r\n\r\nEnter the key in the Linager panel and make sure the check code matches.\r\n", key, code, f)
@@ -112,7 +119,14 @@ func pairHost(ctx context.Context, o HostOptions, server, fp string) error {
 			o.Log.Info("waiting for approval in the panel", "key", key, "check_code", code, "fingerprint", f, "file", note)
 		},
 	})
+	if err == nil && token != "" {
+		_ = os.Remove(joinFile) // the code of the link is used up
+	}
+	return err
 }
+
+// joinTokenFile is the file in the data directory that carries the code of an install link.
+const joinTokenFile = "join.token"
 
 // OpenLog opens the log file of the service for appending. A file over 5 MB is moved aside first.
 func OpenLog(path string) (io.WriteCloser, error) {

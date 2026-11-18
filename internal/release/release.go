@@ -215,6 +215,18 @@ const WindowsKey = "windows_amd64"
 // WindowsBinaryAsset is the release asset name of the Windows agent (the same file the MSI package installs).
 const WindowsBinaryAsset = "linager_windows_amd64.exe"
 
+// WindowsMSIKey is the key of the Windows installer package in Manifest.Assets; the install by a link downloads it.
+const WindowsMSIKey = "windows_msi"
+
+// WindowsMSIAsset is the release asset name of the Windows installer package.
+const WindowsMSIAsset = "linager_windows_amd64.msi"
+
+// WindowsMSI returns the installer package of the release, when it has one.
+func (m Manifest) WindowsMSI() (Asset, bool) {
+	a, ok := m.Assets[WindowsMSIKey]
+	return a, ok && a.SHA256 != ""
+}
+
 // WindowsAsset returns the Windows binary of the release, when it has one.
 func (m Manifest) WindowsAsset() (Asset, bool) {
 	a, ok := m.Assets[WindowsKey]

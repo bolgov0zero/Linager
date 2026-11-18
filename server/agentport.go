@@ -72,6 +72,8 @@ func (a *AgentPort) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/ws", a.ws)
 	mux.HandleFunc("GET /v1/join/{token}", a.joinScript)
 	mux.HandleFunc("GET /v1/join/{token}/binary", a.joinBinary)
+	mux.HandleFunc("GET /v1/join/{token}/windows", a.joinWindowsScript)
+	mux.HandleFunc("GET /v1/join/{token}/msi", a.joinMSI)
 	mux.HandleFunc("GET /v1/release/latest", a.releaseLatest)
 	mux.HandleFunc("GET /v1/release/{ver}/{file}", a.releaseFile)
 	return mux

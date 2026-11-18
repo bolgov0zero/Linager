@@ -178,7 +178,7 @@ func TestWindowsModules(t *testing.T) {
 	reg := NewRegistry(config.DefaultAgent(), NewCollector(context.Background()), nil, t.TempDir())
 	for _, m := range reg.Modules() {
 		switch m {
-		case "apt", "firewall", "docker", "disk", "security":
+		case "apt", "firewall", "docker", "security":
 			t.Errorf("a Linux-only module is enabled: %s", m)
 		}
 	}
@@ -388,4 +388,55 @@ func TestWindowsUpdateSearch(t *testing.T) {
 		return
 	}
 	t.Logf("updates offered: %d", len(res.(map[string]any)["updates"].([]WinUpdate)))
+}
+
+func TestWindowsDiskStateAndScan(t *testing.T) {
+	m := newDiskModule(t.TempDir())
+	res, err := m.stateCmd(context.Background(), nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var st diskState
+	if err := json.Unmarshal(res.(json.RawMessage), &st); err != nil || len(st.Filesystems) == 0 {
+		t.Fatalf("no volumes: %v", err)
+	}
+	for _, f := range st.Filesystems {
+		if f.Total == 0 || f.Mount == "" {
+			t.Errorf("volume: %+v", f)
+		}
+	}
+	t.Logf("volumes: %d, cleanup candidates: %d", len(st.Filesystems), len(st.Cleanup))
+	for _, c := range st.Cleanup {
+		t.Logf("clean %s: %d bytes", c.Kind, c.Size)
+	}
+	// a scan of a small tree: sizes add up, links are not followed, the pie has the free slice
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "Windows", "System32"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "Windows", "System32", "a.bin"), make([]byte, 5000), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "b.bin"), make([]byte, 700), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	sc := &scanner{ctx: context.Background()}
+	tree := sc.walk(dir, 0)
+	if tree.Size != 5700 || findNode(tree, "/windows/system32") == nil {
+		t.Fatalf("tree: size %d", tree.Size)
+	}
+	cats := categorize(tree, fsInfo{used: 10000, avail: 2000, total: 12000})
+	got := map[string]uint64{}
+	for _, c := range cats {
+		got[c.ID] = c.Size
+	}
+	if got["sys"] != 5000 || got["other"] != 5000 || got["free"] != 2000 {
+		t.Fatalf("categories: %v", got)
+	}
+	if _, err := m.cleanCmd(context.Background(), mustJSON(map[string]string{"kind": "win-temp"}), false); err == nil {
+		t.Fatal("a cleanup needs the confirmation")
+	}
+	if _, err := m.cleanCmd(context.Background(), mustJSON(map[string]string{"kind": "rm -rf"}), true); err == nil {
+		t.Fatal("an unknown kind must be refused")
+	}
 }

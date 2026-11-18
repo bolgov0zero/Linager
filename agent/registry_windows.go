@@ -54,6 +54,13 @@ func (r *Registry) registerPlatform(cfg *config.Agent, _ Collector, _ *slog.Logg
 		netDataDir = func() string { return dataDir }
 		go recoverNetChange() // a change left unconfirmed by a restart is undone
 	}
+	if cfg.Enabled("disk") {
+		dm := newDiskModule(dataDir)
+		dm.start()
+		r.cmds["disk.state"] = dm.stateCmd
+		r.cmds["disk.scan"] = dm.scanCmd
+		r.cmds["disk.clean"] = dm.cleanCmd
+	}
 	if cfg.Enabled("files") {
 		r.cmds["files.list"] = filesList
 		r.cmds["files.read"] = filesRead

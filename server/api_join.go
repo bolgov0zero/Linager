@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"github.com/bolgov0zero/linager/internal/pki"
+	"github.com/bolgov0zero/linager/internal/winjoin"
 	"net"
 	"net/http"
 	"strconv"
@@ -71,9 +73,10 @@ func (a *Admin) joinList(w http.ResponseWriter, r *http.Request, _ *store.User) 
 }
 
 type joinCommand struct {
-	Kind    string `json:"kind"` // external or local
-	Host    string `json:"host"`
-	Command string `json:"command"`
+	Kind     string `json:"kind"`     // external or local
+	Platform string `json:"platform"` // linux or windows
+	Host     string `json:"host"`
+	Command  string `json:"command"`
 }
 
 type joinCreated struct {
@@ -140,11 +143,14 @@ func (a *Admin) joinCreate(w http.ResponseWriter, r *http.Request, u *store.User
 		return
 	}
 	out := joinCreated{joinView: a.joinViewOf(r.Context(), t), Token: secret}
+	fp := pki.Fingerprint(a.Keys.TLSDER)
 	if ext != "" {
-		out.Commands = append(out.Commands, joinCommand{Kind: "external", Host: ext, Command: installCommand(ext, port, pin, secret)})
+		out.Commands = append(out.Commands, joinCommand{Kind: "external", Platform: "linux", Host: ext, Command: installCommand(ext, port, pin, secret)},
+			joinCommand{Kind: "external", Platform: "windows", Host: ext, Command: winjoin.InstallCommand(ext, port, fp, secret)})
 	}
 	if loc != "" {
-		out.Commands = append(out.Commands, joinCommand{Kind: "local", Host: loc, Command: installCommand(loc, port, pin, secret)})
+		out.Commands = append(out.Commands, joinCommand{Kind: "local", Platform: "linux", Host: loc, Command: installCommand(loc, port, pin, secret)},
+			joinCommand{Kind: "local", Platform: "windows", Host: loc, Command: winjoin.InstallCommand(loc, port, fp, secret)})
 	}
 	// the first host that uses the link should not wait for the release to be downloaded
 	if a.Updates != nil {

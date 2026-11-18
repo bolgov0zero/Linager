@@ -22,7 +22,7 @@ import (
 	"github.com/bolgov0zero/linager/server/store"
 )
 
-type joinCmd struct{ Kind, Host, Command string }
+type joinCmd struct{ Kind, Host, Command, Platform string }
 type joinMade struct {
 	ID       int64
 	Label    string
@@ -112,8 +112,19 @@ func TestInstallLinks(t *testing.T) {
 		t.Fatalf("create link: %d %+v", code, l1)
 	}
 	kinds := map[string]joinCmd{}
+	winCmds := 0
 	for _, c := range l1.Commands {
+		if c.Platform == "windows" {
+			winCmds++
+			if !strings.Contains(c.Command, "/v1/join/"+l1.Token+"/windows") || !strings.Contains(c.Command, "LinagerPin") || strings.Contains(c.Command, "\n") {
+				t.Fatalf("the Windows command: %s", c.Command)
+			}
+			continue
+		}
 		kinds[c.Kind] = c
+	}
+	if winCmds != 2 {
+		t.Fatalf("a Windows command for each address: %d", winCmds)
 	}
 	pin, _ := server.SPKIPin(keys.TLSDER)
 	if kinds["external"].Host != "203.0.113.5" || kinds["local"].Host != "10.9.9.9" ||

@@ -80,5 +80,19 @@
   "wn.lost": "The connection may have dropped: the change rolls back by itself, wait about a minute.",
   "wn.warnCarrier": "This is probably the adapter that connects the panel to the computer. Wrong settings cut the connection, but the agent restores the old ones after 30 seconds.",
   "wn.desc": "Description",
-  "wn.physical": "physical"
+  "wn.physical": "physical",
+  "wu.search": "Search by name",
+  "wu.f.enabled": "Enabled",
+  "wu.f.admins": "Administrators",
+  "wu.f.online": "Signed in now",
+  "wu.now": "Now",
+  "wu.actions": "Actions",
+  "wu.menu": "Actions",
+  "wu.empty": "No users match.",
+  "wu.legend": "Showing {shown} of {total}",
+  "wu.sessionsN": "sessions: {n}",
+  "wu.sessionType": "Sign-in",
+  "wup.summary": "updates: {n}, security: {s}",
+  "wup.installSec": "Install security",
+  "wup.f.security": "Security only"
 }

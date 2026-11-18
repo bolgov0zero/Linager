@@ -207,5 +207,7 @@
   "asv.ssh.err.not_bound": "The agent started, but the server did not accept its binding request. The install was cancelled.",
   "asv.ssh.err.not_connected": "The agent is installed but did not connect to the server within 60 seconds. Most likely the outgoing port is blocked by the firewall of the host, or the server address is not reachable from it. The install was cancelled, and the host is as it was.",
   "asv.ssh.err.unknown": "Error: {code}.",
-  "asv.ssh.err.wget_failed": "wget could not run on the host or could not find the server. Install wget and check the connection from the host to the server."
+  "asv.ssh.err.wget_failed": "wget could not run on the host or could not find the server. Install wget and check the connection from the host to the server.",
+  "asv.link.platform": "The system of the new computer",
+  "asv.link.winHint": "On the new computer open PowerShell as administrator (right-click the Start button, \"Terminal (admin)\") and paste the command. It downloads the installer from this server, checks it, installs the agent and starts the service. The computer then appears in the Confirmations tab, ready to be confirmed in one click: no key or file to open."
 }

@@ -156,6 +156,18 @@
         return 'docker image prune -a';
       case 'docker-build':
         return 'docker builder prune';
+      case 'win-temp':
+        return 'Remove-Item C:\\Windows\\Temp\\*, C:\\Users\\*\\AppData\\Local\\Temp\\*';
+      case 'win-update-cache':
+        return 'Stop-Service wuauserv, bits; Remove-Item C:\\Windows\\SoftwareDistribution\\Download\\*';
+      case 'win-recycle':
+        return 'Clear-RecycleBin';
+      case 'win-delivery':
+        return 'Delete-DeliveryOptimizationCache';
+      case 'win-dumps':
+        return 'Remove-Item C:\\Windows\\Minidump\\*, C:\\Windows\\MEMORY.DMP';
+      case 'win-old':
+        return 'takeown /F C:\\Windows.old /R; Remove-Item C:\\Windows.old -Recurse';
       default:
         return `apt-get purge -y ${(c.items ?? []).join(' ')}`;
     }

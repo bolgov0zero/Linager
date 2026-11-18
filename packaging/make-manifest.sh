@@ -27,6 +27,12 @@ if [ -f "$WIN" ]; then
   ASSETS=$(printf '%s' "$ASSETS" | jq -c --arg n "linager_windows_amd64.exe" --arg sha "$(sha256 "$WIN")" --argjson size "$WSIZE" \
     '. + {windows_amd64: {name: $n, sha256: $sha, size: $size}}')
 fi
+MSI=bin/linager_windows_amd64.msi
+if [ -f "$MSI" ]; then
+  MSIZE=$(wc -c < "$MSI" | tr -d ' ')
+  ASSETS=$(printf '%s' "$ASSETS" | jq -c --arg n "linager_windows_amd64.msi" --arg sha "$(sha256 "$MSI")" --argjson size "$MSIZE" \
+    '. + {windows_msi: {name: $n, sha256: $sha, size: $size}}')
+fi
 SHA=$(printf '%s' "$ASSETS" | jq -r .amd64.sha256)
 SIZE=$(printf '%s' "$ASSETS" | jq -r .amd64.size)
 MIGRATIONS=$(find migrations -name '*.sql' | wc -l | tr -d ' ')
