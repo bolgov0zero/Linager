@@ -364,8 +364,22 @@
 
   :global(.upd-acts) {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 7px;
+  }
+
+  /* a narrow panel shrinks the buttons (the text is cut) instead of moving the last one to a second row */
+  :global(.upd-acts .btn) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 720px) {
+    :global(.upd-acts) {
+      flex-wrap: wrap;
+    }
   }
 
   :global(.upd-acts-end) {

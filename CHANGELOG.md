@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.2
+
+- Change: **the sizes follow the header of a floating window** (a 24 px button, 11 px text, a 36 px header), the only part that had the intended size. The header of a dialog is that header now (the title 14 px, the close button 24 px); a collapsed block ("Agents", "History", "Same from the terminal", the blocks of the settings and of the Metrics tab) is a thin bar of about 36 px instead of 64; the items of the dropdown menus (snippets, user, the menus of the buttons) are as tall as a small button (24 px, 11 px text); `.btn.sm` is one size everywhere (it was 33 px outside a window); the basic button and the field are 12 px text / 29 px instead of 13 px / 33 px, the top bar is 45 px instead of 57; the buttons of the server update stay in one row (a narrow panel shrinks them instead of moving the last one down). Phones keep the 44 px touch targets.
+
 ## 0.7.1
 
 - Change: **the icons that were text characters are Pixelarticons too.** 0.7.0 replaced the drawn icons only; the buttons that used a character stay behind: minimize, maximize and close of the windows, the cross of the dialogs and of the rows and chips (Docker, Firewall sets, DNS, Fail2ban), the up and down buttons of the groups, the snippets and the firewall rules, the check mark of the chosen item in the menus (`ActionMenu` and `ContextMenu` got `checked`), the marks of the update and job stages, the arrows of the traffic on the cards, the Overview and Metrics, the tree and audit twists, the breadcrumbs, the arrows of the key panels, the move buttons of the dashboard editor and "to the end" of the logs. What stays text: "1920×1080", "×3", the "a → b" of versions and changes, and the legend of the traffic chart.

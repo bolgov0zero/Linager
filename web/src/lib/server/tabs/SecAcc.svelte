@@ -44,8 +44,8 @@
     align-items: center;
     gap: 9px;
     width: 100%;
-    min-height: 52px;
-    padding: 5px 7px 5px 11px;
+    min-height: 44px;
+    padding: 4px 7px 4px 11px;
     background: none;
     color: var(--ink);
     border: 0;

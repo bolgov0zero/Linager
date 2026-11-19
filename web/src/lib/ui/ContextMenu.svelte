@@ -161,7 +161,7 @@
   :global(.sel-list.ctx li.sep) {
     border-top: 1px solid var(--seg-off);
     margin-top: 4px;
-    padding-top: 7px;
+    padding-top: 4px;
   }
 
   :global(.sel-list li.off) {

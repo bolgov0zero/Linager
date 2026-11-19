@@ -39,6 +39,7 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
+    padding: 6px 11px;
   }
 
   .fh {
@@ -46,7 +47,7 @@
     align-items: center;
     gap: 9px;
     width: 100%;
-    min-height: 32px;
+    min-height: 24px;
     padding: 0;
     background: none;
     color: var(--ink);
@@ -60,7 +61,7 @@
     flex: 1;
     min-width: 0;
     margin: 0;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 400;
     color: var(--muted);
     text-transform: uppercase;
@@ -89,8 +90,8 @@
     display: grid;
     place-items: center;
     flex: none;
-    width: 25px;
-    height: 25px;
+    width: 22px;
+    height: 22px;
   }
 
   .chev.up {
@@ -101,7 +102,7 @@
     display: flex;
     flex-direction: column;
     gap: 11px;
-    margin-top: 11px;
+    margin-top: 9px;
   }
 
   @media (max-width: 720px) {

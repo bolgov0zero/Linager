@@ -162,12 +162,12 @@
     align-items: baseline;
     gap: 7px;
     width: 100%;
-    padding: 7px 9px;
+    padding: 4px 9px;
     border: 0;
     background: none;
     color: inherit;
     font: inherit;
-    font-size: 12px;
+    font-size: 11px;
     text-align: left;
     cursor: pointer;
   }
@@ -200,9 +200,9 @@
   }
 
   .empty {
-    padding: 7px 9px;
+    padding: 4px 9px;
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   /* Phones: the button shows the account the shell runs as, the list opens as a sheet from the bottom. */

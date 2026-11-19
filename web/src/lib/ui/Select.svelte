@@ -308,11 +308,11 @@
   }
 
   :global(.sel-list.sm) {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   :global(.sel-list li) {
-    padding: 5px 9px;
+    padding: 4px 9px;
     white-space: nowrap;
     cursor: pointer;
   }

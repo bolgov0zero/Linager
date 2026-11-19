@@ -62,7 +62,7 @@
       <h2 id={labelId}>{title}</h2>
       <div class="dialog-tools">
         {#if actions}{@render actions()}{/if}
-        <button class="btn" type="button" aria-label={$tr('common.close')} onclick={onclose}><PixIcon name="x" /></button>
+        <button class="btn sm icon" type="button" aria-label={$tr('common.close')} onclick={onclose}><PixIcon name="x" size={14} /></button>
       </div>
     </header>
     <div class="dialog-body" class:flush class:fixed>
@@ -121,20 +121,29 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 11px;
-    padding: 11px 14px;
+    gap: 7px;
+    padding: 5px 7px 5px 11px;
     border-bottom: 2px solid var(--line);
+    background: var(--seg-off);
   }
 
   .dialog-tools {
     display: flex;
     align-items: stretch; /* the pencil and the cross are of one height */
-    gap: 7px;
+    gap: 4px;
+  }
+
+  .dialog-tools :global(.btn) {
+    min-width: 25px;
+    padding: 2px 6px;
+    font-size: 11px;
+    line-height: 1.4;
+    box-shadow: 2px 2px 0 var(--shade);
   }
 
   .dialog-head h2 {
     margin: 0;
-    font-size: 18px;
+    font-size: 14px;
     line-height: 1.1;
   }
 

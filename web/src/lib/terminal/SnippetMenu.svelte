@@ -107,7 +107,7 @@
       <li class="row" role="none">
         <button class="run" type="button" role="menuitem" title={sn.command} onclick={() => run(sn)}>{sn.name}</button>
         <button class="paste" type="button" aria-label="{$tr('term.snippetPaste')}: {sn.name}" title={$tr('term.snippetPaste')} onclick={() => paste(sn)}>
-          <PixIcon name="paste" size={14} />
+          <PixIcon name="paste" size={12} />
         </button>
       </li>
     {:else}
@@ -164,14 +164,14 @@
     background: none;
     color: inherit;
     font: inherit;
-    font-size: 12px;
+    font-size: 11px;
     cursor: pointer;
   }
 
   .run {
     flex: 1;
     min-width: 0;
-    padding: 7px 9px;
+    padding: 4px 9px;
     text-align: left;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -197,9 +197,9 @@
   }
 
   .empty {
-    padding: 7px 9px;
+    padding: 4px 9px;
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .manage {
@@ -209,7 +209,7 @@
 
   .manage button {
     width: 100%;
-    padding: 7px 9px;
+    padding: 4px 9px;
     text-align: left;
     color: var(--muted);
   }
