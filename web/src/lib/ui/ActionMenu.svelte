@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import PixIcon from './PixIcon.svelte';
   import { lockScroll } from './scrolllock';
   import { isPhone } from './viewport';
 
@@ -8,8 +9,15 @@
     label,
     items,
     disabled = false,
+    icon,
+    title,
   }: {
+    /** Text of the button; may be empty when `icon` stands for it (then `title` names the button). */
     label: string;
+    /** Name of a pixel icon shown before the text. */
+    icon?: string;
+    /** Tooltip and name of the button and of its list; defaults to the label. */
+    title?: string;
     items: { key: string; label: string; disabled?: boolean; onselect: () => void }[];
     disabled?: boolean;
   } = $props();
@@ -110,11 +118,14 @@
   type="button"
   aria-haspopup="menu"
   aria-expanded={open}
+  aria-label={title}
+  {title}
   aria-controls={open ? `${uid}-list` : undefined}
   {disabled}
   {onkeydown}
   onclick={() => (open ? hide() : void show())}
 >
+  {#if icon}<PixIcon name={icon} />{/if}
   {label}
   <span class="arrow" aria-hidden="true"></span>
 </button>
@@ -127,7 +138,7 @@
     class="sel-list sm"
     class:up={pos.up}
     role="menu"
-    aria-label={label}
+    aria-label={title ?? label}
     style:left="{pos.left}px"
     style:top="{pos.top}px"
     style:max-height="{pos.max}px"

@@ -142,5 +142,12 @@
   "manage.sasDenyText": "На компьютере изменится политика Windows «Software SAS generation»: службам запретится отправлять Ctrl+Alt+Del. Кнопка Ctrl+Alt+Del в Помощнике перестанет работать.",
   "manage.sasNote2": "Это настройка безопасности Windows. Действие записывается в журнал аудита.",
   "manage.sasAllowed": "Ctrl+Alt+Del из Помощника разрешён",
-  "manage.sasDenied": "Ctrl+Alt+Del из Помощника запрещён"
+  "manage.sasDenied": "Ctrl+Alt+Del из Помощника запрещён",
+  "assist.sessionBtn": "Сеанс",
+  "assist.display": "Режим отображения",
+  "assist.mode.fit": "Картинка по размеру окна",
+  "assist.mode.window": "Окно по размеру картинки",
+  "assist.mode.max": "Окно на весь браузер",
+  "assist.mode.real": "Картинка 100% (с прокруткой)",
+  "assist.mode.full": "Полный экран"
 }

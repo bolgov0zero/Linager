@@ -21,6 +21,12 @@
   // The Manage tab can open this tab with a session of its table.
   let session = $state(untrack(() => takeAssistSession(server.id)));
 
+  // The picture fitted into the tab, or at 100% with scroll bars.
+  let display = $state<'fit' | 'window' | 'max' | 'real'>('fit');
+  $effect(() => {
+    screen?.setScale(display === 'real' ? 'real' : 'fit');
+  });
+
   const statusText = $derived(
     phase === 'connecting' ? $tr('assist.connectingShort') : phase === 'open' ? $tr('assist.open') : $tr('assist.closed'),
   );
@@ -42,7 +48,7 @@
     </p>
     {#if server.online}
       <div class="actions">
-        <AssistantTools {serverId} bind:session {phase} {info} {screen} onsettings={() => gotoServerTab(serverName, 'manage')} />
+        <AssistantTools {serverId} bind:session {phase} {info} {screen} layout="tab" bind:display onsettings={() => gotoServerTab(serverName, 'manage')} />
         <button class="btn sm" type="button" onclick={popOut}>{$tr('termwin.openWindow')}</button>
       </div>
     {/if}
@@ -52,7 +58,7 @@
   {:else}
     <div class="box">
       <div class="screenbox"><AssistantSession {serverId} {session} bind:phase bind:info bind:this={screen} /></div>
-      <AssistantStats {serverId} {phase} {info} onsettings={() => gotoServerTab(serverName, 'manage')} />
+      <AssistantStats {serverId} {phase} {info} />
     </div>
   {/if}
 </div>

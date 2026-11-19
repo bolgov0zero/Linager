@@ -142,5 +142,12 @@
   "manage.sasDenyText": "The Windows policy \"Software SAS generation\" will change on the computer: services will not be allowed to send Ctrl+Alt+Del. The Ctrl+Alt+Del button of the Assistant will stop working.",
   "manage.sasNote2": "This is a Windows security setting. The action is written to the audit log.",
   "manage.sasAllowed": "Ctrl+Alt+Del from the Assistant is allowed",
-  "manage.sasDenied": "Ctrl+Alt+Del from the Assistant is forbidden"
+  "manage.sasDenied": "Ctrl+Alt+Del from the Assistant is forbidden",
+  "assist.sessionBtn": "Session",
+  "assist.display": "Display mode",
+  "assist.mode.fit": "Picture fits the window",
+  "assist.mode.window": "Window fits the picture",
+  "assist.mode.max": "Window fills the browser",
+  "assist.mode.real": "Picture at 100% (scrolls)",
+  "assist.mode.full": "Full screen"
 }

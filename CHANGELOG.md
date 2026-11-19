@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0-beta.4
+
+- Change: **the toolbar of the Assistant.** The session button just says "Session" (the list still describes every session). A new button with a monitor icon holds the **display mode**: in a floating window "Picture fits the window", "Window fits the picture" (the default: the window gets the size of the picture at 100% and follows it when the picture changes, as far as the page holds it) and "Window fills the browser"; in the tab "Picture fits the window" and "Picture at 100% (scrolls)"; "Full screen" is in both. Resizing the window by hand leaves the "Window fits the picture" mode, the maximize button of the header is the same as "Window fills the browser". The items "Scale" and "Full screen" are gone from the "More" menu. `ActionMenu` can show an icon.
+- Change: the "Configure" link under the screen of the Assistant is gone in the tab too (it was removed from the window in beta 1); the way to the settings is the item "Quality and frame rate..." of the "More" menu and the "Management" tab.
+
 ## 0.4.0-beta.3
 
 - Change: **the pointer of the computer is not drawn into the picture by default** (the setting is now `show_cursor`, off unless the box in "Management" is ticked; an earlier record keeps the pointer out too). Your own pointer is shown over the screen and moves without delay.
