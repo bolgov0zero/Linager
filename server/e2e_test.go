@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -536,8 +537,13 @@ func TestEndToEnd(t *testing.T) {
 	if code := api.do("GET", "/api/servers/"+id+"/assistant?session=abc", nil, nil); code != http.StatusBadRequest {
 		t.Fatalf("a bad session: %d", code)
 	}
-	if code := api.do("GET", "/api/servers/"+id+"/assistant/sessions", nil, nil); code != http.StatusNotImplemented {
-		t.Fatalf("this agent has no Windows sessions: %d", code)
+	// a Linux agent lists the graphical sessions of its computer (none on a server), another host has no Assistant
+	wantSessions := http.StatusNotImplemented
+	if runtime.GOOS == "linux" {
+		wantSessions = http.StatusOK
+	}
+	if code := api.do("GET", "/api/servers/"+id+"/assistant/sessions", nil, nil); code != wantSessions {
+		t.Fatalf("the sessions of the Assistant: want %d, got %d", wantSessions, code)
 	}
 	actx, acancel := context.WithTimeout(ctx, 20*time.Second)
 	aurl := "ws" + strings.TrimPrefix(api.base, "http") + "/api/servers/" + id + "/assistant?session=console"
