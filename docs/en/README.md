@@ -5,7 +5,7 @@
 - [Admin panel access](access.md)
 - [Agent modules and configuration](modules.md)
 - [Updates, backups, rollback](updates.md)
-- [Windows agent (beta)](windows.md)
+- [Windows agent](windows.md)
 - [The terminal menu](menu.md)
 - [Security](security.md)
 - [Architecture](architecture.md)

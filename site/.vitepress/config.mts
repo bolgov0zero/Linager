@@ -52,7 +52,7 @@ export default defineConfig({
         sidebar: sidebar('', {
           start: 'Getting started', guides: 'Guides', ops: 'Operations', ref: 'Reference',
           introduction: 'Introduction', install: 'Installation', proxy: 'Reverse proxy', access: 'Admin panel access',
-          modules: 'Agent modules', menu: 'Terminal menu', windows: 'Windows agent (beta)', updates: 'Updates and backups', security: 'Security', architecture: 'Architecture',
+          modules: 'Agent modules', menu: 'Terminal menu', windows: 'Windows agent', updates: 'Updates and backups', security: 'Security', architecture: 'Architecture',
         }),
         outline: { label: 'On this page', level: [2, 3] },
         docFooter: { prev: 'Previous', next: 'Next' },
@@ -73,7 +73,7 @@ export default defineConfig({
         sidebar: sidebar('/ru', {
           start: 'Начало работы', guides: 'Руководства', ops: 'Эксплуатация', ref: 'Справочник',
           introduction: 'Введение', install: 'Установка', proxy: 'Обратный прокси', access: 'Доступ к админке',
-          modules: 'Модули агента', menu: 'Меню в терминале', windows: 'Агент для Windows (beta)', updates: 'Обновления и бэкапы', security: 'Безопасность', architecture: 'Архитектура',
+          modules: 'Модули агента', menu: 'Меню в терминале', windows: 'Агент для Windows', updates: 'Обновления и бэкапы', security: 'Безопасность', architecture: 'Архитектура',
         }),
         outline: { label: 'На этой странице', level: [2, 3] },
         docFooter: { prev: 'Назад', next: 'Дальше' },

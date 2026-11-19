@@ -1,6 +1,6 @@
-# Windows agent (beta)
+# Windows agent
 
-The agent runs on Windows 10 / 11 and Windows Server 2016 and newer (x64) and connects to a Linager server the same way as the Linux one. The **server stays on Linux**. The Windows agent is a beta: it has the modules that map onto Windows directly, and nothing else.
+The agent runs on Windows 10 / 11 and Windows Server 2016 and newer (x64) and connects to a Linager server the same way as the Linux one. The **server stays on Linux**. The Windows agent has the modules that map onto Windows directly, and nothing else.
 
 ## What works
 
@@ -91,7 +91,7 @@ From the panel, like a Linux agent: the "Updates" page (one agent, selected ones
 
 **Agents of beta.1 to beta.3 cannot update from the panel** (they do not have the code for it): the table says "new MSI X". Install the MSI of `0.3.0-beta.4` or newer once; after that the panel updates the agent. The same table message appears when a release has no Windows file. The program list of Windows (the MSI product) keeps showing the version of the MSI after an update from the panel; this changes nothing in how the agent works, and the next MSI installs over it as usual. The server of the release must be updated first, as with Linux agents.
 
-## Limits of the beta
+## Limits
 - Only x64. The agent is updated from the panel from `0.3.0-beta.4`; the rollback of a failed update was tested on a Windows runner and on one test machine only. The exe and the MSI are not signed with a code signing certificate, so SmartScreen or an antivirus may warn about them.
 - Checked: the code is built and tested on a Windows runner of GitHub Actions (metrics, services, processes, files, terminal, install and removal of the MSI). Not checked on a real fleet.
 - Windows reports one product name "Windows 10" for Windows 11; the agent tells them apart by the build number (22000 and up).

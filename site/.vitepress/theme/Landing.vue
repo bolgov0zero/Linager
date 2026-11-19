@@ -38,7 +38,7 @@ const FEATS: [string, string][] = [
   ['net', 'f6'], ['dock', 'f7'], ['shield', 'f8'], ['lock', 'f9'],
   ['win', 'f10'], ['plus', 'f11'], ['phone', 'f12'],
 ];
-const TAGS: Record<string, string> = { f10: 'beta' };
+const TAGS: Record<string, string> = { f10: 'new' };
 const STATS: [number, string][] = [[360, 'st.1'], [5, 'st.2'], [30, 'st.3'], [1, 'st.4']];
 const TABS: [string, string, string][] = [
   ['dashboard', 's.t1', 's.c1'], ['terminal', 's.t2', 's.c2'], ['firewall', 's.t3', 's.c3'],
@@ -363,7 +363,7 @@ function pick(i: number): void {
         </div>
         <p class="menu-note reveal">{{ t('w.menu') }}</p>
         <div class="term reveal"><div class="tb"><i></i><i></i><i></i></div><pre v-html="typed"></pre></div>
-        <div class="platforms"><span>Debian 12</span><span>Debian 13</span><span>Ubuntu 22.04</span><span>Ubuntu 24.04</span><span>Ubuntu 26.04</span><span>amd64</span><span>arm64 (agent)</span><span>Windows 10/11 · Server 2016+ (agent, beta)</span></div>
+        <div class="platforms"><span>Debian 12</span><span>Debian 13</span><span>Ubuntu 22.04</span><span>Ubuntu 24.04</span><span>Ubuntu 26.04</span><span>amd64</span><span>arm64 (agent)</span><span>Windows 10/11 · Server 2016+ (agent)</span></div>
       </div>
     </section>
 

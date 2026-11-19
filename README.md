@@ -30,7 +30,7 @@ One web panel, a lightweight agent on every host: live metrics, terminal, files,
 - **Agents connect out.** The agent dials the server over mutual TLS, so managed hosts need no open inbound port. Every message is signed.
 - **Safe by design.** Network and firewall edits are applied with a 30-second rollback timer that lives **on the agent**, so a bad rule that cuts the connection undoes itself. Dangerous actions ask for confirmation, and everything an administrator does lands in an audit log.
 - **Small footprint.** The server runs on Debian and Ubuntu (amd64), the agent also on arm64 (Raspberry Pi 4, 64-bit OS). The web interface is embedded in the binary.
-- **Linux and Windows in one panel.** The Windows agent (10/11, Server 2016+, beta) gives metrics, a terminal, services, users, Windows Update and a **remote desktop right in the browser**.
+- **Linux and Windows in one panel.** The Windows agent (10/11, Server 2016+) gives metrics, a terminal, services, users, Windows Update and a **remote desktop right in the browser**.
 - **Russian and English**, light and dark themes, and a separate phone layout: a bottom bar, cards and a server page made for a thumb.
 
 ## Features
@@ -38,7 +38,7 @@ One web panel, a lightweight agent on every host: live metrics, terminal, files,
 | | |
 |---|---|
 | **Dashboard** | Cards or a map of servers, a Linux or Windows badge, groups, filters, search by name or IP. CPU, RAM, disk, network, uptime, pending updates, reboot needed, failed services at a glance. The view switch, "+ Server" and the menu (theme, language, edit, settings, log out) live in the top bar; on a server page the same bar carries its name, state, note, reboot and delete. |
-| **Windows (beta)** | An agent for Windows 10/11 and Server 2016+ (MSI, a service): metrics, a PowerShell terminal, a **remote desktop in the browser** (RDP through the panel, nothing to install), services, processes, event logs, files, disk, users and sessions, Windows Update, network settings with a rollback. Installed by one PowerShell command from a link. Details: [docs/en/windows.md](docs/en/windows.md). |
+| **Windows** | An agent for Windows 10/11 and Server 2016+ (MSI, a service): metrics, a PowerShell terminal, a **remote desktop in the browser** (RDP through the panel, nothing to install), services, processes, event logs, files, disk, users and sessions, Windows Update, network settings with a rollback. Installed by one PowerShell command from a link. Details: [docs/en/windows.md](docs/en/windows.md). |
 | **Metrics** | Live values every 5 seconds and history up to 360 days, charts for CPU, RAM, disk and network, events and reboots on the chart, CSV export, synchronized hover across charts. |
 | **Terminal** | A web terminal on the host through the agent: floating windows, a key panel for phones, shared snippets, start the shell as another user. |
 | **Files** | An explorer with a folder tree, multiple selection, copy, move, zip, `chmod` and `chown`, and an editor with syntax highlighting (CodeMirror 6). |
@@ -160,7 +160,7 @@ After either install the Linager menu opens on the new host. Details and the sec
 | | Server | Agent |
 |---|---|---|
 | Debian 12, 13 · Ubuntu 22.04, 24.04, 26.04 | amd64 | amd64, arm64 |
-| Windows 10 / 11, Server 2016+ (beta) | — | amd64 (MSI), see [docs/en/windows.md](docs/en/windows.md); no firewall, security or Docker |
+| Windows 10 / 11, Server 2016+ | — | amd64 (MSI), see [docs/en/windows.md](docs/en/windows.md); no firewall, security or Docker |
 | Init system | systemd | systemd (Windows: service) |
 
 The panel can run behind Caddy (Let's Encrypt is set up by the installer) or behind your own reverse proxy: [docs/en/proxy.md](docs/en/proxy.md) has examples for nginx, Caddy and Nginx Proxy Manager.
