@@ -143,6 +143,9 @@ type Stats struct {
 // End is the reason the helper stops.
 type End struct {
 	Reason string `json:"reason"`
+	// Reconnect asks the browser to connect again: the helper ended because another way of reading the screen suits the
+	// computer now (the desktop opened after the sign-in, the screen was locked, the person signed out).
+	Reconnect bool `json:"reconnect,omitempty"`
 }
 
 // Tile is a rectangle of the screen and its JPEG picture.

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0-beta.7
+
+- Fix: **a sign-out from the desktop ended the Assistant with "cannot read the screen: GNOME closed the remote session".** The Assistant for Linux connects again by itself now: the end frame of the helper has `reconnect` (`assist.End`), the browser connects again after a moment (a connection that cannot be opened is tried again for half a minute, not more than four times in 40 seconds) and the agent picks the way that suits the screen: the sign-in or the lock screen below the compositor, the desktop through GNOME. The helper below the compositor looks every two seconds whether the desktop is open (a person's own Wayland session, not locked) and asks for a connection again, so after the sign-in the desktop comes back with its clipboard.
+
 ## 0.8.0-beta.6
 
 - Fix: **elements of the screen blinked with every action after the sign-in (the Assistant for Linux below the compositor).** The helper kept the mapped framebuffers by the number the kernel gave them; when the sign-in screen gave way to the desktop, the new compositor got the same numbers for other buffers, and the helper alternated between the new picture and an old buffer. The framebuffer is mapped for every picture and let go after it now.

@@ -347,7 +347,7 @@ func (h *mutterHost) signals() {
 			case strings.HasSuffix(s.Name, ".Closed"):
 				h.sigMu.Lock()
 				if s.Path == h.sigRD || s.Path == h.sigSC {
-					h.closedErr = errors.New("GNOME closed the remote session: most likely the screen was locked (GNOME allows no remote access to the lock screen) or the person signed out")
+					h.closedErr = &reconnectError{Reason: "GNOME closed the remote session (the screen was locked, or the person signed out): connecting again"}
 				}
 				h.sigMu.Unlock()
 			case strings.HasSuffix(s.Name, ".SelectionOwnerChanged"):

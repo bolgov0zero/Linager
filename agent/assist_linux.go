@@ -84,6 +84,13 @@ func checkSupported(s logindSession) (logindSession, error) {
 	return s, nil
 }
 
+// desktopReady says whether the console is a person's own Wayland session that is not locked: the screen is read from its
+// compositor then, not from the framebuffer.
+func desktopReady() bool {
+	s, ok := consoleSession(readLogindSessions(logindDir))
+	return ok && s.viaCompositor() && !sessionLocked(s.ID)
+}
+
 // sessionLocked asks systemd-logind whether the screen of the session is locked (GNOME says so when it locks): GNOME
 // lets no screen cast see the lock screen, so it is read below the compositor.
 func sessionLocked(id string) bool {

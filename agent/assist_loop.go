@@ -141,7 +141,7 @@ func runAssistLoop(ctx context.Context, rw io.ReadWriter, host assistHost, info 
 
 	_, w, h, err := host.Grab()
 	if err != nil {
-		_ = send2(send, assist.TypeEnd, assist.End{Reason: "cannot read the screen: " + err.Error()})
+		_ = send2(send, assist.TypeEnd, endFor(err))
 		return err
 	}
 	var lastMons []assist.Monitor
@@ -200,7 +200,7 @@ func runAssistLoop(ctx context.Context, rw io.ReadWriter, host assistHost, info 
 			continue
 		}
 		if pix, w, h, err = host.Grab(); err != nil {
-			_ = send2(send, assist.TypeEnd, assist.End{Reason: "cannot read the screen: " + err.Error()})
+			_ = send2(send, assist.TypeEnd, endFor(err))
 			return err
 		}
 		mons, sel := host.Monitors()

@@ -1,6 +1,25 @@
 package agent
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/bolgov0zero/linager/internal/assist"
+)
+
+// reconnectError ends the helper with the request to the browser to connect again: the way the screen is read has to change.
+type reconnectError struct{ Reason string }
+
+func (e *reconnectError) Error() string { return e.Reason }
+
+// endFor is the last frame of a helper that stopped because the screen could not be read.
+func endFor(err error) assist.End {
+	var rc *reconnectError
+	if errors.As(err, &rc) {
+		return assist.End{Reason: rc.Reason, Reconnect: true}
+	}
+	return assist.End{Reason: "cannot read the screen: " + err.Error()}
+}
 
 // assistTokenEnv is the environment variable that carries the one-time token to the helper. The environment of a
 // process of another account is not readable by an ordinary user, the command line may be.

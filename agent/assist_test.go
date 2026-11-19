@@ -306,3 +306,34 @@ func TestAssistLoopPause(t *testing.T) {
 	}
 	readUntil(t, a, assist.TypeTiles)
 }
+
+// reconnectHost is a computer whose picture cannot be read any more because another way of reading it suits it now.
+type reconnectHost struct{ *fakeHost }
+
+func (reconnectHost) Grab() ([]byte, int, int, error) {
+	return nil, 0, 0, &reconnectError{Reason: "the desktop is open"}
+}
+
+func TestAssistLoopAsksTheBrowserToConnectAgain(t *testing.T) {
+	a, b := net.Pipe()
+	defer func() { _ = a.Close() }()
+	done := make(chan error, 1)
+	go func() {
+		done <- runAssistLoop(context.Background(), b, reconnectHost{newFakeHost()}, assist.Hello{User: "u"}, nil)
+		_ = b.Close()
+	}()
+	var end assist.End
+	if err := json.Unmarshal(readUntil(t, a, assist.TypeEnd).Data, &end); err != nil {
+		t.Fatal(err)
+	}
+	if !end.Reconnect || end.Reason != "the desktop is open" {
+		t.Errorf("the end frame asks for a new connection: %+v", end)
+	}
+	if err := <-done; err == nil {
+		t.Error("the loop ends with the reason")
+	}
+	// an ordinary failure does not ask for it
+	if e := endFor(errors.New("boom")); e.Reconnect || e.Reason != "cannot read the screen: boom" {
+		t.Errorf("%+v", e)
+	}
+}

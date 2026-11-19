@@ -125,7 +125,11 @@
       if (mine !== generation) return;
       socket = null;
       releaseAll(false);
-      if (phase !== 'closed') end(ev.code === ASSIST_LIMIT_CODE ? t('assist.limit') : ev.code === 1000 ? t('assist.ended') : t('assist.lost'));
+      if (phase !== 'closed') {
+        const neverOpened = phase === 'connecting';
+        end(ev.code === ASSIST_LIMIT_CODE ? t('assist.limit') : ev.code === 1000 ? t('assist.ended') : t('assist.lost'));
+        if (neverOpened && ev.code !== ASSIST_LIMIT_CODE && Date.now() < autoUntil) autoReconnect(mine);
+      }
     };
   }
 
@@ -148,6 +152,23 @@
     pressedButtons.clear();
     ctrlFromMeta = false;
     swallowUp.clear();
+  }
+
+  // The computer may ask for a new connection (the person signed out, the desktop opened after the sign-in): it is made after a
+  // moment, when the old connection is gone and the new session of the computer has appeared. For half a minute after such a
+  // request a connection that cannot be opened is tried again; all in all not more than four times in 40 seconds, so that a
+  // computer that keeps asking cannot make a loop.
+  let autoTimes: number[] = [];
+  let autoUntil = 0;
+  function autoReconnect(mine: number): void {
+    const now = Date.now();
+    autoTimes = autoTimes.filter((x) => now - x < 40000);
+    if (autoTimes.length >= 4) return;
+    autoTimes.push(now);
+    autoUntil = now + 30000;
+    setTimeout(() => {
+      if (mine === generation && phase === 'closed') connect();
+    }, 1500);
   }
 
   function end(reason: string): void {
@@ -196,9 +217,12 @@
       case MSG_CLIP:
         await takeClip(json<{ text?: string }>(body)?.text);
         return;
-      case MSG_END:
-        end(json<{ reason?: string }>(body)?.reason || t('assist.ended'));
+      case MSG_END: {
+        const e = json<{ reason?: string; reconnect?: boolean }>(body);
+        end(e?.reason || t('assist.ended'));
+        if (e?.reconnect === true) autoReconnect(mine);
         return;
+      }
     }
   }
 

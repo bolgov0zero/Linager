@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"sync"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
@@ -101,6 +102,8 @@ type kmsMap struct {
 type kmsHost struct {
 	log *slog.Logger
 	ui  *uinputDev
+
+	checked time.Time // when it was last looked at whether the desktop is open
 
 	mu    sync.Mutex
 	cards []int // the file descriptors of /dev/dri/card*
@@ -287,6 +290,14 @@ func (h *kmsHost) release() {
 // ---- assistHost ----
 
 func (h *kmsHost) Grab() ([]byte, int, int, error) {
+	// the sign-in is done or the screen is unlocked: the desktop has a compositor that gives the picture with its clipboard
+	// and honours the setting of the pointer; the browser connects again and gets that
+	if time.Since(h.checked) >= 2*time.Second {
+		h.checked = time.Now()
+		if desktopReady() {
+			return nil, 0, 0, &reconnectError{Reason: "the desktop is open: connecting again to show it with its clipboard"}
+		}
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if err := h.scan(); err != nil {
