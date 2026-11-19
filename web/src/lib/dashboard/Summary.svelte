@@ -1,13 +1,15 @@
 <script lang="ts">
   import { tr } from '../../i18n';
+  import { isPhone } from '../ui/viewport';
   import type { Totals } from './status';
 
-  let { summary }: { summary: Totals } = $props();
+  /** compact: the thin strip shown while the server list below is scrolled (desktop only; a phone has its own strip). */
+  let { summary, compact = false }: { summary: Totals; compact?: boolean } = $props();
 
   const cpuText = $derived(summary.cpuAvg === null ? '—' : `${Math.round(summary.cpuAvg)}%`);
 </script>
 
-<section class="tiles" aria-label={$tr('dash.summary')}>
+<section class="tiles" class:compact={compact && !$isPhone} aria-label={$tr('dash.summary')}>
   <div class="tile card">
     {#if summary.offline > 0}<i class="flag crit" aria-hidden="true"></i>{/if}
     <span class="label">{$tr('dash.tile.online')}</span>
@@ -42,6 +44,28 @@
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
+  }
+
+  /* The strip: one line per tile (label and value), no hint. */
+  .tiles.compact .tile {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 9px;
+    padding: 5px 14px;
+  }
+
+  .tiles.compact .val {
+    margin-top: 0;
+    font-size: 18px;
+  }
+
+  .tiles.compact .hint {
+    display: none;
+  }
+
+  .tiles.compact .flag {
+    top: 3px;
+    right: 3px;
   }
 
   .tile {

@@ -79,14 +79,24 @@
   /** Only the server list scrolls: its height is what is left of the window below the summary and the filters. */
   let scroller = $state<HTMLDivElement | undefined>(undefined);
   let listH = $state(480);
+  /** The summary tiles shrink to a thin strip while the list is scrolled (two thresholds: no flicker at the edge). */
+  let compact = $state(false);
+  function onListScroll(e: Event): void {
+    const el = e.currentTarget as HTMLElement;
+    const y = el.scrollTop;
+    // Collapsing gives the list more room, so only do it when there is plenty of content left to scroll.
+    if (y > 60 && el.scrollHeight - el.clientHeight > 160) compact = true;
+    else if (y < 10) compact = false;
+  }
   function fitList(): void {
     if (!scroller) return;
+    if (scroller.scrollTop < 10) compact = false;
     const top = scroller.getBoundingClientRect().top + window.scrollY;
     listH = Math.max(240, Math.floor(window.innerHeight - top - 28));
   }
   $effect(() => {
     // Measure again when the list appears, changes its mode or something above it changes its height.
-    void [scroller, view, visible.length, loaded, totals];
+    void [scroller, view, visible.length, loaded, totals, compact];
     fitList();
     window.addEventListener('resize', fitList);
     return () => window.removeEventListener('resize', fitList);
@@ -454,7 +464,7 @@
   {:else if loadFailed && items.length === 0}
     <p class="error" role="alert">{$tr('dash.loadFailed')}</p>
   {:else}
-    <Summary summary={totals} />
+    <Summary summary={totals} {compact} />
 
     {#if $isPhone}
       <!-- Phone: one pinned row (filters, search); the group picker only when groups exist. -->
@@ -513,7 +523,7 @@
     {:else if visible.length === 0}
       <p class="muted">{$tr('dash.empty')}</p>
     {:else if view === 'cards'}
-      <div class="scroll" bind:this={scroller} style:--list-h="{listH}px">
+      <div class="scroll" bind:this={scroller} style:--list-h="{listH}px" onscroll={onListScroll}>
       <div class="grid">
         {#each visible as card (card.id)}
           <div
@@ -548,7 +558,7 @@
       </div>
       </div>
     {:else}
-      <div class="scroll" bind:this={scroller} style:--list-h="{listH}px">
+      <div class="scroll" bind:this={scroller} style:--list-h="{listH}px" onscroll={onListScroll}>
       <div class="map">
         {#each visible as card (card.id)}
           {@const level = levelOf(card)}

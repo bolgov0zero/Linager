@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.11
+
+- Change: **the four summary tiles of the dashboard shrink to a thin strip while the list of servers is scrolled** (the label and the number in one line, no hints); at the top of the list they are full again. On a phone they stay the strip of four cells they already were. The list takes the room the tiles free; the change is made with two thresholds, so the strip does not flicker at the edge, and only when there is enough list left to scroll.
+- Fix: on a phone the close button of a dialog is the same pixel icon (18 px) as the other header buttons, not a small text "×".
+
 ## 0.3.10
 
 - New: **a badge with the number of Docker updates in the side menu of the server page**, next to the "Docker" item (and in the "Sections" sheet and the bottom bar on a phone), like the one of the "Updates" item. It counts the containers with a newer image (`Sample.ImageUpdates`, ignored containers are not counted), hidden at 0 or while unknown; the tooltip says "Docker images with updates: N".
