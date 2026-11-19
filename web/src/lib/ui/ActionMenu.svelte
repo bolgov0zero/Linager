@@ -11,11 +11,14 @@
     disabled = false,
     icon,
     title,
+    compact = false,
   }: {
     /** Text of the button; may be empty when `icon` stands for it (then `title` names the button). */
     label: string;
     /** Name of a pixel icon shown before the text. */
     icon?: string;
+    /** The small button (`btn sm`) of window headers and toolbars. */
+    compact?: boolean;
     /** Tooltip and name of the button and of its list; defaults to the label. */
     title?: string;
     items: { key: string; label: string; disabled?: boolean; onselect: () => void }[];
@@ -115,6 +118,7 @@
 <button
   bind:this={button}
   class="btn am"
+  class:sm={compact}
   type="button"
   aria-haspopup="menu"
   aria-expanded={open}

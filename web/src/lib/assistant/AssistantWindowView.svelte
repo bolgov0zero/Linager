@@ -34,14 +34,28 @@
     if (!chrome && !win.maximized && boxW > 50 && boxH > 50) chrome = { w: win.w - boxW, h: win.h - boxH };
   });
 
-  /** The window gets the size of the picture (at 100%), as far as the page holds it, and stays inside the page. */
+  /** The picture area the window was fitted for, and whether the picture goes in at 100% or had to be scaled down. */
+  let target = $state<{ w: number; h: number } | null>(null);
+  let scaleMode = $state<'real' | 'fit'>('real');
+  let tries = 0;
+  let lastKey = '';
+
+  /**
+   * The window gets the size of the picture at 100% and stays inside the page. A picture larger than the page is scaled
+   * down as a whole (the window takes its proportions), so that nothing of it is cut off.
+   */
   function fitWindow(pw: number, ph: number): void {
     const c = chrome;
     if (!c) return;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const w = Math.max(360, Math.min(pw + c.w, vw - 16));
-    const h = Math.max(220, Math.min(ph + c.h, vh - 64));
+    const k = Math.min(1, (vw - 16 - c.w) / pw, (vh - 64 - c.h) / ph);
+    const picW = Math.max(1, Math.floor(pw * k));
+    const picH = Math.max(1, Math.floor(ph * k));
+    const w = Math.max(360, picW + c.w);
+    const h = Math.max(220, picH + c.h);
+    target = { w: picW, h: picH };
+    scaleMode = k >= 1 ? 'real' : 'fit';
     applied = { w, h };
     updateTermWindow(win.key, {
       w,
@@ -55,7 +69,31 @@
   $effect(() => {
     if (display !== 'window' || !info || !chrome || narrow()) return;
     const [pw, ph] = [info.w, info.h];
-    untrack(() => fitWindow(pw, ph));
+    const key = `${pw}x${ph}`;
+    untrack(() => {
+      if (key !== lastKey) {
+        lastKey = key;
+        tries = 0;
+      }
+      fitWindow(pw, ph);
+    });
+  });
+
+  // what the window needs around the picture was measured at the first look; when the real picture area comes out
+  // another size (the stats line wrapped in a narrow window), it is measured again and the window is fitted once more
+  $effect(() => {
+    const [bw, bh] = [boxW, boxH];
+    untrack(() => {
+      const t = target;
+      if (display !== 'window' || !t || win.maximized || narrow() || bw < 50) return;
+      if (Math.abs(bw - t.w) <= 1 && Math.abs(bh - t.h) <= 1) {
+        tries = 0;
+        return;
+      }
+      if (tries >= 3) return;
+      tries++;
+      chrome = { w: win.w - bw, h: win.h - bh };
+    });
   });
 
   // the person resized the window by hand: the picture is fitted into it from now on
@@ -82,9 +120,9 @@
     });
   });
 
-  // the picture is shown at 100% while the window follows it, fitted into the window otherwise
+  // the picture is shown at 100% while the window follows it (scaled down as a whole when the page is too small), fitted into the window otherwise
   $effect(() => {
-    screen?.setScale(display === 'window' ? 'real' : 'fit');
+    screen?.setScale(display === 'window' ? scaleMode : 'fit');
   });
 
   const statusText = $derived(

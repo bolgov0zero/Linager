@@ -38,5 +38,5 @@
 
 {#if live}
   <button class="btn sm" type="button" title={$tr('desk.cadHint')} onclick={() => session?.ctrlAltDel()}>Ctrl+Alt+Del</button>
-  <ActionMenu label={$tr('desk.more')} {items} />
+  <ActionMenu compact label={$tr('desk.more')} {items} />
 {/if}

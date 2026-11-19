@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0-beta.5
+
+- Fix: **the buttons in the header of the Assistant window were bigger than those of the Desktop and the terminal** (13 px text instead of 11 px). The menus of the session, the display mode and "More" are small buttons now, as the neighbours are; `ActionMenu` got a `compact` option, the "More" menu of the Desktop window uses it too. The icon of the display button does not make its button taller.
+- Fix: **in the mode "Window fits the picture" the bottom of the picture (the taskbar of Windows) went under the stats line** when the picture was taller than the page: the window was cut to the page and the picture, shown at 100%, was cut with it. Now a picture that does not fit is scaled down as a whole and the window takes its proportions, so nothing is cut off. The window also measures what it needs around the picture again if the real picture area comes out another size (the stats line wraps in a narrow window).
+
 ## 0.4.0-beta.4
 
 - Change: **the toolbar of the Assistant.** The session button just says "Session" (the list still describes every session). A new button with a monitor icon holds the **display mode**: in a floating window "Picture fits the window", "Window fits the picture" (the default: the window gets the size of the picture at 100% and follows it when the picture changes, as far as the page holds it) and "Window fills the browser"; in the tab "Picture fits the window" and "Picture at 100% (scrolls)"; "Full screen" is in both. Resizing the window by hand leaves the "Window fits the picture" mode, the maximize button of the header is the same as "Window fills the browser". The items "Scale" and "Full screen" are gone from the "More" menu. `ActionMenu` can show an icon.
