@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.13
+
+- Fix: **the network charts (Overview, Metrics) were empty on LXC containers** although the interface table showed the speed and the traffic. The total for the charts is the sum over the physical interfaces (so that a Docker host does not count a bridge and veth ends twice), and an interface counted as physical only if sysfs had a `device` entry for it; the `eth0` of a container is one end of a veth pair and has none, so the sum stayed 0. Now a host with no physical interface counts the interface of the default route (`/proc/net/route`, the lowest metric), and without a default route every interface that is up and not virtual by name. Hosts with a physical card are not changed. Tests: the choice for a host with a card, a container with and without a default route, a stale default route; the parsing of the route table.
+
 ## 0.3.12
 
 - Fix: **the summary tiles of the dashboard shrink together with the scroll, and the servers do not go under the filter bar until they have.** The first 54 px of a wheel scroll over the list go into the shrinking (the hints fold away, the number gets smaller, the padding goes down; a number property `--p` from 0 to 1 drives it and is smoothed over 0.12 s, so a step of a mouse wheel is not a jump); the rest scrolls the list. Scrolling back up to the top of the list grows the tiles again. The list's bottom edge follows frame by frame, so the page does not jump. Keys, the scroll bar and touch (no wheel) snap the tiles to the strip. Nothing changes when the list is too short to scroll, on a phone, or with "reduce motion" (no smoothing).

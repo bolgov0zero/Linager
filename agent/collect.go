@@ -311,12 +311,7 @@ func (c *linuxCollector) Collect(now time.Time) protocol.Sample {
 	sort.Slice(s.Disks, func(i, j int) bool { return len(s.Disks[i].Mount) < len(s.Disks[j].Mount) })
 
 	s.Net = c.collectNet(now)
-	for _, n := range s.Net {
-		if isPhysical(n.Iface) {
-			s.RxBps += n.RxBps
-			s.TxBps += n.TxBps
-		}
-	}
+	s.RxBps, s.TxBps = trafficTotals(s.Net, isPhysical, defaultRouteIface(read("/proc/net/route")))
 
 	if f := strings.Fields(read("/proc/loadavg")); len(f) >= 4 {
 		for i := 0; i < 3; i++ {
@@ -348,6 +343,51 @@ func isPhysical(name string) bool {
 	}
 	_, err := os.Stat(filepath.Join("/sys/class/net", name, "device"))
 	return err == nil
+}
+
+// trafficTotals is the traffic of the host for the charts: the sum over its physical interfaces, so that a Docker
+// host does not count the same bytes on the bridge, the veth ends and the card. A host that has no physical
+// interface at all (an LXC container: its eth0 is one end of a veth pair and has no "device" in sysfs) counts the
+// interface of the default route, or, with no default route, every interface that is up and not virtual by name.
+func trafficTotals(ifaces []protocol.NetIface, physical func(string) bool, defaultIface string) (rx, tx float64) {
+	pick := func(match func(protocol.NetIface) bool) (found bool) {
+		for _, n := range ifaces {
+			if match(n) {
+				rx += n.RxBps
+				tx += n.TxBps
+				found = true
+			}
+		}
+		return found
+	}
+	if pick(func(n protocol.NetIface) bool { return physical(n.Iface) }) {
+		return rx, tx
+	}
+	if defaultIface != "" && pick(func(n protocol.NetIface) bool { return n.Iface == defaultIface }) {
+		return rx, tx
+	}
+	pick(func(n protocol.NetIface) bool { return n.Up && !virtualIface(n.Iface) })
+	return rx, tx
+}
+
+// defaultRouteIface is the interface of the IPv4 default route (the lowest metric) from /proc/net/route, "" if none.
+func defaultRouteIface(route string) string {
+	best, bestMetric := "", -1
+	for _, line := range strings.Split(route, "\n") {
+		f := strings.Fields(line)
+		// Iface Destination Gateway Flags RefCnt Use Metric Mask ...
+		if len(f) < 8 || f[1] != "00000000" || f[7] != "00000000" {
+			continue
+		}
+		m, err := strconv.Atoi(f[6])
+		if err != nil {
+			continue
+		}
+		if bestMetric < 0 || m < bestMetric {
+			best, bestMetric = f[0], m
+		}
+	}
+	return best
 }
 
 func (c *linuxCollector) collectNet(now time.Time) []protocol.NetIface {

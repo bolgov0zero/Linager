@@ -2,7 +2,11 @@
 
 package agent
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/bolgov0zero/linager/internal/protocol"
+)
 
 func TestParseCPU(t *testing.T) {
 	busy, total, ok := parseCPU("cpu  100 0 50 800 50 0 0 0 0 0\ncpu0 1 1 1 1 1\n")
@@ -56,5 +60,45 @@ func TestCountApt(t *testing.T) {
 		"Inst vim [1] (2 Debian:13/stable [amd64])\nConf vim\n"
 	if tot, sec := countApt(parseAptInst(out)); tot != 3 || sec != 2 {
 		t.Fatalf("tot=%d sec=%d", tot, sec)
+	}
+}
+
+func TestDefaultRouteIface(t *testing.T) {
+	route := "Iface\tDestination\tGateway\tFlags\tRefCnt\tUse\tMetric\tMask\tMTU\tWindow\tIRTT\n" +
+		"eth1\t00000000\t0101A8C0\t0003\t0\t0\t200\t00000000\t0\t0\t0\n" +
+		"eth0\t00000000\t0100A8C0\t0003\t0\t0\t100\t00000000\t0\t0\t0\n" +
+		"eth0\t0000A8C0\t00000000\t0001\t0\t0\t100\t00FFFFFF\t0\t0\t0\n"
+	if got := defaultRouteIface(route); got != "eth0" {
+		t.Fatalf("lowest metric: %q", got)
+	}
+	if got := defaultRouteIface("Iface\tDestination\tGateway\tFlags\tRefCnt\tUse\tMetric\tMask\n"); got != "" {
+		t.Fatalf("no default route: %q", got)
+	}
+}
+
+func TestTrafficTotals(t *testing.T) {
+	phys := func(n string) bool { return n == "ens18" }
+	nic := func(name string, up bool, rx, tx float64) protocol.NetIface {
+		return protocol.NetIface{Iface: name, Up: up, RxBps: rx, TxBps: tx}
+	}
+	// A host with a physical card: only the card counts (the bridge and the veth ends carry the same bytes).
+	rx, tx := trafficTotals([]protocol.NetIface{nic("ens18", true, 100, 10), nic("docker0", true, 90, 9), nic("br0", true, 80, 8)}, phys, "br0")
+	if rx != 100 || tx != 10 {
+		t.Fatalf("physical host: %v %v", rx, tx)
+	}
+	// An LXC container: eth0 has no device in sysfs, so it is not physical; the default route picks it.
+	rx, tx = trafficTotals([]protocol.NetIface{nic("eth0", true, 500, 50), nic("eth1", true, 7, 7)}, phys, "eth0")
+	if rx != 500 || tx != 50 {
+		t.Fatalf("container with a default route: %v %v", rx, tx)
+	}
+	// No default route: every interface that is up and not virtual by name.
+	rx, tx = trafficTotals([]protocol.NetIface{nic("eth0", true, 5, 1), nic("eth1", false, 7, 7), nic("veth12", true, 9, 9)}, phys, "")
+	if rx != 5 || tx != 1 {
+		t.Fatalf("container without a default route: %v %v", rx, tx)
+	}
+	// The default route names an interface that is not in the list: fall through to the last rule.
+	rx, tx = trafficTotals([]protocol.NetIface{nic("eth0", true, 5, 1)}, phys, "gone0")
+	if rx != 5 || tx != 1 {
+		t.Fatalf("stale default route: %v %v", rx, tx)
 	}
 }
