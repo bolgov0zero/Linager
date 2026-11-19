@@ -53,6 +53,9 @@ type Sample struct {
 	// DesktopOff is set by a Windows agent whose remote desktop (RDP) is turned off or cannot exist (Windows Home): the
 	// panel then hides the "Desktop" tab and menu items.
 	DesktopOff bool `json:"desktop_off,omitempty"`
+	// Gui is set by a Linux agent that has a graphical console the Assistant can show (GNOME on Wayland): the panel then
+	// offers the Assistant for the computer.
+	Gui bool `json:"gui,omitempty"`
 }
 
 // SystemInfo is static host information.

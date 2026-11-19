@@ -1,0 +1,181 @@
+//go:build linux
+
+package agent
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"os/exec"
+	"os/user"
+	"strconv"
+	"sync"
+	"syscall"
+
+	"github.com/bolgov0zero/linager/internal/config"
+)
+
+// registerAssistant adds the Assistant to the commands of a Linux computer: the console of a graphical session of
+// GNOME on Wayland. A computer without a screen has no sessions to offer, and the panel hides the Assistant for it.
+func registerAssistant(r *Registry, cfg *config.Agent) {
+	if cfg.Enabled("assistant") {
+		r.streams["assistant"] = assistantStream
+		r.cmds["assistant.sessions"] = assistSessionsCmd
+	}
+}
+
+// listAssistSessions lists the graphical sessions of people (the one in front on the first seat is the console).
+func listAssistSessions() []AssistSession {
+	var out []AssistSession
+	for _, s := range readLogindSessions(logindDir) {
+		if !s.graphicalUserSession() {
+			continue
+		}
+		id, err := strconv.ParseUint(s.ID, 10, 32)
+		if err != nil {
+			continue
+		}
+		typ := "other"
+		if s.Seat == "seat0" && s.Active {
+			typ = "console"
+		}
+		st := s.State
+		if s.Type != "wayland" {
+			st = s.Type // x11: found, but not supported yet
+		}
+		out = append(out, AssistSession{ID: uint32(id), Type: typ, User: s.User, State: st, Console: typ == "console", Screen: s.supported() && s.Active})
+	}
+	return out
+}
+
+func assistSessionsCmd(context.Context, json.RawMessage, bool) (any, error) {
+	return map[string]any{"sessions": listAssistSessions()}, nil
+}
+
+// resolveAssistSession turns what the panel asked for ("console" or a number) into a session that can be shown.
+func resolveAssistSession(s string) (logindSession, error) {
+	list := readLogindSessions(logindDir)
+	if s == "" || s == "console" {
+		c, ok := consoleSession(list)
+		if !ok {
+			return logindSession{}, errors.New("no graphical session at the console of this computer: nobody is signed in to the desktop")
+		}
+		return checkSupported(c)
+	}
+	for _, x := range list {
+		if x.ID == s && x.graphicalUserSession() {
+			return checkSupported(x)
+		}
+	}
+	return logindSession{}, fmt.Errorf("no graphical session %s", s)
+}
+
+func checkSupported(s logindSession) (logindSession, error) {
+	if s.Type != "wayland" {
+		return s, fmt.Errorf("the session of %s is %s: only GNOME on Wayland is supported", s.User, s.Type)
+	}
+	if !s.Active {
+		return s, fmt.Errorf("the session of %s is in the background: it has no screen to show", s.User)
+	}
+	return s, nil
+}
+
+// assistantStream is the Assistant of one session: the helper is started as the person of the session and the frames
+// are carried. Ctrl+Alt+Del does not exist here.
+func assistantStream(ctx context.Context, params json.RawMessage, sio *StreamIO) error {
+	var p struct {
+		Session string `json:"session"`
+	}
+	_ = json.Unmarshal(params, &p)
+	return runAssistRelay(ctx, sio, p.Session, launchAssistHelper, nil)
+}
+
+// linHelper is the helper process in a session.
+type linHelper struct {
+	cmd  *exec.Cmd
+	done chan struct{}
+	mu   sync.Mutex
+	err  error
+	kill bool
+}
+
+func (l *linHelper) Done() <-chan struct{} { return l.done }
+
+func (l *linHelper) Err() error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.err
+}
+
+// Kill ends the helper and what it started (GStreamer): they are one process group.
+func (l *linHelper) Kill() {
+	l.mu.Lock()
+	l.kill = true
+	l.mu.Unlock()
+	if l.cmd.Process != nil {
+		_ = syscall.Kill(-l.cmd.Process.Pid, syscall.SIGKILL)
+	}
+}
+
+// launchAssistHelper starts `linager agent assistant-helper` with the rights of the person of the session (the
+// compositor lets only that person into its remote-desktop interface) and the environment of the session: the bus
+// and the runtime directory of the person.
+func launchAssistHelper(_ context.Context, session, addr, token string) (assistHelper, error) {
+	s, err := resolveAssistSession(session)
+	if err != nil {
+		return nil, err
+	}
+	u, err := user.LookupId(strconv.Itoa(s.UID))
+	if err != nil {
+		return nil, fmt.Errorf("the user of the session: %w", err)
+	}
+	uid, gid := uint32(s.UID), uint32(0) //nolint:gosec // a user number
+	if g, err := strconv.ParseUint(u.Gid, 10, 32); err == nil {
+		gid = uint32(g)
+	}
+	var groups []uint32
+	if ids, err := u.GroupIds(); err == nil {
+		for _, id := range ids {
+			if n, err := strconv.ParseUint(id, 10, 32); err == nil {
+				groups = append(groups, uint32(n))
+			}
+		}
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+	run := fmt.Sprintf("/run/user/%d", s.UID)
+	cmd := exec.Command(exe, "agent", "assistant-helper", "--addr", addr, "--session", s.ID) //nolint:gosec // our own binary
+	cmd.Env = []string{
+		"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+		"HOME=" + u.HomeDir,
+		"USER=" + u.Username,
+		"LOGNAME=" + u.Username,
+		"XDG_RUNTIME_DIR=" + run,
+		"DBUS_SESSION_BUS_ADDRESS=unix:path=" + run + "/bus",
+		assistTokenEnv + "=" + token,
+	}
+	cmd.Dir = "/"
+	cmd.Stderr = os.Stderr // the journal of the agent shows what the helper says
+	cmd.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: uid, Gid: gid, Groups: groups}, Setpgid: true}
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("start the helper as %s: %w", u.Username, err)
+	}
+	l := &linHelper{cmd: cmd, done: make(chan struct{})}
+	go func() {
+		err := cmd.Wait()
+		l.mu.Lock()
+		var ee *exec.ExitError
+		if err != nil && !l.kill && errors.As(err, &ee) && ee.ExitCode() > 0 {
+			l.err = errors.New(helperExitText(uint32(ee.ExitCode()))) //nolint:gosec // a small exit code
+		} else if err != nil && !l.kill {
+			l.err = err
+		}
+		l.mu.Unlock()
+		close(l.done)
+	}()
+	return l, nil
+}

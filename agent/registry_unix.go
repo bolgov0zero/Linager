@@ -31,6 +31,7 @@ func (r *Registry) registerPlatform(cfg *config.Agent, col Collector, log *slog.
 			return aptStream(ctx, p, io, func() { refreshUpdates(col) })
 		}
 	}
+	registerAssistant(r, cfg)
 	if cfg.Enabled("processes") {
 		r.cmds["processes.list"] = procList
 		r.cmds["processes.kill"] = procKill

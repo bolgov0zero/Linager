@@ -328,6 +328,7 @@ func (c *linuxCollector) Collect(now time.Time) protocol.Sample {
 	}
 	_, err := os.Stat("/var/run/reboot-required")
 	s.RebootRequired = err == nil
+	s.Gui = assistGraphical()
 
 	c.slow.Lock()
 	s.FailedServices, s.Updates, s.SecurityUpdates = c.slow.failed, c.slow.updates, c.slow.security

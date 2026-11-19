@@ -10,6 +10,7 @@ require (
 	github.com/coder/websocket v1.8.15
 	github.com/creack/pty v1.1.24
 	github.com/go-webauthn/webauthn v0.18.2
+	github.com/godbus/dbus/v5 v5.2.4
 	github.com/jackc/pgx/v5 v5.13.0
 	github.com/pquerna/otp v1.5.0
 	github.com/pressly/goose/v3 v3.30.1

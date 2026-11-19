@@ -129,6 +129,11 @@ export function summarize(cards: ServerCard[]): Totals {
   };
 }
 
+/** The Assistant is offered for Windows computers, and for a Linux computer whose agent says it has a graphical console. */
+export function assistantOffered(os: string, sample: { gui?: boolean } | null | undefined): boolean {
+  return osKind(os) === 'windows' || sample?.gui === true;
+}
+
 /** The kind of host an agent runs on, from the OS name it reports (a Windows name starts with "Windows"). */
 export function osKind(os: string): 'windows' | 'linux' {
   return os.startsWith('Windows') ? 'windows' : 'linux';

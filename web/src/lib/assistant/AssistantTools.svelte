@@ -88,6 +88,8 @@
   const current = $derived(entries.find((e) => e.value === session)?.session);
 
   // Ctrl+Alt+Del can be sent by the service only into the console session.
+  // a Linux computer has no Ctrl+Alt+Del, task manager or Win+R of Windows
+  const linux = $derived(info?.platform === 'linux');
   const canCad = $derived((current?.type ?? (session === 'console' ? 'console' : '')) === 'console');
 
   const monitorItems = $derived.by(() => {
@@ -126,10 +128,10 @@
     const s = screen;
     const clip = s?.clipboardAvailable() ?? false;
     return [
-      { key: 'tm', label: $tr('assist.taskManager'), onselect: () => s?.combo(['ControlLeft', 'ShiftLeft', 'Escape']) },
+      ...(linux ? [] : [{ key: 'tm', label: $tr('assist.taskManager'), onselect: () => s?.combo(['ControlLeft', 'ShiftLeft', 'Escape']) }]),
       { key: 'win', label: $tr('assist.winKey'), onselect: () => s?.winKey() },
       { key: 'lock', label: $tr('assist.lock'), onselect: () => s?.combo(['MetaLeft', 'KeyL']) },
-      { key: 'run', label: $tr('assist.run'), onselect: () => s?.combo(['MetaLeft', 'KeyR']) },
+      ...(linux ? [] : [{ key: 'run', label: $tr('assist.run'), onselect: () => s?.combo(['MetaLeft', 'KeyR']) }]),
       { key: 'alttab', label: $tr('assist.altTab'), onselect: () => s?.combo(['AltLeft', 'Tab']) },
       ...monitorItems,
       { key: 'send', label: $tr('desk.clipSend'), disabled: !clip, onselect: () => void s?.sendClipboard() },
@@ -144,7 +146,9 @@
 <ActionMenu compact label={$tr('assist.sessionBtn')} title={$tr('assist.sessionBtn')} items={sessionItems} />
 <ActionMenu compact iconSize={16} label="" icon="desktop" title={$tr('assist.display')} items={displayItems} />
 {#if live}
-  <button class="btn sm" type="button" title={canCad ? $tr('assist.cadHint') : $tr('assist.cadConsoleOnly')} disabled={!canCad} onclick={() => screen?.ctrlAltDel()}>Ctrl+Alt+Del</button>
+  {#if !linux}
+    <button class="btn sm" type="button" title={canCad ? $tr('assist.cadHint') : $tr('assist.cadConsoleOnly')} disabled={!canCad} onclick={() => screen?.ctrlAltDel()}>Ctrl+Alt+Del</button>
+  {/if}
   <ServerShortcuts {serverId} {serverName} small={layout === 'window'} />
   <ActionMenu compact label={$tr('assist.more')} {items} />
 {/if}

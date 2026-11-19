@@ -80,7 +80,12 @@
   const canTerminal = $derived((detail?.modules ?? []).includes('terminal') && (isAdmin || (role === 'operator' && userModules.includes('terminal'))));
   // the remote desktop is off (or the edition has none): the "Desktop" tab is not offered, and it comes back when it is turned on
   const deskHidden = $derived(desktopHidden(detail?.id ?? '', sample, $rdpOverride));
-  const tabs = $derived(visibleTabs((detail?.modules ?? []).filter((m) => !(m === 'desktop' && deskHidden)), isAdmin ? null : role === 'operator' ? userModules : []));
+  // a Linux computer has the Assistant only with a graphical console, and no "Management" (that is RDP and Windows policies)
+  const tabs = $derived(
+    visibleTabs((detail?.modules ?? []).filter((m) => !(m === 'desktop' && deskHidden)), isAdmin ? null : role === 'operator' ? userModules : []).filter(
+      (x) => isWin || (x.id !== 'manage' && (x.id !== 'assistant' || sample?.gui === true)),
+    ),
+  );
   const tab = $derived<TabId>(tabs.find((x) => x.id === requestedTab)?.id ?? 'overview');
   const currentTabKey = $derived(tabs.find((x) => x.id === tab)?.key ?? 'srv.tab.overview');
   const currentGroupKey = $derived(groupTabs(tabs).find((g) => g.tabs.some((x) => x.id === tab))?.key ?? 'srv.group.general');

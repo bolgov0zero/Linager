@@ -9,7 +9,7 @@
   import Summary from './dashboard/Summary.svelte';
   import OsBadge from './dashboard/OsBadge.svelte';
   import Tags from './dashboard/Tags.svelte';
-  import { levelOf, osKind, summarize, tagsOf, toneOfPct, type AgentFlag } from './dashboard/status';
+  import { assistantOffered, levelOf, osKind, summarize, tagsOf, toneOfPct, type AgentFlag } from './dashboard/status';
   import ContextMenu, { type MenuItem } from './ui/ContextMenu.svelte';
   import DeleteServerModal from './DeleteServerModal.svelte';
   import { desktopHidden, rdpOverride } from './server/rdp';
@@ -358,11 +358,11 @@
     const items: MenuItem[] = [
       { key: 'term', label: $tr('dash.terminal'), disabled: !card.online, onselect: () => openTermWindow(card.id, card.name) },
     ];
-    // The remote desktop is for Windows computers only.
-    if (osKind(card.os) === 'windows') {
-      if (!desktopHidden(card.id, card.sample, get(rdpOverride))) {
-        items.push({ key: 'desk', label: $tr('dash.desktop'), disabled: !card.online, onselect: () => openDesktopWindow(card.id, card.name, card.address) });
-      }
+    // The remote desktop is for Windows computers only; the Assistant for Windows and for a Linux computer with a graphical console.
+    if (osKind(card.os) === 'windows' && !desktopHidden(card.id, card.sample, get(rdpOverride))) {
+      items.push({ key: 'desk', label: $tr('dash.desktop'), disabled: !card.online, onselect: () => openDesktopWindow(card.id, card.name, card.address) });
+    }
+    if (assistantOffered(card.os, card.sample)) {
       items.push({ key: 'assist', label: $tr('dash.assistant'), disabled: !card.online, onselect: () => openAssistantWindow(card.id, card.name) });
     }
     items.push({ key: 'open', label: $tr('dash.open'), onselect: () => onopen(card.name) });
@@ -373,7 +373,7 @@
           key: `g${g.id}`,
           label: `${$tr('dash.group.label')}: ${g.name}`,
           checked: card.group_id === g.id,
-          separated: items.length === (osKind(card.os) === 'windows' ? 4 : 2),
+          separated: items.length === 2 + (osKind(card.os) === 'windows' && !desktopHidden(card.id, card.sample, get(rdpOverride)) ? 1 : 0) + (assistantOffered(card.os, card.sample) ? 1 : 0) + 1,
           onselect: () => void setCardGroup(card, String(g.id)),
         });
       }

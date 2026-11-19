@@ -11,7 +11,7 @@
   import OsBadge from './OsBadge.svelte';
   import Tags from './Tags.svelte';
   import { isPhone } from '../ui/viewport';
-  import { levelOf, osKind, tagsOf, type AgentFlag } from './status';
+  import { assistantOffered, levelOf, osKind, tagsOf, type AgentFlag } from './status';
 
   let {
     card,
@@ -126,7 +126,7 @@
     <span class="small mono muted">{footText}</span>
     <div class="row end">
       <button class="btn ic" type="button" title={$tr('dash.terminal')} aria-label={$tr('dash.terminal')} disabled={!card.online} onclick={() => openTermWindow(card.id, card.name)}><CardIcon name="terminal" /></button>
-      {#if osKind(card.os) === 'windows'}
+      {#if assistantOffered(card.os, sample)}
         <button class="btn ic assist" type="button" title={$tr('dash.assistant')} aria-label={$tr('dash.assistant')} disabled={!card.online} onclick={() => openAssistantWindow(card.id, card.name)}><CardIcon name="assistant" /></button>
       {/if}
       <button class="btn ic" type="button" title={$tr('dash.open')} aria-label={$tr('dash.open')} onclick={() => onopen(card.name)}><CardIcon name="open" /></button>

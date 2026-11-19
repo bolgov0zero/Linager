@@ -18,10 +18,6 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-// assistTokenEnv is the environment variable that carries the one-time token to the helper. The environment of a
-// process of another account is not readable by an ordinary user, the command line may be.
-const assistTokenEnv = "LINAGER_ASSIST_TOKEN" //nolint:gosec // the name of a variable, not a secret
-
 // noSession is what Windows returns when no session is at the console (a moment of a switch of users).
 const noSession = 0xFFFFFFFF
 

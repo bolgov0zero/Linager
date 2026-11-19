@@ -125,6 +125,7 @@ export interface Sample {
   image_updates?: number; // Docker containers with a newer image, -1 or absent = unknown
   procs: number;
   desktop_off?: boolean; // a Windows agent: the remote desktop (RDP) is off or the edition has none
+  gui?: boolean; // a Linux agent: there is a graphical console (GNOME on Wayland) the Assistant can show
 }
 export interface SystemInfo {
   hostname: string; os: string; kernel: string; arch: string;

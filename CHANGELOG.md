@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0-beta.1
+
+- New (beta): **the Assistant for Linux: the console of a GNOME desktop on Wayland.** The same view and control in the browser as on Windows, for a Linux computer where somebody is signed in to the desktop: the screen (JPEG tiles, quality and frame rate settings of the panel), the mouse, the keys, the text clipboard (Ctrl+C, Ctrl+V, the menu), the choice of the monitor. The agent (root) finds the active graphical session of seat0 in systemd-logind and starts a helper as the person of the session; the helper takes a stream of the monitor and a remote-desktop session from GNOME Mutter over D-Bus (`org.gnome.Mutter.ScreenCast` and `RemoteDesktop`, no dialog: a process of the person's own session may use them) and reads the frames with `gst-launch-1.0 pipewiresrc`. Needs GNOME on Wayland (Ubuntu 26.04 has no other session) and the packages `gstreamer1.0-tools` and `gstreamer1.0-pipewire`. The agent reports `gui` in its sample, and the panel offers the Assistant (the tab, the card button, the menu items, the Console mode) only for a computer that has a graphical console; Ctrl+Alt+Del, the Windows task manager, Win+R and "Management" are not offered for Linux. Not yet: X11, KDE, wlroots, the GDM sign-in screen and the lock screen, "All monitors", a native PipeWire client. **The server and the agent of the computer need this version.** Not tried on a real desktop except that the D-Bus calls and the frame of the stream were checked with a small program on Ubuntu 26 (GNOME Shell 50.1): the rest is for the beta.
+- New: the module `assistant` is in the agent configuration of Linux (`config.CompleteAgent` adds it to `agent.yaml`); the dependency `github.com/godbus/dbus/v5` (pure Go).
+- Dev: the shared constants of the helper moved to `agent/assist_types.go`; the pure parts of the Linux backend (logind, scan codes to evdev, the layout of the monitors, the clipboard formats) are tested on every platform.
+
 ## 0.7.4
 
 - Change: **the menu of the top bar (theme, language, edit, settings, log out) is as small as the other menus**: a row is 25 px with 12 px text instead of 36 px with 14 px, the menu is 158 px wide instead of 198 px, the counter of the updates is a small mark.

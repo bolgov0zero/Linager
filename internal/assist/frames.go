@@ -129,6 +129,7 @@ type Hello struct {
 	User     string    `json:"user,omitempty"`
 	Monitors []Monitor `json:"monitors,omitempty"` // the primary one first
 	Monitor  int       `json:"monitor"`            // the index shown, -1 for all of them as one picture
+	Platform string    `json:"platform,omitempty"` // "linux" for a Linux computer (the buttons that are Windows keys are not offered), empty for Windows
 }
 
 // Stats is what the helper measured in the last second.

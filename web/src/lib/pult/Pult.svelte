@@ -3,7 +3,7 @@
   import { api, isUnauthorized, type Group, type LiveEvent, type ServerCard, type ServerDetail } from '../../api';
   import { t, tr } from '../../i18n';
   import { subscribeLive } from '../../live';
-  import { levelOf, osKind } from '../dashboard/status';
+  import { assistantOffered, levelOf, osKind } from '../dashboard/status';
   import AssistantTab from '../server/tabs/AssistantTab.svelte';
   import DesktopTab from '../server/tabs/DesktopTab.svelte';
   import TerminalTab from '../server/tabs/TerminalTab.svelte';
@@ -66,12 +66,13 @@
   };
   const canFiles = $derived(role === 'admin' || (role === 'operator' && modules.includes('files')));
 
-  /** The server has the mode: a terminal everywhere, the remote desktop and the Assistant on Windows (RDP only while it is on). */
+  /** The server has the mode: a terminal everywhere, the remote desktop on Windows (only while RDP is on), the Assistant on Windows and on a Linux computer with a graphical console. */
   function has(card: ServerCard, mode: PultMode): boolean {
     if (!allowed(mode)) return false;
     if (mode === 'term') return true;
+    if (mode === 'asst') return assistantOffered(card.os, card.sample);
     if (osKind(card.os) !== 'windows') return false;
-    return mode === 'asst' || !desktopHidden(card.id, card.sample, $rdpOverride);
+    return !desktopHidden(card.id, card.sample, $rdpOverride);
   }
 
   const counts = $derived(Object.fromEntries(MODES.map((m) => [m.id, items.filter((c) => has(c, m.id)).length])) as Record<PultMode, number>);

@@ -247,5 +247,5 @@ func newAgentUpdateCmds(dataDir *string) []*cobra.Command {
 			return agent.RollbackPendingChange(*dataDir, slog.New(slog.NewTextHandler(os.Stderr, nil)))
 		},
 	}
-	return []*cobra.Command{upd, status, rollback, rollbackChange}
+	return append([]*cobra.Command{upd, status, rollback, rollbackChange}, assistHelperCmds()...)
 }

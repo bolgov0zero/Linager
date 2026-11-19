@@ -22,7 +22,7 @@ export const ASSIST_LIMIT_CODE = 4031;
 /** A monitor of the computer; the list has the primary one first. */
 export interface Monitor { x: number; y: number; w: number; h: number; primary: boolean }
 /** `monitors` may be missing or have one entry; `monitor` is the index of the picked one, -1 for all of them as one picture. */
-export interface Hello { w: number; h: number; session: number | string; user: string; monitors?: Monitor[]; monitor?: number }
+export interface Hello { w: number; h: number; session: number | string; user: string; monitors?: Monitor[]; monitor?: number; /** "linux" for a Linux computer. */ platform?: string }
 /** `desktop` is "default" normally, "winlogon" on the lock, sign-in or UAC screen, "screen-saver" with a screen saver. */
 export interface Stats { fps: number; kbps: number; q: number; desktop?: string }
 export interface Tile { x: number; y: number; w: number; h: number; jpeg: Uint8Array }

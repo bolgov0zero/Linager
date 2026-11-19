@@ -19,25 +19,6 @@ import (
 	"github.com/bolgov0zero/linager/internal/assist"
 )
 
-// Exit codes of the helper; the agent turns them into the reason shown to the administrator.
-const (
-	helperExitConnect = 10 // could not call the agent back
-	helperExitScreen  = 11 // could not open the screen
-	helperExitLoop    = 12 // the picture failed while running
-)
-
-func helperExitText(code uint32) string {
-	switch code {
-	case helperExitConnect:
-		return "the helper could not call the agent back"
-	case helperExitScreen:
-		return "the helper could not open the screen of the session"
-	case helperExitLoop:
-		return "the helper stopped: the screen could not be read"
-	}
-	return fmt.Sprintf("the helper exited with code %d", code)
-}
-
 var (
 	modUser32   = windows.NewLazySystemDLL("user32.dll")
 	modGdi32    = windows.NewLazySystemDLL("gdi32.dll")

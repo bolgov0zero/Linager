@@ -174,6 +174,9 @@ func runAssistLoop(ctx context.Context, rw io.ReadWriter, host assistHost, info 
 			t.Stop()
 			enc.SetSettings(s)
 			host.SetShowCursor(s.ShowCursor)
+			if l, ok := host.(interface{ SetMaxFPS(int) }); ok {
+				l.SetMaxFPS(s.FPS)
+			}
 			idle = 0
 		case <-wake:
 			t.Stop()

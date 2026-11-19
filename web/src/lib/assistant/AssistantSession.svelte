@@ -16,6 +16,8 @@
     /** The monitors of the computer (primary first; empty when it did not say) and the picked one, -1 for all as one picture. */
     monitors: Monitor[];
     monitor: number;
+    /** "linux" for a Linux computer: the keys of Windows (Ctrl+Alt+Del, the task manager, Win+R) are not offered. */
+    platform: string;
   }
 </script>
 
@@ -176,6 +178,7 @@
           desktop: info?.desktop ?? 'default',
           monitors: cleanMonitors(hello.monitors),
           monitor: Number.isInteger(hello.monitor) ? (hello.monitor as number) : -1,
+          platform: hello.platform ?? '',
         };
         phase = 'open';
         return;
