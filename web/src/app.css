@@ -114,6 +114,47 @@ button {
   border-radius: 0;
 }
 
+/* Text that is only interface (buttons, tabs, menus, headings, field captions, table heads) is not selectable.
+   Data stays selectable: values, tables, logs, hints, and every input. */
+button,
+summary,
+h1,
+h2,
+h3,
+h4,
+label,
+th,
+.btn,
+.chip,
+.label,
+.hint,
+.tabbar,
+.tab,
+.fh,
+.dialog-head,
+.sel,
+.sel-list,
+.am,
+dt,
+[role='tab'],
+[role='tablist'],
+[role='menu'],
+[role='menuitem'],
+[role='option'],
+[role='columnheader'] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+select,
+[contenteditable='true'],
+.selectable {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* Shared building blocks: hard shadows, 2px borders, square corners. */
 .muted {
   color: var(--muted);

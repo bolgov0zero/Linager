@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.0
+
+The stable release of the **Assistant for Linux**: the console of a GNOME desktop on Wayland in the browser, and below the compositor the sign-in screen, the lock screen and X11. It gathers everything of 0.8.0-beta.1 to 0.8.0-beta.7 below. No database migration; update the server and the agents (the Linux Assistant needs the new agent).
+
+- New: **the Assistant for Linux.** The screen of the desktop, the mouse, the keys, the text clipboard and the choice of a monitor, with no new session and no question to the person at the computer (GNOME Mutter over D-Bus, frames through `gst-launch-1.0 pipewiresrc`); the sign-in screen (GDM), the lock screen and X11 are read below the compositor (DRM/KMS in pure Go, input through `/dev/uinput`). The panel shows the tab only for computers with a graphical console, and switches by itself between the desktop and the lock or sign-in screen.
+- Change: **no service messages when the Assistant switches between the desktop and the lock screen** (and back). The notices "connecting" and "closed" are not shown while the browser reconnects at the request of the computer; the last picture stays until the new one comes. The notice appears only when the reconnection gives up (after four tries in 40 seconds, or 30 seconds without a connection), and the button "Connect again" works as before.
+- Change: **the text of the interface is not selectable where it is not needed.** Buttons, tabs, menus, headings, captions of fields, table heads and hints cannot be selected by an accidental drag any more; the values (the info about the system, tables, logs, the terminal, the editor) and every input field stay selectable (`app.css`: `user-select`).
+- Change: **the toolbars of the view "Console" have one size of buttons.** The Assistant, the Desktop and the Terminal use the compact 24 px button (the size of "More"): the icon buttons "Files" and "Dispatcher" are 24 px with 16 px icons, the keys, copy, paste and close buttons of the Terminal and the buttons of the Desktop are no bigger than the others.
+- The details of every step are in the entries of the betas below.
+
 ## 0.8.0-beta.7
 
 - Fix: **a sign-out from the desktop ended the Assistant with "cannot read the screen: GNOME closed the remote session".** The Assistant for Linux connects again by itself now: the end frame of the helper has `reconnect` (`assist.End`), the browser connects again after a moment (a connection that cannot be opened is tried again for half a minute, not more than four times in 40 seconds) and the agent picks the way that suits the screen: the sign-in or the lock screen below the compositor, the desktop through GNOME. The helper below the compositor looks every two seconds whether the desktop is open (a person's own Wayland session, not locked) and asks for a connection again, so after the sign-in the desktop comes back with its clipboard.

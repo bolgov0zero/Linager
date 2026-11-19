@@ -149,6 +149,6 @@
   {#if !linux}
     <button class="btn sm" type="button" title={canCad ? $tr('assist.cadHint') : $tr('assist.cadConsoleOnly')} disabled={!canCad} onclick={() => screen?.ctrlAltDel()}>Ctrl+Alt+Del</button>
   {/if}
-  <ServerShortcuts {serverId} {serverName} small={layout === 'window'} />
+  <ServerShortcuts {serverId} {serverName} small />
   <ActionMenu compact label={$tr('assist.more')} {items} />
 {/if}

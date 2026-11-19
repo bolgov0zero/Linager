@@ -60,12 +60,12 @@
     {#if server.online && phase !== 'closed'}
       <div class="actions">
         <SnippetMenu serverId={server.id} oninsert={(text, run) => session?.insert(text, run)} onmanage={openSnippetSettings} />
-        <button class="btn" class:ink={keys} type="button" title={$tr('term.keys')} aria-label={$tr('term.keys')} aria-pressed={keys} onclick={() => (keys = !keys)}><KeyIcon /></button>
-        <ServerShortcuts serverId={server.id} serverName={server.name} />
-        <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.copy()}><span class="ic"><TermIcon name="copy" /></span><span class="tx">{$tr('term.copy')}</span></button>
-        <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.paste()}><span class="ic"><TermIcon name="paste" /></span><span class="tx">{$tr('term.paste')}</span></button>
-        {#if !docked}<button class="btn popout" type="button" title={$tr('termwin.openWindow')} onclick={popOut}><span class="ic"><TermIcon name="window" /></span><span class="tx">{$tr('termwin.openWindow')}</span></button>{/if}
-        <button class="btn" type="button" title={$tr('term.close')} onclick={() => session?.close()}><span class="ic"><TermIcon name="close" /></span><span class="tx">{$tr('term.close')}</span></button>
+        <button class="btn sm icon" class:ink={keys} type="button" title={$tr('term.keys')} aria-label={$tr('term.keys')} aria-pressed={keys} onclick={() => (keys = !keys)}><KeyIcon /></button>
+        <ServerShortcuts serverId={server.id} serverName={server.name} small />
+        <button class="btn sm" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.copy()}><span class="ic"><TermIcon name="copy" /></span><span class="tx">{$tr('term.copy')}</span></button>
+        <button class="btn sm" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.paste()}><span class="ic"><TermIcon name="paste" /></span><span class="tx">{$tr('term.paste')}</span></button>
+        {#if !docked}<button class="btn sm popout" type="button" title={$tr('termwin.openWindow')} onclick={popOut}><span class="ic"><TermIcon name="window" /></span><span class="tx">{$tr('termwin.openWindow')}</span></button>{/if}
+        <button class="btn sm" type="button" title={$tr('term.close')} onclick={() => session?.close()}><span class="ic"><TermIcon name="close" /></span><span class="tx">{$tr('term.close')}</span></button>
       </div>
     {/if}
   </div>

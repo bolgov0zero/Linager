@@ -104,9 +104,11 @@
     shutdown();
     const mine = ++generation;
     message = '';
-    info = null;
     clipWanted = 0;
-    size = { w: 0, h: 0 };
+    if (!quiet) {
+      info = null; // a silent reconnection keeps the last picture and its size until the new screen has come
+      size = { w: 0, h: 0 };
+    }
     phase = 'connecting';
     const ws = new WebSocket(assistantSocketUrl(serverId, session));
     ws.binaryType = 'arraybuffer';
@@ -127,8 +129,9 @@
       releaseAll(false);
       if (phase !== 'closed') {
         const neverOpened = phase === 'connecting';
+        const again = neverOpened && ev.code !== ASSIST_LIMIT_CODE && Date.now() < autoUntil && autoReconnect(mine);
+        if (!again) quiet = false;
         end(ev.code === ASSIST_LIMIT_CODE ? t('assist.limit') : ev.code === 1000 ? t('assist.ended') : t('assist.lost'));
-        if (neverOpened && ev.code !== ASSIST_LIMIT_CODE && Date.now() < autoUntil) autoReconnect(mine);
       }
     };
   }
@@ -158,23 +161,29 @@
   // moment, when the old connection is gone and the new session of the computer has appeared. For half a minute after such a
   // request a connection that cannot be opened is tried again; all in all not more than four times in 40 seconds, so that a
   // computer that keeps asking cannot make a loop.
+  // While it goes on nothing is said on the screen (no "closed" or "connecting" notice) and the last picture stays: switching
+  // between the desktop and the lock screen must look like a change of the picture, not like a failure. The notice appears
+  // only when the reconnection gives up.
   let autoTimes: number[] = [];
   let autoUntil = 0;
-  function autoReconnect(mine: number): void {
+  let quiet = $state(false);
+  function autoReconnect(mine: number): boolean {
     const now = Date.now();
     autoTimes = autoTimes.filter((x) => now - x < 40000);
-    if (autoTimes.length >= 4) return;
+    if (autoTimes.length >= 4) return false;
     autoTimes.push(now);
     autoUntil = now + 30000;
+    quiet = true;
     setTimeout(() => {
       if (mine === generation && phase === 'closed') connect();
     }, 1500);
+    return true;
   }
 
   function end(reason: string): void {
     message = reason;
     phase = 'closed';
-    info = null;
+    if (!quiet) info = null;
   }
 
   async function handle(mine: number, data: Uint8Array): Promise<void> {
@@ -202,6 +211,7 @@
           platform: hello.platform ?? '',
         };
         phase = 'open';
+        quiet = false;
         return;
       }
       case MSG_TILES:
@@ -219,8 +229,8 @@
         return;
       case MSG_END: {
         const e = json<{ reason?: string; reconnect?: boolean }>(body);
+        quiet = e?.reconnect === true && autoReconnect(mine);
         end(e?.reason || t('assist.ended'));
-        if (e?.reconnect === true) autoReconnect(mine);
         return;
       }
     }
@@ -500,6 +510,7 @@
   }
 
   export function reconnect(): void {
+    quiet = false;
     connect();
     focus();
   }
@@ -586,7 +597,7 @@
     ></canvas>
   </div>
 
-  {#if phase !== 'open'}
+  {#if phase !== 'open' && !quiet}
     <div class="veil" role={phase === 'closed' ? 'alert' : 'status'}>
       {#if phase === 'connecting'}
         <div class="spin" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
