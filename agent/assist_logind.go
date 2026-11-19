@@ -22,6 +22,7 @@ type logindSession struct {
 	Class  string // user, greeter, lock-screen, ...
 	Seat   string // seat0 is the one with the screen and the keyboard
 	Remote bool   // a session over the network (ssh, RDP): there is no screen of the computer in it
+	Leader int    // the process that started the session: its credentials are the ones of the person
 }
 
 // readLogindSessions reads the session files of dir.
@@ -72,6 +73,8 @@ func parseLogindSession(id, text string) (logindSession, bool) {
 			s.Seat = v
 		case "REMOTE":
 			s.Remote = v == "1"
+		case "LEADER":
+			s.Leader, _ = strconv.Atoi(v)
 		}
 	}
 	return s, s.UID > 0 || s.User != ""
@@ -112,4 +115,33 @@ func consoleSession(list []logindSession) (logindSession, bool) {
 func assistGraphical() bool {
 	s, ok := consoleSession(readLogindSessions(logindDir))
 	return ok && s.supported()
+}
+
+// parseProcCreds reads the group and the supplementary groups out of /proc/<pid>/status. A user that is not in
+// /etc/passwd (the sign-in screen of GDM runs as a dynamic user of systemd) has no other way to be asked for them.
+func parseProcCreds(status string) (gid uint32, groups []uint32, ok bool) {
+	for _, line := range strings.Split(status, "\n") {
+		k, v, found := strings.Cut(line, ":")
+		if !found {
+			continue
+		}
+		f := strings.Fields(v)
+		switch k {
+		case "Gid":
+			if len(f) > 0 {
+				n, err := strconv.ParseUint(f[0], 10, 32)
+				if err != nil {
+					return 0, nil, false
+				}
+				gid, ok = uint32(n), true
+			}
+		case "Groups":
+			for _, g := range f {
+				if n, err := strconv.ParseUint(g, 10, 32); err == nil {
+					groups = append(groups, uint32(n))
+				}
+			}
+		}
+	}
+	return gid, groups, ok
 }

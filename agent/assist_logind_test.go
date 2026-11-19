@@ -68,3 +68,24 @@ func TestScanToEvdev(t *testing.T) {
 		}
 	}
 }
+
+func TestParseProcCreds(t *testing.T) {
+	status := "Name:\tgnome-shell\nUid:\t60580\t60580\t60580\t60580\nGid:\t60580\t60580\t60580\t60580\nGroups:\t60580 44 \nVmPeak:\t1 kB\n"
+	gid, groups, ok := parseProcCreds(status)
+	if !ok || gid != 60580 || len(groups) != 2 || groups[0] != 60580 || groups[1] != 44 {
+		t.Errorf("got %d %v %v", gid, groups, ok)
+	}
+	if _, _, ok := parseProcCreds("Name:\tx\n"); ok {
+		t.Error("no Gid line, no credentials")
+	}
+	if _, _, ok := parseProcCreds("Gid:\tabc\n"); ok {
+		t.Error("a bad number is no credentials")
+	}
+}
+
+func TestParseLogindSessionLeader(t *testing.T) {
+	s, ok := parseLogindSession("c1", "UID=60580\nUSER=gdm-greeter\nLEADER=2119\nCLASS=greeter\n")
+	if !ok || s.Leader != 2119 || s.User != "gdm-greeter" {
+		t.Errorf("got %+v %v", s, ok)
+	}
+}

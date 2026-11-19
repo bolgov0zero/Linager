@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0-beta.3
+
+- Fix: **the sign-in screen of GDM: "the user of the session: unknown userid 60580".** The sign-in screen runs as a dynamic user of systemd that is not in `/etc/passwd`, so the agent (it has no libc to ask the system) could not find it. The helper takes the rights of such a user from the process that started the session (the group and the supplementary groups from `/proc/<leader>/status`, the name from logind), the home directory is `/tmp`. Still not tried: the bus and the compositor of the sign-in screen.
+
 ## 0.8.0-beta.2
 
 - Fix: **the Assistant for Linux answered late.** The mouse and the keys went to GNOME one by one, each waiting for the answer of the compositor, so a fast movement of the mouse queued up the clicks behind it: the events go without waiting for an answer now. A change of the screen waited for the next tick of the loop (up to 200 ms when the screen was quiet): every new frame of the compositor wakes the loop now (`Frames()` of the host). The pipeline of GStreamer does not wait for its clock any more (`sync=false`).

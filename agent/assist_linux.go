@@ -127,22 +127,7 @@ func launchAssistHelper(_ context.Context, session, addr, token string) (assistH
 	if err != nil {
 		return nil, err
 	}
-	u, err := user.LookupId(strconv.Itoa(s.UID))
-	if err != nil {
-		return nil, fmt.Errorf("the user of the session: %w", err)
-	}
-	uid, gid := uint32(s.UID), uint32(0) //nolint:gosec // a user number
-	if g, err := strconv.ParseUint(u.Gid, 10, 32); err == nil {
-		gid = uint32(g)
-	}
-	var groups []uint32
-	if ids, err := u.GroupIds(); err == nil {
-		for _, id := range ids {
-			if n, err := strconv.ParseUint(id, 10, 32); err == nil {
-				groups = append(groups, uint32(n))
-			}
-		}
-	}
+	uid, gid, groups, name, home := sessionCredentials(s)
 	exe, err := os.Executable()
 	if err != nil {
 		return nil, err
@@ -151,9 +136,9 @@ func launchAssistHelper(_ context.Context, session, addr, token string) (assistH
 	cmd := exec.Command(exe, "agent", "assistant-helper", "--addr", addr, "--session", s.ID) //nolint:gosec // our own binary
 	cmd.Env = []string{
 		"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-		"HOME=" + u.HomeDir,
-		"USER=" + u.Username,
-		"LOGNAME=" + u.Username,
+		"HOME=" + home,
+		"USER=" + name,
+		"LOGNAME=" + name,
 		"XDG_RUNTIME_DIR=" + run,
 		"DBUS_SESSION_BUS_ADDRESS=unix:path=" + run + "/bus",
 		assistTokenEnv + "=" + token,
@@ -162,7 +147,7 @@ func launchAssistHelper(_ context.Context, session, addr, token string) (assistH
 	cmd.Stderr = os.Stderr // the journal of the agent shows what the helper says
 	cmd.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: uid, Gid: gid, Groups: groups}, Setpgid: true}
 	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("start the helper as %s: %w", u.Username, err)
+		return nil, fmt.Errorf("start the helper as %s: %w", name, err)
 	}
 	l := &linHelper{cmd: cmd, done: make(chan struct{})}
 	go func() {
@@ -178,4 +163,38 @@ func launchAssistHelper(_ context.Context, session, addr, token string) (assistH
 		close(l.done)
 	}()
 	return l, nil
+}
+
+// sessionCredentials are the rights the helper takes: those of the person of the session. A person in /etc/passwd is
+// looked up; one that is not (the sign-in screen of GDM runs as a dynamic user of systemd) is read from the process that
+// started the session.
+func sessionCredentials(s logindSession) (uid, gid uint32, groups []uint32, name, home string) {
+	uid = uint32(s.UID) //nolint:gosec // a user number
+	name, home = s.User, "/tmp"
+	if u, err := user.LookupId(strconv.Itoa(s.UID)); err == nil {
+		name, home = u.Username, u.HomeDir
+		if g, err := strconv.ParseUint(u.Gid, 10, 32); err == nil {
+			gid = uint32(g)
+		}
+		if ids, err := u.GroupIds(); err == nil {
+			for _, id := range ids {
+				if n, err := strconv.ParseUint(id, 10, 32); err == nil {
+					groups = append(groups, uint32(n))
+				}
+			}
+		}
+		return uid, gid, groups, name, home
+	}
+	gid = uid // a dynamic user has the group of its own number, unless the process says otherwise
+	if s.Leader > 0 {
+		if b, err := os.ReadFile(fmt.Sprintf("/proc/%d/status", s.Leader)); err == nil { //nolint:gosec // a number
+			if g, gs, ok := parseProcCreds(string(b)); ok {
+				gid, groups = g, gs
+			}
+		}
+	}
+	if len(groups) == 0 {
+		groups = []uint32{gid}
+	}
+	return uid, gid, groups, name, home
 }
