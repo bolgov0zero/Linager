@@ -126,10 +126,10 @@
 
   .panel {
     position: absolute;
-    top: calc(100% + 5px);
+    top: calc(100% + 6px);
     right: 0;
     z-index: 30;
-    min-width: 158px;
+    min-width: 182px;
     background: var(--surface);
     border: 2px solid var(--line);
     box-shadow: 4px 4px 0 var(--shade);
@@ -139,16 +139,16 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 11px;
+    gap: 14px;
     width: 100%;
-    min-height: 25px;
-    padding: 0 9px;
+    min-height: 31px;
+    padding: 0 12px;
     background: none;
     border: 0;
     border-top: 2px dashed var(--seg-off);
     color: var(--ink);
     font-family: var(--font-display);
-    font-size: 12px;
+    font-size: 13px;
     text-align: left;
     cursor: pointer;
   }
@@ -188,10 +188,10 @@
   .badge {
     background: var(--warn);
     color: #fff;
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.2;
     min-width: 1.4em;
-    padding: 0 3px;
+    padding: 0 4px;
     border: 2px solid var(--warn);
     text-align: center;
   }

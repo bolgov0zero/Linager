@@ -7,10 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"os/user"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -133,7 +135,12 @@ func launchAssistHelper(_ context.Context, session, addr, token string) (assistH
 		return nil, err
 	}
 	run := fmt.Sprintf("/run/user/%d", s.UID)
-	cmd := exec.Command(exe, "agent", "assistant-helper", "--addr", addr, "--session", s.ID) //nolint:gosec // our own binary
+	// the number the helper puts in its hello: the sessions of a person are numbered, those of the sign-in screen are "c1", "c2"
+	sid := s.ID
+	if _, err := strconv.Atoi(sid); err != nil {
+		sid = "0"
+	}
+	cmd := exec.Command(exe, "agent", "assistant-helper", "--addr", addr, "--session", sid) //nolint:gosec // our own binary
 	cmd.Env = []string{
 		"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
 		"HOME=" + home,
@@ -144,7 +151,8 @@ func launchAssistHelper(_ context.Context, session, addr, token string) (assistH
 		assistTokenEnv + "=" + token,
 	}
 	cmd.Dir = "/"
-	cmd.Stderr = os.Stderr // the journal of the agent shows what the helper says
+	tail := &tailWriter{max: 400}
+	cmd.Stderr = io.MultiWriter(os.Stderr, tail) // the journal of the agent shows what the helper says, and so does the panel
 	cmd.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: uid, Gid: gid, Groups: groups}, Setpgid: true}
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("start the helper as %s: %w", name, err)
@@ -155,7 +163,11 @@ func launchAssistHelper(_ context.Context, session, addr, token string) (assistH
 		l.mu.Lock()
 		var ee *exec.ExitError
 		if err != nil && !l.kill && errors.As(err, &ee) && ee.ExitCode() > 0 {
-			l.err = errors.New(helperExitText(uint32(ee.ExitCode()))) //nolint:gosec // a small exit code
+			msg := helperExitText(uint32(ee.ExitCode())) //nolint:gosec // a small exit code
+			if t := tail.String(); t != "" {
+				msg += ": " + t
+			}
+			l.err = errors.New(msg)
 		} else if err != nil && !l.kill {
 			l.err = err
 		}
@@ -197,4 +209,27 @@ func sessionCredentials(s logindSession) (uid, gid uint32, groups []uint32, name
 		groups = []uint32{gid}
 	}
 	return uid, gid, groups, name, home
+}
+
+// tailWriter keeps the last bytes written to it: the end of what the helper said before it stopped.
+type tailWriter struct {
+	mu  sync.Mutex
+	max int
+	buf []byte
+}
+
+func (t *tailWriter) Write(p []byte) (int, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.buf = append(t.buf, p...)
+	if len(t.buf) > t.max {
+		t.buf = t.buf[len(t.buf)-t.max:]
+	}
+	return len(p), nil
+}
+
+func (t *tailWriter) String() string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return strings.Join(strings.Fields(string(t.buf)), " ")
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.0-beta.4
+
+- Change: **the menu of the top bar is a little larger again** (a row 31 px with 13 px text, 182 px wide: the 25 px of 0.7.4 were too small next to the buttons of the bar), and **the icons of the buttons of the server bar (note, reboot, delete) are 16 px**, as the icons of the side menu.
+- Fix: **the sign-in screen of GDM: "the helper exited with code 1".** The sessions of the sign-in screen have names like `c1`, the helper took the number of the session as a number and refused `--session c1`. The helper gets a number now (0 when the session has none). When a helper stops with an error, the panel shows the end of what it wrote to its error output, not only its exit code.
+
 ## 0.8.0-beta.3
 
 - Fix: **the sign-in screen of GDM: "the user of the session: unknown userid 60580".** The sign-in screen runs as a dynamic user of systemd that is not in `/etc/passwd`, so the agent (it has no libc to ask the system) could not find it. The helper takes the rights of such a user from the process that started the session (the group and the supplementary groups from `/proc/<leader>/status`, the name from logind), the home directory is `/tmp`. Still not tried: the bus and the compositor of the sign-in screen.

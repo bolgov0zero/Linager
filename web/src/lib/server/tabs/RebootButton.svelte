@@ -46,7 +46,7 @@
 </script>
 
 {#if icon}
-  <button class="btn tb-ic" type="button" title={$tr('reboot.button')} aria-label={$tr('reboot.button')} disabled={!server.online} onclick={openModal}><PixIcon name="reboot" size={24} /></button>
+  <button class="btn tb-ic" type="button" title={$tr('reboot.button')} aria-label={$tr('reboot.button')} disabled={!server.online} onclick={openModal}><PixIcon name="reboot" size={16} /></button>
 {:else}
   <button class="btn" type="button" disabled={!server.online} onclick={openModal}>{$tr('reboot.button')}</button>
 {/if}
