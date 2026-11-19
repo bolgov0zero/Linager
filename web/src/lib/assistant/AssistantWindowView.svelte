@@ -2,12 +2,12 @@
   import { untrack } from 'svelte';
   import { tr } from '../../i18n';
   import WindowFrame from '../terminal/WindowFrame.svelte';
-  import { updateTermWindow, type TermWindow } from '../terminal/windows';
+  import { openQualityWindow, updateTermWindow, type TermWindow } from '../terminal/windows';
   import AssistantBadge from './AssistantBadge.svelte';
   import AssistantSession, { type AssistInfo, type AssistPhase } from './AssistantSession.svelte';
+  import { assistInfoShown } from './settings';
   import AssistantStats from './AssistantStats.svelte';
   import AssistantTools from './AssistantTools.svelte';
-  import { gotoServerTab } from './nav';
 
   let { win, top }: { win: TermWindow; top: boolean } = $props();
 
@@ -137,11 +137,13 @@
     <span class="muted status">· {$tr('assist.name')} · {statusText}{#if phase === 'open'} <AssistantBadge desktop={info?.desktop} />{/if}</span>
   {/snippet}
   {#snippet tools()}
-    <AssistantTools {serverId} bind:session={() => session, (v) => updateTermWindow(win.key, { session: v })} {phase} {info} {screen} layout="window" bind:display onsettings={() => gotoServerTab(serverName, 'manage')} />
+    <AssistantTools {serverId} bind:session={() => session, (v) => updateTermWindow(win.key, { session: v })} {phase} {info} {screen} layout="window" bind:display onsettings={() => openQualityWindow(serverId, serverName)} />
   {/snippet}
   <div class="col">
     <div class="screenbox" bind:clientWidth={boxW} bind:clientHeight={boxH}><AssistantSession {serverId} {session} bind:phase bind:info bind:this={screen} /></div>
-    <AssistantStats {serverId} {phase} {info} />
+    {#if $assistInfoShown}
+      <AssistantStats {serverId} {phase} {info} />
+    {/if}
   </div>
 </WindowFrame>
 

@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CLIP_MAX, WheelNotches, cleanMonitors, encodeClipGet, encodeClipSet, encodeInput, encodeMonitor, isSecureDesktop, parseTiles } from './protocol.ts';
 import { scanKey } from './scancodes.ts';
+import { PRESETS, estimateMbit, presetOf } from './quality.ts';
 
 function tilesPayload(tiles) {
   const parts = [Buffer.from([tiles.length >> 8, tiles.length & 255])];
@@ -132,4 +133,19 @@ test('only a desktop other than the default (and not empty) is a secure one', ()
   assert.equal(isSecureDesktop(undefined), false);
   assert.equal(isSecureDesktop('winlogon'), true);
   assert.equal(isSecureDesktop('screen-saver'), true);
+});
+
+test('a preset is recognised, with or without the pointer, and a change makes it custom', () => {
+  assert.equal(presetOf({ ...PRESETS.normal }), 'normal');
+  assert.equal(presetOf({ ...PRESETS.hq, show_cursor: true }), 'hq');
+  assert.equal(presetOf({ ...PRESETS.eco, fps: 9 }), 'custom');
+  // the limit does not matter while there is none
+  assert.equal(presetOf({ ...PRESETS.normal, nolimit: true, mbit: 17 }), 'custom');
+});
+
+test('the traffic estimate follows the colours and never exceeds the limit', () => {
+  assert.equal(estimateMbit({ ...PRESETS.normal, mbit: 4, fps: 30 }), 4);
+  assert.equal(estimateMbit({ ...PRESETS.normal, mbit: 20, fps: 10, colors: '24' }), 5.5);
+  assert.ok(estimateMbit({ ...PRESETS.normal, mbit: 20, fps: 10, colors: 'gray' }) < 5.5);
+  assert.equal(estimateMbit({ ...PRESETS.normal, nolimit: true, fps: 30, colors: '24' }), 16.5);
 });

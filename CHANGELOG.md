@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1
+
+- New: **the picture settings of the Assistant open in a floating window.** The item "Quality and frame rate…" no longer takes you to the "Management" tab (from a floating Assistant or the Console that left the page); it opens a small window with the same card (presets, colours, frame rate, traffic limit, "lower the quality by itself", the pointer), one per server, also in the Console (it is listed among the windows) and on the Assistant tab of a server page. A change takes effect at once, and the line under the screen shows the result. The card is one component (`AssistantQuality`) for the tab and the window; the presets and the traffic estimate moved to `quality.ts` (tested).
+- Change: **the Assistant has no blue focus frame around the screen** any more (it covered 2 px of the remote picture's edge and showed after every mouse click).
+- New: **the line under the screen can be hidden**: the item "Information" in the "More" menu (a tick means shown). One choice for every window and tab of the Assistant, remembered in the browser (`localStorage`, `linager.assist.info`); in the mode "Window fits the picture" the window refits at once.
+
 ## 0.5.0
 
 The first stable release with the **Assistant** for Windows computers and the view **"Console" ("Пульт")**. It gathers everything of 0.4.0-beta.1 to 0.5.0-beta.2 below. One database migration (`00018`, the picture settings of the Assistant); the server updates as usual, **the Windows agents need this version for the Assistant** (the panel updates them from the "Updates" page; an older agent just does not offer the new tabs). Linux agents are not affected.

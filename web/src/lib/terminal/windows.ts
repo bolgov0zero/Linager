@@ -8,7 +8,7 @@ export const TERM_LIMIT = 3;
 /** Floating windows share one store, z-order and dock: terminals and file editors. */
 export interface TermWindow {
   key: number;
-  kind: 'terminal' | 'editor' | 'desktop' | 'assistant' | 'files';
+  kind: 'terminal' | 'editor' | 'desktop' | 'assistant' | 'files' | 'quality';
   serverId: string;
   /** Terminal: server name. Editor: file name. */
   name: string;
@@ -104,6 +104,16 @@ export function openFilesWindow(serverId: string, serverName: string): void {
   addWindow({ kind: 'files', serverId, name: serverName, serverName });
 }
 
+/** Opens the picture settings of the Assistant (quality, frame rate, limit) in a small floating window; one per server, an open one is brought to the front. */
+export function openQualityWindow(serverId: string, serverName: string): void {
+  const open = get(termWindows).find((w) => w.kind === 'quality' && w.serverId === serverId);
+  if (open) {
+    focusTermWindow(open.key);
+    return;
+  }
+  addWindow({ kind: 'quality', serverId, name: serverName, serverName });
+}
+
 /** Opens a file in a floating editor; an already open file of the same server is brought to the front. */
 export function openEditorWindow(serverId: string, serverName: string, path: string, name: string, text: string, mtime: number): void {
   const list = get(termWindows);
@@ -131,8 +141,9 @@ function addWindow(init: Pick<TermWindow, 'kind' | 'serverId' | 'name'> & Partia
   const editor = init.kind === 'editor';
   const desktop = init.kind === 'desktop' || init.kind === 'assistant';
   const files = init.kind === 'files';
-  const w = Math.min(desktop ? 1100 : files ? 960 : editor ? 760 : DEFAULT_W, vw - 32);
-  const h = Math.min(desktop ? 740 : files ? 620 : editor ? 520 : DEFAULT_H, vh - 96);
+  const quality = init.kind === 'quality';
+  const w = Math.min(desktop ? 1100 : files ? 960 : editor ? 760 : quality ? 520 : DEFAULT_W, vw - 32);
+  const h = Math.min(desktop ? 740 : files ? 620 : editor ? 520 : quality ? 580 : DEFAULT_H, vh - 96);
   const step = (list.length % 8) * CASCADE;
   const x = Math.max(16, Math.min(Math.round((vw - w) / 2) + step - 3 * CASCADE, vw - w - 16));
   const y = Math.max(16, Math.min(72 + step, vh - h - 16));

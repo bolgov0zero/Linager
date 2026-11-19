@@ -31,6 +31,7 @@
   "pult.winTerminal": "Терминал",
   "pult.winDesktop": "Рабочий стол",
   "pult.winAssistant": "Помощник",
+  "pult.winQuality": "Качество",
   "pult.filesTitle": "Файлы · {name}",
   "pult.loadFailed": "Не удалось загрузить список серверов."
 }

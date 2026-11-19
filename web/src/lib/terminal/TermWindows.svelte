@@ -5,6 +5,7 @@
   import { pultShown } from '../pult/store';
   import EditorWindowView from './EditorWindowView.svelte';
   import FilesWindowView from './FilesWindowView.svelte';
+  import QualityWindowView from '../assistant/QualityWindowView.svelte';
   import TermWindowView from './TermWindowView.svelte';
   import { lockScroll } from '../ui/scrolllock';
   import { isPhone } from '../ui/viewport';
@@ -62,6 +63,8 @@
         <EditorWindowView {win} top={win.key === topKey} />
       {:else if win.kind === 'files'}
         <FilesWindowView {win} top={win.key === topKey} />
+      {:else if win.kind === 'quality'}
+        <QualityWindowView {win} top={win.key === topKey} />
       {:else if win.kind === 'desktop'}
         <DesktopWindowView {win} top={win.key === topKey} />
       {:else if win.kind === 'assistant'}
@@ -79,7 +82,7 @@
           class:off={win.minimized}
           type="button"
           title={win.minimized ? $tr('termwin.restore') : $tr('termwin.minimize')}
-          onclick={() => toggle(win.key, win.minimized)}>{win.kind === 'editor' ? '✎' : win.kind === 'files' ? '▤' : win.kind === 'assistant' ? '▣' : '>_'} {win.name}</button>
+          onclick={() => toggle(win.key, win.minimized)}>{win.kind === 'editor' ? '✎' : win.kind === 'files' ? '▤' : win.kind === 'assistant' ? '▣' : win.kind === 'quality' ? '⚙' : '>_'} {win.name}</button>
       {/each}
     </nav>
     {/if}

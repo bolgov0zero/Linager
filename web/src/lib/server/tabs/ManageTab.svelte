@@ -5,13 +5,12 @@
     desktopApi,
     type AssistSas,
     type AssistSession,
-    type AssistSettings,
     type DesktopState,
     type ServerDetail,
   } from '../../../api';
-  import { locale, t, tr as T } from '../../../i18n';
+  import { t, tr as T } from '../../../i18n';
   import { gotoServerTab, sessionValue, wantAssistSession } from '../../assistant/nav';
-  import { setAssistSettings } from '../../assistant/settings';
+  import AssistantQuality from '../../assistant/AssistantQuality.svelte';
   import { setRdpOff } from '../rdp';
   import Modal from '../../Modal.svelte';
   import { showToast } from '../../toast';
@@ -21,78 +20,6 @@
   const serverId = $derived(server.id);
   const serverName = $derived(server.name);
   const online = $derived(server.online);
-
-  const PRESETS: Record<'eco' | 'normal' | 'hq', AssistSettings> = {
-    eco: { colors: '256', fps: 8, mbit: 1, nolimit: false, auto: true, show_cursor: false },
-    normal: { colors: '24', fps: 15, mbit: 4, nolimit: false, auto: true, show_cursor: false },
-    hq: { colors: '24', fps: 30, mbit: 12, nolimit: false, auto: true, show_cursor: false },
-  };
-  const PRESET_IDS = ['eco', 'normal', 'hq'] as const;
-  const COLORS = ['24', '16', '256', 'gray'] as const;
-
-  // ---- the picture ----
-
-  let draft = $state<AssistSettings>({ ...PRESETS.normal });
-  let loaded = $state(false);
-  let loadError = $state('');
-  let saving = $state(false);
-  let saveError = $state('');
-  /** Set after a successful save: the number of open sessions that took the new values; null while there are edits. */
-  let applied = $state<number | null>(null);
-
-  const preset = $derived(
-    PRESET_IDS.find((id) => {
-      const p = PRESETS[id];
-      return p.colors === draft.colors && p.fps === draft.fps && p.nolimit === draft.nolimit && p.auto === draft.auto && (draft.nolimit || p.mbit === draft.mbit);
-    }) ?? 'custom',
-  );
-
-  const num = (n: number, digits = 1): string => n.toLocaleString($locale === 'ru' ? 'ru-RU' : 'en-GB', { maximumFractionDigits: digits });
-
-  /** A rough guess of the traffic of a busy screen; the real figure is on the line under the picture. */
-  const estimate = $derived.by(() => {
-    const k = { '24': 1, '16': 0.66, '256': 0.35, gray: 0.3 }[draft.colors];
-    return Math.min(draft.nolimit ? 99 : draft.mbit, Math.round(draft.fps * 0.55 * k * 10) / 10);
-  });
-
-  async function loadSettings(): Promise<void> {
-    try {
-      const got = await assistantApi.settings(serverId);
-      draft = { ...got, show_cursor: got.show_cursor === true };
-      loadError = '';
-      loaded = true;
-    } catch (e) {
-      loadError = e instanceof ApiError && e.serverMessage ? e.serverMessage : t('common.genericError');
-    }
-  }
-
-  $effect(() => {
-    void serverId;
-    loaded = false;
-    void loadSettings();
-  });
-
-  /** Any edit: the "saved" note goes away. */
-  function edit(patch: Partial<AssistSettings>): void {
-    draft = { ...draft, ...patch };
-    applied = null;
-    saveError = '';
-  }
-
-  async function save(): Promise<void> {
-    saving = true;
-    saveError = '';
-    try {
-      const res = await assistantApi.saveSettings(serverId, draft);
-      draft = { ...res.settings, show_cursor: res.settings.show_cursor === true };
-      applied = res.applied;
-      setAssistSettings(serverId, draft);
-    } catch (e) {
-      saveError = e instanceof ApiError && e.serverMessage ? e.serverMessage : t('common.genericError');
-    } finally {
-      saving = false;
-    }
-  }
 
   // ---- remote desktop (RDP) ----
 
@@ -211,74 +138,7 @@
   <div class="stack">
     <section class="card">
       <h3 class="t">{$T('manage.picture')}</h3>
-      {#if loadError}
-        <p class="error" role="alert">{loadError}</p>
-        <button class="btn" type="button" onclick={() => void loadSettings()}>{$T('srv.retry')}</button>
-      {:else if !loaded}
-        <p class="muted">{$T('common.loading')}</p>
-      {:else}
-        <div class="fld">
-          <div class="fl">{$T('manage.presets')}<small>{$T('manage.presetsHint')}</small></div>
-          <div class="segctl">
-            {#each PRESET_IDS as id (id)}
-              <button class="chip" type="button" aria-pressed={preset === id} onclick={() => edit({ ...PRESETS[id], show_cursor: draft.show_cursor })}>{$T(`manage.preset.${id}`)}</button>
-            {/each}
-            <button class="chip" type="button" aria-pressed={preset === 'custom'} disabled>{$T('manage.preset.custom')}</button>
-          </div>
-        </div>
-        <div class="fld">
-          <div class="fl">{$T('manage.colors')}<small>{$T('manage.colorsHint')}</small></div>
-          <div class="segctl">
-            {#each COLORS as c (c)}
-              <button class="chip" type="button" aria-pressed={draft.colors === c} onclick={() => edit({ colors: c })}>{$T(`manage.color.${c}`)}</button>
-            {/each}
-          </div>
-        </div>
-        <div class="fld">
-          <div class="fl">{$T('manage.fps')}<small>{$T('manage.fpsHint')}</small></div>
-          <div class="range">
-            <input type="range" min="1" max="30" step="1" value={draft.fps} aria-label={$T('manage.fps')} oninput={(e) => edit({ fps: Number(e.currentTarget.value) })} />
-            <output>{$T('manage.fpsValue', { n: draft.fps })}</output>
-          </div>
-        </div>
-        <div class="fld">
-          <div class="fl">{$T('manage.limit')}<small>{$T('manage.limitHint')}</small></div>
-          <div>
-            <div class="range">
-              <input type="range" min="0.5" max="20" step="0.5" value={draft.mbit} disabled={draft.nolimit} aria-label={$T('manage.limit')} oninput={(e) => edit({ mbit: Number(e.currentTarget.value) })} />
-              <output>{draft.nolimit ? $T('manage.noLimitValue') : $T('assist.mbitLimit', { v: num(draft.mbit) })}</output>
-            </div>
-            <label class="check nl">
-              <input type="checkbox" checked={draft.nolimit} onchange={(e) => edit({ nolimit: e.currentTarget.checked })} />
-              {$T('manage.noLimit')}
-            </label>
-          </div>
-        </div>
-        <div class="fld">
-          <div class="fl">{$T('manage.quality')}<small>{$T('manage.qualityHint')}</small></div>
-          <label class="check">
-            <input type="checkbox" checked={draft.auto} onchange={(e) => edit({ auto: e.currentTarget.checked })} />
-            {$T('manage.auto')}
-          </label>
-        </div>
-        <div class="fld">
-          <div class="fl">{$T('manage.cursor')}<small>{$T('manage.cursorSub')}</small></div>
-          <div>
-            <label class="check">
-              <input type="checkbox" checked={draft.show_cursor} onchange={(e) => edit({ show_cursor: e.currentTarget.checked })} />
-              {$T('manage.cursorShow')}
-            </label>
-            <p class="small muted note">{$T('manage.cursorHint')}</p>
-          </div>
-        </div>
-        <p class="est">{$T('manage.estimate', { peak: num(estimate), idle: num(0.05, 2) })}</p>
-        <div class="savebar">
-          <button class="btn primary" type="button" disabled={saving} onclick={() => void save()}>{$T('win.save')}</button>
-          <button class="btn" type="button" disabled={saving} onclick={() => edit(PRESETS.normal)}>{$T('manage.reset')}</button>
-          {#if applied !== null}<span class="saved" role="status">{$T('manage.saved', { n: applied })}</span>{/if}
-          {#if saveError}<span class="error" role="alert">{saveError}</span>{/if}
-        </div>
-      {/if}
+      <AssistantQuality {serverId} />
     </section>
   </div>
 
@@ -435,82 +295,6 @@
     letter-spacing: 0.06em;
   }
 
-  .fld {
-    display: grid;
-    grid-template-columns: 150px minmax(0, 1fr);
-    gap: 10px;
-    align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px dashed var(--seg-off);
-  }
-
-  .fl {
-    font-family: var(--font-display);
-  }
-
-  .fl small {
-    display: block;
-    font-family: var(--font-body);
-    color: var(--muted);
-    font-size: 11px;
-  }
-
-  .segctl {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .chip:disabled {
-    cursor: default;
-    opacity: 0.55;
-  }
-
-  .range {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .range input[type='range'] {
-    flex: 1;
-    min-width: 120px;
-    height: 20px;
-    accent-color: var(--accent);
-  }
-
-  .range output {
-    min-width: 92px;
-    text-align: right;
-    font-family: var(--font-display);
-    font-size: 14px;
-  }
-
-  .nl {
-    margin-top: 8px;
-  }
-
-  .est {
-    margin: 12px 0 0;
-    padding: 8px 10px;
-    border: 2px dashed var(--line);
-    color: var(--muted);
-    font-size: 12px;
-  }
-
-  .savebar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    margin-top: 14px;
-  }
-
-  .saved {
-    color: var(--good);
-    font-size: 12px;
-  }
-
   .badge {
     display: inline-block;
     padding: 0 5px;
@@ -605,12 +389,6 @@
 
   @media (max-width: 980px) {
     .grid2 {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 860px) {
-    .fld {
       grid-template-columns: 1fr;
     }
   }

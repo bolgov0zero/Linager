@@ -608,9 +608,9 @@
     image-rendering: auto;
   }
 
+  /* No focus frame: the screen is the whole area, and the frame covered the edge of the remote picture. */
   canvas:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
+    outline: none;
   }
 
   .veil {

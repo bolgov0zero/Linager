@@ -269,12 +269,14 @@
         return `${w.name} · ${$tr('pult.winDesktop')}`;
       case 'assistant':
         return `${w.name} · ${$tr('pult.winAssistant')}`;
+      case 'quality':
+        return `${w.name} · ${$tr('pult.winQuality')}`;
       default:
         return `${w.name} · ${$tr('pult.winTerminal')}`;
     }
   }
 
-  const winIcon = (w: TermWindow): string => (w.kind === 'files' ? 'folder' : w.kind === 'editor' ? 'note' : w.kind === 'desktop' ? 'desktop' : w.kind === 'assistant' ? 'assistant' : 'terminal');
+  const winIcon = (w: TermWindow): string => (w.kind === 'files' ? 'folder' : w.kind === 'editor' ? 'note' : w.kind === 'desktop' ? 'desktop' : w.kind === 'assistant' ? 'assistant' : w.kind === 'quality' ? 'gear' : 'terminal');
 
   /** Click on a row: a minimized window opens, the one in front is minimized, any other comes to the front. */
   function toggleWindow(w: TermWindow): void {

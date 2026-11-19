@@ -5,6 +5,7 @@
   import type AssistantSession from './AssistantSession.svelte';
   import type { AssistInfo, AssistPhase } from './AssistantSession.svelte';
   import { sessionValue } from './nav';
+  import { assistInfoShown, toggleAssistInfo } from './settings';
 
   /**
    * The buttons of the Assistant: the session list, Ctrl+Alt+Del on the bar and the rest in a menu. Shared by the
@@ -27,7 +28,7 @@
     /** What the computer reports (the monitors and the picked one); null before the first picture. */
     info?: AssistInfo | null;
     screen: AssistantSession | null;
-    /** The "Quality and frame rate" item: the owner shows the Manage tab. */
+    /** The "Quality and frame rate" item: the owner opens the settings (a floating window). */
     onsettings: () => void;
     /** Where the screen is: a page tab (the picture is fitted or shown at 100%) or a floating window (the window can follow the picture). */
     layout?: 'tab' | 'window';
@@ -130,6 +131,7 @@
       ...monitorItems,
       { key: 'send', label: $tr('desk.clipSend'), disabled: !clip, onselect: () => void s?.sendClipboard() },
       { key: 'save', label: $tr('desk.clipSave'), disabled: !clip, onselect: () => s?.getClipboard() },
+      { key: 'info', label: `${$assistInfoShown ? '✓ ' : ''}${$tr('assist.info')}`, onselect: toggleAssistInfo },
       { key: 'quality', label: $tr('assist.quality'), onselect: onsettings },
       { key: 'off', label: $tr('assist.disconnect'), onselect: () => s?.disconnect() },
     ];

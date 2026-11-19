@@ -4,10 +4,11 @@
   import { tr } from '../../../i18n';
   import AssistantBadge from '../../assistant/AssistantBadge.svelte';
   import AssistantSession, { type AssistInfo, type AssistPhase } from '../../assistant/AssistantSession.svelte';
+  import { assistInfoShown } from '../../assistant/settings';
   import AssistantStats from '../../assistant/AssistantStats.svelte';
   import AssistantTools from '../../assistant/AssistantTools.svelte';
-  import { gotoServerTab, takeAssistSession } from '../../assistant/nav';
-  import { openAssistantWindow } from '../../terminal/windows';
+  import { takeAssistSession } from '../../assistant/nav';
+  import { openAssistantWindow, openQualityWindow } from '../../terminal/windows';
 
   /** docked: the tab fills the Console (lib/pult): it takes the height of its parent and has no "in a window" button. */
   let { server, docked = false, paused = false }: { server: ServerDetail; docked?: boolean; /** The tab is hidden: the computer stops sending pictures. */ paused?: boolean } = $props();
@@ -53,7 +54,7 @@
     </p>
     {#if server.online}
       <div class="actions">
-        <AssistantTools {serverId} bind:session {phase} {info} {screen} layout="tab" bind:display onsettings={() => gotoServerTab(serverName, 'manage')} />
+        <AssistantTools {serverId} bind:session {phase} {info} {screen} layout="tab" bind:display onsettings={() => openQualityWindow(serverId, serverName)} />
         {#if !docked}<button class="btn sm" type="button" onclick={popOut}>{$tr('termwin.openWindow')}</button>{/if}
       </div>
     {/if}
@@ -63,7 +64,9 @@
   {:else}
     <div class="box">
       <div class="screenbox"><AssistantSession {serverId} {session} bind:phase bind:info bind:this={screen} /></div>
-      <AssistantStats {serverId} {phase} {info} />
+      {#if $assistInfoShown}
+        <AssistantStats {serverId} {phase} {info} />
+      {/if}
     </div>
   {/if}
 </div>
