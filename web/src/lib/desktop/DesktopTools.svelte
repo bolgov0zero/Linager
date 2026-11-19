@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tr } from '../../i18n';
+  import ServerShortcuts from '../assistant/ServerShortcuts.svelte';
   import ActionMenu from '../ui/ActionMenu.svelte';
   import type DesktopSession from './DesktopSession.svelte';
   import type { DeskPhase } from './DesktopSession.svelte';
@@ -8,8 +9,10 @@
   let {
     session,
     phase,
+    serverId,
+    serverName,
     autoResize = $bindable(true),
-  }: { session: DesktopSession | null; phase: DeskPhase; autoResize?: boolean } = $props();
+  }: { session: DesktopSession | null; phase: DeskPhase; serverId: string; serverName: string; autoResize?: boolean } = $props();
 
   const live = $derived(phase === 'open');
 
@@ -38,5 +41,6 @@
 
 {#if live}
   <button class="btn sm" type="button" title={$tr('desk.cadHint')} onclick={() => session?.ctrlAltDel()}>Ctrl+Alt+Del</button>
+  <ServerShortcuts {serverId} {serverName} small />
   <ActionMenu compact label={$tr('desk.more')} {items} />
 {/if}

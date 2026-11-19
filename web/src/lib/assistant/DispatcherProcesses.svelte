@@ -6,7 +6,7 @@
   import { heat, nextSort, procName, sortProcs, type ProcKey, type SortState } from './dispatcher';
 
   /** The "Processes" tab of the Dispatcher: the list as the Task Manager shows it, sorted by a column, and the two ways to end a process. */
-  let { serverId, query, active }: { serverId: string; query: string; active: boolean } = $props();
+  let { serverId, query, active, windows }: { serverId: string; query: string; active: boolean; /** Windows ends a process or its tree, Linux sends SIGTERM or SIGKILL: the texts differ. */ windows: boolean } = $props();
 
   const REFRESH_MS = 3000;
   const ALL = 2000; // the agent's cap
@@ -89,9 +89,9 @@
     sort = nextSort(sort, k, text);
   }
 
-  const agentNote = (p: ProcessInfo): string => (procName(p.cmd).toLowerCase() === 'linager.exe' ? ` ${$tr('disp.agentNote')}` : '');
+  const agentNote = (p: ProcessInfo): string => (['linager', 'linager.exe'].includes(procName(p.cmd).toLowerCase()) ? ` ${$tr('disp.agentNote')}` : '');
   const askText = (p: ProcessInfo, signal: 'TERM' | 'KILL'): string =>
-    $tr(signal === 'KILL' ? 'disp.killText' : 'disp.termText', { name: procName(p.cmd), pid: p.pid }) + agentNote(p);
+    $tr(`disp.${signal === 'KILL' ? 'killText' : 'termText'}${windows ? '' : 'Linux'}`, { name: procName(p.cmd), pid: p.pid }) + agentNote(p);
 
   async function run(): Promise<void> {
     const a = ask;
@@ -100,7 +100,7 @@
     busy = true;
     try {
       await api.killProcess(serverId, a.pid, a.signal);
-      note = $tr(a.signal === 'KILL' ? 'disp.doneKill' : 'disp.done', { name: procName(p.cmd) });
+      note = windows ? $tr(a.signal === 'KILL' ? 'disp.doneKill' : 'disp.done', { name: procName(p.cmd) }) : $tr('proc.sent', { pid: a.pid });
       selected = null;
       refreshNow();
     } catch {

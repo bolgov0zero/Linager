@@ -181,6 +181,8 @@ test('the Dispatcher: the process name is taken from the command line', () => {
   assert.equal(procName('C:\\Windows\\System32\\svchost.exe -k netsvcs'), 'svchost.exe');
   assert.equal(procName('System'), 'System');
   assert.equal(procName('/usr/bin/sshd -D'), 'sshd');
+  assert.equal(procName('[kworker/0:1-events]'), '[kworker/0:1-events]'); // a kernel thread is not a path
+  assert.equal(procName('sshd: root@pts/0'), 'sshd:');
 });
 
 test('the Dispatcher: processes are sorted by the column, the name and PID break a tie', () => {

@@ -20,6 +20,7 @@ export function nextSort<K extends string>(cur: SortState<K>, key: K, text: bool
 /** The executable name of a command line: `"C:\Program Files\x\app.exe" -v` gives `app.exe`. */
 export function procName(cmd: string): string {
   const c = cmd.trim();
+  if (c.startsWith('[')) return c; // a kernel thread: [kworker/0:1]
   let exe = c;
   if (c.startsWith('"')) {
     const j = c.indexOf('"', 1);

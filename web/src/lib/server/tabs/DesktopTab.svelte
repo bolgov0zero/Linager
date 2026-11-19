@@ -36,7 +36,7 @@
     </p>
     {#if server.online}
       <div class="actions">
-        <DesktopTools {session} {phase} bind:autoResize />
+        <DesktopTools {session} {phase} serverId={server.id} serverName={server.name} bind:autoResize />
         {#if !docked}<button class="btn sm" type="button" onclick={popOut}>{$tr('termwin.openWindow')}</button>{/if}
       </div>
     {/if}

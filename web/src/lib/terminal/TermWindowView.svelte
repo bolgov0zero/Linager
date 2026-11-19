@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tr } from '../../i18n';
   import KeyIcon from './KeyIcon.svelte';
+  import ServerShortcuts from '../assistant/ServerShortcuts.svelte';
   import SnippetMenu from './SnippetMenu.svelte';
   import { requestSettings } from '../settings/request';
   import TermIcon from './TermIcon.svelte';
@@ -37,6 +38,7 @@
     {/if}
     <SnippetMenu serverId={serverId} oninsert={(text, run) => session?.insert(text, run)} onmanage={() => requestSettings('snippets')} />
     <button class="btn sm icon" class:ink={keys} type="button" title={$tr('term.keys')} aria-label={$tr('term.keys')} aria-pressed={keys} onclick={() => (keys = !keys)}><KeyIcon /></button>
+    <ServerShortcuts {serverId} serverName={win.serverName ?? win.name} small />
     {#if phase === 'open'}
       <button class="btn sm" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.copy()}><span class="ic"><TermIcon name="copy" /></span><span class="tx">{$tr('term.copy')}</span></button>
       <button class="btn sm" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.paste()}><span class="ic"><TermIcon name="paste" /></span><span class="tx">{$tr('term.paste')}</span></button>

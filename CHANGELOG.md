@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.1
+
+- New: **the buttons "Files" and "Dispatcher" on every connection.** Two icon buttons on the bar of the terminal, of the remote desktop (RDP) and of the Assistant, in a tab, in a floating window and in the Console. "Files" opens the "Files" tab in a floating window (the same as the item of the context menu of the Console); a button is there for whoever has the right for the module.
+- New: **the Dispatcher works on Linux too** (the terminal has its button). Processes: the same list and sorting; "End" sends SIGTERM and "Force end" SIGKILL (the confirmation says so); services: systemd units with the filters, sorting, Start, Restart and Stop. The computer's system is read once when the window opens, and the texts follow it. A kernel thread such as `[kworker/0:1]` is shown whole.
+- Dev: the buttons are one component (`assistant/ServerShortcuts.svelte`), the pixel icon `tasks` is new.
+
+
 ## 0.6.0
 
 - New: **the Dispatcher in the Assistant.** An icon button on the bar of the Assistant (window, tab and the Console; shown to whoever has the right "Processes" or "Services") opens a floating window like the Task Manager, one per server, closed with the cross. **Processes:** refreshes every 3 s, sorted by any column (process, PID, user, CPU, RAM; the second click turns the order over), the totals of CPU and RAM in the headers, cells get warmer with the load, search by name, PID and user; "End" and "Force end", both with a confirmation and an audit entry. **Services:** the filters All / Running / Stopped / Failed, sorting by a column, "Restart" and "Stop" for a running service, "Start" for a stopped or failed one; protected services ask for confirmation as on the "Services" tab. A tab the person has no right for is not shown.
