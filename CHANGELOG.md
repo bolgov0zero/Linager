@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.4
+
+- Change: **the menu of the top bar (theme, language, edit, settings, log out) is as small as the other menus**: a row is 25 px with 12 px text instead of 36 px with 14 px, the menu is 158 px wide instead of 198 px, the counter of the updates is a small mark.
+
 ## 0.7.3
 
 - Fix: **the square icon buttons are square** (the cross of a dialog and of the window headers was 28x24, the up and down buttons of the groups 32x18 with a small icon off the centre). One rule now: an icon button is as wide as it is tall, 29 px (24 px for the compact one, 44 px on a phone), and carries the icon of the size Pixelarticons is drawn for (24 px in a 29 px button, 16 px in a 24 px one). It covers the buttons of the top bar, the cards, the server page, the Files and Dispatcher buttons, the move buttons of the groups, the snippets, the dashboard editor and the firewall rules.
