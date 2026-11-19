@@ -124,6 +124,7 @@ export interface Sample {
   security_updates: number;
   image_updates?: number; // Docker containers with a newer image, -1 or absent = unknown
   procs: number;
+  desktop_off?: boolean; // a Windows agent: the remote desktop (RDP) is off or the edition has none
 }
 export interface SystemInfo {
   hostname: string; os: string; kernel: string; arch: string;
@@ -829,8 +830,8 @@ export const desktopApi = {
 
 /** A Windows session the Assistant can show; `screen` is false for a disconnected one (nothing to look at). */
 export interface AssistSession { id: number; type: 'console' | 'rdp' | 'other'; user: string; state: string; client?: string; console: boolean; screen: boolean }
-/** `hide_cursor`: the pointer of the computer is not drawn into the picture (the browser shows its own); an older panel leaves it out, which is false. */
-export interface AssistSettings { colors: '24' | '16' | '256' | 'gray'; fps: number; mbit: number; nolimit: boolean; auto: boolean; hide_cursor: boolean }
+/** `show_cursor`: the pointer of the computer is drawn into the picture; off by default (the browser then shows its own, without lag). */
+export interface AssistSettings { colors: '24' | '16' | '256' | 'gray'; fps: number; mbit: number; nolimit: boolean; auto: boolean; show_cursor: boolean }
 /** Whether Windows lets the agent service send Ctrl+Alt+Del (the secure attention sequence); `policy` is the raw registry value 0..3. */
 export interface AssistSas { policy: number; enabled: boolean }
 

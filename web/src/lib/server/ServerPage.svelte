@@ -37,6 +37,7 @@
   import PixIcon from '../ui/PixIcon.svelte';
   import TabBar, { type TabBarItem } from '../ui/TabBar.svelte';
   import { groupTabs, HISTORY_LIMIT, visibleTabs, type LiveSample, type TabId } from './model';
+  import { desktopHidden, rdpOverride } from './rdp';
 
   let {
     name,
@@ -77,7 +78,9 @@
   const canDesktop = $derived((detail?.modules ?? []).includes('desktop') && (isAdmin || (role === 'operator' && userModules.includes('desktop'))));
   const canAssistant = $derived((detail?.modules ?? []).includes('assistant') && (isAdmin || (role === 'operator' && userModules.includes('assistant'))));
   const canTerminal = $derived((detail?.modules ?? []).includes('terminal') && (isAdmin || (role === 'operator' && userModules.includes('terminal'))));
-  const tabs = $derived(visibleTabs(detail?.modules ?? [], isAdmin ? null : role === 'operator' ? userModules : []));
+  // the remote desktop is off (or the edition has none): the "Desktop" tab is not offered, and it comes back when it is turned on
+  const deskHidden = $derived(desktopHidden(detail?.id ?? '', sample, $rdpOverride));
+  const tabs = $derived(visibleTabs((detail?.modules ?? []).filter((m) => !(m === 'desktop' && deskHidden)), isAdmin ? null : role === 'operator' ? userModules : []));
   const tab = $derived<TabId>(tabs.find((x) => x.id === requestedTab)?.id ?? 'overview');
   const currentTabKey = $derived(tabs.find((x) => x.id === tab)?.key ?? 'srv.tab.overview');
   const currentGroupKey = $derived(groupTabs(tabs).find((g) => g.tabs.some((x) => x.id === tab))?.key ?? 'srv.group.general');
@@ -238,7 +241,7 @@
         imageUpdates={sample?.image_updates ?? 0}
         agentVersion={detail.agent_version ? `agent ${detail.agent_version}` : ''}
         onterminalwindow={canTerminal && online ? () => openTermWindow(detail!.id, detail!.name) : undefined}
-        ondesktopwindow={canDesktop && online ? () => openDesktopWindow(detail!.id, detail!.name, detail!.address) : undefined}
+        ondesktopwindow={canDesktop && online && !deskHidden ? () => openDesktopWindow(detail!.id, detail!.name, detail!.address) : undefined}
         onassistantwindow={canAssistant && online ? () => openAssistantWindow(detail!.id, detail!.name) : undefined}
       />
       <div class="main">

@@ -163,7 +163,7 @@ func runAssistLoop(ctx context.Context, rw io.ReadWriter, host assistHost, info 
 		case s := <-setCh:
 			t.Stop()
 			enc.SetSettings(s)
-			host.SetShowCursor(!s.HideCursor)
+			host.SetShowCursor(s.ShowCursor)
 			idle = 0
 		case <-wake:
 			t.Stop()

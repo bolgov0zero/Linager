@@ -175,6 +175,7 @@ func (c *winCollector) Collect(now time.Time) protocol.Sample {
 		s.Procs = len(pids)
 	}
 	s.RebootRequired = rebootPending()
+	s.DesktopOff = desktopOff()
 	s.Updates, s.SecurityUpdates = updateCounts()
 
 	c.slow.Lock()

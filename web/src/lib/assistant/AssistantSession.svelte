@@ -82,9 +82,12 @@
   const wheel = new WheelNotches();
   /** Set while the clipboard of the computer is asked for: only an answer to that is put into the local clipboard. */
   let clipWanted = 0;
+  /** The answer was fetched by a Ctrl+C: an empty clipboard is not worth a message. */
+  let clipQuiet = false;
 
-  // The pointer is part of the picture unless the settings say it is not drawn there; then the local one is shown (no lag).
-  const hideCursor = $derived($assistSettings[serverId]?.hide_cursor === true);
+  // The pointer of the computer is part of the picture only when the settings ask for it (off by default); otherwise
+  // the local pointer is shown over the screen and moves without lag.
+  const showCursor = $derived($assistSettings[serverId]?.show_cursor === true);
 
   const factor = $derived(mode === 'real' || box.w <= 0 || box.h <= 0 || size.w <= 0 ? 1 : Math.min(box.w / size.w, box.h / size.h));
   const cssW = $derived(Math.max(1, Math.floor(size.w * factor)));
@@ -135,6 +138,8 @@
     }
     pressedKeys.clear();
     pressedButtons.clear();
+    ctrlFromMeta = false;
+    swallowUp.clear();
   }
 
   function end(reason: string): void {
@@ -194,7 +199,7 @@
     clipWanted = 0;
     if (typeof text !== 'string') return;
     if (text === '') {
-      showToast(t('assist.clipEmpty'));
+      if (!clipQuiet) showToast(t('assist.clipEmpty'));
       return;
     }
     try {
@@ -291,18 +296,116 @@
 
   const isModifier = (code: string): boolean => /^(Control|Shift|Alt|Meta)(Left|Right)$/.test(code);
 
+  // ---- keyboard: the keys go to the computer as scan codes; the clipboard shortcuts also carry the text ----
+
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  /** On a Mac Cmd works as Ctrl on the computer (Cmd+C, Cmd+V, Cmd+A...); a Cmd tapped alone is the Windows key. */
+  let metaUsed = false;
+  let ctrlFromMeta = false;
+  let pasteTimer: ReturnType<typeof setTimeout> | null = null;
+  let pasteMeta = false;
+  /** Key-ups of keys the browser event of which was taken over (the V of a paste is typed by the code below). */
+  const swallowUp = new Set<string>();
+
+  const isMeta = (code: string): boolean => code === 'MetaLeft' || code === 'MetaRight';
+  const isClipKey = (e: KeyboardEvent): boolean =>
+    (e.code === 'KeyC' || e.code === 'KeyV' || e.code === 'KeyX') && !e.altKey && !e.shiftKey && (e.ctrlKey || (isMac && e.metaKey));
+
+  function sendKey(code: string, down: boolean): void {
+    const k = scanKey(code);
+    if (k) send(down ? { t: 'k', sc: k.sc, ext: k.ext, d: true } : { t: 'k', sc: k.sc, ext: k.ext });
+  }
+
+  /** Ctrl on the computer for as long as Cmd is held. */
+  function ensureCtrl(): void {
+    if (ctrlFromMeta || pressedKeys.has('ControlLeft') || pressedKeys.has('ControlRight')) return;
+    ctrlFromMeta = true;
+    sendKey('ControlLeft', true);
+  }
+
+  function releaseCtrl(): void {
+    if (!ctrlFromMeta) return;
+    ctrlFromMeta = false;
+    sendKey('ControlLeft', false);
+  }
+
+  /** Types V for a paste (Ctrl is held on the computer already, or comes from Cmd). */
+  function typePaste(): void {
+    if (pasteMeta) {
+      metaUsed = true;
+      ensureCtrl();
+    }
+    sendKey('KeyV', true);
+    sendKey('KeyV', false);
+  }
+
   function onkeydown(e: KeyboardEvent): void {
+    if (isMac && isMeta(e.code)) {
+      e.preventDefault();
+      e.stopPropagation();
+      metaUsed = false;
+      return;
+    }
+    const viaMeta = isMac && e.metaKey && !isModifier(e.code);
+    if (e.code === 'KeyV' && isClipKey(e)) {
+      // Not prevented: the browser then gives the paste event with the text of the local clipboard (no permission asked).
+      // The text goes to the computer first, then the V; if the event does not come, the V goes alone.
+      e.stopPropagation();
+      swallowUp.add(e.code);
+      pasteMeta = viaMeta;
+      if (pasteTimer) clearTimeout(pasteTimer);
+      pasteTimer = setTimeout(() => {
+        pasteTimer = null;
+        typePaste();
+      }, 150);
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     const k = scanKey(e.code);
     if (!k) return;
+    if (viaMeta) {
+      metaUsed = true;
+      ensureCtrl();
+    }
     pressedKeys.set(e.code, k);
     send({ t: 'k', sc: k.sc, ext: k.ext, d: true });
+    // a copy or a cut: the text of the computer is fetched once the program has put it on the clipboard
+    if ((e.code === 'KeyC' || e.code === 'KeyX') && isClipKey(e)) setTimeout(() => getClipboard(true), 300);
+  }
+
+  function onpaste(e: ClipboardEvent): void {
+    if (document.activeElement !== canvas || !pasteTimer) return;
+    e.preventDefault();
+    clearTimeout(pasteTimer);
+    pasteTimer = null;
+    const text = e.clipboardData?.getData('text/plain') ?? '';
+    if (text !== '') {
+      const msg = encodeClipSet(text);
+      if (msg) socket?.send(msg);
+      else showToast(t('assist.clipTooBig'));
+    }
+    typePaste();
   }
 
   function onkeyup(e: KeyboardEvent): void {
     e.preventDefault();
     e.stopPropagation();
+    if (isMac && isMeta(e.code)) {
+      // a Mac browser sends no key-up for the keys pressed together with Cmd: let go of them with it
+      for (const [code, key] of [...pressedKeys]) {
+        if (isModifier(code)) continue;
+        pressedKeys.delete(code);
+        send({ t: 'k', sc: key.sc, ext: key.ext });
+      }
+      if (ctrlFromMeta) releaseCtrl();
+      else if (!metaUsed) {
+        sendKey('MetaLeft', true); // a Cmd tapped alone: the Windows key
+        sendKey('MetaLeft', false);
+      }
+      return;
+    }
+    if (swallowUp.delete(e.code)) return;
     const k = scanKey(e.code);
     if (!k) return;
     pressedKeys.delete(e.code);
@@ -325,6 +428,9 @@
     }
     pressedKeys.clear();
     pressedButtons.clear();
+    if (sendIt) releaseCtrl();
+    ctrlFromMeta = false;
+    swallowUp.clear();
   }
 
   // The listeners that must not be passive (the wheel scrolls the page otherwise) and the keys while the screen has the focus.
@@ -338,7 +444,9 @@
     c.addEventListener('keyup', onkeyup);
     c.addEventListener('contextmenu', noMenu);
     c.addEventListener('blur', blur);
+    document.addEventListener('paste', onpaste);
     return () => {
+      document.removeEventListener('paste', onpaste);
       c.removeEventListener('wheel', onwheel);
       c.removeEventListener('keydown', onkeydown);
       c.removeEventListener('keyup', onkeyup);
@@ -393,9 +501,10 @@
   }
 
   /** Asks for the clipboard (text) of the computer; it goes into the local one when the answer comes. */
-  export function getClipboard(): void {
+  export function getClipboard(quiet = false): void {
     if (socket?.readyState !== WebSocket.OPEN || phase !== 'open') return;
     clipWanted = Date.now() + 15000;
+    clipQuiet = quiet;
     socket.send(encodeClipGet());
   }
 
@@ -430,7 +539,7 @@
       aria-label={$tr('assist.screenLabel', { name: label })}
       style:width="{cssW}px"
       style:height="{cssH}px"
-      style:cursor={hideCursor ? 'default' : 'none'}
+      style:cursor={showCursor ? 'none' : 'default'}
       {onpointermove}
       {onpointerdown}
       {onpointerup}

@@ -47,6 +47,16 @@ type DesktopState struct {
 	Edition   string `json:"edition"`
 }
 
+// desktopOff reports that the remote desktop cannot be used now: connections are not allowed in the settings, or the
+// edition of Windows has none. It reads the registry only (the full state also tries the port).
+func desktopOff() bool {
+	if strings.Contains(strings.ToLower(regString(ntVersionKey, "EditionID")), "core") {
+		return true
+	}
+	v, ok := regDWORD(tsKey, "fDenyTSConnections")
+	return !ok || v != 0 // Windows ships with the remote desktop off
+}
+
 func desktopState() DesktopState {
 	st := DesktopState{Port: rdpPort(), Edition: osName()}
 	if v, ok := regDWORD(tsKey, "fDenyTSConnections"); ok {

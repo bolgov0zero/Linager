@@ -37,3 +37,9 @@ func (r *Registry) applyDevOverrides() {
 		r.modules = append(r.modules, "docker")
 	}
 }
+
+// devDesktopOff lets the simulator say whether its remote desktop is turned off (a normal build never sets it).
+var devDesktopOff func() bool
+
+// DevDesktopOff is the answer of the simulator, false in a normal build.
+func DevDesktopOff() bool { return devDesktopOff != nil && devDesktopOff() }

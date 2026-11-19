@@ -50,6 +50,9 @@ type Sample struct {
 	SecurityUpdates int        `json:"security_updates"`
 	ImageUpdates    int        `json:"image_updates"` // containers with a newer Docker image, -1 = unknown or no Docker
 	Procs           int        `json:"procs"`
+	// DesktopOff is set by a Windows agent whose remote desktop (RDP) is turned off or cannot exist (Windows Home): the
+	// panel then hides the "Desktop" tab and menu items.
+	DesktopOff bool `json:"desktop_off,omitempty"`
 }
 
 // SystemInfo is static host information.

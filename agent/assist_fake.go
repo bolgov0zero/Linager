@@ -33,7 +33,7 @@ const (
 var fakeMonitors = []assist.Monitor{{X: 0, Y: 0, W: 960, H: 600, Primary: true}, {X: fakeM1X, Y: 0, W: 640, H: 480}}
 
 func newFakeHost() *fakeHost {
-	h := &fakeHost{full: make([]byte, fakeW*fakeH*4), px: 300, py: 200, showCursor: true}
+	h := &fakeHost{full: make([]byte, fakeW*fakeH*4), px: 300, py: 200}
 	return h
 }
 

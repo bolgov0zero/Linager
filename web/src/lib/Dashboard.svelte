@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
+  import { get } from 'svelte/store';
   import { api, isUnauthorized, type Group, type LiveEvent, type ServerCard } from '../api';
   import { t, tr } from '../i18n';
   import { subscribeLive } from '../live';
@@ -11,6 +12,7 @@
   import { levelOf, osKind, summarize, tagsOf, toneOfPct, type AgentFlag } from './dashboard/status';
   import ContextMenu, { type MenuItem } from './ui/ContextMenu.svelte';
   import DeleteServerModal from './DeleteServerModal.svelte';
+  import { desktopHidden, rdpOverride } from './server/rdp';
   import Segments from './ui/Segments.svelte';
   import PixIcon from './ui/PixIcon.svelte';
   import Select from './ui/Select.svelte';
@@ -357,7 +359,9 @@
     ];
     // The remote desktop is for Windows computers only.
     if (osKind(card.os) === 'windows') {
-      items.push({ key: 'desk', label: $tr('dash.desktop'), disabled: !card.online, onselect: () => openDesktopWindow(card.id, card.name, card.address) });
+      if (!desktopHidden(card.id, card.sample, get(rdpOverride))) {
+        items.push({ key: 'desk', label: $tr('dash.desktop'), disabled: !card.online, onselect: () => openDesktopWindow(card.id, card.name, card.address) });
+      }
       items.push({ key: 'assist', label: $tr('dash.assistant'), disabled: !card.online, onselect: () => openAssistantWindow(card.id, card.name) });
     }
     items.push({ key: 'open', label: $tr('dash.open'), onselect: () => onopen(card.name) });

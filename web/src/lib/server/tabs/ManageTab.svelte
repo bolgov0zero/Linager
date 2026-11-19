@@ -12,6 +12,7 @@
   import { locale, t, tr as T } from '../../../i18n';
   import { gotoServerTab, sessionValue, wantAssistSession } from '../../assistant/nav';
   import { setAssistSettings } from '../../assistant/settings';
+  import { setRdpOff } from '../rdp';
   import Modal from '../../Modal.svelte';
   import { showToast } from '../../toast';
 
@@ -22,9 +23,9 @@
   const online = $derived(server.online);
 
   const PRESETS: Record<'eco' | 'normal' | 'hq', AssistSettings> = {
-    eco: { colors: '256', fps: 8, mbit: 1, nolimit: false, auto: true, hide_cursor: false },
-    normal: { colors: '24', fps: 15, mbit: 4, nolimit: false, auto: true, hide_cursor: false },
-    hq: { colors: '24', fps: 30, mbit: 12, nolimit: false, auto: true, hide_cursor: false },
+    eco: { colors: '256', fps: 8, mbit: 1, nolimit: false, auto: true, show_cursor: false },
+    normal: { colors: '24', fps: 15, mbit: 4, nolimit: false, auto: true, show_cursor: false },
+    hq: { colors: '24', fps: 30, mbit: 12, nolimit: false, auto: true, show_cursor: false },
   };
   const PRESET_IDS = ['eco', 'normal', 'hq'] as const;
   const COLORS = ['24', '16', '256', 'gray'] as const;
@@ -57,7 +58,7 @@
   async function loadSettings(): Promise<void> {
     try {
       const got = await assistantApi.settings(serverId);
-      draft = { ...got, hide_cursor: got.hide_cursor === true };
+      draft = { ...got, show_cursor: got.show_cursor === true };
       loadError = '';
       loaded = true;
     } catch (e) {
@@ -83,7 +84,7 @@
     saveError = '';
     try {
       const res = await assistantApi.saveSettings(serverId, draft);
-      draft = { ...res.settings, hide_cursor: res.settings.hide_cursor === true };
+      draft = { ...res.settings, show_cursor: res.settings.show_cursor === true };
       applied = res.applied;
       setAssistSettings(serverId, draft);
     } catch (e) {
@@ -121,6 +122,7 @@
       await desktopApi.enable(serverId);
       showToast(t('desk.enabled'));
       await loadRdp();
+      if (rdp) setRdpOff(serverId, !rdp.enabled || !rdp.supported);
     } catch (e) {
       showToast(e instanceof ApiError && e.serverMessage ? e.serverMessage : t('common.genericError'));
     } finally {
@@ -135,6 +137,7 @@
       confirmOff = false;
       showToast(t('manage.rdpDisabled'));
       await loadRdp();
+      if (rdp) setRdpOff(serverId, !rdp.enabled || !rdp.supported);
     } catch (e) {
       confirmOff = false;
       showToast(e instanceof ApiError && e.serverMessage ? e.serverMessage : t('common.genericError'));
@@ -218,7 +221,7 @@
           <div class="fl">{$T('manage.presets')}<small>{$T('manage.presetsHint')}</small></div>
           <div class="segctl">
             {#each PRESET_IDS as id (id)}
-              <button class="chip" type="button" aria-pressed={preset === id} onclick={() => edit({ ...PRESETS[id], hide_cursor: draft.hide_cursor })}>{$T(`manage.preset.${id}`)}</button>
+              <button class="chip" type="button" aria-pressed={preset === id} onclick={() => edit({ ...PRESETS[id], show_cursor: draft.show_cursor })}>{$T(`manage.preset.${id}`)}</button>
             {/each}
             <button class="chip" type="button" aria-pressed={preset === 'custom'} disabled>{$T('manage.preset.custom')}</button>
           </div>
@@ -262,7 +265,7 @@
           <div class="fl">{$T('manage.cursor')}<small>{$T('manage.cursorSub')}</small></div>
           <div>
             <label class="check">
-              <input type="checkbox" checked={!draft.hide_cursor} onchange={(e) => edit({ hide_cursor: !e.currentTarget.checked })} />
+              <input type="checkbox" checked={draft.show_cursor} onchange={(e) => edit({ show_cursor: e.currentTarget.checked })} />
               {$T('manage.cursorShow')}
             </label>
             <p class="small muted note">{$T('manage.cursorHint')}</p>

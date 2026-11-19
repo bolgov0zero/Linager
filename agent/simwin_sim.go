@@ -119,7 +119,10 @@ func simWinNet() map[string]any {
 // simRDPOn is the state of the simulated remote desktop of the computer.
 var simRDPOn atomic.Bool
 
-func init() { simRDPOn.Store(true) }
+func init() {
+	simRDPOn.Store(true)
+	devDesktopOff = func() bool { return !simRDPOn.Load() }
+}
 
 func simDesktopStateCmd(context.Context, json.RawMessage, bool) (any, error) {
 	on := simRDPOn.Load()

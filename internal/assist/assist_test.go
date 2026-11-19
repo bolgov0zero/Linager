@@ -257,9 +257,9 @@ func TestParseClipAndMonitor(t *testing.T) {
 			t.Errorf("%s must be refused", bad)
 		}
 	}
-	// the setting that hides the pointer is off when an older record does not know it
+	// the pointer of the computer is not in the picture by default, and a record that does not know the setting keeps it so
 	var s Settings
-	if err := json.Unmarshal([]byte(`{"colors":"24","fps":15,"mbit":4,"auto":true}`), &s); err != nil || s.HideCursor {
-		t.Fatalf("an old record shows the pointer: %+v %v", s, err)
+	if err := json.Unmarshal([]byte(`{"colors":"24","fps":15,"mbit":4,"auto":true,"hide_cursor":false}`), &s); err != nil || s.ShowCursor || DefaultSettings().ShowCursor {
+		t.Fatalf("the pointer is hidden by default: %+v %v", s, err)
 	}
 }

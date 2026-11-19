@@ -68,7 +68,7 @@ func (f *fake) Collect(now time.Time) protocol.Sample {
 	return protocol.Sample{TS: now.Unix(), CPU: cl(f.p.cpu + w), MemPct: cl(f.p.mem + w/4), MemTotal: 8 << 30, MemUsed: uint64(cl(f.p.mem) / 100 * (8 << 30)),
 		DiskPct: f.p.disk, BootTime: f.boot, Uptime: now.Unix() - f.boot, Load: load,
 		RxBps: 3e5 + 1e6*(1+math.Sin(float64(now.Unix())/9)), TxBps: 1e5 + 4e5*(1+math.Cos(float64(now.Unix())/7)),
-		Updates: f.p.updates, FailedServices: f.p.failed, RebootRequired: f.p.reboot, Procs: 120,
+		Updates: f.p.updates, FailedServices: f.p.failed, RebootRequired: f.p.reboot, Procs: 120, DesktopOff: f.p.os != "" && agent.DevDesktopOff(),
 		Disks: []protocol.Disk{{Mount: root, Device: "/dev/vda1", FS: "ext4", Total: 100 << 30, Used: uint64(f.p.disk) << 30, Pct: f.p.disk},
 			{Mount: second, Device: "/dev/vdb1", FS: "xfs", Total: 500 << 30, Used: 120 << 30, Pct: 24}},
 		Net: []protocol.NetIface{{Iface: iface, Up: true, IP: "10.0.1.10", MAC: "52:54:00:aa:bb:cc", SpeedMbps: 1000, RxBps: 1e6, TxBps: 4e5, RxTotal: 9 << 30, TxTotal: 3 << 30}}}

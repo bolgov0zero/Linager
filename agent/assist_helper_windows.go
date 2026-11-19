@@ -256,7 +256,7 @@ type winHost struct {
 }
 
 func newWinHost() (*winHost, error) {
-	h := &winHost{ui: newUIThread(), hot: map[uintptr][2]int{}, showCursor: true}
+	h := &winHost{ui: newUIThread(), hot: map[uintptr][2]int{}}
 	var err error
 	h.ui.do(func() {
 		h.syncDesktop()

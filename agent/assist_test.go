@@ -154,7 +154,7 @@ func TestAssistLoopMonitorsClipboardAndDesktop(t *testing.T) {
 		}
 	}
 
-	// the pointer can be left out of the picture (the pipe has no buffer: the frames are read meanwhile)
+	// the pointer is not in the picture unless the settings ask for it (the pipe has no buffer: the frames are read meanwhile)
 	go func() {
 		for {
 			if _, err := assist.ReadFrame(a); err != nil {
@@ -162,8 +162,8 @@ func TestAssistLoopMonitorsClipboardAndDesktop(t *testing.T) {
 			}
 		}
 	}()
-	_ = assist.WriteJSON(a, assist.TypeSettings, assist.Settings{Colors: assist.Colors24, FPS: 15, NoLimit: true, Mbit: 4, HideCursor: true})
-	waitFor(t, "the pointer is hidden", func() bool { host.mu.Lock(); defer host.mu.Unlock(); return !host.showCursor })
+	_ = assist.WriteJSON(a, assist.TypeSettings, assist.Settings{Colors: assist.Colors24, FPS: 15, NoLimit: true, Mbit: 4, ShowCursor: true})
+	waitFor(t, "the pointer is shown", func() bool { host.mu.Lock(); defer host.mu.Unlock(); return host.showCursor })
 }
 
 type fakeHelper struct {
