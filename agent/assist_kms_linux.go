@@ -106,15 +106,13 @@ type kmsHost struct {
 	cards []int // the file descriptors of /dev/dri/card*
 	outs  []kmsOutput
 	sel   int
-	maps  map[uint64]*kmsMap // by card and framebuffer
-	order []uint64           // the order of the maps: the oldest first
 	out   []byte
 	lastW int
 	lastH int
 }
 
 func newKMSHost(log *slog.Logger) (*kmsHost, error) {
-	h := &kmsHost{log: log, maps: map[uint64]*kmsMap{}}
+	h := &kmsHost{log: log}
 	paths, _ := filepath.Glob("/dev/dri/card[0-9]*")
 	sort.Strings(paths)
 	for _, p := range paths {
@@ -187,14 +185,10 @@ func (h *kmsHost) scan() error {
 	return nil
 }
 
-func mapKey(card int, fb uint32) uint64 { return uint64(card&0xffff)<<32 | uint64(fb) }
-
-// framebuffer returns the mapped framebuffer of an output, mapping it when it is new (a page flip brings the next one).
+// framebuffer maps the framebuffer an output shows now. It is mapped for every picture and let go after it: the number of a
+// framebuffer is given again to another buffer when the compositor changes (the sign-in screen gives way to the desktop),
+// and a map kept by that number would show the old buffer.
 func (h *kmsHost) framebuffer(o kmsOutput) (*kmsMap, error) {
-	key := mapKey(o.card, o.fb)
-	if m, ok := h.maps[key]; ok {
-		return m, nil
-	}
 	fd := h.cards[o.card]
 	var f drmModeFBCmd2
 	f.fbID = o.fb
@@ -238,12 +232,6 @@ func (h *kmsHost) framebuffer(o kmsOutput) (*kmsMap, error) {
 		h.closeHandle(fd, m.handle) // the dma-buf holds the buffer
 		m.handle = 0
 	}
-	h.maps[key] = m
-	h.order = append(h.order, key)
-	for len(h.order) > 4 { // a screen has two or three buffers that take turns
-		h.drop(h.order[0])
-		h.order = h.order[1:]
-	}
 	return m, nil
 }
 
@@ -252,8 +240,8 @@ func (h *kmsHost) closeHandle(fd int, handle uint32) {
 	_ = drmIoctl(fd, 0x09, &g)
 }
 
-func (h *kmsHost) drop(key uint64) {
-	m := h.maps[key]
+// unmap lets go of a mapped framebuffer.
+func (h *kmsHost) unmap(m *kmsMap) {
 	if m == nil {
 		return
 	}
@@ -266,7 +254,6 @@ func (h *kmsHost) drop(key uint64) {
 	if m.handle != 0 {
 		h.closeHandle(h.cards[m.card], m.handle)
 	}
-	delete(h.maps, key)
 }
 
 // The flags of DMA_BUF_IOCTL_SYNC.
@@ -287,9 +274,6 @@ func dmaSync(fd int, flags uint64) {
 func (h *kmsHost) release() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	for k := range h.maps {
-		h.drop(k)
-	}
 	for _, fd := range h.cards {
 		_ = unix.Close(fd)
 	}
@@ -316,6 +300,7 @@ func (h *kmsHost) Grab() ([]byte, int, int, error) {
 	if err != nil {
 		return nil, 0, 0, err
 	}
+	defer h.unmap(m)
 	x, y, w, hh := o.x, o.y, min(o.w, m.width-o.x), min(o.h, m.height-o.y)
 	if len(h.out) != w*hh*4 {
 		h.out = make([]byte, w*hh*4)

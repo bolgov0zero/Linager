@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.0-beta.6
+
+- Fix: **elements of the screen blinked with every action after the sign-in (the Assistant for Linux below the compositor).** The helper kept the mapped framebuffers by the number the kernel gave them; when the sign-in screen gave way to the desktop, the new compositor got the same numbers for other buffers, and the helper alternated between the new picture and an old buffer. The framebuffer is mapped for every picture and let go after it now.
+- Note: below the compositor (the sign-in screen) the pointer of the computer is in the picture when the computer draws it itself, and the setting "show the pointer" cannot remove it; on the desktop the setting works.
+
 ## 0.8.0-beta.5
 
 - Change: **the sign-in screen and the lock screen of GNOME: the reason is told.** The Assistant on the sign-in screen failed with "Session creation inhibited": gnome-shell inhibits remote access in every session mode that does not allow screen casts (the sign-in screen, the lock screen), it is a rule of GNOME, not a fault of the Assistant. The panel says so now and tells to sign in at the console; a session that GNOME closes (the screen was locked) is told the same way. Those screens are shown below the compositor, see the next entry.
