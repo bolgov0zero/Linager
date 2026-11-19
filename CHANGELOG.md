@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.3
+
+- Fix: **a failed Windows service was counted on the dashboard ("1 service failed") but not marked in the "Services" list.** The counter takes the automatic services that stopped with an error, while the list showed every stopped service as "inactive". The list now marks the same services as "failed" (the filter "Failed" and the red row work as on Linux), both use one rule (`serviceFailed`, tested on Windows). **The Windows agent needs this version** (Updates page).
+
 ## 0.5.2
 
 - Fix: **copy and paste from the keyboard in the remote desktop (RDP).** The client of the browser sent Cmd of a Mac to Windows as the Windows key (Cmd+C was Win+C), and it synchronised the clipboard only by itself in the background, which needs HTTPS and a permission that Safari does not give to a timer. Now Cmd works as Ctrl (a Cmd tapped alone is still the Windows key), Ctrl+V and Cmd+V send your clipboard to the computer first and then type the paste, and after Ctrl+C, Cmd+C and Cmd+X the clipboard of the computer is fetched into yours; a refusal of the browser is told once. The rules of the keys are in `desktop/keys.ts` (tested). Not tried on a real Windows computer.

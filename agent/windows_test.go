@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/svc"
+	"golang.org/x/sys/windows/svc/mgr"
 
 	"github.com/bolgov0zero/linager/internal/config"
 )
@@ -438,5 +440,27 @@ func TestWindowsDiskStateAndScan(t *testing.T) {
 	}
 	if _, err := m.cleanCmd(context.Background(), mustJSON(map[string]string{"kind": "rm -rf"}), true); err == nil {
 		t.Fatal("an unknown kind must be refused")
+	}
+}
+
+func TestServiceFailed(t *testing.T) {
+	stopped := func(code uint32) svc.Status { return svc.Status{State: svc.Stopped, Win32ExitCode: code} }
+	cases := []struct {
+		name  string
+		start uint32
+		st    svc.Status
+		want  bool
+	}{
+		{"automatic, stopped with an error", mgr.StartAutomatic, stopped(1), true},
+		{"automatic, never started", mgr.StartAutomatic, stopped(uint32(windows.ERROR_SERVICE_NEVER_STARTED)), false},
+		{"automatic, stopped by itself", mgr.StartAutomatic, stopped(0), false},
+		{"automatic, running", mgr.StartAutomatic, svc.Status{State: svc.Running, Win32ExitCode: 1}, false},
+		{"manual, stopped with an error", mgr.StartManual, stopped(1), false},
+		{"disabled, stopped with an error", mgr.StartDisabled, stopped(1), false},
+	}
+	for _, c := range cases {
+		if got := serviceFailed(c.start, c.st); got != c.want {
+			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
+		}
 	}
 }

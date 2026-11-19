@@ -54,6 +54,16 @@ func stateNames(s svc.State) (active, sub string) {
 	return "inactive", "unknown"
 }
 
+// serviceFailed tells whether an automatic service is stopped with an error. Both the counter of the dashboard and the list of
+// the panel use it, so that a service the counter names is marked "failed" in the list.
+func serviceFailed(startType uint32, st svc.Status) bool {
+	if startType != mgr.StartAutomatic || st.State != svc.Stopped {
+		return false
+	}
+	// 1077: never started since boot; 0: stopped by itself without an error (triggered or delayed services)
+	return st.Win32ExitCode != 0 && st.Win32ExitCode != uint32(windows.ERROR_SERVICE_NEVER_STARTED)
+}
+
 func startTypeName(t uint32) string {
 	switch t {
 	case mgr.StartAutomatic:
@@ -105,12 +115,16 @@ func listServices() ([]Unit, error) {
 			continue
 		}
 		u := Unit{Name: n}
-		if st, err := s.Query(); err == nil {
+		st, qerr := s.Query()
+		if qerr == nil {
 			u.Active, u.Sub = stateNames(st.State)
 		}
 		if cfg, err := s.Config(); err == nil {
 			u.Enabled = startTypeName(cfg.StartType)
 			u.Description = cfg.DisplayName
+			if qerr == nil && serviceFailed(cfg.StartType, st) {
+				u.Active, u.Sub = "failed", "failed"
+			}
 		}
 		_ = s.Close()
 		out = append(out, u)
@@ -139,11 +153,7 @@ func failedServices() []string {
 		cfg, cerr := s.Config()
 		st, qerr := s.Query()
 		_ = s.Close()
-		if cerr != nil || qerr != nil || cfg.StartType != mgr.StartAutomatic || st.State != svc.Stopped {
-			continue
-		}
-		// 1077: never started since boot; 0: stopped by itself without an error (triggered or delayed services)
-		if st.Win32ExitCode != 0 && st.Win32ExitCode != uint32(windows.ERROR_SERVICE_NEVER_STARTED) {
+		if cerr == nil && qerr == nil && serviceFailed(cfg.StartType, st) {
 			out = append(out, n)
 		}
 	}
