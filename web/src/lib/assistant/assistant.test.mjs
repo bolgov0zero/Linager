@@ -1,0 +1,89 @@
+// Run with: node --test src/lib/assistant/assistant.test.mjs (Node 22.18 or newer strips the types by itself).
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { WheelNotches, encodeInput, parseTiles } from './protocol.ts';
+import { scanKey } from './scancodes.ts';
+
+function tilesPayload(tiles) {
+  const parts = [Buffer.from([tiles.length >> 8, tiles.length & 255])];
+  for (const t of tiles) {
+    const head = Buffer.alloc(12);
+    head.writeUInt16BE(t.x, 0);
+    head.writeUInt16BE(t.y, 2);
+    head.writeUInt16BE(t.w, 4);
+    head.writeUInt16BE(t.h, 6);
+    head.writeUInt32BE(t.jpeg.length, 8);
+    parts.push(head, Buffer.from(t.jpeg));
+  }
+  return new Uint8Array(Buffer.concat(parts));
+}
+
+test('tiles are read in order with their position and bytes', () => {
+  const data = tilesPayload([
+    { x: 0, y: 0, w: 64, h: 64, jpeg: [1, 2, 3] },
+    { x: 64, y: 128, w: 32, h: 16, jpeg: [] },
+    { x: 300, y: 7, w: 5, h: 6, jpeg: [9] },
+  ]);
+  const tiles = parseTiles(data);
+  assert.equal(tiles.length, 3);
+  assert.deepEqual([tiles[1].x, tiles[1].y, tiles[1].w, tiles[1].h], [64, 128, 32, 16]);
+  assert.deepEqual([...tiles[0].jpeg], [1, 2, 3]);
+  assert.equal(tiles[1].jpeg.length, 0);
+  assert.equal(tiles[2].x, 300);
+});
+
+test('a cut or lying payload is refused, not read past its end', () => {
+  const ok = tilesPayload([{ x: 1, y: 2, w: 3, h: 4, jpeg: [1, 2, 3, 4] }]);
+  assert.equal(parseTiles(ok.subarray(0, ok.length - 1)), null);
+  assert.equal(parseTiles(ok.subarray(0, 7)), null);
+  assert.equal(parseTiles(new Uint8Array([0])), null);
+  assert.deepEqual(parseTiles(new Uint8Array([0, 0])), []);
+  const lie = Uint8Array.from(ok);
+  lie[2 + 8 + 3] = 0xff; // the length says 255 bytes more than there are
+  assert.equal(parseTiles(lie), null);
+});
+
+test('an input message is the type byte and JSON, and stays under the limit of the panel', () => {
+  const m = encodeInput({ t: 'k', sc: 0x1e, ext: false, d: true });
+  assert.equal(m[0], 16);
+  assert.deepEqual(JSON.parse(new TextDecoder().decode(m.subarray(1))), { t: 'k', sc: 30, ext: false, d: true });
+  const big = encodeInput({ t: 'b', b: 4, d: true, x: 65535, y: 65535 });
+  assert.ok(big.length - 1 <= 256);
+});
+
+test('the wheel gives whole notches, keeps the rest, and is clamped', () => {
+  const w = new WheelNotches();
+  assert.deepEqual(w.push(0, 100, 0), { dx: 0, dy: 1 });
+  assert.deepEqual(w.push(0, -250, 0), { dx: 0, dy: -2 });
+  assert.deepEqual(w.push(0, -250, 0), { dx: 0, dy: -3 }); // the half notch that was left comes with the next one
+  assert.deepEqual(w.push(30, 0, 0), { dx: 0, dy: 0 });
+  assert.deepEqual(w.push(80, 0, 0), { dx: 1, dy: 0 });
+  assert.deepEqual(new WheelNotches().push(0, 3, 1), { dx: 0, dy: 1 });
+  assert.deepEqual(new WheelNotches().push(0, 99999, 0), { dx: 0, dy: 10 });
+  assert.deepEqual(new WheelNotches().push(0, -99999, 0), { dx: 0, dy: -10 });
+});
+
+test('keys map to set-1 scan codes with the extended flag', () => {
+  assert.deepEqual(scanKey('KeyA'), { sc: 0x1e, ext: false });
+  assert.deepEqual(scanKey('Enter'), { sc: 0x1c, ext: false });
+  assert.deepEqual(scanKey('NumpadEnter'), { sc: 0x1c, ext: true });
+  assert.deepEqual(scanKey('ControlRight'), { sc: 0x1d, ext: true });
+  assert.deepEqual(scanKey('AltRight'), { sc: 0x38, ext: true });
+  assert.deepEqual(scanKey('MetaLeft'), { sc: 0x5b, ext: true });
+  assert.deepEqual(scanKey('MetaRight'), { sc: 0x5c, ext: true });
+  assert.deepEqual(scanKey('ContextMenu'), { sc: 0x5d, ext: true });
+  assert.deepEqual(scanKey('ArrowLeft'), { sc: 0x4b, ext: true });
+  assert.deepEqual(scanKey('Numpad4'), { sc: 0x4b, ext: false });
+  assert.deepEqual(scanKey('F12'), { sc: 0x58, ext: false });
+  assert.equal(scanKey('MediaPlayPause'), null);
+});
+
+test('every scan code is 1..255 and no two plain keys share one', () => {
+  const seen = new Map();
+  for (const code of ['Escape', 'Digit0', 'Minus', 'Tab', 'KeyQ', 'Space', 'F10', 'F11', 'Numpad0', 'NumpadAdd', 'IntlBackslash', 'ShiftLeft', 'ShiftRight']) {
+    const k = scanKey(code);
+    assert.ok(k.sc >= 1 && k.sc <= 255, code);
+    assert.ok(!seen.has(k.sc), `${code} and ${seen.get(k.sc)} share ${k.sc}`);
+    seen.set(k.sc, code);
+  }
+});

@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Linager: макет «Помощника» и вкладки «Управление»</title>
+<style>
+@font-face{font-family:"Medeo Mono";src:url(../mockup/fonts/MedeoMonoVariable.woff2) format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Medeo Pixel";src:url(../mockup/fonts/MedeoPixelVariable.woff) format("woff");font-style:normal;font-display:swap}
+:root{
+  --bg:#e8ebe5;--surface:#f6f7f3;--ink:#14181e;--muted:#5d6572;--line:#14181e;--accent:#2b55d9;--good:#1e8a4b;--warn:#b36f0e;--crit:#c4352a;--seg-off:#d5d9d0;--shade:#c3c8bd;
+  --ctl:36px;--ctl-sm:28px;--side:236px;
+  --font-display:"Medeo Pixel","Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  --font-body:"Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  font-variation-settings:"ELSH" 1;font-synthesis:none;color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45}
+h1,h2,h3,h4,p{margin:0}
+button{font:inherit;color:inherit}
+.muted{color:var(--muted)}.small{font-size:12px}.mono{font-family:var(--font-body)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px;border-bottom:2px solid var(--line);background:var(--surface);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.brand h1{font-family:var(--font-display);font-size:22px;font-weight:400}
+.note{margin:0;padding:8px 20px;background:var(--ink);color:var(--surface);font-size:12px}
+main{padding:20px;max-width:1360px;margin:0 auto}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.btn,.chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:var(--ctl);background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;padding:0 12px;cursor:pointer;font-family:var(--font-display);font-size:14px;letter-spacing:.02em;box-shadow:3px 3px 0 var(--shade);white-space:nowrap}
+.btn:hover{background:var(--seg-off)}
+.btn:disabled,.btn[aria-disabled=true]{opacity:.5;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn.danger{color:var(--crit);border-color:var(--crit)}
+.btn.danger:hover{background:var(--crit);color:#fff}
+.btn.sm{height:var(--ctl-sm);padding:0 9px;font-size:13px;box-shadow:2px 2px 0 var(--shade)}
+.btn.ic{width:var(--ctl);padding:0}
+.btn.ic svg{width:16px;height:16px;shape-rendering:crispEdges}
+.chip{box-shadow:none;font-size:13px;padding:0 10px}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--surface)}
+.card{background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);padding:16px}
+h3.t{font-family:var(--font-display);font-weight:400;font-size:16px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.ok{color:var(--good)}.warn{color:var(--warn)}.crit{color:var(--crit)}
+.badge{display:inline-block;padding:1px 6px;border:2px solid currentColor;font-size:12px;white-space:nowrap}
+.dot{display:inline-block;width:8px;height:8px;background:currentColor;margin-right:6px}
+.stage{display:inline-block;margin-left:6px;padding:0 5px;border:2px solid var(--warn);color:var(--warn);font-size:10px;letter-spacing:.04em;white-space:nowrap;vertical-align:middle}
+
+/* ───── view switch of the mockup ───── */
+.views{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:18px;padding-bottom:14px;border-bottom:2px dashed var(--seg-off)}
+.views .lbl{font-family:var(--font-display);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+
+/* ───── server head, sidebar ───── */
+.srv-head{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:18px}
+.srv-head h2{font-family:var(--font-display);font-size:34px;font-weight:400}
+.layout{display:grid;grid-template-columns:var(--side) minmax(0,1fr);gap:20px;align-items:start}
+.side{position:sticky;top:16px;background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);display:flex;flex-direction:column}
+.side-nav{display:flex;flex-direction:column;padding:6px 0}
+.grp{padding:4px 8px 6px}
+.grp+.grp{border-top:2px dashed var(--seg-off)}
+.grp-h{display:block;height:28px;padding:0 6px;margin:2px 0;color:var(--muted);font-family:var(--font-display);font-size:12px;letter-spacing:.1em;text-transform:uppercase;line-height:28px}
+.items{display:flex;flex-direction:column;gap:2px}
+.irow{position:relative}
+.item{display:flex;align-items:center;gap:10px;width:100%;height:34px;padding:0 10px;border:2px solid transparent;background:none;cursor:pointer;color:var(--ink);font-size:14px;text-align:left}
+.item:hover{background:var(--seg-off)}
+.item[aria-selected=true]{background:var(--ink);color:var(--surface);border-color:var(--ink);box-shadow:3px 3px 0 var(--shade)}
+.item svg.ic{width:16px;height:16px;flex:none;shape-rendering:crispEdges}
+.item .lbl{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.irow.withwin .item{padding-right:38px}
+.winbtn{position:absolute;right:4px;top:5px;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;padding:0;background:var(--surface);color:var(--ink);border:2px solid var(--line);cursor:pointer}
+.winbtn svg{width:12px;height:12px;shape-rendering:crispEdges}
+.winbtn:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.side-foot{border-top:2px solid var(--line);padding:8px;font-size:12px;color:var(--muted);line-height:1.3}
+.crumb{font-family:var(--font-display);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.page-h{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+.page-h h3{font-family:var(--font-display);font-weight:400;font-size:26px}
+.lead{color:var(--muted);margin-bottom:16px;max-width:760px}
+.stack{display:flex;flex-direction:column;gap:16px}
+
+/* ───── assistant tab / window ───── */
+.deskTab{display:flex;flex-direction:column;gap:9px}
+.dhead{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap}
+.dmeta{display:flex;align-items:center;gap:7px;margin:0}
+.dmeta .sq{width:9px;height:9px;background:var(--muted)}
+.dmeta .sq.on{background:var(--good)}
+.actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.box{border:2px solid var(--line);display:flex;flex-direction:column;background:#0b0e14}
+.statline{display:flex;gap:14px;flex-wrap:wrap;padding:4px 10px;border-top:2px solid var(--line);background:var(--surface);font-size:12px;color:var(--muted)}
+.statline b{font-weight:400;color:var(--ink)}
+.statline a{margin-left:auto;color:var(--accent);cursor:pointer;text-decoration:underline}
+
+/* custom select + action menu */
+.dd{position:relative;display:inline-block}
+.dd-btn{display:inline-flex;align-items:center;gap:8px;height:var(--ctl-sm);padding:0 9px;background:var(--surface);border:2px solid var(--line);box-shadow:2px 2px 0 var(--shade);cursor:pointer;font-family:var(--font-display);font-size:13px;white-space:nowrap}
+.dd-btn:hover{background:var(--seg-off)}
+.dd-btn svg{width:8px;height:8px;flex:none;shape-rendering:crispEdges}
+.dd-list{display:none;position:absolute;z-index:40;top:calc(100% + 4px);left:0;min-width:100%;background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);padding:4px}
+.dd.right .dd-list{left:auto;right:0}
+.dd.open .dd-list{display:block}
+.dd-item{display:flex;align-items:center;gap:8px;width:100%;min-height:30px;padding:4px 10px;background:none;border:2px solid transparent;cursor:pointer;text-align:left;font-size:13px;white-space:nowrap}
+.dd-item:hover:not(:disabled){background:var(--ink);color:var(--surface)}
+.dd-item:disabled{color:var(--muted);cursor:not-allowed}
+.dd-item .tick{width:12px;flex:none;color:var(--accent)}
+.dd-item .sub{color:var(--muted);font-size:12px;margin-left:auto;padding-left:14px}
+.dd-item:hover:not(:disabled) .sub,.dd-item:hover:not(:disabled) .tick{color:var(--surface)}
+.dd-sep{height:2px;background:var(--seg-off);margin:4px 0}
+
+/* the fake Windows screen */
+.screen{position:relative;height:440px;overflow:hidden;background:linear-gradient(135deg,#17356b,#2f68c4 58%,#7fb0ea);image-rendering:pixelated;color:#111;font-family:Segoe UI,Arial,sans-serif;font-size:12px;user-select:none}
+.screen .ico{position:absolute;left:18px;width:54px;text-align:center;color:#fff;font-size:11px;text-shadow:1px 1px 0 #0006}
+.screen .ico i{display:block;width:34px;height:34px;margin:0 auto 4px;background:#fff4;border:2px solid #fff8}
+.screen .w{position:absolute;background:#f4f4f4;border:1px solid #6a6a6a;box-shadow:6px 6px 0 #0004}
+.screen .w .tb{height:24px;background:#2b55d9;color:#fff;padding:3px 8px;display:flex;justify-content:space-between}
+.screen .w .grid{display:grid;grid-template-columns:repeat(5,1fr);margin:0}
+.screen .w .grid span{border:1px solid #d6d6d6;padding:3px 6px;height:22px;overflow:hidden}
+.screen .w .grid span.h{background:#e8e8e8;font-weight:700}
+.taskbar{position:absolute;left:0;right:0;bottom:0;height:34px;background:#101827;display:flex;align-items:center;gap:6px;padding:0 8px;color:#fff;font-size:12px}
+.taskbar .st{width:22px;height:22px;background:#4f8cff}
+.taskbar .ap{width:90px;height:22px;background:#ffffff22;border-bottom:2px solid #7fb0ea;padding:2px 6px;overflow:hidden;white-space:nowrap}
+.taskbar .clk{margin-left:auto;text-align:right;line-height:1.1}
+.cursor{position:absolute;left:58%;top:56%;width:0;height:0;border-left:10px solid #fff;border-bottom:14px solid transparent;filter:drop-shadow(1px 1px 0 #000)}
+.veil{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center;color:#e6e9ef;background:#0b0e14;padding:20px}
+.screen[data-s=connecting] .veil.connecting,.screen[data-s=gone] .veil.gone{display:flex}
+.screen[data-s=lock] .lock{display:flex}
+.lock{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:linear-gradient(160deg,#0e1b3a,#25448a);color:#fff}
+.lock .big{font-family:var(--font-display);font-size:64px;line-height:1}
+.lock .pill{margin-top:14px;border:2px solid #fff8;padding:4px 12px}
+.screen[data-s=connecting] .live,.screen[data-s=gone] .live,.screen[data-s=lock] .live{display:none}
+.spin{display:flex;gap:6px}.spin i{width:10px;height:10px;background:var(--accent);animation:bl 1s steps(1) infinite}
+.spin i:nth-child(2){animation-delay:.2s}.spin i:nth-child(3){animation-delay:.4s}.spin i:nth-child(4){animation-delay:.6s}
+@keyframes bl{0%{opacity:1}50%{opacity:.15}}
+
+/* ───── floating window ───── */
+.stagebg{position:relative;min-height:620px;border:2px dashed var(--seg-off);background:repeating-linear-gradient(45deg,transparent 0 10px,color-mix(in srgb,var(--seg-off) 40%,transparent) 10px 11px);padding:20px}
+.win{position:absolute;left:50%;top:26px;transform:translateX(-50%);width:min(860px,calc(100% - 32px));display:flex;flex-direction:column;background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade)}
+.win .bar{display:flex;align-items:center;justify-content:space-between;gap:7px;padding:5px 7px 5px 11px;border-bottom:2px solid var(--line);background:var(--seg-off);flex-wrap:wrap}
+.win .name{display:flex;align-items:center;gap:7px;font-size:11px;white-space:nowrap;margin:0}
+.win .name .lb{font-family:var(--font-display)}
+.win .name .sq{width:9px;height:9px;border:2px solid var(--line);background:var(--muted)}
+.win .name .sq.on{background:var(--good)}
+.win .tools{display:flex;gap:4px;align-items:center}
+.win .tools .btn.sm{height:25px;font-size:11px;padding:0 7px}
+.win .tools .btn.ic{width:25px;padding:0}
+.win .tools .dd-btn{height:25px;font-size:11px}
+.win .body{padding:7px}
+.dock{position:absolute;left:14px;bottom:11px;display:flex;gap:5px}
+.dock .btn{height:var(--ctl-sm);font-size:11px;box-shadow:3px 3px 0 var(--shade)}
+
+/* ───── management tab ───── */
+.grid2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+.field{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--seg-off)}
+.field:last-of-type{border-bottom:0}
+.field .fl{font-family:var(--font-display);font-size:14px}
+.field .fl small{display:block;font-family:var(--font-body);color:var(--muted);font-size:12px}
+.segctl{display:flex;flex-wrap:wrap;gap:6px}
+.range{display:flex;align-items:center;gap:12px}
+.range input[type=range]{flex:1;min-width:120px;accent-color:var(--accent);height:20px}
+.range output{min-width:92px;text-align:right;font-family:var(--font-display);font-size:15px}
+label.chk{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px}
+label.chk input{appearance:none;-webkit-appearance:none;width:18px;height:18px;margin:0;background:var(--surface);border:2px solid var(--line);box-shadow:2px 2px 0 var(--shade);cursor:pointer;display:grid;place-content:center;flex:none}
+label.chk input:checked{background:var(--accent);border-color:var(--accent)}
+label.chk input:checked::after{content:"";width:8px;height:8px;background:#fff;clip-path:polygon(0 50%,20% 30%,40% 50%,80% 10%,100% 30%,40% 90%)}
+.est{margin-top:12px;padding:8px 10px;border:2px dashed var(--line);font-size:12px;color:var(--muted)}
+.est b{color:var(--ink);font-weight:400}
+.savebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.saved{color:var(--good);font-size:12px;opacity:0}
+.saved.show{opacity:1}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px;margin:10px 0 14px}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-family:var(--font-display);font-weight:400;font-size:12px;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:2px solid var(--line)}
+.tbl td{padding:7px 8px;border-bottom:1px dashed var(--seg-off)}
+.demo{display:flex;gap:6px;align-items:center;margin-bottom:10px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.demo .chip{height:24px;font-size:12px}
+.modal{position:fixed;inset:0;background:rgba(10,12,16,.55);display:none;align-items:flex-start;justify-content:center;padding:80px 16px 16px;z-index:60;overflow:auto}
+.modal.open{display:flex}
+.dialog{background:var(--surface);border:2px solid var(--line);box-shadow:6px 6px 0 var(--shade);width:min(520px,100%);padding:18px}
+.dialog h3{font-family:var(--font-display);font-weight:400;font-size:22px;margin-bottom:10px}
+.dialog p{margin-bottom:10px}
+.dialog .row{justify-content:flex-end;margin-top:14px}
+
+/* ───── dashboard ───── */
+.dcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:16px}
+.dcard{background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);border-top-width:6px}
+.dcard .in{padding:12px 14px}
+.dcard h4{font-family:var(--font-display);font-weight:400;font-size:20px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.plat{font-size:11px;border:2px solid var(--line);padding:0 5px;font-family:var(--font-display)}
+.meters{display:grid;grid-template-columns:auto 1fr auto;gap:5px 10px;margin:10px 0;font-size:12px;align-items:center}
+.segs{display:flex;gap:2px}.segs i{width:100%;height:8px;background:var(--seg-off)}.segs i.on{background:var(--accent)}
+.dcard .foot{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 14px;border-top:2px solid var(--line)}
+.dcard .foot .btn.ic{height:30px;width:32px;box-shadow:2px 2px 0 var(--shade)}
+.menuwrap{display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-top:6px}
+.popmenu{background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);padding:4px;min-width:210px}
+.popmenu .dd-item{cursor:default}
+.popmenu .dd-item.hl{background:var(--ink);color:var(--surface)}
+.notes{margin-top:18px}
+.notes ul{margin:8px 0 0;padding-left:20px}
+.notes li{margin:3px 0}
+@media (max-width:980px){.grid2{grid-template-columns:1fr}}
+@media (max-width:860px){main{padding:14px}.layout{grid-template-columns:1fr;gap:14px}.side{position:static}.field{grid-template-columns:1fr}.win{position:static;transform:none;width:100%}.stagebg{padding:8px}.dock{position:static;margin-top:10px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 14 14" width="30" height="30" shape-rendering="crispEdges" aria-hidden="true"><rect width="14" height="14" rx="3" fill="#0f1218"/><rect x="2" y="3" width="2" height="2" fill="#e6e9ef"/><rect x="4" y="5" width="2" height="2" fill="#e6e9ef"/><rect x="2" y="7" width="2" height="2" fill="#e6e9ef"/><rect x="7" y="9" width="5" height="2" fill="#e6e9ef"/></svg>
+    <h1>Linager</h1>
+  </div>
+  <div class="row"><button class="btn" id="theme" type="button">Тема</button></div>
+</header>
+<p class="note">Макет «Помощника» (консоль и RDP-сеансы Windows) и вкладки «Управление». Данные вымышленные. Метки «этап 2» показывают то, что приходит позже; у выбранных пунктов есть заглушки поведения.</p>
+
+<main>
+  <div class="views" id="views" role="tablist">
+    <span class="lbl">Что показать:</span>
+    <button class="chip" type="button" data-v="tab" aria-pressed="true">1 · Вкладка «Помощник»</button>
+    <button class="chip" type="button" data-v="win" aria-pressed="false">2 · Окно помощника</button>
+    <button class="chip" type="button" data-v="manage" aria-pressed="false">3 · «Управление»</button>
+    <button class="chip" type="button" data-v="dash" aria-pressed="false">4 · Дашборд</button>
+  </div>
+  <div id="stage"></div>
+</main>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mt">
+  <div class="dialog">
+    <h3 id="mt">Выключить удалённый рабочий стол?</h3>
+    <p>Windows перестанет принимать подключения по RDP: на компьютере запретится вход по удалённому рабочему столу и выключится правило брандмауэра «Удалённый рабочий стол». Сеансы, открытые сейчас, не прерываются, новые подключиться не смогут.</p>
+    <p class="muted small">Агент и Помощник от RDP не зависят и продолжат работать. Действие записывается в журнал аудита.</p>
+    <div class="row"><button class="btn" type="button" data-act="modal-close">Отмена</button><button class="btn danger" type="button" data-act="rdp-off">Выключить RDP</button></div>
+  </div>
+</div>
+
+<script>
+/* pixel icons ("1" is a filled square); the width follows the first row */
+const ICONS={
+  overview:["11100111","10100101","11100111","00000000","11100111","10100101","11100111","00000000"],
+  metrics:["00000001","00000001","00010001","00010101","01010101","01010101","01010101","11111111"],
+  terminal:["00000000","10000000","01000000","00100000","01000000","10000000","00011110","00000000"],
+  desktop:["111111111","100000001","101111101","101111101","100000001","111111111","000010000","000010000","011111110"],
+  assistant:["11111111","10000001","10100001","10110001","10111001","10100001","11111111","00111100"],
+  manage:["00000000","11111111","00011000","00011000","00000000","11111111","01100000","01100000"],
+  services:["00000000","11001111","11001111","00000000","11110011","11110011","00000000","00000000"],
+  processes:["01010100","01111110","11000011","01000010","11000011","01111110","00101010","00000000"],
+  logs:["00000000","11111100","00000000","11111111","00000000","11110000","00000000","11111111"],
+  updates:["00011000","00011000","01011010","00111100","00011000","00000000","11111111","11111111"],
+  files:["00000000","11110000","11111111","10000001","10000001","10000001","11111111","00000000"],
+  disk:["00000000","11111111","10000001","10000001","11111111","10000101","11111111","00000000"],
+  network:["00011000","00011000","00011000","11111111","10011001","10011001","11011011","11011011"],
+  firewall:["11101110","11101110","00000000","10111011","10111011","00000000","11101110","11101110"],
+  security:["01111110","11111111","11100111","11100111","11100111","01100110","00111100","00011000"],
+  users:["00111100","01111110","00111100","00011000","01111110","11111111","11111111","00000000"],
+  trash:["00111100","11111111","00000000","01111110","01011010","01011010","01011010","01111110"],
+  open:["00000111","00000111","00000011","00000101","00001000","01010000","10100000","11000000"],
+  win:["11111111","10000001","11111111","10000001","10000001","10000001","10000001","11111111"],
+  min:["00000000","00000000","00000000","00000000","00000000","11111111","11111111","00000000"],
+  max:["11111111","11111111","10000001","10000001","10000001","10000001","11111111","00000000"],
+  close:["10000001","11000011","01100110","00111100","00111100","01100110","11000011","10000001"]
+};
+function icon(id,cls){const rows=ICONS[id]||ICONS.overview,w=rows[0].length;let r="";rows.forEach((row,y)=>{[...row].forEach((c,x)=>{if(c==="1")r+=`<rect x="${x}" y="${y}" width="1" height="1"/>`})});return `<svg class="${cls||"ic"}" viewBox="0 0 ${w} ${rows.length}" fill="currentColor" aria-hidden="true">${r}</svg>`}
+const CHEV='<svg viewBox="0 0 8 8" shape-rendering="crispEdges"><path d="M0 2h2v2h2v2h2V4h2V2h-2v0H0z" fill="currentColor" transform="translate(0 1)"/></svg>';
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+
+/* ───── mockup state ───── */
+const S={view:"tab",tab:"assistant",desk:"open",session:1,rdp:"on",preset:"normal",
+  colors:"24",fps:15,mbit:4,nolimit:false,auto:true,saved:false,openDD:null};
+const PRESETS={eco:{colors:"256",fps:8,mbit:1,nolimit:false,auto:true},normal:{colors:"24",fps:15,mbit:4,nolimit:false,auto:true},hq:{colors:"24",fps:30,mbit:12,nolimit:false,auto:true}};
+const SESSIONS=[
+  {id:1,type:"Консоль",user:"i.petrova",state:"active",from:"—"},
+  {id:2,type:"RDP",user:"a.sidorov",state:"active",from:"10.0.2.15"},
+  {id:3,type:"RDP",user:"m.kuznetsov",state:"gone",from:"10.0.2.41"}
+];
+const COLORS={ "24":"Полные цвета","16":"65 тысяч","256":"256 цветов","gray":"Оттенки серого"};
+const COLORNOTE={ "24":"24 бита","16":"16 бит","256":"8 бит","gray":"8 бит, ч/б"};
+
+/* ───── pieces ───── */
+function dd(id,label,items,opts){opts=opts||{};
+  return `<div class="dd${opts.right?" right":""}${S.openDD===id?" open":""}" data-dd="${id}"><button class="dd-btn" type="button" data-act="dd" data-id="${id}" aria-haspopup="listbox" aria-expanded="${S.openDD===id}">${label}${CHEV}</button><div class="dd-list" role="listbox">${items}</div></div>`}
+function sessItems(){return SESSIONS.map(s=>{const gone=s.state==="gone";const on=s.id===S.session;
+  return `<button class="dd-item" type="button" role="option" data-act="sess" data-id="${s.id}" ${gone?"disabled":""}><span class="tick">${on?"✓":""}</span>${s.id} · ${s.type} · ${s.user}<span class="sub">${gone?"отключён, нет экрана":s.type==="RDP"?"RDP, "+s.from:"экран за компьютером"}</span></button>`}).join("")}
+function sessLabel(){const s=SESSIONS.find(x=>x.id===S.session);return `Сеанс ${s.id}: ${s.type === "Консоль" ? "консоль" : "RDP"} · ${s.user}`}
+function moreItems(){return [
+  ["tm","Диспетчер задач (Ctrl+Shift+Esc)"],["win","Клавиша Windows"],["lock","Заблокировать (Win+L)"],["run","Выполнить (Win+R)"],["alt","Alt+Tab"],"-",
+  ["cs","Отправить мой буфер обмена",1],["cg","Забрать буфер обмена компьютера",1],"-",
+  ["fit","Масштаб: по размеру окна"],["real","Масштаб: 100%"],["mon","Монитор 1 из 2…",1],["full","На весь экран"],"-",
+  ["q","Качество и частота кадров…"],["off","Отключиться"]].map(i=>i==="-"?'<div class="dd-sep"></div>':`<button class="dd-item" type="button" data-act="${i[0]==="q"?"goto-manage":"noop"}">${i[1]}${i[2]?'<span class="stage">этап 2</span>':""}</button>`).join("")}
+function fakeScreen(){
+  return `<div class="screen" data-s="${S.desk==="gone"||SESSIONS.find(x=>x.id===S.session).state==="gone"?"gone":S.desk}">
+    <div class="live">
+      <div class="ico" style="top:14px"><i></i>Корзина</div><div class="ico" style="top:96px"><i></i>Отчёты</div><div class="ico" style="top:178px"><i></i>1С</div>
+      <div class="w" style="left:130px;top:34px;width:520px"><div class="tb"><span>Продажи_октябрь.xlsx</span><span>— ▢ ✕</span></div>
+        <div class="grid"><span class="h">Менеджер</span><span class="h">Заказов</span><span class="h">Сумма</span><span class="h">План</span><span class="h">%</span>
+        <span>Орлова</span><span>42</span><span>1 204 500</span><span>1 100 000</span><span>109</span><span>Лебедев</span><span>37</span><span>987 300</span><span>1 000 000</span><span>98</span>
+        <span>Фомин</span><span>51</span><span>1 410 000</span><span>1 200 000</span><span>117</span><span>Рахимов</span><span>29</span><span>702 800</span><span>900 000</span><span>78</span>
+        <span>Ким</span><span>44</span><span>1 133 000</span><span>1 100 000</span><span>103</span><span>Итого</span><span>203</span><span>5 437 600</span><span>5 300 000</span><span>103</span></div></div>
+      <div class="w" style="left:330px;top:206px;width:300px"><div class="tb"><span>Подключение к 1С</span><span>✕</span></div><div style="padding:10px 12px">Выполняется обновление базы…<div style="margin-top:8px;height:12px;background:#ddd"><div style="width:62%;height:100%;background:#2b55d9"></div></div></div></div>
+      <div class="cursor"></div>
+      <div class="taskbar"><span class="st"></span><span class="ap">Продажи</span><span class="ap">1С</span><span class="clk">14:32<br>19.11.2026</span></div>
+    </div>
+    <div class="lock"><div class="big">14:32</div><div>четверг, 19 ноября</div><div class="pill">Экран блокировки · i.petrova<span class="stage">этап 2</span></div></div>
+    <div class="veil connecting"><div class="spin"><i></i><i></i><i></i><i></i></div><div>Подключение к сеансу ${S.session}…</div><div class="small" style="color:#8a93a4">агент запускает помощника в сеансе, ждём первый кадр</div></div>
+    <div class="veil gone"><div style="font-family:var(--font-display);font-size:20px">Сеанс 3 отключён</div><div style="max-width:380px;color:#8a93a4">У отключённого сеанса нет экрана, показывать нечего. Выберите другой сеанс в списке выше.</div></div>
+  </div>`}
+function stateChips(){return `<div class="demo"><span>Состояние в макете:</span>${[["open","подключено"],["connecting","подключение"],["lock","экран блокировки"],["gone","сеанс отключён"]].map(([k,l])=>`<button class="chip" type="button" data-act="desk" data-id="${k}" aria-pressed="${S.desk===k}">${l}</button>`).join("")}</div>`}
+function statText(){return S.desk==="connecting"?"подключение…":S.desk==="open"||S.desk==="lock"?"подключено":"отключено"}
+function tools(){return `${dd("sess",sessLabel(),sessItems())}<button class="btn sm" type="button" data-act="noop" title="Отправить Ctrl+Alt+Del в сеанс">Ctrl+Alt+Del</button>${dd("more","Ещё",moreItems(),{right:true})}`}
+function statline(){const g=COLORNOTE[S.colors];const lim=S.nolimit?"без лимита":S.mbit+" Мбит/с";
+  return `<div class="statline"><span>1920×1080</span><span>цвета: <b>${g}</b></span><span>кадров: <b>${S.desk==="open"?Math.min(S.fps,12):0} из ${S.fps}</b></span><span>трафик: <b>${S.desk==="open"?"1,8":"0"} Мбит/с</b> (лимит ${lim})</span><a data-act="goto-manage">Настроить</a></div>`}
+
+/* ───── view 1: server page ───── */
+const GROUPS=[
+  {t:"Общее",i:[["overview","Обзор"],["metrics","Метрики"],["terminal","Терминал"],["desktop","Рабочий стол","win"],["assistant","Помощник","win"]]},
+  {t:"Система",i:[["services","Службы"],["processes","Процессы"],["logs","Логи"],["updates","Обновления"]]},
+  {t:"Файловая система",i:[["files","Файлы"],["disk","Диск"]]},
+  {t:"Сеть и защита",i:[["network","Сеть"],["firewall","Файрвол"],["security","Безопасность"],["manage","Управление"],["users","Пользователи"]]}
+];
+function sidebar(){return `<aside class="side"><nav class="side-nav">${GROUPS.map(g=>`<div class="grp"><span class="grp-h">${g.t}</span><div class="items">${g.i.map(i=>`<div class="irow${i[2]?" withwin":""}"><button class="item" type="button" data-act="tab" data-id="${i[0]}" aria-selected="${S.tab===i[0]}">${icon(i[0])}<span class="lbl">${i[1]}</span></button>${i[2]?`<button class="winbtn" type="button" data-act="${i[0]==="assistant"?"to-win":"noop"}" title="Открыть в окне" aria-label="Открыть в окне">${icon("win")}</button>`:""}</div>`).join("")}</div></div>`).join("")}</nav><div class="side-foot">Агент v0.4.0-beta.1<br>Windows 11 Pro</div></aside>`}
+function head(){return `<div class="srv-head"><h2>WS-ACC-07</h2><span class="badge ok"><span class="dot"></span>онлайн</span><span class="muted small">10.0.2.34 · Windows 11 Pro · агент v0.4.0-beta.1</span></div>`}
+function pageAssistant(){return `<div class="crumb">Общее</div><div class="deskTab">
+  <div class="dhead"><p class="dmeta"><span class="sq${S.desk==="open"||S.desk==="lock"?" on":""}"></span><span style="font-family:var(--font-display)">Помощник · WS-ACC-07</span><span class="muted">· ${statText()}</span></p>
+  <div class="actions">${tools()}<button class="btn sm" type="button" data-act="to-win">Открыть в окне</button></div></div>
+  <div class="box">${fakeScreen()}${statline()}</div>${stateChips()}
+  <div class="card notes" style="margin-top:6px"><h3 class="t">Что здесь решаем</h3><ul class="small">
+    <li>Сеанс выбирается списком: консоль (то, что видит человек за компьютером) и активные RDP-сеансы. Отключённые сеансы серые: у них нет экрана.</li>
+    <li>Пароль не спрашивается: доступ по правам Linager (модуль «Помощник»), каждое открытие и закрытие пишется в журнал аудита.</li>
+    <li>Строка под экраном показывает, что реально происходит (кадры, трафик) и ведёт в «Управление».</li></ul></div>
+  </div>`}
+
+/* ───── view 3: management tab ───── */
+function pageManage(){
+  const lim=S.nolimit?"без ограничения":S.mbit+" Мбит/с";
+  const colorBtns=["24","16","256","gray"].map(k=>[k,COLORS[k]]).map(([k,l])=>`<button class="chip" type="button" data-act="color" data-id="${k}" aria-pressed="${S.colors===k}">${l}</button>`).join("");
+  const preset=["eco:Экономный","normal:Обычный","hq:Качественный"].map(p=>{const[k,l]=p.split(":");return `<button class="chip" type="button" data-act="preset" data-id="${k}" aria-pressed="${S.preset===k}">${l}</button>`}).join("")+`<button class="chip" type="button" aria-pressed="${S.preset==="custom"}" disabled>Свои</button>`;
+  const rdpOn=S.rdp==="on",home=S.rdp==="home";
+  const rdp=home?`<span class="badge warn">недоступен</span><p class="small muted" style="margin-top:10px">Эта редакция Windows (Home) не принимает удалённый рабочий стол: службы RDP в ней нет. Помощник работает независимо от RDP, ему это не мешает.</p>`
+   :`<div class="row"><span class="badge ${rdpOn?"ok":"warn"}"><span class="dot"></span>${rdpOn?"включён":"выключен"}</span></div>
+     <dl class="kv"><dt>Порт</dt><dd>3389</dd><dt>Служба</dt><dd>${rdpOn?"TermService запущена":"TermService остановлена"}</dd><dt>Брандмауэр</dt><dd>${rdpOn?"группа правил включена":"группа правил выключена"}</dd><dt>Сеансов RDP</dt><dd>${rdpOn?"2 (1 активный, 1 отключён)":"0"}</dd></dl>
+     <div class="row">${rdpOn?`<button class="btn danger" type="button" data-act="rdp-confirm">Выключить RDP</button>`:`<button class="btn primary" type="button" data-act="rdp-on">Включить RDP</button>`}</div>
+     <p class="small muted" style="margin-top:10px">${rdpOn?"Вкладка «Рабочий стол» использует RDP. Если выключить его, она предложит включить заново.":"Пока RDP выключен, «Рабочий стол» недоступен. «Помощник» продолжает работать."}</p>`;
+  return `<div class="crumb">Сеть и защита</div><div class="page-h"><h3>Управление</h3></div>
+  <p class="lead">Параметры подключения Помощника к этому компьютеру и удалённый рабочий стол Windows. Изменения действуют сразу, в том числе на открытые сеансы.</p>
+  <div class="grid2"><div class="stack">
+    <section class="card"><h3 class="t" style="margin-bottom:6px">Картинка Помощника</h3>
+      <div class="field"><div class="fl">Готовые наборы<small>быстрый выбор</small></div><div class="segctl">${preset}</div></div>
+      <div class="field"><div class="fl">Цвета<small>меньше цветов — меньше трафик</small></div><div class="segctl">${colorBtns}</div></div>
+      <div class="field"><div class="fl">Частота кадров<small>верхний предел</small></div><div class="range"><input id="fps" type="range" min="1" max="30" step="1" value="${S.fps}" aria-label="Частота кадров"><output id="fpsv">${S.fps} к/с</output></div></div>
+      <div class="field"><div class="fl">Лимит трафика<small>Мбит/с на сеанс</small></div><div><div class="range"><input id="mbit" type="range" min="0.5" max="20" step="0.5" value="${S.mbit}" ${S.nolimit?"disabled":""} aria-label="Лимит трафика"><output id="mbitv">${lim}</output></div><label class="chk" style="margin-top:8px"><input id="nolimit" type="checkbox" ${S.nolimit?"checked":""}>Без ограничения (в локальной сети)</label></div></div>
+      <div class="field"><div class="fl">Качество<small>сжатие картинки</small></div><label class="chk"><input id="auto" type="checkbox" ${S.auto?"checked":""}>Само снижать качество и частоту кадров, если не укладывается в лимит</label></div>
+      <div class="est" id="est"></div>
+      <div class="savebar"><button class="btn primary" type="button" data-act="save">Сохранить</button><button class="btn" type="button" data-act="preset" data-id="normal">Сбросить</button><span class="saved${S.saved?" show":""}" id="saved">Сохранено · применено к открытым сеансам: 1</span></div>
+    </section></div>
+  <div class="stack">
+    <section class="card"><h3 class="t" style="margin-bottom:6px">Удалённый рабочий стол (RDP)</h3>
+      <div class="demo"><span>в макете:</span>${[["on","включён"],["off","выключен"],["home","Windows Home"]].map(([k,l])=>`<button class="chip" type="button" data-act="rdpstate" data-id="${k}" aria-pressed="${S.rdp===k}">${l}</button>`).join("")}</div>${rdp}</section>
+    <section class="card"><h3 class="t" style="margin-bottom:8px">Сеансы Windows сейчас</h3>
+      <table class="tbl"><thead><tr><th>№</th><th>Пользователь</th><th>Тип</th><th>Состояние</th><th></th></tr></thead><tbody>
+      ${SESSIONS.map(s=>`<tr><td>${s.id}</td><td>${s.user}</td><td>${s.type}${s.from!=="—"?`<div class="muted small">${s.from}</div>`:""}</td><td class="${s.state==="gone"?"warn":"ok"}">${s.state==="gone"?"отключён":"активен"}</td><td style="text-align:right">${s.state==="gone"?`<span class="muted small">нет экрана</span>`:`<button class="btn sm" type="button" data-act="open-sess" data-id="${s.id}">Помощник</button>`}</td></tr>`).join("")}</tbody></table></section>
+  </div></div>
+  <div class="card notes"><h3 class="t">Что здесь решаем</h3><ul class="small">
+    <li>«Битрейт» у нас лимит трафика: картинка идёт плитками JPEG, кодер сам понижает качество и частоту кадров под лимит (флажок «Само снижать»). Настоящего видеокодека нет.</li>
+    <li>Выключение RDP: опасное действие с подтверждением и записью в аудит. На Windows Home RDP нет, кнопка недоступна.</li>
+    <li>Вкладка видна тем, у кого есть право на модуль «Помощник»; включение и выключение RDP требует ещё и права «Рабочий стол».</li></ul></div>`}
+function pageGeneric(){const g=GROUPS.find(g=>g.i.some(i=>i[0]===S.tab)),it=g.i.find(i=>i[0]===S.tab);return `<div class="crumb">${g.t}</div><div class="page-h"><h3>${it[1]}</h3></div><div class="card" style="min-height:240px;display:grid;place-content:center;gap:10px;text-align:center;color:var(--muted)"><div>Содержимое вкладки «${it[1]}» остаётся прежним.</div><div><button class="btn" type="button" data-act="tab" data-id="assistant">К «Помощнику»</button> <button class="btn" type="button" data-act="tab" data-id="manage">К «Управлению»</button></div></div>`}
+function viewTab(){const t=S.tab;return head()+`<div class="layout">${sidebar()}<section>${t==="assistant"?pageAssistant():t==="manage"?pageManage():pageGeneric()}</section></div>`}
+
+/* ───── view 2: floating window ───── */
+function viewWin(){return `<div class="stagebg"><div class="win"><header class="bar"><p class="name"><span class="sq${S.desk==="open"||S.desk==="lock"?" on":""}"></span><span class="lb">WS-ACC-07</span><span class="muted">· Помощник · ${statText()}</span></p>
+  <div class="tools">${dd("sess",sessLabel(),sessItems())}<button class="btn sm" type="button" data-act="noop">Ctrl+Alt+Del</button>${dd("more","Ещё",moreItems(),{right:true})}
+  <button class="btn sm ic" type="button" title="Свернуть" aria-label="Свернуть">${icon("min")}</button><button class="btn sm ic" type="button" title="Развернуть" aria-label="Развернуть">${icon("max")}</button><button class="btn sm ic" type="button" data-act="to-tab" title="Закрыть" aria-label="Закрыть">${icon("close")}</button></div></header>
+  <div class="body"><div class="box">${fakeScreen()}${statline()}</div></div></div>
+  <nav class="dock"><button class="btn sm" type="button">WS-ACC-07 · Помощник</button><button class="btn sm" type="button" style="color:var(--muted)">web-01 · терминал</button></nav></div>${stateChips()}
+  <div class="card notes"><h3 class="t">Что здесь решаем</h3><ul class="small"><li>Окно как у терминала и рабочего стола: переносится, меняет размер, сворачивается в нижнюю полосу, можно держать несколько (по одному на сеанс).</li><li>Панель инструментов та же, что во вкладке; список сеансов в заголовке.</li></ul></div>`}
+
+/* ───── view 4: dashboard ───── */
+function dcard(name,addr,os,top,win,cpu,ram,dsk){const seg=n=>Array.from({length:12},(_,k)=>`<i class="${k<n?"on":""}"></i>`).join("");
+  return `<article class="dcard" style="border-top-color:${top}"><div class="in"><h4>${name}<span class="plat">${os}</span></h4><div class="muted small">${addr}</div>
+  <div class="meters"><span>CPU</span><span class="segs">${seg(cpu)}</span><span>${cpu*8}%</span><span>RAM</span><span class="segs">${seg(ram)}</span><span>${ram*8}%</span><span>Диск</span><span class="segs">${seg(dsk)}</span><span>${dsk*8}%</span></div></div>
+  <footer class="foot"><span class="muted small">uptime 12 д</span><div class="row" style="gap:6px"><button class="btn ic" type="button" title="Терминал" aria-label="Терминал">${icon("terminal")}</button>${win?`<button class="btn ic" type="button" style="border-color:var(--accent);color:var(--accent)" title="Помощник" aria-label="Помощник" data-act="to-win">${icon("assistant")}</button>`:""}<button class="btn ic" type="button" title="Открыть" aria-label="Открыть">${icon("open")}</button><button class="btn ic" type="button" title="Удалить" aria-label="Удалить">${icon("trash")}</button></div></footer></article>`}
+function viewDash(){return `<div class="page-h"><h3>Серверы</h3><span class="muted small">карточки</span></div>
+  <div class="dcards">${dcard("web-01","10.0.1.11 · Debian 13","Linux","var(--good)",false,2,5,4)}${dcard("WS-ACC-07","10.0.2.34 · Windows 11 Pro","Windows","var(--good)",true,3,6,5)}${dcard("DC-02","10.0.2.5 · Windows Server 2022","Windows","var(--warn)",true,7,9,6)}</div>
+  <div class="card"><h3 class="t" style="margin-bottom:10px">Меню плитки на «Карте» и меню строки (Windows-сервер)</h3>
+  <div class="menuwrap"><div class="popmenu" role="menu"><button class="dd-item" type="button">Терминал</button><button class="dd-item" type="button">Рабочий стол</button><button class="dd-item hl" type="button">Помощник</button><div class="dd-sep"></div><button class="dd-item" type="button">Открыть</button></div>
+  <p class="muted small" style="max-width:520px">На карточке рядом с кнопкой терминала появляется кнопка «Помощник» (только у Windows-серверов, выделена цветом акцента, у сервера не в сети выключена). Пункт «Помощник» добавляется в меню плитки и строки сразу после «Рабочего стола». Нажатие открывает окно помощника с консолью.</p></div></div>
+  <div class="card notes"><h3 class="t">Что здесь решаем</h3><ul class="small"><li>Сейчас на карточке только кнопка терминала, «Рабочий стол» живёт в меню. «Помощник» получает свою кнопку, как вы просили.</li><li>Кнопка выключена, если сервер не в сети или у вас нет права на модуль.</li></ul></div>`}
+
+/* ───── render + events ───── */
+function render(){
+  if(S.view==="manage"){S.view="tab";S.tab="manage"}
+  const cur=S.view==="tab"&&S.tab==="manage"?"manage":S.view;
+  $$("#views .chip").forEach(c=>c.setAttribute("aria-pressed",c.dataset.v===cur));
+  $("#stage").innerHTML=S.view==="tab"?viewTab():S.view==="win"?viewWin():viewDash();
+  bindManage();updateEst();
+}
+function bindManage(){
+  const f=$("#fps");if(!f)return;
+  const rd=()=>{S.fps=+$("#fps").value;S.mbit=+$("#mbit").value;S.nolimit=$("#nolimit").checked;S.auto=$("#auto").checked;S.preset="custom";S.saved=false;
+    $("#fpsv").textContent=S.fps+" к/с";$("#mbitv").textContent=S.nolimit?"без ограничения":S.mbit+" Мбит/с";$("#mbit").disabled=S.nolimit;$("#saved").classList.remove("show");
+    $$('[data-act=preset]').forEach(b=>b.setAttribute("aria-pressed","false"));updateEst()};
+  ["fps","mbit","nolimit","auto"].forEach(id=>$("#"+id).addEventListener("input",rd));
+}
+function updateEst(){const e=$("#est");if(!e)return;
+  const k={ "24":1,"16":.66,"256":.35,gray:.3}[S.colors];const peak=Math.min(S.nolimit?99:S.mbit,Math.round(S.fps*.55*k*10)/10);
+  e.innerHTML=`Оценка при активной работе: до <b>${peak.toString().replace(".",",")} Мбит/с</b>, в покое около <b>0,05 Мбит/с</b> (картинка не меняется, кадры не шлются).`}
+document.addEventListener("click",ev=>{
+  const b=ev.target.closest("[data-act],[data-v],[data-dd]");
+  const inDD=ev.target.closest(".dd");
+  if(!inDD&&S.openDD){S.openDD=null;render()}
+  if(!b)return;
+  if(b.dataset.v){S.view=b.dataset.v;if(S.view==="tab")S.tab="assistant";if(S.view==="manage"){S.view="manage"}render();return}
+  const a=b.dataset.act,id=b.dataset.id;
+  switch(a){
+    case"dd":S.openDD=S.openDD===id?null:id;render();break;
+    case"sess":S.session=+id;S.openDD=null;S.desk="connecting";render();setTimeout(()=>{if(S.desk==="connecting"){S.desk="open";render()}},1400);break;
+    case"desk":S.desk=id;render();break;
+    case"tab":S.tab=id;S.view="tab";render();break;
+    case"to-win":S.view="win";render();break;
+    case"to-tab":S.view="tab";S.tab="assistant";render();break;
+    case"goto-manage":S.view="tab";S.tab="manage";S.openDD=null;render();break;
+    case"color":S.colors=id;S.preset="custom";S.saved=false;render();break;
+    case"preset":Object.assign(S,PRESETS[id],{preset:id,saved:false});render();break;
+    case"save":S.saved=true;render();break;
+    case"rdpstate":S.rdp=id;render();break;
+    case"rdp-confirm":$("#modal").classList.add("open");break;
+    case"modal-close":$("#modal").classList.remove("open");break;
+    case"rdp-off":S.rdp="off";$("#modal").classList.remove("open");render();break;
+    case"rdp-on":S.rdp="on";render();break;
+    case"open-sess":S.session=+id;S.view="tab";S.tab="assistant";S.desk="open";render();break;
+  }
+});
+$("#modal").addEventListener("click",e=>{if(e.target.id==="modal")$("#modal").classList.remove("open")});
+$("#theme").onclick=()=>{const d=document.documentElement,dark=getComputedStyle(d).colorScheme==="dark";d.dataset.theme=dark?"light":"dark"};
+render();
+</script>
+</body>
+</html>

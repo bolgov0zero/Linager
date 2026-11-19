@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ServerCard } from '../../api';
   import { tr } from '../../i18n';
-  import { openTermWindow } from '../terminal/windows';
+  import { openAssistantWindow, openTermWindow } from '../terminal/windows';
   import CardIcon from './CardIcon.svelte';
   import Segments from '../ui/Segments.svelte';
   import Spark from '../ui/Spark.svelte';
@@ -10,7 +10,7 @@
   import OsBadge from './OsBadge.svelte';
   import Tags from './Tags.svelte';
   import { isPhone } from '../ui/viewport';
-  import { levelOf, tagsOf, type AgentFlag } from './status';
+  import { levelOf, osKind, tagsOf, type AgentFlag } from './status';
 
   let {
     card,
@@ -125,6 +125,9 @@
     <span class="small mono muted">{footText}</span>
     <div class="row end">
       <button class="btn ic" type="button" title={$tr('dash.terminal')} aria-label={$tr('dash.terminal')} disabled={!card.online} onclick={() => openTermWindow(card.id, card.name)}><CardIcon name="terminal" /></button>
+      {#if osKind(card.os) === 'windows'}
+        <button class="btn ic assist" type="button" title={$tr('dash.assistant')} aria-label={$tr('dash.assistant')} disabled={!card.online} onclick={() => openAssistantWindow(card.id, card.name)}><CardIcon name="assistant" /></button>
+      {/if}
       <button class="btn ic" type="button" title={$tr('dash.open')} aria-label={$tr('dash.open')} onclick={() => onopen(card.name)}><CardIcon name="open" /></button>
       <button class="btn ic del" type="button" title={$tr('dash.deleteServer')} aria-label={$tr('dash.deleteServer')} onclick={ondelete}><CardIcon name="trash" /></button>
     </div>
@@ -264,6 +267,12 @@
     align-items: center;
     justify-content: center;
     padding: 4px 7px;
+  }
+
+  /* The Assistant is the one action of a Windows card that is set apart by the accent colour. */
+  .foot .btn.assist:not(:disabled) {
+    color: var(--accent);
+    border-color: var(--accent);
   }
 
   .foot .btn.del:hover:not(:disabled) {

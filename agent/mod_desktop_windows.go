@@ -98,6 +98,31 @@ func desktopEnableCmd(ctx context.Context, _ json.RawMessage, dangerous bool) (a
 	return desktopState(), nil
 }
 
+// desktopDisableCmd turns the remote desktop off: connections are no longer allowed and the firewall group is closed.
+// The service and the sessions that are open stay as they are. The agent and the Assistant do not depend on it, so it
+// cannot lock the administrator out of the panel.
+func desktopDisableCmd(ctx context.Context, _ json.RawMessage, dangerous bool) (any, error) {
+	if !dangerous {
+		return nil, errDangerous
+	}
+	if !desktopState().Supported {
+		return nil, errors.New("this edition of Windows has no remote desktop to turn off")
+	}
+	k, _, err := registry.CreateKey(registry.LOCAL_MACHINE, tsKey, registry.SET_VALUE)
+	if err != nil {
+		return nil, err
+	}
+	err = k.SetDWordValue("fDenyTSConnections", 1)
+	_ = k.Close()
+	if err != nil {
+		return nil, err
+	}
+	if out, err := exec.CommandContext(ctx, "netsh.exe", "advfirewall", "firewall", "set", "rule", "group=@FirewallAPI.dll,-28752", "new", "enable=No").CombinedOutput(); err != nil { //nolint:gosec // fixed command
+		return nil, errors.New("the firewall rule was not closed: " + strings.TrimSpace(string(out)))
+	}
+	return desktopState(), nil
+}
+
 // serviceStateOf is the state of any service by name.
 func serviceStateOf(name string) string {
 	m, err := connectSCM()

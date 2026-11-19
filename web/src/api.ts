@@ -822,6 +822,30 @@ export function desktopSocketUrl(id: string, login: string): string {
 export const desktopApi = {
   state: (id: string) => request<DesktopState>('GET', `api/servers/${enc(id)}/desktop/state`),
   enable: (id: string) => request<DesktopState>('POST', `api/servers/${enc(id)}/desktop/enable`, { confirm: true }),
+  disable: (id: string) => request<DesktopState>('POST', `api/servers/${enc(id)}/desktop/disable`, { confirm: true }),
+};
+
+// ---- the Assistant (the screen of a Windows session in the browser) ----
+
+/** A Windows session the Assistant can show; `screen` is false for a disconnected one (nothing to look at). */
+export interface AssistSession { id: number; type: 'console' | 'rdp' | 'other'; user: string; state: string; client?: string; console: boolean; screen: boolean }
+export interface AssistSettings { colors: '24' | '16' | '256' | 'gray'; fps: number; mbit: number; nolimit: boolean; auto: boolean }
+
+/** The WebSocket of the Assistant: `session` is 'console' or the number of a Windows session. Binary frames both ways. */
+export function assistantSocketUrl(id: string, session: string): string {
+  const url = new URL(`api/servers/${enc(id)}/assistant`, location.href);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  url.searchParams.set('session', session);
+  return url.toString();
+}
+
+export const assistantApi = {
+  /** 501 (ApiError) when the agent of the computer has no Assistant module. */
+  sessions: (id: string) => request<{ sessions: AssistSession[] }>('GET', `api/servers/${enc(id)}/assistant/sessions`),
+  settings: (id: string) => request<AssistSettings>('GET', `api/servers/${enc(id)}/assistant/settings`),
+  /** 422 (ApiError with the text) for a value out of range; `applied` is the number of open sessions that took it. */
+  saveSettings: (id: string, settings: AssistSettings) =>
+    request<{ settings: AssistSettings; applied: number }>('PUT', `api/servers/${enc(id)}/assistant/settings`, settings),
 };
 
 // ---- Windows modules: users, Windows Update, network adapters ----

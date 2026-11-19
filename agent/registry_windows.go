@@ -33,6 +33,11 @@ func (r *Registry) registerPlatform(cfg *config.Agent, _ Collector, _ *slog.Logg
 		r.streams["desktop"] = desktopStream
 		r.cmds["desktop.state"] = desktopStateCmd
 		r.cmds["desktop.enable"] = desktopEnableCmd
+		r.cmds["desktop.disable"] = desktopDisableCmd
+	}
+	if cfg.Enabled("assistant") {
+		r.streams["assistant"] = assistantStream
+		r.cmds["assistant.sessions"] = assistSessionsCmd
 	}
 	if cfg.Enabled("users") {
 		r.cmds["users.state"] = usersStateCmd

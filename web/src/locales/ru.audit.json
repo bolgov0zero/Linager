@@ -133,5 +133,10 @@
   "audit.group.desktop": "Рабочий стол",
   "audit.action.desktop.open": "Рабочий стол: открыт",
   "audit.action.desktop.close": "Рабочий стол: закрыт",
-  "audit.action.desktop.enable": "Рабочий стол: включён"
+  "audit.action.desktop.enable": "Рабочий стол: включён",
+  "audit.action.desktop.disable": "Рабочий стол: выключен",
+  "audit.group.assistant": "Помощник",
+  "audit.action.assistant.open": "Помощник: открыт",
+  "audit.action.assistant.close": "Помощник: закрыт",
+  "audit.action.assistant.settings": "Помощник: настройки картинки"
 }

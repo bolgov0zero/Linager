@@ -15,7 +15,7 @@
   import PixIcon from './ui/PixIcon.svelte';
   import Select from './ui/Select.svelte';
   import { isPhone, PHONE_MAX } from './ui/viewport';
-  import { openDesktopWindow, openTermWindow } from './terminal/windows';
+  import { openAssistantWindow, openDesktopWindow, openTermWindow } from './terminal/windows';
   import { showToast } from './toast';
   import { dashView } from './dashboard/view';
 
@@ -358,6 +358,7 @@
     // The remote desktop is for Windows computers only.
     if (osKind(card.os) === 'windows') {
       items.push({ key: 'desk', label: $tr('dash.desktop'), disabled: !card.online, onselect: () => openDesktopWindow(card.id, card.name, card.address) });
+      items.push({ key: 'assist', label: $tr('dash.assistant'), disabled: !card.online, onselect: () => openAssistantWindow(card.id, card.name) });
     }
     items.push({ key: 'open', label: $tr('dash.open'), onselect: () => onopen(card.name) });
     // Choosing the group of a server is part of editing the dashboard.
@@ -366,7 +367,7 @@
         items.push({
           key: `g${g.id}`,
           label: `${card.group_id === g.id ? '✓ ' : ''}${$tr('dash.group.label')}: ${g.name}`,
-          separated: items.length === (osKind(card.os) === 'windows' ? 3 : 2),
+          separated: items.length === (osKind(card.os) === 'windows' ? 4 : 2),
           onselect: () => void setCardGroup(card, String(g.id)),
         });
       }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tr } from '../../i18n';
+  import AssistantWindowView from '../assistant/AssistantWindowView.svelte';
   import DesktopWindowView from '../desktop/DesktopWindowView.svelte';
   import EditorWindowView from './EditorWindowView.svelte';
   import TermWindowView from './TermWindowView.svelte';
@@ -59,6 +60,8 @@
         <EditorWindowView {win} top={win.key === topKey} />
       {:else if win.kind === 'desktop'}
         <DesktopWindowView {win} top={win.key === topKey} />
+      {:else if win.kind === 'assistant'}
+        <AssistantWindowView {win} top={win.key === topKey} />
       {:else}
         <TermWindowView {win} top={win.key === topKey} {canUsers} />
       {/if}
@@ -71,7 +74,7 @@
           class:off={win.minimized}
           type="button"
           title={win.minimized ? $tr('termwin.restore') : $tr('termwin.minimize')}
-          onclick={() => toggle(win.key, win.minimized)}>{win.kind === 'editor' ? '✎' : '>_'} {win.name}</button>
+          onclick={() => toggle(win.key, win.minimized)}>{win.kind === 'editor' ? '✎' : win.kind === 'assistant' ? '▣' : '>_'} {win.name}</button>
       {/each}
     </nav>
   </div>

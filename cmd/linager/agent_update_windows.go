@@ -67,5 +67,26 @@ func newAgentUpdateCmds(dataDir *string) []*cobra.Command {
 		Hidden: true,
 		RunE:   func(*cobra.Command, []string) error { return agent.RollbackNetworkChange(*dataDir) },
 	}
-	return []*cobra.Command{upd, status, rollback, restart, rollbackChange}
+	var helperAddr string
+	var helperSession int
+	helper := &cobra.Command{
+		Use:    "assistant-helper",
+		Short:  "Serve the screen of a Windows session to the agent (started by the agent service in the session)",
+		Hidden: true,
+		Run: func(c *cobra.Command, _ []string) {
+			ctx, stop := signal.NotifyContext(c.Context(), os.Interrupt)
+			defer stop()
+			code, err := agent.RunAssistHelper(ctx, helperAddr, helperSession)
+			if err != nil {
+				_, _ = fmt.Fprintln(c.ErrOrStderr(), err)
+			}
+			if code != 0 {
+				stop()
+				os.Exit(code)
+			}
+		},
+	}
+	helper.Flags().StringVar(&helperAddr, "addr", "", "address of the agent on the loopback")
+	helper.Flags().IntVar(&helperSession, "session", 0, "number of the session")
+	return []*cobra.Command{upd, status, rollback, restart, rollbackChange, helper}
 }

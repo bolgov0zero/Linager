@@ -8,7 +8,7 @@ export const TERM_LIMIT = 3;
 /** Floating windows share one store, z-order and dock: terminals and file editors. */
 export interface TermWindow {
   key: number;
-  kind: 'terminal' | 'editor' | 'desktop';
+  kind: 'terminal' | 'editor' | 'desktop' | 'assistant';
   serverId: string;
   /** Terminal: server name. Editor: file name. */
   name: string;
@@ -19,6 +19,8 @@ export interface TermWindow {
   asUser?: string;
   /** Desktop: how the computer is called inside the connection (its address in the panel). */
   address?: string;
+  /** Assistant: 'console' or the number of a Windows session. */
+  session?: string;
   initialText?: string;
   initialMtime?: number;
   x: number;
@@ -82,6 +84,16 @@ export function openDesktopWindow(serverId: string, serverName: string, address:
   addWindow({ kind: 'desktop', serverId, name: serverName, serverName, address });
 }
 
+/** Opens the Assistant (the screen of a Windows session) in a floating window; one per server and session, an open one is brought to the front. */
+export function openAssistantWindow(serverId: string, serverName: string, session = 'console'): void {
+  const open = get(termWindows).find((w) => w.kind === 'assistant' && w.serverId === serverId && (w.session ?? 'console') === session);
+  if (open) {
+    focusTermWindow(open.key);
+    return;
+  }
+  addWindow({ kind: 'assistant', serverId, name: serverName, serverName, session });
+}
+
 /** Opens a file in a floating editor; an already open file of the same server is brought to the front. */
 export function openEditorWindow(serverId: string, serverName: string, path: string, name: string, text: string, mtime: number): void {
   const list = get(termWindows);
@@ -107,7 +119,7 @@ function addWindow(init: Pick<TermWindow, 'kind' | 'serverId' | 'name'> & Partia
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const editor = init.kind === 'editor';
-  const desktop = init.kind === 'desktop';
+  const desktop = init.kind === 'desktop' || init.kind === 'assistant';
   const w = Math.min(desktop ? 1100 : editor ? 760 : DEFAULT_W, vw - 32);
   const h = Math.min(desktop ? 740 : editor ? 520 : DEFAULT_H, vh - 96);
   const step = (list.length % 8) * CASCADE;

@@ -56,6 +56,9 @@ type Admin struct {
 	terms  map[string]int
 	desks  map[string]int // open remote desktops per server (guarded by termMu)
 
+	assists    map[string]int                        // open Assistants per server and session (guarded by termMu)
+	assistLive map[string]map[*StreamHandle]struct{} // the streams of the open Assistants per server (guarded by termMu)
+
 	editJobs dockerEditJobs // settings of a container waiting for their stream (api_docker_edit.go)
 
 	// passkey ceremonies in progress (the challenge must survive between begin and finish)
@@ -181,6 +184,11 @@ func (a *Admin) Handler() http.Handler {
 	a.route(mux, "GET /api/servers/{id}/desktop", "srv:desktop", a.desktopWS)
 	a.route(mux, "GET /api/servers/{id}/desktop/state", "srv:desktop", a.desktopState)
 	a.route(mux, "POST /api/servers/{id}/desktop/enable", "srv:desktop", a.desktopEnable)
+	a.route(mux, "POST /api/servers/{id}/desktop/disable", "srv:desktop", a.desktopDisable)
+	a.route(mux, "GET /api/servers/{id}/assistant", "srv:assistant", a.assistantWS)
+	a.route(mux, "GET /api/servers/{id}/assistant/sessions", "srv:assistant", a.assistantSessions)
+	a.route(mux, "GET /api/servers/{id}/assistant/settings", "srv:assistant", a.assistantSettingsGet)
+	a.route(mux, "PUT /api/servers/{id}/assistant/settings", "srv:assistant", a.assistantSettingsSet)
 	a.route(mux, "GET /api/servers/{id}/files", "srv:files", a.filesList)
 	a.route(mux, "GET /api/servers/{id}/files/content", "srv:files", a.filesContent)
 	a.route(mux, "PUT /api/servers/{id}/files/content", "srv:files", a.simpleFileOp("write", "files.write", false))

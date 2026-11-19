@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync/atomic"
 	"time"
 )
 
@@ -24,7 +25,7 @@ func useSimWindows() {
 	ok := func(v any) CmdFunc {
 		return func(context.Context, json.RawMessage, bool) (any, error) { return v, nil }
 	}
-	devModules = []string{"metrics", "terminal", "desktop", "services", "processes", "logs", "files", "disk", "users", "winupdate", "network", "system"}
+	devModules = []string{"metrics", "terminal", "desktop", "assistant", "services", "processes", "logs", "files", "disk", "users", "winupdate", "network", "system"}
 	devCommands = map[string]CmdFunc{
 		"services.list":  ok(simWinServices()),
 		"processes.list": ok(simProcesses()),
@@ -33,8 +34,16 @@ func useSimWindows() {
 		"users.state":    ok(simWinUsers()),
 		"winupdate.list": ok(map[string]any{"updates": simWinUpdates(), "reboot_pending": true}),
 		"network.state":  ok(simWinNet()),
+		"assistant.sessions": ok(map[string]any{"sessions": []AssistSession{
+			{ID: 1, Type: "console", User: "ACME\\i.petrova", State: "active", Console: true, Screen: true},
+			{ID: 2, Type: "rdp", User: "ACME\\a.sidorov", State: "active", Client: "10.0.2.15", Screen: true},
+			{ID: 3, Type: "rdp", User: "ACME\\m.kuznetsov", State: "disconnected", Client: "10.0.2.41"},
+		}}),
+		"desktop.state":   simDesktopStateCmd,
+		"desktop.enable":  simDesktopToggle(true),
+		"desktop.disable": simDesktopToggle(false),
 	}
-	devStreams = map[string]StreamFunc{"logs": simLogs}
+	devStreams = map[string]StreamFunc{"logs": simLogs, "assistant": fakeAssistStream(nil)}
 }
 
 func simWinServices() map[string]any {
@@ -108,4 +117,25 @@ func simWinNet() map[string]any {
 		{"index": 7, "name": "vEthernet (Default Switch)", "description": "Hyper-V Virtual Ethernet Adapter", "mac": "00:15:5D:AA:BB:01", "up": true, "virtual": true, "mtu": 1500, "speed_mbps": 10000, "dhcp": true, "ipv4": []string{"172.24.64.1/20"}, "gateway": "", "dns": []string{}},
 		{"index": 3, "name": "Wi-Fi", "description": "Intel(R) Wi-Fi 6 AX201", "mac": "A4:BB:6D:12:34:57", "up": false, "virtual": false, "mtu": 1500, "speed_mbps": 0, "dhcp": true, "ipv4": []string{}, "gateway": "", "dns": []string{}},
 	}, "pending": nil}
+}
+
+// simRDPOn is the state of the simulated remote desktop of the computer.
+var simRDPOn atomic.Bool
+
+func init() { simRDPOn.Store(true) }
+
+func simDesktopStateCmd(context.Context, json.RawMessage, bool) (any, error) {
+	on := simRDPOn.Load()
+	svc := "stopped"
+	if on {
+		svc = "running"
+	}
+	return map[string]any{"enabled": on, "listening": on, "port": 3389, "nla": true, "service": svc, "supported": true, "edition": "Windows 11 Pro"}, nil
+}
+
+func simDesktopToggle(on bool) CmdFunc {
+	return func(ctx context.Context, p json.RawMessage, d bool) (any, error) {
+		simRDPOn.Store(on)
+		return simDesktopStateCmd(ctx, p, d)
+	}
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/bolgov0zero/linager/agent"
+	"github.com/bolgov0zero/linager/internal/assist"
 	"github.com/bolgov0zero/linager/internal/config"
 	"github.com/bolgov0zero/linager/internal/pki"
 	"github.com/bolgov0zero/linager/internal/protocol"
@@ -280,7 +281,8 @@ func TestEndToEnd(t *testing.T) {
 		runErr <- agent.Run(ctx, agent.RunOptions{
 			DataDir: adata, AgentVersion: "0.0.1-test", Log: slog.New(slog.NewTextHandler(io.Discard, nil)), PingEvery: 100 * time.Millisecond,
 			SampleEvery: 200 * time.Millisecond, Collector: fakeCollector{boot: time.Now().Add(-time.Hour).Unix()},
-			Uninstall: func(purge bool, _ string) error { uninstalled.purge, uninstalled.ran = purge, true; return nil },
+			Uninstall:    func(purge bool, _ string) error { uninstalled.purge, uninstalled.ran = purge, true; return nil },
+			ExtraStreams: map[string]agent.StreamFunc{"assistant": agent.FakeAssistStream()},
 		})
 	}()
 	type srvView struct {
@@ -512,6 +514,81 @@ func TestEndToEnd(t *testing.T) {
 	waitFor(t, "terminal audit entries", func() bool {
 		_ = db.Pool.QueryRow(ctx, `SELECT count(*) FROM audit_log WHERE action IN ('stream.open','stream.close')`).Scan(&nAudit)
 		return nAudit >= 2
+	})
+
+	// --- the Assistant: pictures come to the browser, input goes back, the settings are kept and reach open windows ---
+	var aset assist.Settings
+	if code := api.do("GET", "/api/servers/"+id+"/assistant/settings", nil, &aset); code != 200 || aset != assist.DefaultSettings() {
+		t.Fatalf("default assistant settings: %d %+v", code, aset)
+	}
+	for _, bad := range []assist.Settings{{Colors: "x", FPS: 10, Mbit: 2}, {Colors: "24", FPS: 99, Mbit: 2}, {Colors: "24", FPS: 10, Mbit: 99}} {
+		if code := api.do("PUT", "/api/servers/"+id+"/assistant/settings", bad, nil); code != http.StatusUnprocessableEntity {
+			t.Fatalf("bad assistant settings %+v: %d", bad, code)
+		}
+	}
+	gray := assist.Settings{Colors: assist.ColorsGray, FPS: 10, Mbit: 2, Auto: true}
+	if code := api.do("PUT", "/api/servers/"+id+"/assistant/settings", gray, nil); code != 200 {
+		t.Fatalf("save assistant settings: %d", code)
+	}
+	if code := api.do("GET", "/api/servers/"+id+"/assistant/settings", nil, &aset); code != 200 || aset != gray {
+		t.Fatalf("assistant settings are kept: %d %+v", code, aset)
+	}
+	if code := api.do("GET", "/api/servers/"+id+"/assistant?session=abc", nil, nil); code != http.StatusBadRequest {
+		t.Fatalf("a bad session: %d", code)
+	}
+	if code := api.do("GET", "/api/servers/"+id+"/assistant/sessions", nil, nil); code != http.StatusNotImplemented {
+		t.Fatalf("this agent has no Windows sessions: %d", code)
+	}
+	actx, acancel := context.WithTimeout(ctx, 20*time.Second)
+	aurl := "ws" + strings.TrimPrefix(api.base, "http") + "/api/servers/" + id + "/assistant?session=console"
+	ac, _, err := websocket.Dial(actx, aurl, &websocket.DialOptions{HTTPClient: api.hc})
+	if err != nil {
+		t.Fatalf("assistant websocket: %v", err)
+	}
+	var gotHello bool
+	fullPictures := 0
+	readAssist := func(until func() bool) {
+		for !until() {
+			_, b, err := ac.Read(actx)
+			if err != nil {
+				t.Fatalf("assistant frames: %v (hello %v, full pictures %d)", err, gotHello, fullPictures)
+			}
+			switch b[0] {
+			case assist.TypeHello:
+				gotHello = bytes.Contains(b[1:], []byte(`"w":960`))
+			case assist.TypeTiles:
+				if tl, err := assist.UnpackTiles(b[1:]); err == nil && len(tl) >= 8 {
+					fullPictures++
+				}
+			}
+		}
+	}
+	readAssist(func() bool { return gotHello && fullPictures >= 1 })
+	// a second window on the same session is refused with a code the browser can read
+	if over, _, err := websocket.Dial(actx, aurl, &websocket.DialOptions{HTTPClient: api.hc}); err != nil {
+		t.Fatal(err)
+	} else if _, _, err := over.Read(actx); websocket.CloseStatus(err) != 4031 {
+		t.Fatalf("a second assistant on one session: want close 4031, got %v", err)
+	}
+	// input is forwarded (a bad one is dropped by the panel), and new settings reach the open window: a change of the
+	// colour mode makes the helper send the whole picture again
+	if err := ac.Write(actx, websocket.MessageBinary, append([]byte{assist.TypeInput}, `{"t":"m","x":300,"y":200}`...)); err != nil {
+		t.Fatal(err)
+	}
+	if err := ac.Write(actx, websocket.MessageBinary, append([]byte{assist.TypeInput}, `{"t":"m","x":-9}`...)); err != nil {
+		t.Fatal(err)
+	}
+	before := fullPictures
+	if code := api.do("PUT", "/api/servers/"+id+"/assistant/settings", assist.Settings{Colors: assist.Colors16, FPS: 20, NoLimit: true, Mbit: 4}, nil); code != 200 {
+		t.Fatalf("change the settings of an open assistant: %d", code)
+	}
+	readAssist(func() bool { return fullPictures > before })
+	_ = ac.Close(websocket.StatusNormalClosure, "")
+	acancel()
+	waitFor(t, "assistant audit entries", func() bool {
+		var n int
+		_ = db.Pool.QueryRow(ctx, `SELECT count(*) FROM audit_log WHERE action IN ('assistant.open','assistant.close','assistant.settings')`).Scan(&n)
+		return n >= 4
 	})
 
 	// --- files: list, edit with conflict detection, create, upload, download, delete ---

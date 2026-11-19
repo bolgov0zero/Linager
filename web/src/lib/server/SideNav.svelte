@@ -14,6 +14,7 @@
     agentVersion = '',
     onterminalwindow,
     ondesktopwindow,
+    onassistantwindow,
   }: {
     tabs: readonly (typeof TABS)[number][];
     current: TabId;
@@ -29,6 +30,8 @@
     onterminalwindow?: () => void;
     /** Opens the remote desktop in a floating window; the button sits next to the Desktop item (Windows servers). */
     ondesktopwindow?: () => void;
+    /** Opens the Assistant in a floating window; the button sits next to the Assistant item (Windows servers). */
+    onassistantwindow?: () => void;
   } = $props();
 
   const GROUPS_KEY = 'linager.side.groups';
@@ -178,7 +181,7 @@
               <div class="entry">
                 <button
                   class="item"
-                  class:withwin={(t.id === 'terminal' && !!onterminalwindow) || (t.id === 'desktop' && !!ondesktopwindow)}
+                  class:withwin={(t.id === 'terminal' && !!onterminalwindow) || (t.id === 'desktop' && !!ondesktopwindow) || (t.id === 'assistant' && !!onassistantwindow)}
                   type="button"
                   role="tab"
                   aria-selected={current === t.id}
@@ -206,6 +209,15 @@
                     title={$tr('termwin.openWindow')}
                     aria-label={$tr('termwin.openWindow')}
                     onclick={ondesktopwindow}><TermIcon name="window" /></button>
+                {/if}
+                {#if t.id === 'assistant' && onassistantwindow}
+                  <button
+                    class="winbtn"
+                    class:on={current === t.id}
+                    type="button"
+                    title={$tr('termwin.openWindow')}
+                    aria-label={$tr('termwin.openWindow')}
+                    onclick={onassistantwindow}><TermIcon name="window" /></button>
                 {/if}
               </div>
             {/each}

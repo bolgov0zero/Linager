@@ -27,6 +27,7 @@ export const TABS = [
   { id: 'metrics', key: 'srv.tab.metrics' },
   { id: 'terminal', key: 'srv.tab.terminal' },
   { id: 'desktop', key: 'srv.tab.desktop' },
+  { id: 'assistant', key: 'srv.tab.assistant' },
   { id: 'files', key: 'srv.tab.files' },
   { id: 'disk', key: 'srv.tab.disk' },
   { id: 'services', key: 'srv.tab.services' },
@@ -34,6 +35,7 @@ export const TABS = [
   { id: 'network', key: 'srv.tab.network' },
   { id: 'firewall', key: 'srv.tab.firewall' },
   { id: 'security', key: 'srv.tab.security' },
+  { id: 'manage', key: 'srv.tab.manage' },
   { id: 'users', key: 'srv.tab.users' },
   { id: 'docker', key: 'srv.tab.docker' },
   { id: 'updates', key: 'srv.tab.updates' },
@@ -46,6 +48,8 @@ export type TabId = (typeof TABS)[number]['id'];
 const TAB_MODULE: Partial<Record<TabId, string>> = {
   terminal: 'terminal',
   desktop: 'desktop',
+  assistant: 'assistant',
+  manage: 'assistant',
   files: 'files',
   disk: 'disk',
   services: 'services',
@@ -61,7 +65,7 @@ const TAB_MODULE: Partial<Record<TabId, string>> = {
 
 /**
  * Tabs to show for the reported agent modules. An empty list means the agent did not report
- * its modules (old agent): all tabs stay except Docker, Security and Disk, which need the module to be reported.
+ * its modules (old agent): all tabs stay except Docker, Security, Disk, Users and the Windows-only Assistant and Manage, which need the module to be reported.
  */
 export function visibleTabs(modules: readonly string[], allowed: readonly string[] | null = null): (typeof TABS)[number][] {
   return TABS.filter((tab) => {
@@ -71,17 +75,17 @@ export function visibleTabs(modules: readonly string[], allowed: readonly string
     if (tab.id === 'updates' && modules.includes('winupdate') && (allowed === null || allowed.includes('apt'))) return true;
     // an operator only gets the modules that were given (an administrator: null), an auditor none
     if (allowed !== null && !allowed.includes(module)) return false;
-    if (modules.length === 0) return module !== 'docker' && module !== 'security' && module !== 'disk' && module !== 'users';
+    if (modules.length === 0) return module !== 'docker' && module !== 'security' && module !== 'disk' && module !== 'users' && module !== 'assistant';
     return modules.includes(module);
   });
 }
 
 /** Sidebar groups of the server page; every tab belongs to exactly one group, in the order shown. */
 export const TAB_GROUPS: readonly { id: string; key: string; tabs: readonly TabId[] }[] = [
-  { id: 'general', key: 'srv.group.general', tabs: ['overview', 'metrics', 'terminal', 'desktop'] },
+  { id: 'general', key: 'srv.group.general', tabs: ['overview', 'metrics', 'terminal', 'desktop', 'assistant'] },
   { id: 'system', key: 'srv.group.system', tabs: ['services', 'processes', 'logs', 'updates'] },
   { id: 'fs', key: 'srv.group.fs', tabs: ['files', 'disk'] },
-  { id: 'net', key: 'srv.group.net', tabs: ['network', 'firewall', 'security', 'users'] },
+  { id: 'net', key: 'srv.group.net', tabs: ['network', 'firewall', 'security', 'manage', 'users'] },
   { id: 'apps', key: 'srv.group.apps', tabs: ['docker'] },
 ];
 
@@ -100,6 +104,8 @@ export const TAB_ICONS: Record<TabId, readonly string[]> = {
   metrics: ['000000001', '000000001', '000000101', '000000101', '000010101', '001010101', '101010101', '101010101', '111111111'],
   terminal: ['000000000', '110000000', '011000000', '001100000', '000110000', '001100000', '011000000', '110001111', '000001111'],
   desktop: ['111111111', '100000001', '101111101', '101111101', '100000001', '111111111', '000010000', '000010000', '011111110'],
+  assistant: ['111111111', '100000001', '101000001', '101100001', '101110001', '101000001', '111111111', '000111000', '001111100'],
+  manage: ['000000000', '111111111', '000110000', '000110000', '000000000', '111111111', '011000000', '011000000', '000000000'],
   services: ['000000000', '110111111', '110111111', '000000000', '110111111', '110111111', '000000000', '110111111', '110111111'],
   processes: ['001010100', '011111110', '110000011', '010111010', '110111011', '010111010', '110000011', '011111110', '001010100'],
   logs: ['111111111', '111111111', '000000000', '111111000', '111111000', '000000000', '111111111', '111111111', '000000000'],

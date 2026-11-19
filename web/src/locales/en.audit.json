@@ -133,5 +133,10 @@
   "audit.group.desktop": "Remote desktop",
   "audit.action.desktop.open": "Remote desktop: opened",
   "audit.action.desktop.close": "Remote desktop: closed",
-  "audit.action.desktop.enable": "Remote desktop: turned on"
+  "audit.action.desktop.enable": "Remote desktop: turned on",
+  "audit.action.desktop.disable": "Remote desktop: turned off",
+  "audit.group.assistant": "Assistant",
+  "audit.action.assistant.open": "Assistant: opened",
+  "audit.action.assistant.close": "Assistant: closed",
+  "audit.action.assistant.settings": "Assistant: picture settings changed"
 }

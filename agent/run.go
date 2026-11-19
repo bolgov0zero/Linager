@@ -43,6 +43,9 @@ type RunOptions struct {
 	Uninstall func(purge bool, dataDir string) error
 	// RenewRetryEvery is the longest pause between certificate renewal requests (default 12 h).
 	RenewRetryEvery time.Duration
+	// ExtraStreams adds stream handlers to the registry (the tests and the simulator use it to stand in for a
+	// module the host does not have).
+	ExtraStreams map[string]StreamFunc
 }
 
 // Run keeps a signed WebSocket connection to the server until ctx ends,
@@ -67,6 +70,9 @@ func Run(ctx context.Context, o RunOptions) error {
 		o.Config = config.DefaultAgent()
 	}
 	reg := NewRegistry(o.Config, o.Collector, o.Log, o.DataDir)
+	for name, fn := range o.ExtraStreams {
+		reg.streams[name] = fn
+	}
 	reg.startBackground(ctx)
 	buf := &sampleBuffer{}
 	go sampler(ctx, o, buf)
