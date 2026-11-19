@@ -16,7 +16,7 @@ import (
 // RunAssistHelper is `linager agent assistant-helper` on Linux: it runs as the person of a graphical session, calls the
 // agent back on the loopback with the token of its environment, opens the screen of the session through the compositor
 // and serves it until the stream ends. The return value is the exit code.
-func RunAssistHelper(ctx context.Context, addr string, session int) (int, error) {
+func RunAssistHelper(ctx context.Context, addr string, session int, mode string) (int, error) {
 	token := os.Getenv(assistTokenEnv)
 	_ = os.Unsetenv(assistTokenEnv)
 	host, _, err := net.SplitHostPort(addr)
@@ -32,14 +32,26 @@ func RunAssistHelper(ctx context.Context, addr string, session int) (int, error)
 		return helperExitConnect, err
 	}
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	h, err := newMutterHost(log)
-	if err != nil {
-		_ = assist.WriteJSON(conn, assist.TypeEnd, assist.End{Reason: "cannot open the screen: " + err.Error()})
-		return helperExitScreen, err
+	var screen assistHost
+	var release func()
+	if mode == "kms" { // the screen below the compositor: the sign-in screen, an X11 session, a locked screen
+		k, err := newKMSHost(log)
+		if err != nil {
+			_ = assist.WriteJSON(conn, assist.TypeEnd, assist.End{Reason: "cannot open the screen: " + err.Error()})
+			return helperExitScreen, err
+		}
+		screen, release = k, k.release
+	} else {
+		m, err := newMutterHost(log)
+		if err != nil {
+			_ = assist.WriteJSON(conn, assist.TypeEnd, assist.End{Reason: "cannot open the screen: " + err.Error()})
+			return helperExitScreen, err
+		}
+		screen, release = m, m.release
 	}
-	defer h.release()
+	defer release()
 	info := assist.Hello{Session: session, User: os.Getenv("USER"), Platform: "linux"}
-	if err := runAssistLoop(ctx, conn, h, info, log); err != nil {
+	if err := runAssistLoop(ctx, conn, screen, info, log); err != nil {
 		return helperExitLoop, err
 	}
 	return 0, nil

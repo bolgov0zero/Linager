@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0-beta.5
+
+- Change: **the sign-in screen and the lock screen of GNOME: the reason is told.** The Assistant on the sign-in screen failed with "Session creation inhibited": gnome-shell inhibits remote access in every session mode that does not allow screen casts (the sign-in screen, the lock screen), it is a rule of GNOME, not a fault of the Assistant. The panel says so now and tells to sign in at the console; a session that GNOME closes (the screen was locked) is told the same way. Those screens are shown below the compositor, see the next entry.
+- New (beta): **the Assistant for Linux below the compositor: the sign-in screen, the lock screen, X11.** The helper runs as root and reads the framebuffer of the display controller through DRM/KMS in pure Go (`GETRESOURCES`, `GETCRTC`, `GETFB2`, the buffer is mapped through its dma-buf, or as a dumb buffer when the driver exports none; XRGB8888, ARGB8888, XBGR8888, ABGR8888 and RGB565), and makes the mouse, the wheels and the keys as a device of the kernel through `/dev/uinput`. It is used for the session class `greeter` of logind (GDM before the sign-in), for a session whose lock hint is set and for X11 sessions; the picture is marked with the badge of the lock or sign-in screen. Only a linear framebuffer is read (virtual machines, some cards): a tiled one is refused with the reason. No clipboard, no pointer in the picture. The structs of the kernel interface and the numbers of the ioctls are checked by a test.
+- Change: **the icons of the card buttons and of the buttons of the server header on a phone are 16 px** too (back, note, menu; terminal, Assistant, open, delete), as those of the server bar and of the side menu.
+
 ## 0.8.0-beta.4
 
 - Change: **the menu of the top bar is a little larger again** (a row 31 px with 13 px text, 182 px wide: the 25 px of 0.7.4 were too small next to the buttons of the bar), and **the icons of the buttons of the server bar (note, reboot, delete) are 16 px**, as the icons of the side menu.

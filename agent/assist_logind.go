@@ -87,8 +87,13 @@ func (s logindSession) graphicalUserSession() bool {
 	return !s.Remote && (s.Class == "user" || s.Class == "greeter") && s.Seat != "" && (s.Type == "wayland" || s.Type == "x11")
 }
 
-// supported is true for the kind of session the Assistant can capture now (GNOME on Wayland).
-func (s logindSession) supported() bool { return s.graphicalUserSession() && s.Type == "wayland" }
+// supported is true for a session the Assistant can show: a Wayland session of a person through GNOME, and every other
+// graphical session (the sign-in screen, X11) below the compositor.
+func (s logindSession) supported() bool { return s.graphicalUserSession() }
+
+// viaCompositor says whether the screen of the session is taken from its compositor (GNOME Mutter): a person's own
+// Wayland session. The other sessions (the sign-in screen, X11) are read below it, from the framebuffer.
+func (s logindSession) viaCompositor() bool { return s.Class == "user" && s.Type == "wayland" }
 
 // consoleSession is the graphical session that is in front on seat0: the console of the computer (a person's session,
 // or the sign-in screen while nobody is signed in).

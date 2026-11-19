@@ -123,6 +123,11 @@ func (h *mutterHost) startLocked() error {
 	rd := conn.Object(rdDest, rdPath)
 	var rdSession dbus.ObjectPath
 	if err := rd.Call(rdIface+".CreateSession", 0).Store(&rdSession); err != nil {
+		if strings.Contains(err.Error(), "inhibited") {
+			// gnome-shell inhibits remote access in every session mode that does not allow screen casts: the sign-in screen
+			// and the lock screen
+			return errors.New("GNOME does not allow remote access to the sign-in screen and to the lock screen (its security rule): sign in at the console of the computer, then the Assistant shows the desktop")
+		}
 		return fmt.Errorf("remote desktop session (GNOME Mutter is needed): %w", err)
 	}
 	rds := conn.Object(rdDest, rdSession)
@@ -342,7 +347,7 @@ func (h *mutterHost) signals() {
 			case strings.HasSuffix(s.Name, ".Closed"):
 				h.sigMu.Lock()
 				if s.Path == h.sigRD || s.Path == h.sigSC {
-					h.closedErr = errors.New("the session of GNOME was closed by the compositor")
+					h.closedErr = errors.New("GNOME closed the remote session: most likely the screen was locked (GNOME allows no remote access to the lock screen) or the person signed out")
 				}
 				h.sigMu.Unlock()
 			case strings.HasSuffix(s.Name, ".SelectionOwnerChanged"):

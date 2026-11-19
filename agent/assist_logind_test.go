@@ -28,8 +28,8 @@ func TestConsoleSession(t *testing.T) {
 	if !ok || s.ID != "7" {
 		t.Fatalf("the console is the active graphical session of a person on seat0: %+v %v", s, ok)
 	}
-	if s.supported() {
-		t.Error("x11 is found but not supported yet")
+	if !s.supported() || s.viaCompositor() {
+		t.Error("an x11 session is shown below the compositor")
 	}
 	// nobody is signed in: the sign-in screen is the console
 	if g, ok := consoleSession(list[:1]); !ok || g.ID != "1" || !g.supported() {

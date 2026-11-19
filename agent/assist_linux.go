@@ -15,6 +15,9 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
+
+	"github.com/godbus/dbus/v5"
 
 	"github.com/bolgov0zero/linager/internal/config"
 )
@@ -75,13 +78,32 @@ func resolveAssistSession(s string) (logindSession, error) {
 }
 
 func checkSupported(s logindSession) (logindSession, error) {
-	if s.Type != "wayland" {
-		return s, fmt.Errorf("the session of %s is %s: only GNOME on Wayland is supported", s.User, s.Type)
-	}
 	if !s.Active {
 		return s, fmt.Errorf("the session of %s is in the background: it has no screen to show", s.User)
 	}
 	return s, nil
+}
+
+// sessionLocked asks systemd-logind whether the screen of the session is locked (GNOME says so when it locks): GNOME
+// lets no screen cast see the lock screen, so it is read below the compositor.
+func sessionLocked(id string) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	conn, err := dbus.ConnectSystemBus()
+	if err != nil {
+		return false
+	}
+	defer func() { _ = conn.Close() }()
+	var path dbus.ObjectPath
+	if conn.Object("org.freedesktop.login1", "/org/freedesktop/login1").CallWithContext(ctx, "org.freedesktop.login1.Manager.GetSession", 0, id).Store(&path) != nil {
+		return false
+	}
+	v, err := conn.Object("org.freedesktop.login1", path).GetProperty("org.freedesktop.login1.Session.LockedHint")
+	if err != nil {
+		return false
+	}
+	locked, _ := v.Value().(bool)
+	return locked
 }
 
 // assistantStream is the Assistant of one session: the helper is started as the person of the session and the frames
@@ -129,6 +151,8 @@ func launchAssistHelper(_ context.Context, session, addr, token string) (assistH
 	if err != nil {
 		return nil, err
 	}
+	// the sign-in screen, an X11 session and a locked screen are read below the compositor: that needs root
+	kms := !s.viaCompositor() || sessionLocked(s.ID)
 	uid, gid, groups, name, home := sessionCredentials(s)
 	exe, err := os.Executable()
 	if err != nil {
@@ -140,7 +164,11 @@ func launchAssistHelper(_ context.Context, session, addr, token string) (assistH
 	if _, err := strconv.Atoi(sid); err != nil {
 		sid = "0"
 	}
-	cmd := exec.Command(exe, "agent", "assistant-helper", "--addr", addr, "--session", sid) //nolint:gosec // our own binary
+	args := []string{"agent", "assistant-helper", "--addr", addr, "--session", sid}
+	if kms {
+		args = append(args, "--mode", "kms")
+	}
+	cmd := exec.Command(exe, args...) //nolint:gosec // our own binary
 	cmd.Env = []string{
 		"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
 		"HOME=" + home,
@@ -154,6 +182,10 @@ func launchAssistHelper(_ context.Context, session, addr, token string) (assistH
 	tail := &tailWriter{max: 400}
 	cmd.Stderr = io.MultiWriter(os.Stderr, tail) // the journal of the agent shows what the helper says, and so does the panel
 	cmd.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: uid, Gid: gid, Groups: groups}, Setpgid: true}
+	if kms { // root, as this service is: the framebuffer and /dev/uinput are for root
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		cmd.Env = []string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "USER=" + name, assistTokenEnv + "=" + token}
+	}
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("start the helper as %s: %w", name, err)
 	}

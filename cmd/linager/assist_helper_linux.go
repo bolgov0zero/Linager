@@ -16,7 +16,7 @@ import (
 // assistHelperCmds is `linager agent assistant-helper`: the process the agent service starts as the person of a graphical
 // session to serve its screen to the Assistant.
 func assistHelperCmds() []*cobra.Command {
-	var addr string
+	var addr, mode string
 	var session int
 	helper := &cobra.Command{
 		Use:    "assistant-helper",
@@ -25,7 +25,7 @@ func assistHelperCmds() []*cobra.Command {
 		Run: func(c *cobra.Command, _ []string) {
 			ctx, stop := signal.NotifyContext(c.Context(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
-			code, err := agent.RunAssistHelper(ctx, addr, session)
+			code, err := agent.RunAssistHelper(ctx, addr, session, mode)
 			if err != nil {
 				_, _ = fmt.Fprintln(c.ErrOrStderr(), err)
 			}
@@ -37,5 +37,6 @@ func assistHelperCmds() []*cobra.Command {
 	}
 	helper.Flags().StringVar(&addr, "addr", "", "address of the agent on the loopback")
 	helper.Flags().IntVar(&session, "session", 0, "number of the session")
+	helper.Flags().StringVar(&mode, "mode", "", `"kms": read the screen below the compositor (the sign-in screen, X11, a locked screen)`)
 	return []*cobra.Command{helper}
 }
