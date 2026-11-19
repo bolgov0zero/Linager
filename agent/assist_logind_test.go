@@ -31,8 +31,13 @@ func TestConsoleSession(t *testing.T) {
 	if s.supported() {
 		t.Error("x11 is found but not supported yet")
 	}
-	if _, ok := consoleSession(list[:4]); ok {
-		t.Error("a greeter, a tty, a login over the network and a session in the background are not a console")
+	// nobody is signed in: the sign-in screen is the console
+	if g, ok := consoleSession(list[:1]); !ok || g.ID != "1" || !g.supported() {
+		t.Errorf("the greeter of GDM is the console while nobody is signed in: %+v %v", g, ok)
+	}
+	// a tty, a login over the network and a session in the background are not a console
+	if _, ok := consoleSession(list[1:4]); ok {
+		t.Error("they are not a console")
 	}
 }
 

@@ -75,7 +75,8 @@ type mutterHost struct {
 	clipText   string // what the browser put on the clipboard of the computer
 	out        []byte // the frame handed out by Grab
 
-	relayout atomic.Bool // the monitors changed: the capture starts again from the new layout
+	relayout atomic.Bool   // the monitors changed: the capture starts again from the new layout
+	frameCh  chan struct{} // a new frame came
 
 	nodeCh chan uint32
 	sigs   chan *dbus.Signal
@@ -88,7 +89,7 @@ func newMutterHost(log *slog.Logger) (*mutterHost, error) {
 	if err != nil {
 		return nil, fmt.Errorf("the session bus: %w", err)
 	}
-	h := &mutterHost{log: log, conn: conn, maxFPS: 15, nodeCh: make(chan uint32, 4), sigs: make(chan *dbus.Signal, 32), stop: make(chan struct{})}
+	h := &mutterHost{log: log, conn: conn, maxFPS: 15, frameCh: make(chan struct{}, 1), nodeCh: make(chan uint32, 4), sigs: make(chan *dbus.Signal, 32), stop: make(chan struct{})}
 	conn.Signal(h.sigs)
 	for _, m := range []struct{ iface, member string }{
 		{scStream, "PipeWireStreamAdded"},
@@ -206,7 +207,7 @@ func (h *mutterHost) frameSizeLocked() (int, int) {
 // tryGstLocked starts a pipeline and waits for its first frame. A screen that does not change sends none, so after a
 // moment the pointer is moved by a pixel and back: that is a change.
 func (h *mutterHost) tryGstLocked(w, hh, fps int) (*gstCapture, error) {
-	c, err := startGst(h.node, fps, w, hh)
+	c, err := startGst(h.node, fps, w, hh, h.frameReady)
 	if err != nil {
 		return nil, err
 	}
@@ -441,7 +442,10 @@ func (h *mutterHost) Do(in assist.Input) error {
 	if rd == nil {
 		return errors.New("the session is not open")
 	}
-	call := func(method string, args ...any) error { return rd.Call(rdSess+"."+method, 0, args...).Err }
+	// no answer is waited for: the events follow one another on the bus, and a round trip each would queue them up
+	call := func(method string, args ...any) error {
+		return rd.Call(rdSess+"."+method, dbus.FlagNoReplyExpected, args...).Err
+	}
 	move := func() error {
 		fw, fh := 0, 0
 		if c != nil {
@@ -544,6 +548,17 @@ func (h *mutterHost) ClipboardSet(text string) error {
 }
 
 func (h *mutterHost) Desktop() string { return "default" }
+
+// frameReady tells the loop that a new frame came, so that a change on the screen is sent at once and not at the next tick.
+func (h *mutterHost) frameReady() {
+	select {
+	case h.frameCh <- struct{}{}:
+	default:
+	}
+}
+
+// Frames is what the loop waits on besides its timer.
+func (h *mutterHost) Frames() <-chan struct{} { return h.frameCh }
 
 // SetShowCursor draws the pointer of the computer into the picture or not; the compositor decides it when the stream
 // is made, so the sessions are opened again.

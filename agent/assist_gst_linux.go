@@ -33,8 +33,8 @@ type gstCapture struct {
 }
 
 // startGst starts the pipeline for the PipeWire node; w and h are the size of the frames. fps limits the rate of the
-// frames (0: no limit).
-func startGst(node uint32, fps, w, h int) (*gstCapture, error) {
+// frames (0: no limit). notify is called after every frame that came.
+func startGst(node uint32, fps, w, h int, notify func()) (*gstCapture, error) {
 	path, err := exec.LookPath("gst-launch-1.0")
 	if err != nil {
 		return nil, errNoGst
@@ -50,7 +50,7 @@ func startGst(node uint32, fps, w, h int) (*gstCapture, error) {
 	if fps > 0 {
 		args = append(args, "videorate", "drop-only=true", "max-rate="+strconv.Itoa(fps), "!")
 	}
-	args = append(args, "videoconvert", "!", "videoscale", "!", fmt.Sprintf("video/x-raw,format=BGRA,width=%d,height=%d", w, h), "!", "fdsink", "fd=3")
+	args = append(args, "videoconvert", "!", "videoscale", "!", fmt.Sprintf("video/x-raw,format=BGRA,width=%d,height=%d", w, h), "!", "fdsink", "fd=3", "sync=false")
 	cmd := exec.Command(path, args...) //nolint:gosec // the path of gst-launch-1.0 and numbers
 	cmd.ExtraFiles = []*os.File{pw}
 	cmd.Stderr = os.Stderr
@@ -79,6 +79,9 @@ func startGst(node uint32, fps, w, h int) (*gstCapture, error) {
 			c.mu.Unlock()
 			if first {
 				close(c.first)
+			}
+			if notify != nil {
+				notify()
 			}
 		}
 	}()

@@ -263,3 +263,56 @@ func TestParseClipAndMonitor(t *testing.T) {
 		t.Fatalf("the pointer is hidden by default: %+v %v", s, err)
 	}
 }
+
+// noisy is a picture that costs a lot of traffic.
+func noisy(w, h int) []byte {
+	b := make([]byte, w*h*4)
+	x := uint32(12345)
+	for i := range b {
+		x = x*1664525 + 1013904223
+		b[i] = byte(x >> 24)
+	}
+	return b
+}
+
+func TestEncoderRefinesTilesSentAtLowQuality(t *testing.T) {
+	s := Settings{Colors: Colors24, FPS: 15, Mbit: 0.5, Auto: true}
+	e := NewEncoder(s)
+	pix := noisy(128, 128)
+	now := time.Unix(1000, 0)
+	if tiles, err := e.Encode(pix, 128, 128, now); err != nil || len(tiles) == 0 {
+		t.Fatalf("the first picture is whole: %d tiles, %v", len(tiles), err)
+	}
+	if e.Quality() >= startQuality {
+		t.Fatalf("a picture over the budget lowers the quality: %d", e.Quality())
+	}
+	// the screen is still: the tiles come again at a better quality, then it is quiet
+	refined, quiet := 0, false
+	for i := 0; i < 400 && !quiet; i++ {
+		now = now.Add(time.Second)
+		tiles, err := e.Encode(pix, 128, 128, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(tiles) == 0 {
+			quiet = refined > 0 // nothing is left to improve
+			continue
+		}
+		refined += len(tiles)
+	}
+	if refined == 0 || !quiet {
+		t.Errorf("tiles sent at a low quality are refined once, then it is quiet: refined %d, quiet %v", refined, quiet)
+	}
+}
+
+func TestEncoderDoesNotRefineAtFixedQuality(t *testing.T) {
+	e := NewEncoder(Settings{Colors: Colors24, FPS: 15, Mbit: 20, NoLimit: true, Auto: false})
+	pix := noisy(128, 128)
+	now := time.Unix(1000, 0)
+	if _, err := e.Encode(pix, 128, 128, now); err != nil {
+		t.Fatal(err)
+	}
+	if tiles, _ := e.Encode(pix, 128, 128, now.Add(time.Second)); len(tiles) != 0 {
+		t.Errorf("nothing changed and the quality never moved: %d tiles", len(tiles))
+	}
+}

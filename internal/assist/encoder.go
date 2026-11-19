@@ -18,13 +18,22 @@ const (
 	fixedQuality = 80
 )
 
+// A tile sent at a low quality (the traffic budget was spent) is sent again at the quality in force once the screen is
+// still: refineGap is how much lower than the quality now it must have been, refineMax how many tiles one picture
+// takes. A flat dark area sent in tiles of different quality shows as rectangles of slightly different shades.
+const (
+	refineGap = 6
+	refineMax = 8
+)
+
 // Encoder turns screen shots into the tiles that changed since the last picture that was sent. It keeps the previous
 // picture, the colour mode and the traffic budget; it does not touch the screen or the network, so it is tested
 // everywhere. It is used by one goroutine.
 type Encoder struct {
 	set     Settings
 	w, h    int
-	prev    []byte // the last picture that was sent, BGRA after the colour reduction
+	prev    []byte  // the last picture that was sent, BGRA after the colour reduction
+	tileQ   []uint8 // the JPEG quality each tile was last sent at
 	cur     []byte
 	changed []bool
 	quality int
@@ -65,7 +74,7 @@ func (e *Encoder) Quality() int { return e.quality }
 func (e *Encoder) Interval() time.Duration { return time.Second / time.Duration(e.set.FPS) }
 
 // Reset makes the next picture a whole one (a new viewer, a change of the screen size).
-func (e *Encoder) Reset() { e.prev = nil }
+func (e *Encoder) Reset() { e.prev, e.tileQ = nil, nil }
 
 // rate is the traffic budget in bytes per second; zero means no limit.
 func (e *Encoder) rate() float64 {
@@ -83,7 +92,7 @@ func (e *Encoder) Encode(bgra []byte, w, h int, now time.Time) ([]Tile, error) {
 		return nil, fmt.Errorf("assist: bad screen shot %dx%d (%d bytes)", w, h, len(bgra))
 	}
 	if w != e.w || h != e.h {
-		e.w, e.h, e.prev = w, h, nil
+		e.w, e.h, e.prev, e.tileQ = w, h, nil, nil
 	}
 	if rate := e.rate(); rate > 0 {
 		if e.last.IsZero() {
@@ -117,8 +126,28 @@ func (e *Encoder) Encode(bgra []byte, w, h int, now time.Time) ([]Tile, error) {
 			any = any || c
 		}
 	}
+	if len(e.tileQ) != tx*ty {
+		e.tileQ = make([]uint8, tx*ty)
+	}
 	if !any {
-		return nil, nil
+		// the screen is still: tiles that were sent at a low quality are sent again, at the best quality when the quality
+		// moves by the traffic budget
+		q := e.quality
+		if e.set.Auto && e.rate() > 0 {
+			q = maxQuality
+		}
+		n := 0
+		for idx := range e.changed {
+			if n < refineMax && int(e.tileQ[idx])+refineGap <= q {
+				e.changed[idx] = true
+				any = true
+				n++
+			}
+		}
+		if !any {
+			return nil, nil
+		}
+		e.quality = q
 	}
 
 	var tiles []Tile
@@ -140,6 +169,9 @@ func (e *Encoder) Encode(bgra []byte, w, h int, now time.Time) ([]Tile, error) {
 				return nil, err
 			}
 			tiles = append(tiles, Tile{X: x0, Y: y0, W: rw, H: rh, Data: pic})
+			for t := i; t < k; t++ {
+				e.tileQ[j*tx+t] = uint8(e.quality) //nolint:gosec // 25..85
+			}
 			total += len(pic)
 			i = k
 		}

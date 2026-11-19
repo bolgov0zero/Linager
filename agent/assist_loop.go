@@ -157,6 +157,11 @@ func runAssistLoop(ctx context.Context, rw io.ReadWriter, host assistHost, info 
 	if err := hello(); err != nil {
 		return err
 	}
+	// a host that has frames of its own (a compositor that sends a frame when the screen changes) wakes the loop with them
+	var hostFrames <-chan struct{}
+	if f, ok := host.(interface{ Frames() <-chan struct{} }); ok {
+		hostFrames = f.Frames()
+	}
 	enc := assist.NewEncoder(assist.DefaultSettings())
 	var frames, sentBytes, idle int
 	statAt := time.Now()
@@ -179,6 +184,9 @@ func runAssistLoop(ctx context.Context, rw io.ReadWriter, host assistHost, info 
 			}
 			idle = 0
 		case <-wake:
+			t.Stop()
+			idle = 0
+		case <-hostFrames:
 			t.Stop()
 			idle = 0
 		case <-reHello:

@@ -77,21 +77,33 @@ func parseLogindSession(id, text string) (logindSession, bool) {
 	return s, s.UID > 0 || s.User != ""
 }
 
-// graphicalUserSession tells whether the session is one whose screen the Assistant can show: the person's own graphical
-// session on a seat (not a greeter, not a login over the network). x11 is listed too so that the reason can be told.
+// graphicalUserSession tells whether the session is one whose screen the Assistant can show: the graphical session of a
+// person on a seat or the sign-in screen (the greeter of GDM), not a login over the network. x11 is listed too so that
+// the reason can be told.
 func (s logindSession) graphicalUserSession() bool {
-	return !s.Remote && s.Class == "user" && s.Seat != "" && (s.Type == "wayland" || s.Type == "x11")
+	return !s.Remote && (s.Class == "user" || s.Class == "greeter") && s.Seat != "" && (s.Type == "wayland" || s.Type == "x11")
 }
 
 // supported is true for the kind of session the Assistant can capture now (GNOME on Wayland).
 func (s logindSession) supported() bool { return s.graphicalUserSession() && s.Type == "wayland" }
 
-// consoleSession is the graphical session that is in front on seat0: the console of the computer.
+// consoleSession is the graphical session that is in front on seat0: the console of the computer (a person's session,
+// or the sign-in screen while nobody is signed in).
 func consoleSession(list []logindSession) (logindSession, bool) {
-	for _, s := range list {
-		if s.graphicalUserSession() && s.Seat == "seat0" && s.Active {
+	var greeter *logindSession
+	for i, s := range list {
+		if !s.graphicalUserSession() || s.Seat != "seat0" || !s.Active {
+			continue
+		}
+		if s.Class == "user" {
 			return s, true
 		}
+		if greeter == nil {
+			greeter = &list[i]
+		}
+	}
+	if greeter != nil {
+		return *greeter, true
 	}
 	return logindSession{}, false
 }
