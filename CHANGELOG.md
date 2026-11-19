@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.4
+
+- Fix: **the picture settings window of the Assistant blinked while it was moved** ("Loading..." and the form again). Every move gives the window a new object, and the form took that as a new computer and read the settings once more (an unsaved edit was lost too). The form follows the id of the computer only now.
+
 ## 0.5.3
 
 - Fix: **a failed Windows service was counted on the dashboard ("1 service failed") but not marked in the "Services" list.** The counter takes the automatic services that stopped with an error, while the list showed every stopped service as "inactive". The list now marks the same services as "failed" (the filter "Failed" and the red row work as on Linux), both use one rule (`serviceFailed`, tested on Windows). **The Windows agent needs this version** (Updates page).

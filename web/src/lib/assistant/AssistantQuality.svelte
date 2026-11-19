@@ -5,7 +5,9 @@
   import { setAssistSettings } from './settings';
 
   /** The picture settings of the Assistant of one computer: presets, colours, frame rate, traffic limit, pointer. The "Management" tab and the floating window share it. */
-  let { serverId }: { serverId: string } = $props();
+  let { serverId: serverIdProp }: { serverId: string } = $props();
+  // Derived: a floating window gets a new `win` object on every move, which must not read the settings again (the form would blink and the edits would be lost).
+  const serverId = $derived(serverIdProp);
 
   let draft = $state<AssistSettings>({ ...PRESETS.normal });
   let loaded = $state(false);
