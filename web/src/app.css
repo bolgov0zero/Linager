@@ -1,3 +1,9 @@
+@property --p {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
 @font-face {
   font-family: "Medeo Mono";
   src: url("/fonts/MedeoMonoVariable.woff2") format("woff2");

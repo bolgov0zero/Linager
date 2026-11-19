@@ -14,7 +14,7 @@
   import Segments from './ui/Segments.svelte';
   import PixIcon from './ui/PixIcon.svelte';
   import Select from './ui/Select.svelte';
-  import { isPhone } from './ui/viewport';
+  import { isPhone, PHONE_MAX } from './ui/viewport';
   import { openDesktopWindow, openTermWindow } from './terminal/windows';
   import { showToast } from './toast';
   import { dashView } from './dashboard/view';
@@ -79,24 +79,69 @@
   /** Only the server list scrolls: its height is what is left of the window below the summary and the filters. */
   let scroller = $state<HTMLDivElement | undefined>(undefined);
   let listH = $state(480);
-  /** The summary tiles shrink to a thin strip while the list is scrolled (two thresholds: no flicker at the edge). */
-  let compact = $state(false);
-  function onListScroll(e: Event): void {
+  /**
+   * The summary tiles shrink to a thin strip as the list is scrolled, and the list does not move under the filters until
+   * they have: the first SPAN pixels of a wheel scroll go into the shrinking (progress 0..1), the rest scrolls the list.
+   * Scrolling back up to the top of the list grows the tiles again.
+   */
+  const SPAN = 54;
+  let progress = $state(0);
+  let lastWheel = 0;
+  function onListWheel(e: WheelEvent): void {
     const el = e.currentTarget as HTMLElement;
-    const y = el.scrollTop;
-    // Collapsing gives the list more room, so only do it when there is plenty of content left to scroll.
-    if (y > 60 && el.scrollHeight - el.clientHeight > 160) compact = true;
-    else if (y < 10) compact = false;
+    if (window.innerWidth <= PHONE_MAX || e.ctrlKey) return;
+    lastWheel = performance.now();
+    const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * el.clientHeight : e.deltaY;
+    if (dy > 0 && progress < 1) {
+      if (progress === 0 && el.scrollHeight - el.clientHeight < 8) return; // nothing to scroll: leave the tiles alone
+      e.preventDefault();
+      const use = Math.min(dy, (1 - progress) * SPAN);
+      progress = Math.min(1, progress + use / SPAN);
+      if (dy > use) el.scrollTop += dy - use;
+    } else if (dy < 0 && progress > 0 && el.scrollTop <= 0) {
+      e.preventDefault();
+      progress = Math.max(0, progress + dy / SPAN);
+    }
   }
+  function onListScroll(e: Event): void {
+    // Scrolled by something other than the wheel (keys, the scroll bar, touch): follow it.
+    const y = (e.currentTarget as HTMLElement).scrollTop;
+    if (y > 2 && progress < 1) progress = 1;
+    else if (y < 2 && progress > 0 && performance.now() - lastWheel > 400) progress = 0;
+  }
+  $effect(() => {
+    const el = scroller;
+    if (!el) {
+      progress = 0;
+      return;
+    }
+    el.addEventListener('wheel', onListWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onListWheel);
+  });
   function fitList(): void {
     if (!scroller) return;
-    if (scroller.scrollTop < 10) compact = false;
     const top = scroller.getBoundingClientRect().top + window.scrollY;
     listH = Math.max(240, Math.floor(window.innerHeight - top - 28));
   }
+  // The tiles change height over ~0.22 s: follow it frame by frame, so the list's bottom edge stays at the window's.
+  let followFrame = 0;
+  function followList(): void {
+    cancelAnimationFrame(followFrame);
+    const end = performance.now() + 320;
+    const step = () => {
+      fitList();
+      if (performance.now() < end) followFrame = requestAnimationFrame(step);
+    };
+    followFrame = requestAnimationFrame(step);
+  }
+  $effect(() => {
+    void progress;
+    followList();
+    return () => cancelAnimationFrame(followFrame);
+  });
   $effect(() => {
     // Measure again when the list appears, changes its mode or something above it changes its height.
-    void [scroller, view, visible.length, loaded, totals, compact];
+    void [scroller, view, visible.length, loaded, totals];
     fitList();
     window.addEventListener('resize', fitList);
     return () => window.removeEventListener('resize', fitList);
@@ -464,7 +509,7 @@
   {:else if loadFailed && items.length === 0}
     <p class="error" role="alert">{$tr('dash.loadFailed')}</p>
   {:else}
-    <Summary summary={totals} {compact} />
+    <Summary summary={totals} {progress} />
 
     {#if $isPhone}
       <!-- Phone: one pinned row (filters, search); the group picker only when groups exist. -->

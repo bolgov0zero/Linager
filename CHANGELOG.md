@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.12
+
+- Fix: **the summary tiles of the dashboard shrink together with the scroll, and the servers do not go under the filter bar until they have.** The first 54 px of a wheel scroll over the list go into the shrinking (the hints fold away, the number gets smaller, the padding goes down; a number property `--p` from 0 to 1 drives it and is smoothed over 0.12 s, so a step of a mouse wheel is not a jump); the rest scrolls the list. Scrolling back up to the top of the list grows the tiles again. The list's bottom edge follows frame by frame, so the page does not jump. Keys, the scroll bar and touch (no wheel) snap the tiles to the strip. Nothing changes when the list is too short to scroll, on a phone, or with "reduce motion" (no smoothing).
+
 ## 0.3.11
 
 - Change: **the four summary tiles of the dashboard shrink to a thin strip while the list of servers is scrolled** (the label and the number in one line, no hints); at the top of the list they are full again. On a phone they stay the strip of four cells they already were. The list takes the room the tiles free; the change is made with two thresholds, so the strip does not flicker at the edge, and only when there is enough list left to scroll.
