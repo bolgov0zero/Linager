@@ -13,6 +13,7 @@
   import { desktopApi, desktopSocketUrl, type DesktopState } from '../../api';
   import { tr, t } from '../../i18n';
   import { showToast } from '../toast';
+  import { planKey } from './keys';
 
   /**
    * The remote desktop of a Windows computer: a login form, then the screen of the browser RDP client (IronRDP,
@@ -60,6 +61,97 @@
   let resizeTimer: ReturnType<typeof setTimeout> | undefined;
   let observer: ResizeObserver | undefined;
   let gone = false;
+
+  // ---- the keyboard: Cmd of a Mac works as Ctrl, and the clipboard shortcuts carry the clipboard with them ----
+
+  const mac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  /** Cmd was used with another key: letting it go is not a tap of the Windows key. */
+  let metaUsed = false;
+  let clipWarned = false;
+  let keysOn = false;
+
+  const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+  /** A key event for the client (it listens on the window): with Ctrl (typed as well when it comes from Cmd) and the shift of the real key. */
+  function typeKey(e: KeyboardEvent, withCtrl: boolean, full: boolean): void {
+    const fire = (type: 'keydown' | 'keyup', code: string, key: string): void => {
+      window.dispatchEvent(new KeyboardEvent(type, { code, key, ctrlKey: withCtrl || e.ctrlKey, shiftKey: e.shiftKey, bubbles: true, cancelable: true }));
+    };
+    if (full) fire('keydown', 'ControlLeft', 'Control');
+    fire('keydown', e.code, e.key);
+    fire('keyup', e.code, e.key);
+    if (full) fire('keyup', 'ControlLeft', 'Control');
+  }
+
+  /** The local clipboard goes to the computer first (the keystroke is a user action, so the browser may ask), then the paste. */
+  async function paste(e: KeyboardEvent, viaMeta: boolean): Promise<void> {
+    try {
+      await ui?.sendClipboardData();
+    } catch (err) {
+      const text = String(err instanceof Error ? err.message : err);
+      // an empty clipboard is no news; a refusal is, once
+      if (!clipWarned && !/no data/i.test(text)) {
+        clipWarned = true;
+        showToast(t('desk.clipDenied'));
+      }
+    }
+    await wait(120);
+    if (ui) typeKey(e, viaMeta, viaMeta);
+  }
+
+  /** The clipboard of the computer goes into the local one once the program has put the text there. */
+  function fetchClipboard(): void {
+    setTimeout(() => {
+      void Promise.resolve()
+        .then(() => ui?.saveRemoteClipboardData())
+        .catch(() => undefined); // nothing came (the browser is still asking, or there is nothing new): nothing to say
+    }, 350);
+  }
+
+  function onKey(e: KeyboardEvent): void {
+    if (!e.isTrusted || !ui || !element || document.activeElement !== element) return;
+    const plan = planKey(e, mac);
+    const stop = (): void => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    };
+    if (plan === 'meta') {
+      stop();
+      if (e.type === 'keydown') {
+        if (!e.repeat) metaUsed = false;
+      } else if (!metaUsed) {
+        try {
+          ui.metaKey();
+        } catch {
+          // not connected any more
+        }
+      }
+      return;
+    }
+    if (plan === 'pass' || e.type !== 'keydown') return;
+    const viaMeta = mac && e.metaKey;
+    if (plan === 'copy' && !viaMeta) {
+      fetchClipboard(); // Ctrl+C itself goes as it is
+      return;
+    }
+    stop();
+    if (viaMeta) metaUsed = true;
+    if (plan === 'paste') {
+      void paste(e, viaMeta);
+      return;
+    }
+    typeKey(e, true, true);
+    if (plan === 'copy') fetchClipboard();
+  }
+
+  function keys(on: boolean): void {
+    if (on === keysOn) return;
+    keysOn = on;
+    for (const type of ['keydown', 'keyup'] as const) {
+      if (on) window.addEventListener(type, onKey, true);
+      else window.removeEventListener(type, onKey, true);
+    }
+  }
 
   $effect(() => {
     if (phase !== 'form') return;
@@ -136,6 +228,8 @@
       await ready;
       ui.setEnableClipboard(true);
       ui.setEnableAutoClipboard(true);
+      clipWarned = false;
+      keys(true);
       ui.onWarningCallback((w: string) => showToast(w));
       const config = ui
         .configBuilder()
@@ -178,6 +272,7 @@
   }
 
   function cleanup(): void {
+    keys(false);
     observer?.disconnect();
     clearTimeout(resizeTimer);
     try {

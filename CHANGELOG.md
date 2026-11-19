@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.2
+
+- Fix: **copy and paste from the keyboard in the remote desktop (RDP).** The client of the browser sent Cmd of a Mac to Windows as the Windows key (Cmd+C was Win+C), and it synchronised the clipboard only by itself in the background, which needs HTTPS and a permission that Safari does not give to a timer. Now Cmd works as Ctrl (a Cmd tapped alone is still the Windows key), Ctrl+V and Cmd+V send your clipboard to the computer first and then type the paste, and after Ctrl+C, Cmd+C and Cmd+X the clipboard of the computer is fetched into yours; a refusal of the browser is told once. The rules of the keys are in `desktop/keys.ts` (tested). Not tried on a real Windows computer.
+
 ## 0.5.1
 
 - New: **the picture settings of the Assistant open in a floating window.** The item "Quality and frame rate…" no longer takes you to the "Management" tab (from a floating Assistant or the Console that left the page); it opens a small window with the same card (presets, colours, frame rate, traffic limit, "lower the quality by itself", the pointer), one per server, also in the Console (it is listed among the windows) and on the Assistant tab of a server page. A change takes effect at once, and the line under the screen shows the result. The card is one component (`AssistantQuality`) for the tab and the window; the presets and the traffic estimate moved to `quality.ts` (tested).

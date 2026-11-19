@@ -34,6 +34,7 @@
   "desk.clipSend": "Send my clipboard",
   "desk.clipSave": "Take the computer's clipboard",
   "desk.clipboardSaved": "Clipboard copied",
+  "desk.clipDenied": "The browser did not allow access to the clipboard: allow it for this page (HTTPS is needed).",
   "desk.scaleFit": "Scale: fit the window",
   "desk.scaleReal": "Scale: 100%",
   "desk.autoResize": "Change resolution with the window",
