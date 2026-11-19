@@ -371,7 +371,8 @@
       for (const g of groups) {
         items.push({
           key: `g${g.id}`,
-          label: `${card.group_id === g.id ? '✓ ' : ''}${$tr('dash.group.label')}: ${g.name}`,
+          label: `${$tr('dash.group.label')}: ${g.name}`,
+          checked: card.group_id === g.id,
           separated: items.length === (osKind(card.os) === 'windows' ? 4 : 2),
           onselect: () => void setCardGroup(card, String(g.id)),
         });
@@ -647,8 +648,8 @@
                 {/each}
               </div>
               <div class="tnet mono">
-                <span><b class="rx" aria-hidden="true">↓</b> {fmtRate(sample.rx_bps)}</span>
-                <span><b class="tx" aria-hidden="true">↑</b> {fmtRate(sample.tx_bps)}</span>
+                <span><b class="rx" aria-hidden="true"><PixIcon name="arrow-down" size={12} /></b> {fmtRate(sample.rx_bps)}</span>
+                <span><b class="tx" aria-hidden="true"><PixIcon name="arrow-up" size={12} /></b> {fmtRate(sample.tx_bps)}</span>
               </div>
             {/if}
             <span class="tsub mono tup">{uptimeText(card)}</span>

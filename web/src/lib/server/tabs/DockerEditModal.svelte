@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../../ui/PixIcon.svelte';
   import { tick, untrack } from 'svelte';
   import { get } from 'svelte/store';
   import { api, type DockerContainer, type DockerEditConfig } from '../../../api';
@@ -303,7 +304,7 @@
                   <span class="label">{$tStore('dockerEdit.port.proto')}</span>
                   <Select bind:value={p.proto} options={protoOptions} ariaLabel={$tStore('dockerEdit.port.proto')} disabled={!!compose} />
                 </div>
-                <button class="rm" type="button" aria-label={$tStore('dockerEdit.port.remove')} disabled={!!compose} onclick={() => void removeRow('ports', p._id)}>×</button>
+                <button class="rm" type="button" aria-label={$tStore('dockerEdit.port.remove')} disabled={!!compose} onclick={() => void removeRow('ports', p._id)}><PixIcon name="x" size={12} /></button>
               </div>
             {/each}
           </div>
@@ -333,7 +334,7 @@
                   <span class="label">{$tStore('dockerEdit.mount.mode')}</span>
                   <label class="check chk"><input type="checkbox" disabled={!!compose} bind:checked={m.ro} /> <span>{$tStore('dockerEdit.mount.ro')}</span></label>
                 </div>
-                <button class="rm" type="button" aria-label={$tStore('dockerEdit.mount.remove')} disabled={!!compose} onclick={() => void removeRow('mounts', m._id)}>×</button>
+                <button class="rm" type="button" aria-label={$tStore('dockerEdit.mount.remove')} disabled={!!compose} onclick={() => void removeRow('mounts', m._id)}><PixIcon name="x" size={12} /></button>
               </div>
             {/each}
           </div>
@@ -364,7 +365,7 @@
                     {/if}
                   </div>
                 </div>
-                <button class="rm" type="button" aria-label={$tStore('dockerEdit.env.remove')} disabled={!!compose} onclick={() => void removeRow('env', e._id)}>×</button>
+                <button class="rm" type="button" aria-label={$tStore('dockerEdit.env.remove')} disabled={!!compose} onclick={() => void removeRow('env', e._id)}><PixIcon name="x" size={12} /></button>
               </div>
             {/each}
           </div>

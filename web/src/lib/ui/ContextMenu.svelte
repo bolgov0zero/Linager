@@ -6,11 +6,14 @@
     danger?: boolean;
     /** A thin line is drawn above this item. */
     separated?: boolean;
+    /** A check mark before the text: the chosen item. */
+    checked?: boolean;
     onselect: () => void;
   }
 </script>
 
 <script lang="ts">
+  import PixIcon from './PixIcon.svelte';
   import { onMount, tick } from 'svelte';
   import { get } from 'svelte/store';
   import { lockScroll } from './scrolllock';
@@ -132,12 +135,18 @@
       onpointerdown={(e) => e.preventDefault()}
       onclick={() => pick(i)}
     >
-      {item.label}
+      {#if item.checked}<span class="ck" aria-hidden="true"><PixIcon name="check" size={12} /></span>{/if}{item.label}
     </li>
   {/each}
 </ul>
 
 <style>
+  .ck {
+    display: inline-flex;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
   :global(.sel-list.ctx) {
     margin: 0;
     min-width: 180px;

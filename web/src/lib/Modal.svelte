@@ -62,7 +62,7 @@
       <h2 id={labelId}>{title}</h2>
       <div class="dialog-tools">
         {#if actions}{@render actions()}{/if}
-        <button class="btn" type="button" aria-label={$tr('common.close')} onclick={onclose}>{#if $isPhone}<PixIcon name="x" />{:else}×{/if}</button>
+        <button class="btn" type="button" aria-label={$tr('common.close')} onclick={onclose}><PixIcon name="x" /></button>
       </div>
     </header>
     <div class="dialog-body" class:flush class:fixed>

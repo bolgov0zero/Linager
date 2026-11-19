@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../ui/PixIcon.svelte';
   import type { Snippet } from 'svelte';
   import { tr } from '../../i18n';
   import { viewBox } from './vv';
@@ -103,13 +104,13 @@
     <div class="tools">
       {@render tools?.()}
       <button class="btn sm icon wbtn" type="button" title={$tr('termwin.minimize')} aria-label={$tr('termwin.minimize')}
-        onclick={() => updateTermWindow(key, { minimized: true })}>_</button>
+        onclick={() => updateTermWindow(key, { minimized: true })}><PixIcon name="minus" size={14} /></button>
       <button class="btn sm icon wide" type="button"
         title={win.maximized ? $tr('termwin.restore') : $tr('termwin.maximize')}
         aria-label={win.maximized ? $tr('termwin.restore') : $tr('termwin.maximize')}
-        onclick={toggleMax}>{win.maximized ? '▭' : '□'}</button>
+        onclick={toggleMax}><PixIcon name={win.maximized ? 'collapse' : 'expand'} size={14} /></button>
       <button class="btn sm icon wbtn" type="button" title={$tr('termwin.close')} aria-label={$tr('termwin.close')}
-        onclick={() => (onclose ? onclose() : closeTermWindow(key))}>×</button>
+        onclick={() => (onclose ? onclose() : closeTermWindow(key))}><PixIcon name="x" size={14} /></button>
     </div>
     <span class="brk" aria-hidden="true"></span>
   </header>

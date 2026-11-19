@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../ui/PixIcon.svelte';
   import type { UpdateStep, UpdatesInfo } from '../../api';
   import Select from '../ui/Select.svelte';
   import Modal from '../Modal.svelte';
@@ -197,7 +198,7 @@
           {@const dur = took(id)}
           <li class="upd-step {st}">
             <span class="upd-ico" aria-hidden="true">
-              {#if st === 'done'}✓{:else if st === 'running'}<span class="upd-spin"></span>{:else if st === 'unknown'}<span class="upd-dots">…</span>{:else if st === 'failed'}✗{:else}○{/if}
+              {#if st === 'done'}<PixIcon name="check" size={12} />{:else if st === 'running'}<span class="upd-spin"></span>{:else if st === 'unknown'}<PixIcon name="more" size={12} />{:else if st === 'failed'}<PixIcon name="x" size={12} />{:else}<PixIcon name="circle" size={12} />{/if}
             </span>
             <span>{$trans(`upd.srvstep.${id}`)}</span>
             {#if dur}<span class="upd-dur">{dur}</span>{/if}

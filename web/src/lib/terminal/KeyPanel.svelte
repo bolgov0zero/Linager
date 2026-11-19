@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../ui/PixIcon.svelte';
   import { tr } from '../../i18n';
 
   /**
@@ -44,6 +45,7 @@
 
   // The arrow cluster: the inverted T of a real keyboard; Esc and Tab stand where PgUp and PgDn do on a laptop.
   const ARROWS: Cell[] = [key('Esc', 'Esc'), key('Up', '↑'), key('Tab', 'Tab'), key('Left', '←'), key('Down', '↓'), key('Right', '→')];
+  const ARROW_ICON: Record<string, string> = { '←': 'arrow-left', '↑': 'arrow-up', '↓': 'arrow-down', '→': 'arrow-right' };
   const ARROW_NAMES: Record<string, string> = { '↑': 'Up', '↓': 'Down', '←': 'Left', '→': 'Right' };
 
   let mode = $state(0);
@@ -89,7 +91,7 @@
             aria-label={ARROW_NAMES[cell.label] ?? undefined}
             aria-pressed={cell.mod ? on : undefined}
             onpointerdown={keep}
-            onclick={() => press(cell)}>{cell.label}</button>
+            onclick={() => press(cell)}>{#if ARROW_ICON[cell.label]}<PixIcon name={ARROW_ICON[cell.label]} size={16} />{:else}{cell.label}{/if}</button>
         {:else}
           <span class="gap" aria-hidden="true"></span>
         {/if}

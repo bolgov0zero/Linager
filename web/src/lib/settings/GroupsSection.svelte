@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../ui/PixIcon.svelte';
   import { onMount } from 'svelte';
   import { api, ApiError, isUnauthorized, type Group } from '../../api';
   import { t, tr } from '../../i18n';
@@ -115,8 +116,8 @@
             oninput={(event) => (names[group.id] = event.currentTarget.value)}
             onkeydown={(event) => event.key === 'Enter' && void rename(group)} />
           <div class="row acts">
-            <button class="btn sq" type="button" title={$tr('dash.group.up')} aria-label={$tr('dash.group.up')} disabled={busy || i === 0} onclick={() => void move(i, -1)}>↑</button>
-            <button class="btn sq" type="button" title={$tr('dash.group.down')} aria-label={$tr('dash.group.down')} disabled={busy || i === groups.length - 1} onclick={() => void move(i, 1)}>↓</button>
+            <button class="btn sq" type="button" title={$tr('dash.group.up')} aria-label={$tr('dash.group.up')} disabled={busy || i === 0} onclick={() => void move(i, -1)}><PixIcon name="arrow-up" size={14} /></button>
+            <button class="btn sq" type="button" title={$tr('dash.group.down')} aria-label={$tr('dash.group.down')} disabled={busy || i === groups.length - 1} onclick={() => void move(i, 1)}><PixIcon name="arrow-down" size={14} /></button>
             <button
               class="btn"
               type="button"

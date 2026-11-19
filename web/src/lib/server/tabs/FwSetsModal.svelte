@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../../ui/PixIcon.svelte';
   import type { FwSet } from '../../../api';
   import { tr as trs } from '../../../i18n';
   import Modal from '../../Modal.svelte';
@@ -172,7 +173,7 @@
 
         <div class="chips" role="list">
           {#each shownElements as e (e)}
-            <span class="chip2 mono" role="listitem">{e}<button type="button" aria-label={$trs('fw.sets.remove', { item: e })} onclick={() => removeElement(e)}>×</button></span>
+            <span class="chip2 mono" role="listitem">{e}<button type="button" aria-label={$trs('fw.sets.remove', { item: e })} onclick={() => removeElement(e)}><PixIcon name="x" size={12} /></button></span>
           {:else}
             <span class="muted small">{current.elements.length ? $trs('fw.sets.nothingFound') : $trs('fw.sets.emptyList')}</span>
           {/each}

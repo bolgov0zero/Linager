@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../ui/PixIcon.svelte';
   import { tr } from '../../i18n';
 
   let {
@@ -21,20 +22,20 @@
     disabled={index <= 0}
     title={$tr('dash.move.prev')}
     aria-label={$tr('dash.move.prev')}
-    onclick={() => onmove(-1)}>‹</button>
+    onclick={() => onmove(-1)}><PixIcon name="chevron-left" size={14} /></button>
   <button
     class="btn sm"
     type="button"
     disabled={index >= count - 1}
     title={$tr('dash.move.next')}
     aria-label={$tr('dash.move.next')}
-    onclick={() => onmove(1)}>›</button>
+    onclick={() => onmove(1)}><PixIcon name="next" size={14} /></button>
   <button
     class="btn sm"
     type="button"
     title={$tr('dash.remove')}
     aria-label={$tr('dash.remove')}
-    onclick={onremove}>×</button>
+    onclick={onremove}><PixIcon name="x" size={14} /></button>
 </div>
 
 <style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../ui/PixIcon.svelte';
   import type { AuditItem } from '../../api';
   import { locale, tr as translate } from '../../i18n';
   import { isPhone } from '../ui/viewport';
@@ -142,7 +143,7 @@
               title={isOpen ? $translate('audit.collapse') : $translate('audit.expand')}
               disabled={!item.details}
               onclick={() => toggle(item.id)}
-            >{isOpen ? '▾' : '▸'}</button>
+            ><PixIcon name={isOpen ? 'chev' : 'next'} size={12} /></button>
           </td>
         </tr>
         {#if isOpen && item.details}

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.1
+
+- Change: **the icons that were text characters are Pixelarticons too.** 0.7.0 replaced the drawn icons only; the buttons that used a character stay behind: minimize, maximize and close of the windows, the cross of the dialogs and of the rows and chips (Docker, Firewall sets, DNS, Fail2ban), the up and down buttons of the groups, the snippets and the firewall rules, the check mark of the chosen item in the menus (`ActionMenu` and `ContextMenu` got `checked`), the marks of the update and job stages, the arrows of the traffic on the cards, the Overview and Metrics, the tree and audit twists, the breadcrumbs, the arrows of the key panels, the move buttons of the dashboard editor and "to the end" of the logs. What stays text: "1920×1080", "×3", the "a → b" of versions and changes, and the legend of the traffic chart.
+
 ## 0.7.0
 
 - Fix: **the buttons "Files" and "Dispatcher" were smaller than their neighbours** in the header of a window and on a tab: they were as tall as the icon. They are as tall as a button with words now, and nearly square (the remote desktop passes the size of the header, as the others do).

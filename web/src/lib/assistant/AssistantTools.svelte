@@ -78,7 +78,8 @@
   const sessionItems = $derived(
     entries.map((e) => ({
       key: e.value,
-      label: `${e.value === session ? '✓ ' : ''}${e.session ? itemLabel(e.session) : $tr('assist.console')}`,
+      label: e.session ? itemLabel(e.session) : $tr('assist.console'),
+      checked: e.value === session,
       disabled: e.session ? !e.session.screen : false,
       onselect: () => (session = e.value),
     })),
@@ -94,30 +95,29 @@
     const list = info?.monitors ?? [];
     if (list.length < 2) return [];
     const picked = info?.monitor ?? -1;
-    const mark = (on: boolean): string => (on ? '✓ ' : '');
     return [
       ...list.map((m, i) => ({
         key: `mon${i}`,
-        label: `${mark(picked === i)}${$tr('assist.monitorN', { n: i + 1 })}${m.primary ? ` (${$tr('assist.monitorPrimary')})` : ''} · ${m.w}×${m.h}`,
+        label: `${$tr('assist.monitorN', { n: i + 1 })}${m.primary ? ` (${$tr('assist.monitorPrimary')})` : ''} · ${m.w}×${m.h}`,
+        checked: picked === i,
         onselect: () => s?.selectMonitor(i),
       })),
-      { key: 'monall', label: `${mark(picked === -1)}${$tr('assist.monitorAll')}`, onselect: () => s?.selectMonitor(-1) },
+      { key: 'monall', label: $tr('assist.monitorAll'), checked: picked === -1, onselect: () => s?.selectMonitor(-1) },
     ];
   });
 
   const displayItems = $derived.by(() => {
-    const mark = (d: string): string => (display === d ? '✓ ' : '');
     const pick = (d: 'fit' | 'window' | 'max' | 'real') => () => (display = d);
     const list =
       layout === 'window'
         ? [
-            { key: 'fit', label: `${mark('fit')}${$tr('assist.mode.fit')}`, onselect: pick('fit') },
-            { key: 'window', label: `${mark('window')}${$tr('assist.mode.window')}`, onselect: pick('window') },
-            { key: 'max', label: `${mark('max')}${$tr('assist.mode.max')}`, onselect: pick('max') },
+            { key: 'fit', label: $tr('assist.mode.fit'), checked: display === 'fit', onselect: pick('fit') },
+            { key: 'window', label: $tr('assist.mode.window'), checked: display === 'window', onselect: pick('window') },
+            { key: 'max', label: $tr('assist.mode.max'), checked: display === 'max', onselect: pick('max') },
           ]
         : [
-            { key: 'fit', label: `${mark('fit')}${$tr('assist.mode.fit')}`, onselect: pick('fit') },
-            { key: 'real', label: `${mark('real')}${$tr('assist.mode.real')}`, onselect: pick('real') },
+            { key: 'fit', label: $tr('assist.mode.fit'), checked: display === 'fit', onselect: pick('fit') },
+            { key: 'real', label: $tr('assist.mode.real'), checked: display === 'real', onselect: pick('real') },
           ];
     return [...list, { key: 'full', label: $tr('assist.mode.full'), onselect: () => screen?.fullscreen() }];
   });
@@ -134,7 +134,7 @@
       ...monitorItems,
       { key: 'send', label: $tr('desk.clipSend'), disabled: !clip, onselect: () => void s?.sendClipboard() },
       { key: 'save', label: $tr('desk.clipSave'), disabled: !clip, onselect: () => s?.getClipboard() },
-      { key: 'info', label: `${$assistInfoShown ? '✓ ' : ''}${$tr('assist.info')}`, onselect: toggleAssistInfo },
+      { key: 'info', label: $tr('assist.info'), checked: $assistInfoShown, onselect: toggleAssistInfo },
       { key: 'quality', label: $tr('assist.quality'), onselect: onsettings },
       { key: 'off', label: $tr('assist.disconnect'), onselect: () => s?.disconnect() },
     ];

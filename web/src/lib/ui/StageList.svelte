@@ -15,6 +15,7 @@
 </script>
 
 <script lang="ts">
+  import PixIcon from './PixIcon.svelte';
   import { onMount } from 'svelte';
   import { locale, tr as trans } from '../../i18n';
   import { fmtDuration } from '../updates/format';
@@ -65,7 +66,7 @@
     {@const time = elapsed(stage)}
     <li class="step {stage.state}">
       <span class="ico" aria-hidden="true">
-        {#if stage.state === 'done'}✓{:else if stage.state === 'running'}<span class="spin"></span>{:else if stage.state === 'failed'}✗{:else if stage.state === 'warn'}!{:else}○{/if}
+        {#if stage.state === 'done'}<PixIcon name="check" size={12} />{:else if stage.state === 'running'}<span class="spin"></span>{:else if stage.state === 'failed'}<PixIcon name="x" size={12} />{:else if stage.state === 'warn'}<PixIcon name="warn" size={12} />{:else}<PixIcon name="circle" size={12} />{/if}
       </span>
       <span class="name">{stage.name}</span>
       {#if time}<span class="dur">{time}</span>{/if}

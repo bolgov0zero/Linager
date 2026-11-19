@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../../ui/PixIcon.svelte';
   import { untrack } from 'svelte';
   import { api, ApiError, type DiskCleanItem, type DiskFS, type DiskNode, type DiskScan, type DiskState, type ServerDetail } from '../../../api';
   import { locale, t, tr as T } from '../../../i18n';
@@ -277,7 +278,7 @@
           <div class="crumbs">
             {#each path as n, i (i)}
               <button type="button" onclick={() => (path = path.slice(0, i + 1))}>{n.name}</button>
-              {#if i < path.length - 1}<span class="muted">›</span>{/if}
+              {#if i < path.length - 1}<span class="muted crumbsep"><PixIcon name="next" size={12} /></span>{/if}
             {/each}
           </div>
         </div>
@@ -285,7 +286,7 @@
           {#each rows as r (r.name)}
             {#if r.link}
               <button class="drow link" type="button" onclick={() => (path = [...path, r.node])}>
-                <span class="nm mono">{r.name} <span class="muted">›</span></span>
+                <span class="nm mono">{r.name} <span class="muted crumbsep"><PixIcon name="next" size={12} /></span></span>
                 <span class="track"><i style:width="{(r.size / biggest) * 100}%"></i></span>
                 <span class="sz mono">{formatBytes(r.size)}</span>
               </button>

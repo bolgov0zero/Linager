@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../ui/PixIcon.svelte';
   import { onMount } from 'svelte';
   import type { AgentUpdateStep } from '../../api';
   import { locale, tr as trans } from '../../i18n';
@@ -61,7 +62,7 @@
     {@const time = elapsed(step)}
     <li class="step {step.state}">
       <span class="ico" aria-hidden="true">
-        {#if step.state === 'done'}✓{:else if step.state === 'running'}<span class="spin"></span>{:else if step.state === 'failed'}✗{:else}○{/if}
+        {#if step.state === 'done'}<PixIcon name="check" size={12} />{:else if step.state === 'running'}<span class="spin"></span>{:else if step.state === 'failed'}<PixIcon name="x" size={12} />{:else}<PixIcon name="circle" size={12} />{/if}
       </span>
       <span class="name">{$trans(`upd.agstep.${step.id}`)}</span>
       {#if time}<span class="dur">{time}</span>{/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../../ui/PixIcon.svelte';
   import { untrack } from 'svelte';
   import { api, type FileEntry } from '../../../api';
   import { tr } from '../../../i18n';
@@ -107,7 +108,7 @@
         aria-label={open ? $tr('files.collapse') : $tr('files.expand')}
         disabled={leaf}
         onclick={() => toggle(row.path)}
-      >{leaf ? '' : node?.loading ? '·' : open ? '▾' : '▸'}</button>
+      >{#if leaf}{:else if node?.loading}·{:else}<PixIcon name={open ? 'chev' : 'next'} size={12} />{/if}</button>
       <button class="label" type="button" title={row.path} onclick={() => onnavigate(row.path)} ondblclick={() => toggle(row.path)}>
         <span class="icon" aria-hidden="true"></span><span class="text">{row.name}</span>
       </button>

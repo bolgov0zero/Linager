@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../ui/PixIcon.svelte';
   import { tr } from '../../i18n';
 
   /**
@@ -27,6 +28,7 @@
 
   const keep = (e: PointerEvent) => e.preventDefault();
 
+  const ARROW_ICON: Record<string, string> = { '←': 'arrow-left', '↑': 'arrow-up', '↓': 'arrow-down', '→': 'arrow-right' };
   const ARROWS: { key: string; label: string; name: string }[] = [
     { key: 'Left', label: '←', name: 'Left' },
     { key: 'Up', label: '↑', name: 'Up' },
@@ -41,10 +43,10 @@
   <button class="k" class:on={ctrl} type="button" aria-pressed={ctrl} onpointerdown={keep} onclick={() => ontoggle('ctrl')}>Ctrl</button>
   <button class="k" class:on={alt} type="button" aria-pressed={alt} onpointerdown={keep} onclick={() => ontoggle('alt')}>Alt</button>
   {#each ARROWS as a (a.key)}
-    <button class="k arrow" type="button" aria-label={a.name} onpointerdown={keep} onclick={() => onkey(a.key)}>{a.label}</button>
+    <button class="k arrow" type="button" aria-label={a.name} onpointerdown={keep} onclick={() => onkey(a.key)}><PixIcon name={ARROW_ICON[a.label]} size={16} /></button>
   {/each}
   <button class="k" class:on={more} type="button" aria-pressed={more} onpointerdown={keep} onclick={onmore}>{$tr('m.term.more')}</button>
-  <button class="k arrow" type="button" aria-label={$tr('m.term.hideKbd')} onpointerdown={keep} onclick={onhide}>▾</button>
+  <button class="k arrow" type="button" aria-label={$tr('m.term.hideKbd')} onpointerdown={keep} onclick={onhide}><PixIcon name="chev" size={16} /></button>
 </div>
 
 <style>

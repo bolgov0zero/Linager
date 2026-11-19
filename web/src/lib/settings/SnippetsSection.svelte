@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../ui/PixIcon.svelte';
   import { onMount } from 'svelte';
   import { api, ApiError, isUnauthorized, type Snippet } from '../../api';
   import { t, tr } from '../../i18n';
@@ -128,8 +129,8 @@
             <RowMenu label={$tr('docker.menu')} title={sn.name} items={menu(sn, i)} />
           {:else}
           <div class="row acts">
-            <button class="btn sm" type="button" aria-label={$tr('snippets.up')} title={$tr('snippets.up')} disabled={i === 0} onclick={() => void move(i, -1)}>↑</button>
-            <button class="btn sm" type="button" aria-label={$tr('snippets.down')} title={$tr('snippets.down')} disabled={i === $snippets.length - 1} onclick={() => void move(i, 1)}>↓</button>
+            <button class="btn sm" type="button" aria-label={$tr('snippets.up')} title={$tr('snippets.up')} disabled={i === 0} onclick={() => void move(i, -1)}><PixIcon name="arrow-up" size={14} /></button>
+            <button class="btn sm" type="button" aria-label={$tr('snippets.down')} title={$tr('snippets.down')} disabled={i === $snippets.length - 1} onclick={() => void move(i, 1)}><PixIcon name="arrow-down" size={14} /></button>
             <button class="btn sm" type="button" onclick={() => edit(sn)}>{$tr('snippets.edit')}</button>
             <button class="btn sm danger" type="button" onclick={() => (deleting = sn)}>{$tr('snippets.delete')}</button>
           </div>

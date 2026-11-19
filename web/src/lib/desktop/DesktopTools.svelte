@@ -19,7 +19,7 @@
 
   const items = $derived.by(() => {
     const s = session;
-    const list: { key: string; label: string; disabled?: boolean; onselect: () => void }[] = [
+    const list: { key: string; label: string; disabled?: boolean; checked?: boolean; onselect: () => void }[] = [
       { key: 'tm', label: $tr('desk.taskManager'), onselect: () => s?.combo(['ControlLeft', 'ShiftLeft', 'Escape']) },
       { key: 'win', label: $tr('desk.winKey'), onselect: () => s?.winKey() },
       { key: 'lock', label: $tr('desk.lock'), onselect: () => s?.combo(['MetaLeft', 'KeyL']) },
@@ -32,7 +32,7 @@
       { key: 'save', label: $tr('desk.clipSave'), disabled: !clip, onselect: () => void s?.saveClipboard() },
       { key: 'fit', label: $tr('desk.scaleFit'), onselect: () => s?.setScale('fit') },
       { key: 'real', label: $tr('desk.scaleReal'), onselect: () => s?.setScale('real') },
-      { key: 'auto', label: `${autoResize ? '✓ ' : ''}${$tr('desk.autoResize')}`, onselect: () => (autoResize = !autoResize) },
+      { key: 'auto', label: $tr('desk.autoResize'), checked: autoResize, onselect: () => (autoResize = !autoResize) },
       { key: 'full', label: $tr('desk.fullscreen'), onselect: () => s?.fullscreen() },
       { key: 'off', label: $tr('desk.disconnect'), onselect: () => s?.disconnect() },
     );

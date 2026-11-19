@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../ui/PixIcon.svelte';
   import type { ServerCard } from '../../api';
   import { tr } from '../../i18n';
   import { openAssistantWindow, openTermWindow } from '../terminal/windows';
@@ -76,7 +77,7 @@
     {/if}
     <div class="pft">
       <Tags {tags} />
-      {#if card.online}<span class="mono small muted net2">↓ {fmtRate(sample?.rx_bps)} ↑ {fmtRate(sample?.tx_bps)}</span>{/if}
+      {#if card.online}<span class="mono small muted net2"><PixIcon name="arrow-down" size={12} /> {fmtRate(sample?.rx_bps)} <PixIcon name="arrow-up" size={12} /> {fmtRate(sample?.tx_bps)}</span>{/if}
     </div>
   </article>
 {:else}
@@ -115,8 +116,8 @@
       <Spark values={card.online ? card.spark : []} height={24} />
     </div>
     <div class="net mono small">
-      <span>↓ {fmtRate(sample?.rx_bps)}</span>
-      <span>↑ {fmtRate(sample?.tx_bps)}</span>
+      <span><PixIcon name="arrow-down" size={12} /> {fmtRate(sample?.rx_bps)}</span>
+      <span><PixIcon name="arrow-up" size={12} /> {fmtRate(sample?.tx_bps)}</span>
       <span class="cap">{$tr('dash.cpu1m')}</span>
     </div>
   </div>

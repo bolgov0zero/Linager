@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../../ui/PixIcon.svelte';
   import { untrack } from 'svelte';
   import { api, ApiError, type F2bSettings } from '../../../api';
   import { t, tr as T } from '../../../i18n';
@@ -139,7 +140,7 @@
       <span class="ipchip mono">127.0.0.0/8</span>
       {#if selfIp}<span class="ipchip mono">{selfIp} · {$T('sec.f2b.yourAddress')}</span>{/if}
       {#each ignore as ip (ip)}
-        <span class="ipchip mono">{ip}<button type="button" aria-label={$T('sec.f2b.ignore.remove', { ip })} onclick={() => (ignore = ignore.filter((x) => x !== ip))}>×</button></span>
+        <span class="ipchip mono">{ip}<button type="button" aria-label={$T('sec.f2b.ignore.remove', { ip })} onclick={() => (ignore = ignore.filter((x) => x !== ip))}><PixIcon name="x" size={12} /></button></span>
       {/each}
     </div>
     <form

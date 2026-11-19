@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../ui/PixIcon.svelte';
   import { api, type History, type HistoryPoint, type MetricStats, type Period } from '../../api';
   import { locale, tr } from '../../i18n';
   import { isPhone } from '../ui/viewport';
@@ -77,7 +78,7 @@
 
 {#snippet statLine(s: MetricStats, fmt: (v: number) => string, prefix = '')}
   <p class="stats small" class:pref={!!prefix}>
-    {#if prefix}<span class="muted">{prefix}</span>{/if}
+    {#if prefix}<span class="muted"><PixIcon name={prefix === 'rx' ? 'arrow-down' : 'arrow-up'} size={12} /></span>{/if}
     <span>{$tr('srv.stat.min')} <b>{fmt(s.min)}</b></span>
     <span>{$tr('srv.stat.avg')} <b>{fmt(s.avg)}</b></span>
     <span>{$tr('srv.stat.p95')} <b>{fmt(s.p95)}</b></span>
@@ -199,8 +200,8 @@
           minTop={1024}
           label={$tr('srv.metrics.net')}
         />
-        {@render statLine(h.stats.rx, formatRate, '↓')}
-        {@render statLine(h.stats.tx, formatRate, '↑')}
+        {@render statLine(h.stats.rx, formatRate, 'rx')}
+        {@render statLine(h.stats.tx, formatRate, 'tx')}
       </article>
     </div>
 

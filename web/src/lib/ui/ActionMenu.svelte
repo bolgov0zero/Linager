@@ -24,7 +24,7 @@
     compact?: boolean;
     /** Tooltip and name of the button and of its list; defaults to the label. */
     title?: string;
-    items: { key: string; label: string; disabled?: boolean; onselect: () => void }[];
+    items: { key: string; label: string; disabled?: boolean; /** A check mark before the text: the chosen item. */ checked?: boolean; onselect: () => void }[];
     disabled?: boolean;
   } = $props();
 
@@ -163,7 +163,7 @@
         onpointerdown={(e) => e.preventDefault()}
         onclick={() => pick(i)}
       >
-        {item.label}
+        {#if item.checked}<span class="ck" aria-hidden="true"><PixIcon name="check" size={12} /></span>{/if}{item.label}
       </li>
     {/each}
   </ul>
@@ -174,6 +174,12 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
+  }
+
+  .ck {
+    display: inline-flex;
+    margin-right: 6px;
+    vertical-align: middle;
   }
 
   .arrow {

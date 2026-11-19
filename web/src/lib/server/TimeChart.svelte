@@ -9,6 +9,7 @@
 </script>
 
 <script lang="ts">
+  import PixIcon from '../ui/PixIcon.svelte';
   import { tr } from '../../i18n';
   import { isPhone } from '../ui/viewport';
   import type { ChartEvent } from './model';
@@ -285,7 +286,7 @@
           </span>
         {/each}
         {#each hoverEvents as e, i (i)}
-          <span>▲ {$tr(`srv.event.${e.kind}`)} · {fullLabel(e.ts)}</span>
+          <span><PixIcon name="warn" size={12} /> {$tr(`srv.event.${e.kind}`)} · {fullLabel(e.ts)}</span>
         {/each}
       </div>
     {/if}

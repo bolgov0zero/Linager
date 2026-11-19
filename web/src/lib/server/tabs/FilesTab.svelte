@@ -707,7 +707,7 @@
           onclick={() => go('/')}>/</button
         >
         {#each crumbs(path) as c (c.path)}
-          <span class="sep" aria-hidden="true">›</span>
+          <span class="sep" aria-hidden="true"><PixIcon name="next" size={12} /></span>
           <button
             class="crumb"
             type="button"

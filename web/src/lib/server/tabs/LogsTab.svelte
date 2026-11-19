@@ -282,7 +282,7 @@
     </div>
 
     {#if $isPhone && !autoscroll}
-      <button class="btn toend" type="button" onclick={toEnd}>↓ {$tr('m.logs.toEnd')}</button>
+      <button class="btn toend" type="button" onclick={toEnd}><PixIcon name="arrow-down" size={14} /> {$tr('m.logs.toEnd')}</button>
     {/if}
 
     {#if streamState === 'closed'}

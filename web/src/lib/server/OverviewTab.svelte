@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../ui/PixIcon.svelte';
   import type { Sample, ServerDetail } from '../../api';
   import { locale, tr } from '../../i18n';
   import { isPhone } from '../ui/viewport';
@@ -115,8 +116,8 @@
                 <span class="small muted mono">{nic.ip || '—'}{nic.up ? '' : ' · DOWN'}</span>
               </div>
               <div class="nic-rate small">
-                <span>↓ {formatRate(nic.rx_bps)}</span>
-                <span>↑ {formatRate(nic.tx_bps)}</span>
+                <span><PixIcon name="arrow-down" size={12} /> {formatRate(nic.rx_bps)}</span>
+                <span><PixIcon name="arrow-up" size={12} /> {formatRate(nic.tx_bps)}</span>
               </div>
             </li>
           {/each}

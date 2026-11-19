@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../ui/PixIcon.svelte';
   import { tick } from 'svelte';
   import { api, type HostUser } from '../../api';
   import { tr } from '../../i18n';
@@ -115,7 +116,7 @@
       {@const active = (u.uid === 0 ? '' : u.name) === current}
       <li role="none">
         <button class="item" class:active type="button" role="menuitemradio" aria-checked={active} onclick={() => pick(u)}>
-          <span class="mark" aria-hidden="true">{active ? '✓' : ''}</span>
+          <span class="mark" aria-hidden="true">{#if active}<PixIcon name="check" size={11} />{/if}</span>
           <span class="name">{u.name}</span>
           {#if u.gecos}<span class="muted small gecos">{u.gecos}</span>{/if}
         </button>

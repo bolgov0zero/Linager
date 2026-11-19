@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../../ui/PixIcon.svelte';
   import { untrack } from 'svelte';
   import { api, ApiError } from '../../../api';
   import { tr, t } from '../../../i18n';
@@ -82,7 +83,7 @@
             aria-invalid={check.rows[i] !== null}
             bind:value={rows[i]}
           />
-          <button class="btn" type="button" aria-label={$tr('net.dns.edit.remove')} title={$tr('net.dns.edit.remove')} onclick={() => removeRow(i)}>×</button>
+          <button class="btn" type="button" aria-label={$tr('net.dns.edit.remove')} title={$tr('net.dns.edit.remove')} onclick={() => removeRow(i)}><PixIcon name="x" size={14} /></button>
         </div>
         {#if check.rows[i]}<p class="error small">{$tr(check.rows[i])}</p>{/if}
       {/each}
