@@ -527,7 +527,7 @@
             <button class="chip" type="button" aria-pressed={filter === 'problems'} onclick={() => (filter = 'problems')}>{$tr('dash.filter.problems')}</button>
             <button class="chip" type="button" aria-pressed={filter === 'offline'} onclick={() => (filter = 'offline')}>{$tr('dash.filter.offline')}</button>
           </div>
-          <button class="btn ic" type="button" aria-label={$tr('dash.searchOpen')} aria-pressed={searchOpen || query !== ''} onclick={() => (searchOpen = !searchOpen)}><PixIcon name="search" /></button>
+          <button class="btn ic" type="button" aria-label={$tr('dash.searchOpen')} aria-pressed={searchOpen || query !== ''} onclick={() => (searchOpen = !searchOpen)}><PixIcon name="search" size={24} /></button>
         </div>
         {#if searchOpen || query !== ''}
           <input class="input search" type="search" placeholder={$tr('dash.search')} aria-label={$tr('dash.search')} bind:value={query} />
@@ -1019,8 +1019,6 @@
 
   .prow .btn.ic {
     flex: none;
-    width: 44px;
-    padding: 0;
   }
 
   .prow .btn.ic[aria-pressed='true'] {

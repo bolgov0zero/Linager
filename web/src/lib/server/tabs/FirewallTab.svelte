@@ -986,9 +986,9 @@
                   <td class="r num">{counters.packets}</td>
                   <td class="r num">{counters.bytes}</td>
                   <td class="r acts">
-                    <button class="ib" type="button" aria-label={$trs('fw.rule.up')} title={$trs('fw.rule.up')} disabled={row.index === 0} onclick={() => moveRule(row.chain, row.index, -1)}><PixIcon name="chevron-up" size={14} /></button
-                    ><button class="ib" type="button" aria-label={$trs('fw.rule.down')} title={$trs('fw.rule.down')} disabled={row.index === row.last} onclick={() => moveRule(row.chain, row.index, 1)}><PixIcon name="chevron-down" size={14} /></button
-                    ><button class="ib del" type="button" aria-label={$trs('fw.rule.delete')} title={$trs('fw.rule.delete')} onclick={() => removeRule(row.chain, row.index)}><PixIcon name="x" size={14} /></button
+                    <button class="ib" type="button" aria-label={$trs('fw.rule.up')} title={$trs('fw.rule.up')} disabled={row.index === 0} onclick={() => moveRule(row.chain, row.index, -1)}><PixIcon name="chevron-up" size={16} /></button
+                    ><button class="ib" type="button" aria-label={$trs('fw.rule.down')} title={$trs('fw.rule.down')} disabled={row.index === row.last} onclick={() => moveRule(row.chain, row.index, 1)}><PixIcon name="chevron-down" size={16} /></button
+                    ><button class="ib del" type="button" aria-label={$trs('fw.rule.delete')} title={$trs('fw.rule.delete')} onclick={() => removeRule(row.chain, row.index)}><PixIcon name="x" size={16} /></button
                     >
                   </td>
                 </tr>
@@ -1620,8 +1620,8 @@
   }
 
   .ib {
-    width: 23px;
-    height: 23px;
+    width: 24px;
+    height: 24px;
     padding: 0;
     display: inline-grid;
     place-items: center;

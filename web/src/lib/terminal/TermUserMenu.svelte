@@ -148,13 +148,21 @@
     min-width: 198px;
     max-width: min(378px, calc(100vw - 14px));
     margin: 0;
-    padding: 4px;
+    padding: 4px 0;
     overflow-y: auto;
     list-style: none;
     background: var(--surface);
     color: var(--ink);
     border: 2px solid var(--line);
     box-shadow: 3px 3px 0 var(--shade);
+  }
+
+  .list li {
+    padding: 0;
+  }
+
+  .list li.empty {
+    padding: 4px 9px;
   }
 
   .item {

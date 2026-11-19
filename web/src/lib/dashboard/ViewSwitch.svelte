@@ -12,7 +12,7 @@
     type="button"
     aria-label={$tr('dash.viewToggle')}
     onclick={() => setDashView($dashView === 'map' ? 'cards' : 'map')}>
-    <PixIcon name={$dashView === 'map' ? 'cards' : 'map'} />
+    <PixIcon name={$dashView === 'map' ? 'cards' : 'map'} size={24} />
   </button>
 {:else}
   <div class="seg" role="group" aria-label={$tr('dash.viewToggle')}>

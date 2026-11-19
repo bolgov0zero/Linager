@@ -302,10 +302,10 @@
     {/if}
     {#if serverName !== null && $serverBar}
       {@const sb = $serverBar}
-      <button class="btn tb-ic note" class:has={sb.hasNote} type="button" title={$tr('srv.note.open')} aria-label={$tr('srv.note.open')} onclick={sb.onnote}><PixIcon name="note" /></button>
+      <button class="btn tb-ic note" class:has={sb.hasNote} type="button" title={$tr('srv.note.open')} aria-label={$tr('srv.note.open')} onclick={sb.onnote}><PixIcon name="note" size={24} /></button>
       {#if sb.isAdmin}
         <RebootButton server={sb.detail} icon />
-        <button class="btn tb-ic danger" type="button" title={$tr('srv.delete')} aria-label={$tr('srv.delete')} onclick={sb.ondelete}><PixIcon name="trash" /></button>
+        <button class="btn tb-ic danger" type="button" title={$tr('srv.delete')} aria-label={$tr('srv.delete')} onclick={sb.ondelete}><PixIcon name="trash" size={24} /></button>
       {/if}
     {/if}
     <!-- Phone: the bottom bar has its own "More" sheet, so the menu is only for the sign-in screen there. -->
@@ -519,8 +519,12 @@
   /* The icon buttons of the server page; the note button has a small square when the server has a note. */
   .right :global(.tb-ic) {
     position: relative;
-    min-width: 32px;
-    padding: 0 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 29px;
+    height: 29px;
+    padding: 0;
   }
 
   .right :global(.tb-ic.has)::after {

@@ -104,13 +104,13 @@
     <div class="tools">
       {@render tools?.()}
       <button class="btn sm icon wbtn" type="button" title={$tr('termwin.minimize')} aria-label={$tr('termwin.minimize')}
-        onclick={() => updateTermWindow(key, { minimized: true })}><PixIcon name="minus" size={14} /></button>
+        onclick={() => updateTermWindow(key, { minimized: true })}><PixIcon name="minus" size={16} /></button>
       <button class="btn sm icon wide" type="button"
         title={win.maximized ? $tr('termwin.restore') : $tr('termwin.maximize')}
         aria-label={win.maximized ? $tr('termwin.restore') : $tr('termwin.maximize')}
-        onclick={toggleMax}><PixIcon name={win.maximized ? 'collapse' : 'expand'} size={14} /></button>
+        onclick={toggleMax}><PixIcon name={win.maximized ? 'collapse' : 'expand'} size={16} /></button>
       <button class="btn sm icon wbtn" type="button" title={$tr('termwin.close')} aria-label={$tr('termwin.close')}
-        onclick={() => (onclose ? onclose() : closeTermWindow(key))}><PixIcon name="x" size={14} /></button>
+        onclick={() => (onclose ? onclose() : closeTermWindow(key))}><PixIcon name="x" size={16} /></button>
     </div>
     <span class="brk" aria-hidden="true"></span>
   </header>
@@ -212,11 +212,6 @@
     padding: 2px 7px;
     font-size: 11px;
     line-height: 1.4;
-  }
-
-  .tools :global(.btn.icon) {
-    min-width: 25px;
-    padding: 2px 4px;
   }
 
   .body {

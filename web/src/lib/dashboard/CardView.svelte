@@ -264,10 +264,7 @@
 
   /* Icon buttons: the same height as text buttons, square-ish. */
   .foot .btn.ic {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 7px;
+    flex: none;
   }
 
   /* The Assistant is the one action of a Windows card that is set apart by the accent colour. */

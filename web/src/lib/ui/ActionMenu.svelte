@@ -12,7 +12,7 @@
     icon,
     title,
     compact = false,
-    iconSize = 18,
+    iconSize = 16,
   }: {
     /** Text of the button; may be empty when `icon` stands for it (then `title` names the button). */
     label: string;

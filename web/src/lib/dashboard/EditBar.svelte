@@ -17,25 +17,25 @@
 
 <div class="edit row">
   <button
-    class="btn sm"
+    class="btn sm sq"
     type="button"
     disabled={index <= 0}
     title={$tr('dash.move.prev')}
     aria-label={$tr('dash.move.prev')}
-    onclick={() => onmove(-1)}><PixIcon name="chevron-left" size={14} /></button>
+    onclick={() => onmove(-1)}><PixIcon name="chevron-left" size={16} /></button>
   <button
-    class="btn sm"
+    class="btn sm sq"
     type="button"
     disabled={index >= count - 1}
     title={$tr('dash.move.next')}
     aria-label={$tr('dash.move.next')}
-    onclick={() => onmove(1)}><PixIcon name="next" size={14} /></button>
+    onclick={() => onmove(1)}><PixIcon name="next" size={16} /></button>
   <button
-    class="btn sm"
+    class="btn sm sq"
     type="button"
     title={$tr('dash.remove')}
     aria-label={$tr('dash.remove')}
-    onclick={onremove}><PixIcon name="x" size={14} /></button>
+    onclick={onremove}><PixIcon name="x" size={16} /></button>
 </div>
 
 <style>

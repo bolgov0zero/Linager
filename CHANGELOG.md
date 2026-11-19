@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.3
+
+- Fix: **the square icon buttons are square** (the cross of a dialog and of the window headers was 28x24, the up and down buttons of the groups 32x18 with a small icon off the centre). One rule now: an icon button is as wide as it is tall, 29 px (24 px for the compact one, 44 px on a phone), and carries the icon of the size Pixelarticons is drawn for (24 px in a 29 px button, 16 px in a 24 px one). It covers the buttons of the top bar, the cards, the server page, the Files and Dispatcher buttons, the move buttons of the groups, the snippets, the dashboard editor and the firewall rules.
+- Fix: **the snippet and the user menus of a terminal window were taller than the buttons** (the list is a `.sel-list`, whose items have their own padding, and the buttons inside added theirs: 32 px instead of 24). An item is 24 px, like the items of the list of the groups and like the small buttons.
+
 ## 0.7.2
 
 - Change: **the sizes follow the header of a floating window** (a 24 px button, 11 px text, a 36 px header), the only part that had the intended size. The header of a dialog is that header now (the title 14 px, the close button 24 px); a collapsed block ("Agents", "History", "Same from the terminal", the blocks of the settings and of the Metrics tab) is a thin bar of about 36 px instead of 64; the items of the dropdown menus (snippets, user, the menus of the buttons) are as tall as a small button (24 px, 11 px text); `.btn.sm` is one size everywhere (it was 33 px outside a window); the basic button and the field are 12 px text / 29 px instead of 13 px / 33 px, the top bar is 45 px instead of 57; the buttons of the server update stay in one row (a narrow panel shrinks them instead of moving the last one down). Phones keep the 44 px touch targets.

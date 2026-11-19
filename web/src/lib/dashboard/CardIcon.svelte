@@ -4,4 +4,4 @@
   let { name }: { name: 'terminal' | 'open' | 'trash' | 'assistant' } = $props();
 </script>
 
-<PixIcon {name} size={16} />
+<PixIcon {name} size={24} />

@@ -62,7 +62,7 @@
       <h2 id={labelId}>{title}</h2>
       <div class="dialog-tools">
         {#if actions}{@render actions()}{/if}
-        <button class="btn sm icon" type="button" aria-label={$tr('common.close')} onclick={onclose}><PixIcon name="x" size={14} /></button>
+        <button class="btn sm icon" type="button" aria-label={$tr('common.close')} onclick={onclose}><PixIcon name="x" size={16} /></button>
       </div>
     </header>
     <div class="dialog-body" class:flush class:fixed>
@@ -133,9 +133,8 @@
     gap: 4px;
   }
 
-  .dialog-tools :global(.btn) {
-    min-width: 25px;
-    padding: 2px 6px;
+  .dialog-tools :global(.btn:not(.icon)) {
+    padding: 2px 7px;
     font-size: 11px;
     line-height: 1.4;
     box-shadow: 2px 2px 0 var(--shade);

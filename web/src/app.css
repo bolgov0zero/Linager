@@ -161,6 +161,25 @@ button {
   box-shadow: 3px 3px 0 var(--shade);
 }
 
+/* Square icon buttons: as wide as a text button of the same size is tall. */
+.btn.ic,
+.btn.sq,
+.btn.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 29px;
+  height: 29px;
+  padding: 0;
+}
+
+.btn.sm.ic,
+.btn.sm.sq,
+.btn.sm.icon {
+  width: 24px;
+  height: 24px;
+}
+
 /* The compact control: the buttons of a floating window header (24 px) are the size of every small button of the interface. */
 .btn.sm {
   padding: 2px 7px;
@@ -341,6 +360,16 @@ input[type='checkbox']:focus-visible {
     justify-content: center;
     min-height: 44px;
     padding: 0 13px;
+  }
+
+  .btn.ic,
+  .btn.sq,
+  .btn.icon,
+  .btn.sm.ic,
+  .btn.sm.sq,
+  .btn.sm.icon {
+    width: 44px;
+    height: 44px;
   }
 
   /* a touch target stays a touch target: the compact button of a window is for the mouse */

@@ -142,7 +142,7 @@
     min-width: 198px;
     max-width: min(378px, calc(100vw - 14px));
     margin: 0;
-    padding: 4px;
+    padding: 4px 0;
     overflow-y: auto;
     list-style: none;
     background: var(--surface);
@@ -151,10 +151,12 @@
     box-shadow: 3px 3px 0 var(--shade);
   }
 
+  /* the list is a .sel-list (a sheet on a phone) whose items bring their own padding: here the buttons inside do */
   .row {
     display: flex;
     align-items: stretch;
-    gap: 4px;
+    gap: 0;
+    padding: 0;
   }
 
   .run,
@@ -204,6 +206,7 @@
 
   .manage {
     margin-top: 4px;
+    padding: 0;
     border-top: 2px solid var(--seg-off);
   }
 

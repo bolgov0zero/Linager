@@ -197,7 +197,7 @@
 <section class="srv" data-tab={tab}>
   <!-- Phone header: back, the section as a title, server and its state under it, the actions in a sheet. -->
   <header class="phead">
-    <button class="btn ic" type="button" aria-label={$tr('srv.back')} onclick={onBack}><PixIcon name="back" /></button>
+    <button class="btn ic" type="button" aria-label={$tr('srv.back')} onclick={onBack}><PixIcon name="back" size={24} /></button>
     <div class="pt">
       <h1>{detail ? $tr(currentTabKey) : name}</h1>
       <p class="mono">
@@ -205,10 +205,10 @@
       </p>
     </div>
     {#if detail}
-      <button class="btn ic note" class:has={Boolean(detail.note?.trim())} type="button" aria-label={$tr('srv.note.open')} onclick={() => (noteOpen = true)}><PixIcon name="note" /></button>
+      <button class="btn ic note" class:has={Boolean(detail.note?.trim())} type="button" aria-label={$tr('srv.note.open')} onclick={() => (noteOpen = true)}><PixIcon name="note" size={24} /></button>
     {/if}
     {#if detail && isAdmin}
-      <button class="btn ic" type="button" aria-label={$tr('srv.menu')} onclick={() => (menuOpen = true)}><PixIcon name="more" /></button>
+      <button class="btn ic" type="button" aria-label={$tr('srv.menu')} onclick={() => (menuOpen = true)}><PixIcon name="more" size={24} /></button>
     {/if}
   </header>
 
