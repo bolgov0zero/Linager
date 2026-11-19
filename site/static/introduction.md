@@ -1,12 +1,14 @@
 # Introduction
 
-Linager is an open-source system for managing Debian and Ubuntu servers: a server with a web admin panel and lightweight agents on the managed hosts.
+Linager is an open-source system for managing Debian, Ubuntu and Windows servers: a server with a web admin panel and lightweight agents on the managed hosts.
 
 ## What you get
 
 - Live metrics every 5 seconds and history up to 360 days.
 - A web terminal, a file manager, systemd services, processes and logs.
 - apt updates, network and firewall editing with an automatic rollback, Docker.
+- A Windows agent (beta): the same server page with a remote desktop in the browser, services, users and Windows Update.
+- Editing a Docker container, ignoring single package or container updates, a separate phone layout.
 - Roles, 2FA, passkeys and an audit log of every administrator action.
 - Access control for the admin panel: a white or black list by real client address, trusted proxies and an access journal.
 
@@ -26,8 +28,9 @@ The server keeps its data in a local PostgreSQL and serves the panel. Each agent
 |---|---|---|
 | Debian 12, 13 | amd64 | amd64, arm64 |
 | Ubuntu 22.04, 24.04, 26.04 | amd64 | amd64, arm64 |
+| Windows 10 / 11, Server 2016+ (beta) | n/a | amd64 (MSI) |
 
-The agent also runs on a Raspberry Pi 4 with a 64-bit OS.
+The agent also runs on a Raspberry Pi 4 with a 64-bit OS. The Windows agent is described in [Windows agent (beta)](windows).
 
 ## Where to go next
 

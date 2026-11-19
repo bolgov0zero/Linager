@@ -22,6 +22,9 @@ const ICONS: Record<string, string[]> = {
   net: ['00011000', '00011000', '00111100', '11111111', '10011001', '10011001', '11100111', '11100111'],
   dock: ['00000000', '00111000', '00111000', '11111111', '11111111', '11111110', '01111100', '00000000'],
   shield: ['01111110', '11111111', '11100111', '11100111', '11100111', '01100110', '00111100', '00011000'],
+  win: ['11111111', '10000001', '10000001', '10000001', '10000001', '11111111', '00011000', '01111110'],
+  phone: ['01111110', '01000010', '01000010', '01000010', '01000010', '01011010', '01000010', '01111110'],
+  plus: ['00011000', '00011000', '00011000', '11111111', '11111111', '00011000', '00011000', '00011000'],
   lock: ['00111100', '01000010', '01000010', '11111111', '11111111', '11100111', '11100111', '11111111'],
 };
 function icon(name: string): string {
@@ -33,20 +36,22 @@ function icon(name: string): string {
 const FEATS: [string, string][] = [
   ['dash', 'f1'], ['chart', 'f2'], ['term', 'f3'], ['folder', 'f4'], ['down', 'f5'],
   ['net', 'f6'], ['dock', 'f7'], ['shield', 'f8'], ['lock', 'f9'],
+  ['win', 'f10'], ['plus', 'f11'], ['phone', 'f12'],
 ];
+const TAGS: Record<string, string> = { f10: 'beta' };
 const STATS: [number, string][] = [[360, 'st.1'], [5, 'st.2'], [30, 'st.3'], [1, 'st.4']];
 const TABS: [string, string, string][] = [
   ['dashboard', 's.t1', 's.c1'], ['terminal', 's.t2', 's.c2'], ['firewall', 's.t3', 's.c3'],
-  ['docker', 's.t4', 's.c4'], ['access-restriction', 's.t5', 's.c5'],
+  ['docker', 's.t4', 's.c4'], ['windows-overview', 's.t6', 's.c6'], ['add-server', 's.t7', 's.c7'], ['access-restriction', 's.t5', 's.c5'],
 ];
 
 // ---- live mini dashboard
-interface Srv { n: string; c: number; r: number; d: number; k: string }
+interface Srv { n: string; c: number; r: number; d: number; k: string; os?: string }
 const servers = reactive<Srv[]>([
   { n: 'web-01', c: 35, r: 52, d: 41, k: '' },
   { n: 'web-02', c: 28, r: 47, d: 38, k: 'w' },
   { n: 'db-01', c: 91, r: 86, d: 72, k: 'c' },
-  { n: 'cache-01', c: 12, r: 31, d: 22, k: '' },
+  { n: 'office-pc', c: 12, r: 31, d: 22, k: '', os: 'WINDOWS' },
 ]);
 const bars = (v: number) => Array.from({ length: 20 }, (_, i) => i < Math.round(v / 5));
 const barCls = (v: number) => (v > 85 ? 'crit' : v > 65 ? 'warn' : '');
@@ -210,7 +215,7 @@ function pick(i: number): void {
           <div class="bar"><i></i><i></i><i></i><span>{{ t('live.title') }}</span></div>
           <div class="grid">
             <div v-for="s in servers" :key="s.n" class="sc" :class="s.k">
-              <h4><i class="dot" :class="s.k === 'c' ? 'crit' : s.k === 'w' ? 'warn' : 'ok'"></i>{{ s.n }}</h4>
+              <h4><i class="dot" :class="s.k === 'c' ? 'crit' : s.k === 'w' ? 'warn' : 'ok'"></i>{{ s.n }}<span class="os" :class="{ win: s.os }">{{ s.os ?? 'LINUX' }}</span></h4>
               <div class="row"><span>CPU</span><div class="pbar" :class="barCls(s.c)"><i v-for="(on, i) in bars(s.c)" :key="i" :class="{ on }"></i></div><b>{{ Math.round(s.c) }}%</b></div>
               <div class="row"><span>RAM</span><div class="pbar" :class="s.r > 85 ? 'crit' : ''"><i v-for="(on, i) in bars(s.r)" :key="i" :class="{ on }"></i></div><b>{{ Math.round(s.r) }}%</b></div>
               <div class="row"><span>DISK</span><div class="pbar"><i v-for="(on, i) in bars(s.d)" :key="i" :class="{ on }"></i></div><b>{{ Math.round(s.d) }}%</b></div>
@@ -235,7 +240,7 @@ function pick(i: number): void {
         <div class="fgrid">
           <div v-for="(f, i) in FEATS" :key="f[1]" class="card feat reveal" :style="{ '--d': (i % 3) * 0.08 + 's' }">
             <div class="ic" v-html="icon(f[0])"></div>
-            <h3>{{ t(f[1] + '.t') }} <span v-if="f[1] === 'f9'" class="new">{{ t('new') }}</span></h3>
+            <h3>{{ t(f[1] + '.t') }} <span v-if="TAGS[f[1]]" class="new">{{ t(TAGS[f[1]]) }}</span></h3>
             <p>{{ t(f[1] + '.p') }}</p>
           </div>
         </div>
@@ -294,6 +299,20 @@ function pick(i: number): void {
     </section>
 
     <section class="sec" style="padding-top: 20px">
+      <div class="wrap spot rev">
+        <div>
+          <span class="eyebrow">{{ t('x.eyebrow') }}</span>
+          <h2>{{ t('x.h2') }}</h2>
+          <p class="lead">{{ t('x.lead') }}</p>
+          <ul class="checks">
+            <li v-for="n in 5" :key="n" class="reveal" :style="{ '--d': n * 0.07 + 's' }">{{ t('x.' + n) }}</li>
+          </ul>
+        </div>
+        <div class="card reveal"><img alt="" style="display: block; width: 100%" :src="shot('windows-overview')" loading="lazy" /></div>
+      </div>
+    </section>
+
+    <section class="sec" style="padding-top: 20px">
       <div class="wrap spot">
         <div>
           <span class="eyebrow">{{ t('a.eyebrow') }}</span>
@@ -304,6 +323,23 @@ function pick(i: number): void {
           </ul>
         </div>
         <div class="card reveal"><img alt="" style="display: block; width: 100%" :src="shot('access-journal')" loading="lazy" /></div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="wrap spot">
+        <div>
+          <span class="eyebrow">{{ t('m.eyebrow') }}</span>
+          <h2>{{ t('m.h2') }}</h2>
+          <p class="lead">{{ t('m.lead') }}</p>
+          <ul class="checks">
+            <li v-for="n in 4" :key="n" class="reveal" :style="{ '--d': n * 0.07 + 's' }">{{ t('m.' + n) }}</li>
+          </ul>
+        </div>
+        <div class="phones reveal">
+          <img alt="" :src="shot('mobile-dashboard')" loading="lazy" />
+          <img alt="" :src="shot('mobile-server')" loading="lazy" />
+        </div>
       </div>
     </section>
 
@@ -327,7 +363,7 @@ function pick(i: number): void {
         </div>
         <p class="menu-note reveal">{{ t('w.menu') }}</p>
         <div class="term reveal"><div class="tb"><i></i><i></i><i></i></div><pre v-html="typed"></pre></div>
-        <div class="platforms"><span>Debian 12</span><span>Debian 13</span><span>Ubuntu 22.04</span><span>Ubuntu 24.04</span><span>Ubuntu 26.04</span><span>amd64</span><span>arm64 (agent)</span></div>
+        <div class="platforms"><span>Debian 12</span><span>Debian 13</span><span>Ubuntu 22.04</span><span>Ubuntu 24.04</span><span>Ubuntu 26.04</span><span>amd64</span><span>arm64 (agent)</span><span>Windows 10/11 · Server 2016+ (agent, beta)</span></div>
       </div>
     </section>
 
@@ -403,6 +439,8 @@ function pick(i: number): void {
 .lg .sc{border:2px solid var(--line);border-top-width:6px;padding:10px 12px;background:var(--surface)}
 .lg .sc.w{border-top-color:var(--warn)}.lg .sc.c{border-top-color:var(--crit)}
 .lg .sc h4{font-family:var(--font-display);font-weight:400;font-size:18px;display:flex;align-items:center;gap:8px}
+.lg .sc h4 .os{margin-left:auto;border:1px solid var(--muted);color:var(--muted);font-family:"Medeo Mono",monospace;font-size:9px;letter-spacing:.06em;padding:1px 4px;font-weight:400}
+.lg .sc h4 .os.win{border-color:var(--accent);color:var(--accent)}
 .lg .sc .row{display:grid;grid-template-columns:34px 1fr 38px;gap:8px;align-items:center;font-size:11px;color:var(--muted);margin-top:6px}
 .lg .sc .row b{font-weight:400;color:var(--ink);text-align:right}
 .lg .live .toast{position:absolute;right:-14px;bottom:-20px;background:var(--ink);color:var(--surface);padding:10px 14px;font-size:12px;box-shadow:4px 4px 0 var(--shade);animation:lgpop 6s ease-in-out infinite}
@@ -462,6 +500,9 @@ function pick(i: number): void {
 
 /* spotlight */
 .lg .spot{display:grid;grid-template-columns:.9fr 1.1fr;gap:44px;align-items:center}
+.lg .spot.rev>:first-child{order:2}
+.lg .phones{display:flex;gap:18px;justify-content:center;align-items:flex-start}
+.lg .phones img{width:calc(50% - 9px);max-width:260px;height:auto;border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);background:var(--surface)}
 .lg .checks{list-style:none;padding:0;margin:20px 0 0;display:grid;gap:10px}
 .lg .checks li{display:flex;gap:10px;align-items:flex-start;font-size:14px}
 .lg .checks li::before{content:"";flex:none;width:14px;height:14px;margin-top:5px;background:var(--accent);clip-path:polygon(0 55%,20% 40%,40% 62%,85% 10%,100% 25%,40% 90%)}
@@ -495,6 +536,7 @@ function pick(i: number): void {
 
 @media (max-width:900px){
   .lg .hero-grid,.lg .spot{grid-template-columns:1fr}
+  .lg .spot.rev>:first-child{order:0}
   .lg .live{max-width:520px}
   .lg .fgrid{grid-template-columns:1fr 1fr}
   .lg .stats-grid{grid-template-columns:1fr 1fr}.lg .stat:nth-child(3){border-left:0}.lg .stat:nth-child(n+3){border-top:2px solid #3b4455}
