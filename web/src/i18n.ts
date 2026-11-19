@@ -43,6 +43,8 @@ import enDesk from './locales/en.desk.json';
 import ruWin from './locales/ru.winmods.json';
 import enWin from './locales/en.winmods.json';
 import ruAssist from './locales/ru.assist.json';
+import ruPult from './locales/ru.pult.json';
+import enPult from './locales/en.pult.json';
 import enAssist from './locales/en.assist.json';
 import enAddsrv from './locales/en.addsrv.json';
 
@@ -50,8 +52,8 @@ export type Locale = 'ru' | 'en';
 export type Vars = Record<string, string | number>;
 
 const dictionaries: Record<Locale, Record<string, string>> = {
-  ru: { ...ru, ...ruServer, ...ruTerm, ...ruMgmt, ...ruFiles, ...ruNet, ...ruFw, ...ruUpd, ...ruAudit, ...ruSettings, ...ruAccess, ...ruSec, ...ruDisk, ...ruUsers, ...ruMobile, ...ruMobA, ...ruMobB, ...ruMobC, ...ruMobD, ...ruAddsrv, ...ruDesk, ...ruWin, ...ruAssist },
-  en: { ...en, ...enServer, ...enTerm, ...enMgmt, ...enFiles, ...enNet, ...enFw, ...enUpd, ...enAudit, ...enSettings, ...enAccess, ...enSec, ...enDisk, ...enUsers, ...enMobile, ...enMobA, ...enMobB, ...enMobC, ...enMobD, ...enAddsrv, ...enDesk, ...enWin, ...enAssist },
+  ru: { ...ru, ...ruServer, ...ruTerm, ...ruMgmt, ...ruFiles, ...ruNet, ...ruFw, ...ruUpd, ...ruAudit, ...ruSettings, ...ruAccess, ...ruSec, ...ruDisk, ...ruUsers, ...ruMobile, ...ruMobA, ...ruMobB, ...ruMobC, ...ruMobD, ...ruAddsrv, ...ruDesk, ...ruWin, ...ruAssist, ...ruPult },
+  en: { ...en, ...enServer, ...enTerm, ...enMgmt, ...enFiles, ...enNet, ...enFw, ...enUpd, ...enAudit, ...enSettings, ...enAccess, ...enSec, ...enDisk, ...enUsers, ...enMobile, ...enMobA, ...enMobB, ...enMobC, ...enMobD, ...enAddsrv, ...enDesk, ...enWin, ...enAssist, ...enPult },
 };
 const STORAGE_KEY = 'linager.lang';
 const DEFAULT_LOCALE: Locale = 'ru';

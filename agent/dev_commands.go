@@ -43,3 +43,14 @@ var devDesktopOff func() bool
 
 // DevDesktopOff is the answer of the simulator, false in a normal build.
 func DevDesktopOff() bool { return devDesktopOff != nil && devDesktopOff() }
+
+// devOS is the OS name the simulator reports in the hello of a simulated host (a normal build keeps it empty).
+var devOS string
+
+// helloOS is the OS name an agent introduces itself with.
+func helloOS() string {
+	if devOS != "" {
+		return devOS
+	}
+	return osName()
+}

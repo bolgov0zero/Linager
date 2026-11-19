@@ -25,6 +25,7 @@ func useSimWindows() {
 	ok := func(v any) CmdFunc {
 		return func(context.Context, json.RawMessage, bool) (any, error) { return v, nil }
 	}
+	devOS = "Windows 11 Pro 24H2"
 	devModules = []string{"metrics", "terminal", "desktop", "assistant", "services", "processes", "logs", "files", "disk", "users", "winupdate", "network", "system"}
 	devCommands = map[string]CmdFunc{
 		"services.list":      ok(simWinServices()),

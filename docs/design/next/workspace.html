@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Linager: макет режима «Пульт»</title>
+<style>
+@font-face{font-family:"Medeo Mono";src:url(../mockup/fonts/MedeoMonoVariable.woff2) format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Medeo Pixel";src:url(../mockup/fonts/MedeoPixelVariable.woff) format("woff");font-style:normal;font-display:swap}
+:root{
+  --bg:#e8ebe5;--surface:#f6f7f3;--ink:#14181e;--muted:#5d6572;--line:#14181e;--accent:#2b55d9;--good:#1e8a4b;--warn:#b36f0e;--crit:#c4352a;--seg-off:#d5d9d0;--shade:#c3c8bd;
+  --ctl:36px;--ctl-sm:28px;--side:252px;
+  --font-display:"Medeo Pixel","Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  --font-body:"Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  font-variation-settings:"ELSH" 1;font-synthesis:none;color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45;display:flex;flex-direction:column}
+h1,h2,h3,h4,p{margin:0}
+button{font:inherit;color:inherit}
+.muted{color:var(--muted)}.small{font-size:12px}
+.note{margin:0;padding:6px 16px;background:var(--ink);color:var(--surface);font-size:12px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.note .nm{display:flex;gap:6px;align-items:center}
+.note .chip{height:22px;font-size:11px;background:transparent;color:var(--surface);border-color:var(--surface);box-shadow:none;padding:0 8px}
+.note .chip[aria-pressed=true]{background:var(--surface);color:var(--ink)}
+.btn,.chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:var(--ctl);background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;padding:0 12px;cursor:pointer;font-family:var(--font-display);font-size:14px;letter-spacing:.02em;box-shadow:3px 3px 0 var(--shade);white-space:nowrap}
+.btn:hover{background:var(--seg-off)}
+.btn.sm{height:var(--ctl-sm);padding:0 9px;font-size:11px;box-shadow:2px 2px 0 var(--shade)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip{box-shadow:none;font-size:13px;padding:0 10px}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--surface)}
+.ok{color:var(--good)}.warn{color:var(--warn)}.crit{color:var(--crit)}
+svg.ic{width:16px;height:16px;flex:none;shape-rendering:crispEdges}
+
+/* ───── top bar of the panel (as on the dashboard; no summary tiles or filters in this mode) ───── */
+.top{display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:2px solid var(--line);background:var(--surface);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.brand h1{font-family:var(--font-display);font-size:22px;font-weight:400}
+.live{font-size:12px;color:var(--muted);margin-left:auto}
+.live i{display:inline-block;width:8px;height:8px;background:var(--good);margin-right:6px}
+.views{display:flex}
+.views .chip{box-shadow:none;margin-left:-2px}
+.views .chip:first-child{margin-left:0}
+
+/* ───── workspace ───── */
+.ws{flex:none;height:calc(100vh - 150px);min-height:560px;display:grid;grid-template-columns:var(--side) minmax(0,1fr);min-width:0}
+.side{display:flex;flex-direction:column;border-right:2px solid var(--line);background:var(--surface);min-height:0}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-bottom:2px solid var(--line)}
+.mode{display:flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 4px;background:none;border:0;border-right:2px solid var(--line);cursor:pointer;font-family:var(--font-display);font-size:13px}
+.mode:last-child{border-right:0}
+.mode:hover{background:var(--seg-off)}
+.mode[aria-pressed=true]{background:var(--ink);color:var(--surface)}
+.mode .cnt{font-family:var(--font-body);font-size:13px}
+.find{padding:8px;border-bottom:2px dashed var(--seg-off)}
+.find div{height:28px;border:2px solid var(--line);padding:0 8px;line-height:24px;color:var(--muted);font-size:12px;background:var(--bg)}
+.list{flex:1;overflow:auto;padding:4px 0 8px}
+.grp-h{display:flex;align-items:center;justify-content:space-between;width:100%;height:28px;padding:0 12px;margin-top:4px;background:none;border:0;cursor:pointer;color:var(--muted);font-family:var(--font-display);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.grp-h:hover{color:var(--ink)}
+.grp-h .chev{width:8px;height:8px;transition:transform .12s}
+.grp[data-collapsed=true] .chev{transform:rotate(-90deg)}
+.grp[data-collapsed=true] .srvs{display:none}
+.srv{display:flex;align-items:center;gap:9px;width:100%;height:30px;padding:0 12px 0 16px;border:2px solid transparent;background:none;cursor:pointer;text-align:left;font-size:13px;position:relative}
+.srv:hover{background:var(--seg-off)}
+.srv .dot{width:9px;height:9px;flex:none;background:var(--good)}
+.srv .dot.warn{background:var(--warn)}.srv .dot.crit{background:var(--crit)}
+.srv .dot.off{background:transparent;border:2px solid var(--muted)}
+.srv .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srv .os{font-size:10px;color:var(--muted);border:1px solid currentColor;padding:0 3px;font-family:var(--font-display)}
+.srv.off{color:var(--muted);cursor:not-allowed}
+.srv.openx::after{content:"";position:absolute;right:4px;top:50%;width:5px;height:5px;margin-top:-2px;background:var(--accent)}
+.srv[aria-current=true]{background:var(--ink);color:var(--surface);box-shadow:3px 3px 0 var(--shade)}
+.srv[aria-current=true] .os{color:var(--surface)}
+.srv.ctx{outline:2px dashed var(--accent);outline-offset:-2px}
+.side-foot{border-top:2px solid var(--line);padding:6px 12px;font-size:11px;color:var(--muted);display:flex;gap:8px;align-items:center}
+.side-foot kbd{border:2px solid var(--line);padding:0 4px;font-family:var(--font-display);font-size:10px;background:var(--bg)}
+
+/* right: tabs of open windows + the docked window */
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.tabbar{display:flex;align-items:stretch;background:var(--bg);min-width:0}
+.tabs{flex:1;min-width:0;display:flex;align-items:flex-end;gap:0;border-bottom:2px solid var(--line);background:var(--bg);overflow-x:auto;min-height:38px;padding:0 8px;scrollbar-width:none;scroll-behavior:smooth}
+.tabs::-webkit-scrollbar{display:none}
+.scr{display:none;flex:none;width:30px;border:0;border-bottom:2px solid var(--line);background:var(--surface);cursor:pointer;font-family:var(--font-display);font-size:16px;line-height:1}
+.scr:hover:not(:disabled){background:var(--ink);color:var(--surface)}
+.scr:disabled{opacity:.35;cursor:default}
+.scr.l{border-right:2px solid var(--line)}.scr.r{border-left:2px solid var(--line)}
+.tabbar.ovf .scr{display:block}
+.tab{display:flex;align-items:center;gap:8px;height:34px;padding:0 6px 0 10px;border:2px solid var(--line);border-bottom:0;margin-right:-2px;background:var(--surface);cursor:pointer;font-size:13px;white-space:nowrap;position:relative;top:2px}
+.tab:hover{background:var(--seg-off)}
+.tab[aria-selected=true]{background:var(--ink);color:var(--surface);z-index:2}
+.tab .x{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;border:0;background:none;cursor:pointer;opacity:.7}
+.tab .x:hover{opacity:1;background:var(--crit);color:#fff}
+.tab .x svg{width:10px;height:10px}
+.tab .dotm{width:8px;height:8px;background:var(--good)}
+.tab .dotm.warn{background:var(--warn)}.tab .dotm.crit{background:var(--crit)}
+.stage{flex:1;position:relative;min-height:0;display:flex;flex-direction:column;background:var(--surface)}
+.restored{display:flex;align-items:center;gap:10px;padding:5px 10px;border-bottom:2px dashed var(--seg-off);font-size:12px;color:var(--muted);background:var(--bg)}
+.restored b{font-weight:400;color:var(--ink)}.restored button{margin-left:auto}
+.pane-bar{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:2px solid var(--line);flex-wrap:wrap}
+.pane-bar .who{font-family:var(--font-display);font-size:14px}
+.pane-bar .tools{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pane-bar .sq{width:9px;height:9px;background:var(--good)}
+.pane-body{flex:1;min-height:0;display:flex}
+.empty{margin:auto;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:8px;align-items:center}
+.empty svg{width:48px;height:48px;color:var(--ink)}
+
+/* terminal */
+.term{flex:1;background:#0b0e14;color:#cfd6e4;font-size:13px;line-height:1.5;padding:10px 14px;overflow:auto;white-space:pre}
+.term .p{color:#6fd39a}.term .d{color:#7d9cff}.term .w{color:#e6b04b}
+.term .cur{display:inline-block;width:8px;height:15px;background:#cfd6e4;vertical-align:-2px;animation:bl 1s steps(1) infinite}
+@keyframes bl{50%{opacity:0}}
+
+/* the fake Windows screen */
+.screen{position:relative;flex:1;overflow:hidden;background:linear-gradient(135deg,#17356b,#2f68c4 58%,#7fb0ea);color:#111;font-family:Segoe UI,Arial,sans-serif;font-size:12px;user-select:none}
+.screen .ico{position:absolute;left:18px;width:54px;text-align:center;color:#fff;font-size:11px;text-shadow:1px 1px 0 #0006}
+.screen .ico i{display:block;width:34px;height:34px;margin:0 auto 4px;background:#fff4;border:2px solid #fff8}
+.screen .w{position:absolute;background:#f4f4f4;border:1px solid #6a6a6a;box-shadow:6px 6px 0 #0004}
+.screen .w .tb{height:24px;background:#2b55d9;color:#fff;padding:3px 8px;display:flex;justify-content:space-between}
+.screen .w .grid{display:grid;grid-template-columns:repeat(5,1fr);margin:0}
+.screen .w .grid span{border:1px solid #d6d6d6;padding:3px 6px;height:22px;overflow:hidden}
+.screen .w .grid span.h{background:#e8e8e8;font-weight:700}
+.taskbar{position:absolute;left:0;right:0;bottom:0;height:34px;background:#101827;display:flex;align-items:center;gap:6px;padding:0 8px;color:#fff;font-size:12px}
+.taskbar .st{width:22px;height:22px;background:#4f8cff}
+.taskbar .ap{width:90px;height:22px;background:#ffffff22;border-bottom:2px solid #7fb0ea;padding:2px 6px;overflow:hidden;white-space:nowrap}
+.taskbar .clk{margin-left:auto;text-align:right;line-height:1.1}
+
+/* floating windows (Files, editor): over the docked window, can be minimized to the dock */
+.fw{position:absolute;display:flex;flex-direction:column;background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);z-index:10;min-width:0}
+.fw.hidden{display:none}
+.fw .bar{display:flex;align-items:center;justify-content:space-between;gap:7px;padding:5px 7px 5px 11px;border-bottom:2px solid var(--line);background:var(--seg-off);cursor:move;user-select:none}
+.fw .name{display:flex;align-items:center;gap:7px;font-size:11px;white-space:nowrap}
+.fw .name .lb{font-family:var(--font-display)}
+.fw .name .sq{width:9px;height:9px;border:2px solid var(--line);background:var(--good)}
+.fw .wb{display:flex;gap:4px}
+.fw .wb .btn{height:25px;width:25px;padding:0;font-size:11px}
+.fw .wb svg{width:10px;height:10px}
+.fw .body{flex:1;min-height:0;display:flex;flex-direction:column}
+.fbar{display:flex;gap:6px;align-items:center;padding:6px 8px;border-bottom:2px dashed var(--seg-off);flex-wrap:wrap}
+.crumbs{font-size:12px;flex:1;min-width:120px}
+.crumbs b{font-weight:400;color:var(--accent)}
+.ftbl{width:100%;border-collapse:collapse;font-size:12px}
+.ftbl th{font-family:var(--font-display);font-weight:400;font-size:11px;color:var(--muted);text-align:left;padding:4px 10px;border-bottom:2px solid var(--line);position:sticky;top:0;background:var(--surface)}
+.ftbl td{padding:4px 10px;border-bottom:1px dashed var(--seg-off);white-space:nowrap}
+.ftbl tr:hover td{background:var(--seg-off)}
+.ftbl tr.sel td{background:var(--ink);color:var(--surface)}
+.ftbl .num{text-align:right}
+.fscroll{overflow:auto;flex:1;min-height:0}
+.edit{flex:1;min-height:0;margin:0;border:0;padding:8px 12px;background:var(--bg);color:var(--ink);font:12px/1.55 var(--font-body);resize:none;outline:none;white-space:pre;overflow:auto}
+.estat{display:flex;gap:12px;align-items:center;padding:4px 10px;border-top:2px solid var(--line);font-size:11px;color:var(--muted)}
+.view{flex:1;min-height:0;position:relative;display:flex;flex-direction:column}
+.wins{flex:none;border-top:2px solid var(--line);background:var(--bg);max-height:176px;overflow:auto;display:none}
+.wins.has{display:block}
+.wins .wh{position:sticky;top:0;background:var(--bg);display:flex;align-items:center;justify-content:space-between;height:26px;padding:0 12px;font-family:var(--font-display);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.wrow{display:flex;align-items:stretch;height:30px;border:2px solid transparent;font-size:12px}
+.wrow .tg{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:0 6px 0 12px;background:none;border:0;cursor:pointer;font:inherit;text-align:left}
+.wrow .tg span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wrow:hover{background:var(--seg-off)}
+.wrow.on{box-shadow:inset 3px 0 0 var(--accent)}
+.wrow.min{color:var(--muted)}
+.wrow.cur{background:var(--seg-off)}
+.wrow .st{margin-left:auto;font-size:10px;color:var(--muted);font-family:var(--font-display);padding-right:4px}
+.wrow .cl{width:28px;background:none;border:0;cursor:pointer;opacity:.7;display:inline-flex;align-items:center;justify-content:center}
+.wrow .cl:hover{background:var(--crit);color:#fff;opacity:1}
+.wrow svg{width:12px;height:12px;flex:none}
+
+/* context menu of a server in the sidebar */
+.cm{position:fixed;z-index:60;min-width:210px;background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);padding:4px;display:none}
+.cm.open{display:block}
+.cm button{display:flex;align-items:center;gap:8px;width:100%;height:30px;padding:0 10px;background:none;border:2px solid transparent;cursor:pointer;font-size:13px;text-align:left}
+.cm button:hover:not(:disabled){background:var(--ink);color:var(--surface)}
+.cm button:disabled{color:var(--muted);cursor:not-allowed}
+.cm .sep{height:2px;background:var(--seg-off);margin:4px 0}
+.cm .hd{padding:2px 10px 4px;font-size:11px;color:var(--muted);font-family:var(--font-display);letter-spacing:.06em}
+
+/* notes under the workspace */
+.notes{padding:14px 16px 20px;max-width:1100px}
+.notes h3{font-family:var(--font-display);font-weight:400;font-size:16px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.notes ul{margin:6px 0 0;padding-left:20px;font-size:12px}
+.notes li{margin:3px 0}
+@media (max-width:860px){.ws{grid-template-columns:1fr;grid-template-rows:260px minmax(0,1fr)}.side{border-right:0;border-bottom:2px solid var(--line)}}
+</style>
+</head>
+<body>
+<p class="note"><span>Макет нового режима дашборда. В нём нет блоков статистики и фильтров: только сайдбар и окно. Данные вымышленные; кликайте по серверам, вкладкам, переключателю режима; правый клик по серверу — «Файлы».</span>
+<span class="nm">Вкладок: <button class="chip" type="button" data-tabs="many" aria-pressed="false">много</button><button class="chip" type="button" data-tabs="few" aria-pressed="true">мало</button></span></p>
+
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 14 14" width="30" height="30" shape-rendering="crispEdges" aria-hidden="true"><rect width="14" height="14" rx="3" fill="#0f1218"/><rect x="2" y="3" width="2" height="2" fill="#e6e9ef"/><rect x="4" y="5" width="2" height="2" fill="#e6e9ef"/><rect x="2" y="7" width="2" height="2" fill="#e6e9ef"/><rect x="7" y="9" width="5" height="2" fill="#e6e9ef"/></svg>
+    <h1>Linager</h1>
+  </div>
+  <div class="views" role="group" aria-label="Вид"><button class="chip" type="button" aria-pressed="false">Карточки</button><button class="chip" type="button" aria-pressed="false">Карта</button><button class="chip" type="button" id="viewname" aria-pressed="true">Пульт</button></div>
+  <span class="live"><i></i>live · 14:32:08</span>
+  <button class="btn" type="button" id="theme">Тема</button>
+  <button class="btn" type="button" style="background:var(--accent);border-color:var(--accent);color:#fff">+ Сервер</button>
+</header>
+
+<div class="ws" id="ws">
+  <aside class="side">
+    <div class="modes" role="group" aria-label="Что открывать" id="modes"></div>
+    <div class="find"><div>Поиск по имени…</div></div>
+    <div class="list" id="list"></div>
+    <div class="wins" id="wins"></div>
+    <div class="side-foot"><span>клик — открыть</span><span>·</span><span>ПКМ — файлы</span></div>
+  </aside>
+  <section class="main">
+    <div class="tabbar" id="tabbar"><button class="scr l" type="button" id="scl" aria-label="Вкладки влево">&lt;</button><div class="tabs" id="tabs" role="tablist"></div><button class="scr r" type="button" id="scrr" aria-label="Вкладки вправо">&gt;</button></div>
+    <div class="stage" id="stage"></div>
+  </section>
+</div>
+
+<div class="cm" id="cm"></div>
+
+<div class="notes" id="notes">
+  <h3>Что здесь решаем</h3>
+  <ul>
+    <li><b>Название режима.</b> «Пульт» (выбрано): третий вид рядом с «Карточки» и «Карта».</li>
+    <li><b>Режим целиком.</b> Верхних плиток (Online, Внимание, Обновления, CPU) и фильтров нет, остаются верхняя строка панели, сайдбар и окно.</li>
+    <li><b>Сайдбар.</b> Сверху переключатель режима в одну строку: только значок (терминал, RDP, помощник) и число серверов, подпись в подсказке. Ниже группы серверов (сворачиваются, как группы на дашборде), у каждого сервера точка статуса, имя и метка системы LIN или WIN. Показываются только серверы, у которых есть этот режим: RDP только у Windows с включённым RDP (у DC-02 он выключен, поэтому его нет в списке «RDP»), «Помощник» только у Windows. Сервер не в сети виден, но серый и не открывается.</li>
+    <li><b>Окно справа.</b> Клик по серверу открывает его во вкладке рядом с сайдбаром (не плавающее). Над окном вкладки уже открытых сеансов; когда вкладок много, по краям строки вкладок появляются кнопки «‹» и «›» (прокрутка; у края строки кнопка гаснет, активная вкладка всегда прокручивается в видимую часть; кнопок нет, пока всё помещается); повторный клик по тому же серверу в том же режиме открывает уже открытую вкладку, а не новую. У вкладки значок режима, точка статуса и ×. Синий квадратик справа от имени в сайдбаре: у сервера уже есть открытая вкладка.</li>
+    <li><b>Окна файлов.</b> Окон может быть сколько угодно: «Файлы» открываются по одному окну на сервер (правый клик по серверу, у которого окно уже есть, просто выводит его вперёд и разворачивает), у каждого сервера своё содержимое (в макете: nginx у web-01, PostgreSQL у db-primary, папка Windows у WS-ACC-07). Редактор открывается по двойному клику на файле, по одному окну на файл. Новые окна ложатся каскадом, любое окно выходит вперёд при клике, их можно двигать.</li>
+    <li><b>Область «Окна».</b> Внизу сайдбара область «Окна · N» (она появляется, пока есть хотя бы одно окно). По строке на каждое окно в порядке открытия: клик сворачивает или разворачивает, у открытого синяя черта слева, у верхнего ещё и фон, у свёрнутого серый текст и пометка «свёрнуто», «×» закрывает. Когда окон больше шести, область растёт до фиксированной высоты и прокручивается сама (заголовок остаётся на месте). Список серверов выше прокручивается отдельно и под эту область не заходит. Окна сворачиваются в сайдбар, а не поверх картинки.</li>
+    <li><b>Правый клик.</b> «Файлы» открываются в плавающем окне поверх рабочей области, его можно сворачивать в нижнюю полосу, двигать, разворачивать. Файл из списка (двойной клик) открывается в редакторе, тоже в плавающем окне. Файлы остаются со своими окнами и не меняют вкладки.</li>
+    <li><b>Телефон.</b> На телефоне этого режима нет: переключатель видов там остаётся «Карточки / Карта».</li>
+    <li><b>Жизнь сеансов.</b> Сеансы принадлежат «Пульту», а не странице сервера и не вкладке: пока вы в «Пульте», все открытые терминалы, RDP и Помощники остаются подключёнными, переключение между вкладками и серверами их не сбрасывает (неактивные вкладки только скрыты; терминал не теряет историю на экране). Лимит терминалов на один сервер прежний (3). Скрытые вкладки RDP и Помощника ставятся на паузу, чтобы не гнать картинку впустую, и возобновляются при возврате. Если уйти из «Пульта» в «Карточки» или «Карту», сеансы остаются живыми в фоне (пауза у картинки, терминалы остаются со всей историей); они закрываются, когда вы закрываете их сами, перезагружаете страницу или выходите из панели.</li>
+    <li><b>Запоминание.</b> Запоминается всё, чтобы вернуться туда, где работали: открытые вкладки и их порядок, активная вкладка, режим сайдбара, свёрнутые группы, плавающие окна Файлов и редактора (положение, свёрнуто или нет, папка, открытый файл; несохранённые правки редактора остаются в черновике). Хранится в браузере по пользователю (на каком компьютере работали, там и вернётесь). При входе сеансы переподключаются сами, сверху показывается строка «Открыто то, на чём вы остановились». Ограничения: <i>RDP и Помощник</i> возвращаются в тот же сеанс Windows, потому что он живёт на компьютере. <i>Терминал</i> открывается заново в той же папке, а то, что было на экране (история), пропадает: оболочка закрывается вместе с вкладкой. Чтобы терминал переживал закрытие вкладки, нужен постоянный сеанс на сервере (как tmux), это отдельная большая задача и пока не входит.</li>
+    <li><b>Файлы.</b> Окно Файлов это тот же раздел «Файлы» со страницы сервера, один к одному: дерево, список, создание, загрузка и скачивание, копирование и перенос, удаление, архив, редактор с проверкой конфликтов. В макете показан упрощённый список.</li>
+  </ul>
+</div>
+
+<script>
+const ICONS={
+  terminal:["00000000","10000000","01000000","00100000","01000000","10000000","00011110","00000000"],
+  rdp:["111111111","100000001","101111101","101111101","100000001","111111111","000010000","000010000","011111110"],
+  asst:["11111111","10000001","10100001","10110001","10111001","10100001","11111111","00111100"],
+  files:["00000000","11110000","11111111","10000001","10000001","10000001","11111111","00000000"],
+  close:["10000001","11000011","01100110","00111100","00111100","01100110","11000011","10000001"],
+  min:["00000000","00000000","00000000","00000000","00000000","11111111","11111111","00000000"],
+  max:["11111111","11111111","10000001","10000001","10000001","10000001","11111111","00000000"],
+  open:["00000111","00000111","00000011","00000101","00001000","01010000","10100000","11000000"]
+};
+function icon(id,cls){const rows=ICONS[id],w=rows[0].length;let r="";rows.forEach((row,y)=>{[...row].forEach((c,x)=>{if(c==="1")r+=`<rect x="${x}" y="${y}" width="1" height="1"/>`})});return `<svg class="${cls||"ic"}" viewBox="0 0 ${w} ${rows.length}" fill="currentColor" aria-hidden="true">${r}</svg>`}
+const CHEV='<svg class="chev" viewBox="0 0 8 8" shape-rendering="crispEdges"><path d="M0 2h2v2h2v2h2V4h2V2h-2v0H0z" fill="currentColor" transform="translate(0 1)"/></svg>';
+const $=s=>document.querySelector(s);
+
+const SERVERS=[
+  {n:"web-01",os:"linux",g:"Продакшн",st:"ok"},
+  {n:"web-02",os:"linux",g:"Продакшн",st:"warn"},
+  {n:"db-primary",os:"linux",g:"Продакшн",st:"ok"},
+  {n:"db-replica",os:"linux",g:"Продакшн",st:"crit"},
+  {n:"WS-ACC-07",os:"win",g:"Офис",st:"ok",rdp:true},
+  {n:"WS-ACC-08",os:"win",g:"Офис",st:"off",rdp:true},
+  {n:"DC-02",os:"win",g:"Офис",st:"warn",rdp:false},
+  {n:"backup-nas",os:"linux",g:"",st:"ok"},
+  {n:"mail-01",os:"linux",g:"",st:"off"}
+];
+const MODES=[["term","Терминал","terminal"],["rdp","RDP","rdp"],["asst","Помощник","asst"]];
+const has=(s,m)=>m==="term"?true:m==="rdp"?(s.os==="win"&&s.rdp):s.os==="win";
+
+const S={restored:true,mode:"term",tabs:[{id:1,n:"web-01",m:"term"},{id:2,n:"WS-ACC-07",m:"asst"},{id:3,n:"db-primary",m:"term"}],active:1,next:4,collapsed:{},
+  W:[{id:1,kind:"files",srv:"web-01",x:30,y:34,w:540,h:300,min:false,z:21},{id:2,kind:"files",srv:"db-primary",x:110,y:84,w:540,h:300,min:false,z:22},{id:3,kind:"files",srv:"WS-ACC-07",x:60,y:60,w:540,h:300,min:true,z:23},{id:4,kind:"edit",srv:"web-01",file:"nginx.conf",x:190,y:50,w:520,h:300,min:true,z:24}],topZ:24,nextW:5,ctx:null};
+
+function modes(){
+  $("#modes").innerHTML=MODES.map(([k,l,ic])=>{const c=SERVERS.filter(s=>has(s,k)).length;return `<button class="mode" type="button" aria-pressed="${S.mode===k}" data-mode="${k}" title="${l}" aria-label="${l}: ${c}">${icon(ic)}<span class="cnt">${c}</span></button>`}).join("");
+}
+function list(){
+  const groups=[...new Set(SERVERS.map(s=>s.g))];
+  const openKey=new Set(S.tabs.filter(t=>t.m===S.mode).map(t=>t.n));
+  const act=S.tabs.find(t=>t.id===S.active);
+  $("#list").innerHTML=groups.map(g=>{
+    const items=SERVERS.filter(s=>s.g===g&&has(s,S.mode));
+    if(!items.length)return "";
+    const name=g||"Без группы";
+    return `<div class="grp" data-collapsed="${!!S.collapsed[name]}"><button class="grp-h" type="button" data-grp="${name}"><span>${name} · ${items.length}</span>${CHEV}</button><div class="srvs">${items.map(s=>`<button class="srv${s.st==="off"?" off":""}${openKey.has(s.n)?" openx":""}${S.ctx===s.n?" ctx":""}" type="button" data-srv="${s.n}" ${act&&act.n===s.n&&act.m===S.mode?'aria-current="true"':""}><span class="dot ${s.st}"></span><span class="nm">${s.n}</span><span class="os">${s.os==="win"?"WIN":"LIN"}</span></button>`).join("")}</div></div>`}).join("");
+}
+function scrState(){
+  const t=$("#tabs"),bar=$("#tabbar");if(!t)return;
+  bar.classList.toggle("ovf",t.scrollWidth>t.clientWidth+1);
+  $("#scl").disabled=t.scrollLeft<=1;
+  $("#scrr").disabled=t.scrollLeft+t.clientWidth>=t.scrollWidth-1;
+}
+function tabs(){
+  $("#tabs").innerHTML=S.tabs.map(t=>{const s=SERVERS.find(x=>x.n===t.n);const ic=MODES.find(m=>m[0]===t.m)[2];
+    return `<div class="tab" role="tab" aria-selected="${t.id===S.active}" data-tab="${t.id}"><span class="dotm ${s.st}"></span>${icon(ic)}<span>${t.n}</span><button class="x" type="button" data-close="${t.id}" aria-label="Закрыть">${icon("close")}</button></div>`}).join("");
+  const act=document.querySelector('.tab[aria-selected="true"]');if(act)act.scrollIntoView({inline:"nearest",block:"nearest"});
+  scrState();
+}
+const TERM=`<span class="p">admin@web-01</span>:<span class="d">~</span>$ systemctl status nginx --no-pager
+● nginx.service - A high performance web server
+     Loaded: loaded (/lib/systemd/system/nginx.service; enabled)
+     Active: <span class="p">active (running)</span> since Tue 2026-11-17 09:12:44; 2 days ago
+   Main PID: 612 (nginx)
+      Tasks: 5 (limit: 4631)
+<span class="p">admin@web-01</span>:<span class="d">~</span>$ df -h /
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/vda1        50G   21G   27G  44% /
+<span class="p">admin@web-01</span>:<span class="d">~</span>$ <span class="cur"></span>`;
+function winScreen(){return `<div class="screen"><div class="ico" style="top:14px"><i></i>Корзина</div><div class="ico" style="top:96px"><i></i>Отчёты</div>
+  <div class="w" style="left:130px;top:34px;width:520px"><div class="tb"><span>Продажи_октябрь.xlsx</span><span>— ▢ ✕</span></div><div class="grid"><span class="h">Менеджер</span><span class="h">Заказов</span><span class="h">Сумма</span><span class="h">План</span><span class="h">%</span><span>Орлова</span><span>42</span><span>1 204 500</span><span>1 100 000</span><span>109</span><span>Лебедев</span><span>37</span><span>987 300</span><span>1 000 000</span><span>98</span><span>Фомин</span><span>51</span><span>1 410 000</span><span>1 200 000</span><span>117</span></div></div>
+  <div class="taskbar"><span class="st"></span><span class="ap">Продажи</span><span class="clk">14:32<br>19.11.2026</span></div></div>`}
+function stage(){
+  const t=S.tabs.find(x=>x.id===S.active);
+  let html="";
+  if(!t){html=`<div class="pane-body"><div class="empty">${icon("terminal").replace('class="ic"','')}<div>Выберите сервер в списке слева</div><div class="small">Сеанс откроется здесь, вкладки откроются сверху.</div></div></div>`;}
+  else{
+    const s=SERVERS.find(x=>x.n===t.n),lbl=MODES.find(m=>m[0]===t.m)[1];
+    const tools=t.m==="term"?`<button class="btn sm" type="button">Сниппеты</button><button class="btn sm" type="button">Ещё ▾</button>`
+      :t.m==="rdp"?`<button class="btn sm" type="button">Ctrl+Alt+Del</button><button class="btn sm" type="button">Ещё ▾</button>`
+      :`<button class="btn sm" type="button">Сеанс ▾</button><button class="btn sm" type="button">Ctrl+Alt+Del</button><button class="btn sm" type="button">Ещё ▾</button>`;
+    html=`<div class="pane-bar"><span class="sq" style="${s.st==="warn"?"background:var(--warn)":s.st==="crit"?"background:var(--crit)":""}"></span><span class="who">${t.n}</span><span class="muted small">· ${lbl} · подключено</span><div class="tools">${tools}</div></div>
+    <div class="pane-body">${t.m==="term"?`<div class="term">${TERM.replace("web-01",t.n).replace("web-01",t.n).replace("web-01",t.n)}</div>`:winScreen()}</div>`;
+  }
+  if(S.restored)html=`<div class="restored"><span>Открыто то, на чём вы остановились: <b>${S.tabs.length} ${S.tabs.length===1?"вкладка":"вкладки"}</b>, вы вернулись во вкладку «${(S.tabs.find(x=>x.id===S.active)||{n:"—"}).n}». Сеансы переподключены.</span><button class="btn sm" type="button" data-dismiss="1">Скрыть</button></div>`+html;
+  html+=floating();
+  $("#stage").innerHTML=`<div class="view">${html}</div>`;
+  wins();
+  bindDrag();
+}
+const FILESETS={
+  web:{path:'<b>/</b> etc / <b>nginx</b>',rows:[["▸ conf.d","—","17 ноя 09:10"],["▸ sites-enabled","—","17 ноя 09:10"],["nginx.conf","1,5 КБ","12 ноя 18:02"],["mime.types","3,9 КБ","05 окт 11:40"],["proxy_params","0,4 КБ","05 окт 11:40"]]},
+  db:{path:'<b>/</b> var / lib / postgresql / <b>17</b>',rows:[["▸ main","—","19 ноя 03:00"],["▸ conf.d","—","11 ноя 12:20"],["postgresql.conf","29 КБ","11 ноя 12:20"],["pg_hba.conf","5,2 КБ","11 ноя 12:20"],["pg_ident.conf","2,6 КБ","05 окт 11:40"]]},
+  win:{path:'<b>/</b> C: / Users / <b>Public</b>',rows:[["▸ Documents","—","18 ноя 16:41"],["▸ Downloads","—","19 ноя 09:05"],["report.xlsx","84 КБ","18 ноя 17:12"],["readme.txt","1,1 КБ","03 окт 10:02"]]}
+};
+const setOf=n=>{const s=SERVERS.find(x=>x.n===n);return s.os==="win"?FILESETS.win:/^db/.test(n)?FILESETS.db:FILESETS.web};
+const NGINX=`user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    sendfile on;
+    keepalive_timeout 65;
+    include /etc/nginx/mime.types;
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/sites-enabled/*;
+}`;
+const winTitle=w=>w.kind==="files"?"Файлы":w.file;
+function floating(){
+  return S.W.map(w=>{
+    const head=`<div class="fw${w.min?" hidden":""}" data-wid="${w.id}" style="left:${w.x}px;top:${w.y}px;width:${w.w}px;height:${w.h}px;z-index:${w.z}"><div class="bar" data-drag="${w.id}"><span class="name"><span class="sq"></span><span class="lb">${w.srv}</span><span class="muted">· ${winTitle(w)}</span></span><span class="wb"><button class="btn sm" type="button" data-wmin="${w.id}" aria-label="Свернуть в список окон">${icon("min")}</button><button class="btn sm" type="button" aria-label="Развернуть">${icon("max")}</button><button class="btn sm" type="button" data-wclose="${w.id}" aria-label="Закрыть">${icon("close")}</button></span></div>`;
+    if(w.kind==="files"){const f=setOf(w.srv);
+      return head+`<div class="body"><div class="fbar"><span class="crumbs">${f.path}</span><button class="btn sm" type="button">Новая папка</button><button class="btn sm" type="button">Загрузить</button></div><div class="fscroll"><table class="ftbl"><thead><tr><th>Имя</th><th class="num">Размер</th><th>Изменён</th></tr></thead><tbody>${f.rows.map(r=>`<tr${r[0][0]==="▸"?"":` data-open="${r[0]}" data-srv-of="${w.srv}"`}><td>${r[0]}</td><td class="num">${r[1]}</td><td>${r[2]}</td></tr>`).join("")}</tbody></table></div><div class="estat"><span>${f.rows.length} объектов</span><span>двойной клик по файлу — открыть в редакторе</span></div></div></div>`;}
+    const text=w.file==="nginx.conf"?NGINX:`# ${w.file}\n# содержимое файла`;
+    return head+`<div class="body"><div class="fbar"><button class="btn sm primary" type="button">Сохранить</button><span class="muted small">${w.file} · UTF-8 · LF</span></div><textarea class="edit" spellcheck="false">${text}</textarea><div class="estat"><span>Ln 1, Col 1</span><span>${w.file.split(".").pop()}</span></div></div></div>`;
+  }).join("");
+}
+function wins(){
+  const vis=S.W.filter(w=>!w.min),topId=vis.length?vis.reduce((a,b)=>b.z>a.z?b:a).id:0;
+  const rows=S.W.map(w=>`<div class="wrow ${w.min?"min":"on"}${w.id===topId?" cur":""}"><button class="tg" type="button" data-wtoggle="${w.id}" title="${w.min?"Развернуть":"Свернуть"}">${w.kind==="files"?icon("files"):'<svg class="ic" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><path d="M1 0h4l2 2v6H1zM2 3h4v1H2zm0 2h4v1H2z" fill-rule="evenodd"/></svg>'}<span>${w.srv} · ${winTitle(w)}</span><i class="st">${w.min?"свёрнуто":""}</i></button><button class="cl" type="button" data-wclose="${w.id}" aria-label="Закрыть">${icon("close")}</button></div>`);
+  const el=$("#wins");el.className="wins"+(rows.length?" has":"");
+  el.innerHTML=rows.length?`<div class="wh"><span>Окна · ${rows.length}</span></div>${rows.join("")}`:"";
+}
+function front(id){const w=S.W.find(x=>x.id===id);if(!w)return;w.z=++S.topZ;const el=document.querySelector(`[data-wid="${id}"]`);if(el)el.style.zIndex=w.z;wins()}
+function openWin(kind,srv,file){
+  let w=S.W.find(x=>x.kind===kind&&x.srv===srv&&(kind==="files"||x.file===file));
+  if(w){w.min=false;w.z=++S.topZ;return}
+  const n=S.W.filter(x=>!x.min).length;
+  S.W.push({id:S.nextW++,kind,srv,file,x:30+(n%6)*34,y:34+(n%6)*34,w:540,h:300,min:false,z:++S.topZ});
+}
+function render(){modes();list();tabs();stage()}
+
+/* ───── interactions ───── */
+document.addEventListener("click",e=>{
+  const cm=$("#cm");if(!e.target.closest("#cm")){cm.classList.remove("open");if(S.ctx){S.ctx=null;list()}}
+  const el=e.target.closest("[data-mode],[data-srv],[data-grp],[data-tab],[data-close],[data-wmin],[data-wclose],[data-wrestore],[data-wtoggle],[data-open],[data-cmact],[data-dismiss],[data-tabs]");if(!el)return;
+  const d=el.dataset;
+  if(d.dismiss){S.restored=false;stage();return}
+  if(d.tabs){document.querySelectorAll("[data-tabs]").forEach(b=>b.setAttribute("aria-pressed",b===el));
+    if(d.tabs==="many"){[["db-replica","term"],["web-02","term"],["DC-02","asst"],["backup-nas","term"],["WS-ACC-07","rdp"],["web-01","asst"]].forEach(([n,m])=>{if(has(SERVERS.find(x=>x.n===n),m)&&!S.tabs.find(x=>x.n===n&&x.m===m))S.tabs.push({id:S.next++,n,m})});}
+    else{S.tabs=S.tabs.slice(0,3);if(!S.tabs.find(x=>x.id===S.active))S.active=S.tabs[0].id}
+    render();return}
+  if(d.mode){S.mode=d.mode;render();return}
+  if(d.grp){S.collapsed[d.grp]=!S.collapsed[d.grp];list();return}
+  if(d.srv){const s=SERVERS.find(x=>x.n===d.srv);if(s.st==="off")return;
+    let t=S.tabs.find(x=>x.n===d.srv&&x.m===S.mode);if(!t){t={id:S.next++,n:d.srv,m:S.mode};S.tabs.push(t)}S.active=t.id;render();return}
+  if(d.close){const id=+d.close;const i=S.tabs.findIndex(x=>x.id===id);S.tabs.splice(i,1);if(S.active===id)S.active=S.tabs.length?S.tabs[Math.max(0,i-1)].id:0;render();e.stopPropagation();return}
+  if(d.tab){S.active=+d.tab;render();return}
+  if(d.wmin){S.W.find(x=>x.id===+d.wmin).min=true;stage();return}
+  if(d.wclose){S.W=S.W.filter(x=>x.id!==+d.wclose);stage();return}
+  if(d.wtoggle){const w=S.W.find(x=>x.id===+d.wtoggle);w.min=!w.min;if(!w.min)w.z=++S.topZ;stage();return}
+  if(d.cmact==="files"){openWin("files",d.s);cm.classList.remove("open");S.ctx=null;render();return}
+  if(d.cmact==="page"){cm.classList.remove("open");S.ctx=null;list();return}
+});
+document.addEventListener("dblclick",e=>{const r=e.target.closest("[data-open]");if(!r)return;openWin("edit",r.dataset.srvOf,r.dataset.open);stage()});
+document.addEventListener("contextmenu",e=>{
+  const b=e.target.closest("[data-srv]");if(!b)return;e.preventDefault();
+  const s=SERVERS.find(x=>x.n===b.dataset.srv),cm=$("#cm");S.ctx=s.n;list();
+  cm.innerHTML=`<div class="hd">${s.n}</div><button type="button" data-cmact="files" data-s="${s.n}" ${s.st==="off"?"disabled":""}>${icon("files")} Файлы</button><div class="sep"></div><button type="button" data-cmact="page" data-s="${s.n}">${icon("open")} Открыть страницу сервера</button>`;
+  cm.style.left=Math.min(e.clientX,innerWidth-230)+"px";cm.style.top=Math.min(e.clientY,innerHeight-120)+"px";cm.classList.add("open");
+});
+function bindDrag(){
+  document.querySelectorAll(".fw").forEach(el=>el.addEventListener("pointerdown",()=>front(+el.dataset.wid),true));
+  document.querySelectorAll("[data-drag]").forEach(bar=>{
+    bar.addEventListener("pointerdown",e=>{
+      if(e.target.closest("button"))return;
+      const w=S.W.find(x=>x.id===+bar.dataset.drag),el=bar.parentElement,st=document.querySelector(".view").getBoundingClientRect(),sx=e.clientX,sy=e.clientY,ox=w.x,oy=w.y;
+      bar.setPointerCapture(e.pointerId);
+      const mv=ev=>{w.x=Math.max(0,Math.min(ox+ev.clientX-sx,st.width-80));w.y=Math.max(0,Math.min(oy+ev.clientY-sy,st.height-40));el.style.left=w.x+"px";el.style.top=w.y+"px"};
+      const up=()=>{bar.removeEventListener("pointermove",mv);bar.removeEventListener("pointerup",up)};
+      bar.addEventListener("pointermove",mv);bar.addEventListener("pointerup",up);
+    });
+  });
+}
+$("#scl").onclick=()=>$("#tabs").scrollBy({left:-220});
+$("#scrr").onclick=()=>$("#tabs").scrollBy({left:220});
+$("#tabs").addEventListener("scroll",scrState);
+addEventListener("resize",scrState);
+$("#theme").onclick=()=>{const d=document.documentElement,dark=getComputedStyle(d).colorScheme==="dark";d.dataset.theme=dark?"light":"dark"};
+render();
+</script>
+</body>
+</html>

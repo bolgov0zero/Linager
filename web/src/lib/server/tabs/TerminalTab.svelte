@@ -11,7 +11,8 @@
   import { lockScroll } from '../../ui/scrolllock';
   import { isPhone } from '../../ui/viewport';
 
-  let { server }: { server: ServerDetail } = $props();
+  /** docked: the tab fills the Console (lib/pult): it takes the height of its parent and has no "in a window" button. */
+  let { server, docked = false }: { server: ServerDetail; docked?: boolean } = $props();
 
   let phase = $state<TermPhase>('connecting');
   let keys = $state(false);
@@ -46,7 +47,7 @@
   );
 </script>
 
-<div class="term" class:kbd style:top={kbd ? `${$viewBox.top}px` : undefined} style:height={kbd ? `${$viewBox.height}px` : undefined}>
+<div class="term" class:docked class:kbd style:top={kbd ? `${$viewBox.top}px` : undefined} style:height={kbd ? `${$viewBox.height}px` : undefined}>
   <div class="head">
     <p class="meta">
       <span class="dot" class:on={server.online && phase === 'open'} aria-hidden="true"></span>
@@ -61,7 +62,7 @@
         <button class="btn" class:ink={keys} type="button" title={$tr('term.keys')} aria-label={$tr('term.keys')} aria-pressed={keys} onclick={() => (keys = !keys)}><KeyIcon /></button>
         <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.copy()}><span class="ic"><TermIcon name="copy" /></span><span class="tx">{$tr('term.copy')}</span></button>
         <button class="btn" type="button" title={$tr('term.clipboardHint')} onclick={() => session?.paste()}><span class="ic"><TermIcon name="paste" /></span><span class="tx">{$tr('term.paste')}</span></button>
-        <button class="btn popout" type="button" title={$tr('termwin.openWindow')} onclick={popOut}><span class="ic"><TermIcon name="window" /></span><span class="tx">{$tr('termwin.openWindow')}</span></button>
+        {#if !docked}<button class="btn popout" type="button" title={$tr('termwin.openWindow')} onclick={popOut}><span class="ic"><TermIcon name="window" /></span><span class="tx">{$tr('termwin.openWindow')}</span></button>{/if}
         <button class="btn" type="button" title={$tr('term.close')} onclick={() => session?.close()}><span class="ic"><TermIcon name="close" /></span><span class="tx">{$tr('term.close')}</span></button>
       </div>
     {/if}
@@ -124,6 +125,11 @@
     min-width: 0;
   }
 
+  .term.docked {
+    height: 100%;
+    min-height: 0;
+  }
+
   .head {
     display: flex;
     flex-wrap: wrap;
@@ -157,6 +163,26 @@
   .box :global(.screen) {
     flex: none;
     height: 378px;
+  }
+
+  /* In the Console the terminal takes all the room under the header. */
+  .term.docked .box {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .term.docked .box :global(.session) {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+  }
+
+  .term.docked .box :global(.screen) {
+    flex: 1;
+    height: auto;
+    min-height: 0;
   }
 
   .note {

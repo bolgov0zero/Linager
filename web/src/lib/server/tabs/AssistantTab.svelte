@@ -9,7 +9,8 @@
   import { gotoServerTab, takeAssistSession } from '../../assistant/nav';
   import { openAssistantWindow } from '../../terminal/windows';
 
-  let { server }: { server: ServerDetail } = $props();
+  /** docked: the tab fills the Console (lib/pult): it takes the height of its parent and has no "in a window" button. */
+  let { server, docked = false, paused = false }: { server: ServerDetail; docked?: boolean; /** The tab is hidden: the computer stops sending pictures. */ paused?: boolean } = $props();
 
   // Derived primitives: the parent replaces `server` on every live metrics event, which must not restart the session.
   const serverId = $derived(server.id);
@@ -20,6 +21,10 @@
   let screen = $state<AssistantSession | null>(null);
   // The Manage tab can open this tab with a session of its table.
   let session = $state(untrack(() => takeAssistSession(server.id)));
+
+  $effect(() => {
+    screen?.setPaused(paused);
+  });
 
   // The picture fitted into the tab, or at 100% with scroll bars.
   let display = $state<'fit' | 'window' | 'max' | 'real'>('fit');
@@ -38,7 +43,7 @@
   }
 </script>
 
-<div class="asstTab">
+<div class="asstTab" class:docked>
   <div class="head">
     <p class="meta">
       <span class="dot" class:on={server.online && phase === 'open'} aria-hidden="true"></span>
@@ -49,7 +54,7 @@
     {#if server.online}
       <div class="actions">
         <AssistantTools {serverId} bind:session {phase} {info} {screen} layout="tab" bind:display onsettings={() => gotoServerTab(serverName, 'manage')} />
-        <button class="btn sm" type="button" onclick={popOut}>{$tr('termwin.openWindow')}</button>
+        {#if !docked}<button class="btn sm" type="button" onclick={popOut}>{$tr('termwin.openWindow')}</button>{/if}
       </div>
     {/if}
   </div>
@@ -70,6 +75,11 @@
     gap: 9px;
     height: calc(100vh - 198px);
     min-height: 378px;
+  }
+
+  .asstTab.docked {
+    height: 100%;
+    min-height: 0;
   }
 
   .head {

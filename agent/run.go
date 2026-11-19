@@ -172,7 +172,7 @@ func session(ctx context.Context, o RunOptions, st *State, cert tls.Certificate,
 		b, _ := json.Marshal(env)
 		return ws.Write(ctx, websocket.MessageText, b)
 	}
-	if err := send(protocol.TypeHello, protocol.Hello{AgentVersion: o.AgentVersion, OS: osName(), Hostname: hostname(), Modules: reg.Modules()}); err != nil {
+	if err := send(protocol.TypeHello, protocol.Hello{AgentVersion: o.AgentVersion, OS: helloOS(), Hostname: hostname(), Modules: reg.Modules()}); err != nil {
 		return err
 	}
 

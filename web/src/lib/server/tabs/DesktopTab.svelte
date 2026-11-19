@@ -5,7 +5,8 @@
   import DesktopTools from '../../desktop/DesktopTools.svelte';
   import { openDesktopWindow } from '../../terminal/windows';
 
-  let { server }: { server: ServerDetail } = $props();
+  /** docked: the tab fills the Console (lib/pult): it takes the height of its parent and has no "in a window" button. */
+  let { server, docked = false }: { server: ServerDetail; docked?: boolean } = $props();
 
   let phase = $state<DeskPhase>('form');
   let autoResize = $state(true);
@@ -26,7 +27,7 @@
   }
 </script>
 
-<div class="deskTab">
+<div class="deskTab" class:docked>
   <div class="head">
     <p class="meta">
       <span class="dot" class:on={server.online && phase === 'open'} aria-hidden="true"></span>
@@ -36,7 +37,7 @@
     {#if server.online}
       <div class="actions">
         <DesktopTools {session} {phase} bind:autoResize />
-        <button class="btn sm" type="button" onclick={popOut}>{$tr('termwin.openWindow')}</button>
+        {#if !docked}<button class="btn sm" type="button" onclick={popOut}>{$tr('termwin.openWindow')}</button>{/if}
       </div>
     {/if}
   </div>
@@ -54,6 +55,11 @@
     gap: 9px;
     height: calc(100vh - 198px);
     min-height: 378px;
+  }
+
+  .deskTab.docked {
+    height: 100%;
+    min-height: 0;
   }
 
   .head {

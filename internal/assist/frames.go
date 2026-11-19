@@ -28,6 +28,7 @@ const (
 	TypeClipSet  byte = 18 // JSON Clip: put this text on the clipboard of the computer
 	TypeClipGet  byte = 19 // no payload: send the text of the clipboard of the computer
 	TypeMonitor  byte = 20 // JSON MonitorSel: show this monitor
+	TypePause    byte = 21 // JSON Pause: stop sending pictures (the tab is hidden) or go on
 )
 
 // MaxFrame is the largest frame accepted: a full 4K screen in poor JPEG is far below it.

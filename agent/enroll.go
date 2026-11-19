@@ -109,7 +109,7 @@ func Enroll(ctx context.Context, o EnrollOptions) error {
 	host := hostname()
 	ts := time.Now().Unix()
 	body, _ := json.Marshal(protocol.EnrollRequest{
-		Pubkey: pub, Hostname: host, Address: local, OS: osName(), AgentVersion: o.AgentVersion,
+		Pubkey: pub, Hostname: host, Address: local, OS: helloOS(), AgentVersion: o.AgentVersion,
 		Protocol: protocol.Version, TS: ts, Sig: ed25519.Sign(key, protocol.EnrollSigningBytes(pub, host, ts)),
 		JoinToken: o.JoinToken,
 	})

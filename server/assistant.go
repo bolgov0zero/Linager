@@ -175,6 +175,9 @@ func (a *Admin) assistantWS(w http.ResponseWriter, r *http.Request, u *store.Use
 			case assist.TypeMonitor:
 				_, err := assist.ParseMonitor(b[1:])
 				ok = err == nil
+			case assist.TypePause:
+				_, err := assist.ParsePause(b[1:])
+				ok = err == nil
 			}
 			if !ok {
 				continue

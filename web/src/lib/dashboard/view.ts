@@ -1,13 +1,13 @@
 import { writable } from 'svelte/store';
 
-export type DashView = 'cards' | 'map';
+export type DashView = 'cards' | 'map' | 'pult';
 
 const VIEW_KEY = 'linager.dashboard.view';
 
 function readView(): DashView {
   try {
     const value = localStorage.getItem(VIEW_KEY);
-    if (value === 'cards') return value;
+    if (value === 'cards' || value === 'pult') return value;
     if (value === 'map' || value === 'rows') return 'map'; // the old rows view was replaced by the map
   } catch {
     // storage unavailable: fall back to the default view

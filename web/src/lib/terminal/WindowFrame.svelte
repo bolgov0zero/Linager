@@ -213,11 +213,6 @@
     line-height: 1.4;
   }
 
-  /* a pixel icon (18 px) is taller than the 11 px text of a small button: it must not make the button taller than its neighbours */
-  .tools :global(.btn.sm .pix) {
-    margin: -2px 0;
-  }
-
   .tools :global(.btn.icon) {
     min-width: 25px;
     padding: 2px 4px;

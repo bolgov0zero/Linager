@@ -8,7 +8,7 @@ export const TERM_LIMIT = 3;
 /** Floating windows share one store, z-order and dock: terminals and file editors. */
 export interface TermWindow {
   key: number;
-  kind: 'terminal' | 'editor' | 'desktop' | 'assistant';
+  kind: 'terminal' | 'editor' | 'desktop' | 'assistant' | 'files';
   serverId: string;
   /** Terminal: server name. Editor: file name. */
   name: string;
@@ -94,6 +94,16 @@ export function openAssistantWindow(serverId: string, serverName: string, sessio
   addWindow({ kind: 'assistant', serverId, name: serverName, serverName, session });
 }
 
+/** Opens the files of a server in a floating window (the whole "Files" tab); one window per server, an open one is brought to the front. */
+export function openFilesWindow(serverId: string, serverName: string): void {
+  const open = get(termWindows).find((w) => w.kind === 'files' && w.serverId === serverId);
+  if (open) {
+    focusTermWindow(open.key);
+    return;
+  }
+  addWindow({ kind: 'files', serverId, name: serverName, serverName });
+}
+
 /** Opens a file in a floating editor; an already open file of the same server is brought to the front. */
 export function openEditorWindow(serverId: string, serverName: string, path: string, name: string, text: string, mtime: number): void {
   const list = get(termWindows);
@@ -120,8 +130,9 @@ function addWindow(init: Pick<TermWindow, 'kind' | 'serverId' | 'name'> & Partia
   const vh = window.innerHeight;
   const editor = init.kind === 'editor';
   const desktop = init.kind === 'desktop' || init.kind === 'assistant';
-  const w = Math.min(desktop ? 1100 : editor ? 760 : DEFAULT_W, vw - 32);
-  const h = Math.min(desktop ? 740 : editor ? 520 : DEFAULT_H, vh - 96);
+  const files = init.kind === 'files';
+  const w = Math.min(desktop ? 1100 : files ? 960 : editor ? 760 : DEFAULT_W, vw - 32);
+  const h = Math.min(desktop ? 740 : files ? 620 : editor ? 520 : DEFAULT_H, vh - 96);
   const step = (list.length % 8) * CASCADE;
   const x = Math.max(16, Math.min(Math.round((vw - w) / 2) + step - 3 * CASCADE, vw - w - 16));
   const y = Math.max(16, Math.min(72 + step, vh - h - 16));
@@ -145,5 +156,69 @@ export function closeTermWindow(key: number): void {
 }
 
 export function closeAllTermWindows(): void {
+  trackFiles = false; // signing out is not the person closing the windows: what was open stays remembered
   termWindows.set([]);
+}
+
+// ---- the Files windows are remembered (the Console brings them back) ----
+
+const FILES_KEY = 'linager.pult.files';
+let trackFiles = false;
+let filesTimer: ReturnType<typeof setTimeout> | undefined;
+
+interface SavedFiles {
+  serverId: string;
+  name: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  minimized: boolean;
+}
+
+termWindows.subscribe((list) => {
+  if (!trackFiles) return;
+  clearTimeout(filesTimer);
+  filesTimer = setTimeout(() => {
+    const saved: SavedFiles[] = list
+      .filter((w) => w.kind === 'files')
+      .map((w) => ({ serverId: w.serverId, name: w.name, x: w.x, y: w.y, w: w.w, h: w.h, minimized: w.minimized }));
+    try {
+      localStorage.setItem(FILES_KEY, JSON.stringify(saved));
+    } catch {
+      // storage unavailable: the windows just are not remembered
+    }
+  }, 300);
+});
+
+/** Opens again the Files windows that were open when the person left (once per sign-in), and starts remembering them. */
+export function restoreFilesWindows(): void {
+  if (trackFiles) return;
+  trackFiles = true;
+  let saved: SavedFiles[] = [];
+  try {
+    const raw = JSON.parse(localStorage.getItem(FILES_KEY) ?? '[]') as unknown;
+    if (Array.isArray(raw)) saved = raw as SavedFiles[];
+  } catch {
+    return; // storage unavailable or damaged
+  }
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  for (const s of saved) {
+    if (typeof s?.serverId !== 'string' || typeof s.name !== 'string') continue;
+    if (get(termWindows).some((w) => w.kind === 'files' && w.serverId === s.serverId)) continue;
+    const w = Math.min(Math.max(Number(s.w) || 960, 360), vw - 16);
+    const h = Math.min(Math.max(Number(s.h) || 620, 220), vh - 16);
+    addWindow({
+      kind: 'files',
+      serverId: s.serverId,
+      name: s.name,
+      serverName: s.name,
+      w,
+      h,
+      x: Math.min(Math.max(Number(s.x) || 16, 0), vw - 80),
+      y: Math.min(Math.max(Number(s.y) || 72, 0), vh - 40),
+      minimized: s.minimized === true,
+    });
+  }
 }

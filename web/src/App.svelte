@@ -4,6 +4,8 @@
   import { liveConnected, subscribeLive } from './live';
   import { locale, setLocale, t, tr, type Locale } from './i18n';
   import Dashboard from './lib/Dashboard.svelte';
+  import { dashView } from './lib/dashboard/view';
+  import Pult from './lib/pult/Pult.svelte';
   import Login from './lib/Login.svelte';
   import SettingsModal from './lib/settings/SettingsModal.svelte';
   import type { SettingsSection } from './lib/settings/sections';
@@ -76,6 +78,13 @@
   const serverRoute = $derived(parseServerHash(hash));
   const serverName = $derived(serverRoute?.name ?? null);
   const onDashboard = $derived(phase === 'app' && serverName === null);
+  // The Console ("Пульт"; not on a phone) is mounted when it is first opened and then stays mounted, so that its
+  // sessions stay connected while the person looks at other views and pages.
+  const pultView = $derived(onDashboard && $dashView === 'pult' && !$isPhone);
+  let pultVisited = $state(false);
+  $effect(() => {
+    if (pultView) pultVisited = true;
+  });
   let updatesCount = $state(0);
   /** Only an administrator changes the settings, adds and removes servers and agents, and edits the dashboard. */
   const isAdmin = $derived((session?.role ?? 'admin') === 'admin');
@@ -186,6 +195,7 @@
     settingsOpen = false;
     editing = false;
     addOpen = false;
+    pultVisited = false; // the sessions of the Console end with the sign-in
     closeAllTermWindows();
     unsubscribeLive?.();
     unsubscribeLive = undefined;
@@ -310,7 +320,7 @@
   </div>
 </header>
 
-<main class:center={phase === 'login'} class:bar={phase === 'app'} class:srvpage={serverName !== null}>
+<main class:center={phase === 'login'} class:bar={phase === 'app'} class:srvpage={serverName !== null} class:pultmain={pultView}>
   {#if phase === 'loading'}
     <p class="muted">{$tr('common.loading')}</p>
   {:else if phase === 'login'}
@@ -327,7 +337,7 @@
           userModules={session.modules ?? []}
           onagentchanged={refreshUpdatesCount} />
       {/key}
-    {:else}
+    {:else if !pultView}
       <Dashboard {editing} {reloadKey} onopen={openServer} onauthlost={endSession} />
     {/if}
   {/if}
@@ -392,6 +402,10 @@
       </div>
     </div>
   </Modal>
+{/if}
+
+{#if session && pultVisited}
+  <Pult shown={pultView} role={session.role ?? 'admin'} modules={session.modules ?? []} {reloadKey} onopen={openServer} onauthlost={endSession} />
 {/if}
 
 {#if session}
@@ -626,6 +640,11 @@
   }
 
   /* The sign-in card sits in the middle of the free space under the top bar. */
+  /* the Console is fixed under the top bar and fills the window by itself */
+  main.pultmain {
+    display: none;
+  }
+
   main.center {
     display: flex;
     align-items: center;

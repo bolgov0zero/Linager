@@ -11,13 +11,14 @@
     class="btn ic"
     type="button"
     aria-label={$tr('dash.viewToggle')}
-    onclick={() => setDashView($dashView === 'cards' ? 'map' : 'cards')}>
-    <PixIcon name={$dashView === 'cards' ? 'map' : 'cards'} />
+    onclick={() => setDashView($dashView === 'map' ? 'cards' : 'map')}>
+    <PixIcon name={$dashView === 'map' ? 'cards' : 'map'} />
   </button>
 {:else}
   <div class="seg" role="group" aria-label={$tr('dash.viewToggle')}>
     <button class="chip" type="button" aria-pressed={$dashView === 'cards'} onclick={() => setDashView('cards')}>{$tr('dash.view.cards')}</button>
     <button class="chip" type="button" aria-pressed={$dashView === 'map'} onclick={() => setDashView('map')}>{$tr('dash.view.map')}</button>
+    <button class="chip" type="button" aria-pressed={$dashView === 'pult'} onclick={() => setDashView('pult')}>{$tr('dash.view.pult')}</button>
   </div>
 {/if}
 

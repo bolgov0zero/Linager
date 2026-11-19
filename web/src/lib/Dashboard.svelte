@@ -71,7 +71,8 @@
   let filter = $state<Filter>('all');
   let query = $state('');
   let searchOpen = $state(false);
-  const view = $derived($dashView);
+  // the Pult is a view of its own (lib/pult); on the dashboard it counts as the cards (the phone has no Pult)
+  const view = $derived($dashView === 'pult' ? 'cards' : $dashView);
   let now = $state(Date.now());
   /** A card removed from the dashboard whose API call waits for the undo window. */
   let pending = $state<{ card: ServerCard; index: number } | null>(null);

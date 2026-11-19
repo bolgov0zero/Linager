@@ -37,6 +37,7 @@
     encodeClipSet,
     encodeInput,
     encodeMonitor,
+    encodePause,
     parseTiles,
     type Hello,
     type Monitor,
@@ -80,6 +81,8 @@
   let pendingMove: { x: number; y: number } | null = null;
   let frame = 0;
   const wheel = new WheelNotches();
+  /** The tab is hidden (the Console): the pictures are paused. */
+  let pausedNow = false;
   /** Set while the clipboard of the computer is asked for: only an answer to that is put into the local clipboard. */
   let clipWanted = 0;
   /** The answer was fetched by a Ctrl+C: an empty clipboard is not worth a message. */
@@ -106,6 +109,9 @@
     const ws = new WebSocket(assistantSocketUrl(serverId, session));
     ws.binaryType = 'arraybuffer';
     socket = ws;
+    ws.onopen = () => {
+      if (mine === generation && pausedNow) ws.send(encodePause(true)); // the tab was hidden while it connected
+    };
     queue = Promise.resolve();
     ws.onmessage = (ev) => {
       if (mine !== generation || !(ev.data instanceof ArrayBuffer)) return;
@@ -477,6 +483,12 @@
   }
 
   /** Picks a monitor of the computer (its index in info.monitors) or -1 for all of them as one picture; the computer answers with a new Hello. */
+  /** The tab is hidden: the computer stops sending pictures until it is shown again. */
+  export function setPaused(on: boolean): void {
+    pausedNow = on;
+    if (socket?.readyState === WebSocket.OPEN) socket.send(encodePause(on));
+  }
+
   export function selectMonitor(index: number): void {
     if (socket?.readyState === WebSocket.OPEN && phase === 'open') socket.send(encodeMonitor(index));
     focus();

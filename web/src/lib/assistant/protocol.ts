@@ -11,6 +11,7 @@ export const MSG_INPUT = 16;
 export const MSG_CLIP_SET = 18;
 export const MSG_CLIP_GET = 19;
 export const MSG_MONITOR = 20;
+export const MSG_PAUSE = 21;
 
 /** The biggest text the browser sends to the clipboard of the computer (the payload of a ClipSet message). */
 export const CLIP_MAX = 1024 * 1024;
@@ -74,6 +75,11 @@ function withJson(type: number, value: unknown): Uint8Array<ArrayBuffer> {
 }
 
 /** Picks a monitor: its index, or -1 for all of them as one picture. */
+/** Stops the pictures (the tab is hidden) or lets them go on. */
+export function encodePause(on: boolean): Uint8Array<ArrayBuffer> {
+  return withJson(MSG_PAUSE, { on });
+}
+
 export function encodeMonitor(index: number): Uint8Array<ArrayBuffer> {
   return withJson(MSG_MONITOR, { i: Math.trunc(index) });
 }

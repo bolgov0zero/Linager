@@ -2,7 +2,9 @@
   import { tr } from '../../i18n';
   import AssistantWindowView from '../assistant/AssistantWindowView.svelte';
   import DesktopWindowView from '../desktop/DesktopWindowView.svelte';
+  import { pultShown } from '../pult/store';
   import EditorWindowView from './EditorWindowView.svelte';
+  import FilesWindowView from './FilesWindowView.svelte';
   import TermWindowView from './TermWindowView.svelte';
   import { lockScroll } from '../ui/scrolllock';
   import { isPhone } from '../ui/viewport';
@@ -58,6 +60,8 @@
     {#each $termWindows as win (win.key)}
       {#if win.kind === 'editor'}
         <EditorWindowView {win} top={win.key === topKey} />
+      {:else if win.kind === 'files'}
+        <FilesWindowView {win} top={win.key === topKey} />
       {:else if win.kind === 'desktop'}
         <DesktopWindowView {win} top={win.key === topKey} />
       {:else if win.kind === 'assistant'}
@@ -66,6 +70,7 @@
         <TermWindowView {win} top={win.key === topKey} {canUsers} />
       {/if}
     {/each}
+    {#if !$pultShown || $isPhone}
     <nav class="dock" aria-label={$tr('termwin.dock')}>
       {#each $termWindows as win (win.key)}
         <button
@@ -74,9 +79,10 @@
           class:off={win.minimized}
           type="button"
           title={win.minimized ? $tr('termwin.restore') : $tr('termwin.minimize')}
-          onclick={() => toggle(win.key, win.minimized)}>{win.kind === 'editor' ? '✎' : win.kind === 'assistant' ? '▣' : '>_'} {win.name}</button>
+          onclick={() => toggle(win.key, win.minimized)}>{win.kind === 'editor' ? '✎' : win.kind === 'files' ? '▤' : win.kind === 'assistant' ? '▣' : '>_'} {win.name}</button>
       {/each}
     </nav>
+    {/if}
   </div>
 {/if}
 

@@ -112,3 +112,18 @@ func ParseMonitor(b []byte) (MonitorSel, error) {
 	}
 	return m, nil
 }
+
+// Pause is the payload of TypePause.
+type Pause struct {
+	On bool `json:"on"`
+}
+
+// ParsePause reads and checks a pause payload.
+func ParsePause(b []byte) (Pause, error) {
+	var p Pause
+	if len(b) > 64 {
+		return p, errors.New("pause is too long")
+	}
+	err := json.Unmarshal(b, &p)
+	return p, err
+}

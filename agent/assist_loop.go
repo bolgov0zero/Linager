@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bolgov0zero/linager/internal/assist"
@@ -58,6 +59,7 @@ func runAssistLoop(ctx context.Context, rw io.ReadWriter, host assistHost, info 
 		return send(typ, b)
 	}
 	reHello := make(chan struct{}, 1)
+	var paused atomic.Bool // the tab is hidden: no pictures are taken or sent
 
 	go func() { // the other side: input and settings
 		defer cancel()
@@ -107,6 +109,14 @@ func runAssistLoop(ctx context.Context, rw io.ReadWriter, host assistHost, info 
 				}
 				if err := host.ClipboardSet(c.Text); err != nil && log != nil {
 					log.Debug("assistant clipboard", "err", err)
+				}
+			case assist.TypePause:
+				if p, err := assist.ParsePause(f.Data); err == nil {
+					paused.Store(p.On)
+					select {
+					case wake <- struct{}{}:
+					default:
+					}
 				}
 			case assist.TypeMonitor:
 				m, err := assist.ParseMonitor(f.Data)
@@ -173,6 +183,10 @@ func runAssistLoop(ctx context.Context, rw io.ReadWriter, host assistHost, info 
 			enc.Reset()
 			idle = 0
 		case <-t.C:
+		}
+		if paused.Load() {
+			wait = 250 * time.Millisecond // a hidden tab costs nothing but this look; the picture goes on from where it was
+			continue
 		}
 		if pix, w, h, err = host.Grab(); err != nil {
 			_ = send2(send, assist.TypeEnd, assist.End{Reason: "cannot read the screen: " + err.Error()})

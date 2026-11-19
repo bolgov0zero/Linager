@@ -129,7 +129,7 @@
   {onkeydown}
   onclick={() => (open ? hide() : void show())}
 >
-  {#if icon}<PixIcon name={icon} />{/if}
+  {#if icon}<PixIcon name={icon} size={compact ? 13.5 : 18} />{/if}
   {label}
   <span class="arrow" aria-hidden="true"></span>
 </button>

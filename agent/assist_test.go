@@ -280,3 +280,29 @@ func TestAssistRelayHelperFailures(t *testing.T) {
 		t.Fatal("a silent helper must time out")
 	}
 }
+
+// A hidden tab pauses the pictures; going on sends what changed meanwhile.
+func TestAssistLoopPause(t *testing.T) {
+	a, host, _ := startLoop(t)
+	readUntil(t, a, assist.TypeHello)
+	readUntil(t, a, assist.TypeTiles)
+	if err := assist.WriteJSON(a, assist.TypePause, assist.Pause{On: true}); err != nil {
+		t.Fatal(err)
+	}
+	// frames that were already on the way are read; then nothing but the pointer must change the picture
+	deadline := time.Now().Add(700 * time.Millisecond)
+	for time.Now().Before(deadline) {
+		_ = a.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+		_, _ = assist.ReadFrame(a)
+	}
+	_ = a.SetReadDeadline(time.Now().Add(600 * time.Millisecond))
+	if f, err := assist.ReadFrame(a); err == nil && f.Type == assist.TypeTiles {
+		t.Fatal("pictures must stop while the tab is hidden")
+	}
+	_ = assist.WriteJSON(a, assist.TypeInput, assist.Input{T: assist.InKey, Sc: 30, Down: true})
+	waitFor(t, "input still works while paused", func() bool { _, _, k, _ := host.state(); return k == 1 })
+	if err := assist.WriteJSON(a, assist.TypePause, assist.Pause{On: false}); err != nil {
+		t.Fatal(err)
+	}
+	readUntil(t, a, assist.TypeTiles)
+}
