@@ -8,7 +8,7 @@ export const TERM_LIMIT = 3;
 /** Floating windows share one store, z-order and dock: terminals and file editors. */
 export interface TermWindow {
   key: number;
-  kind: 'terminal' | 'editor' | 'desktop' | 'assistant' | 'files' | 'quality';
+  kind: 'terminal' | 'editor' | 'desktop' | 'assistant' | 'files' | 'quality' | 'dispatcher';
   serverId: string;
   /** Terminal: server name. Editor: file name. */
   name: string;
@@ -114,6 +114,16 @@ export function openQualityWindow(serverId: string, serverName: string): void {
   addWindow({ kind: 'quality', serverId, name: serverName, serverName });
 }
 
+/** Opens the Dispatcher (the processes and the services of a Windows computer) in a floating window; one per server, an open one is brought to the front. */
+export function openDispatcherWindow(serverId: string, serverName: string): void {
+  const open = get(termWindows).find((w) => w.kind === 'dispatcher' && w.serverId === serverId);
+  if (open) {
+    focusTermWindow(open.key);
+    return;
+  }
+  addWindow({ kind: 'dispatcher', serverId, name: serverName, serverName });
+}
+
 /** Opens a file in a floating editor; an already open file of the same server is brought to the front. */
 export function openEditorWindow(serverId: string, serverName: string, path: string, name: string, text: string, mtime: number): void {
   const list = get(termWindows);
@@ -142,8 +152,9 @@ function addWindow(init: Pick<TermWindow, 'kind' | 'serverId' | 'name'> & Partia
   const desktop = init.kind === 'desktop' || init.kind === 'assistant';
   const files = init.kind === 'files';
   const quality = init.kind === 'quality';
-  const w = Math.min(desktop ? 1100 : files ? 960 : editor ? 760 : quality ? 520 : DEFAULT_W, vw - 32);
-  const h = Math.min(desktop ? 740 : files ? 620 : editor ? 520 : quality ? 580 : DEFAULT_H, vh - 96);
+  const dispatcher = init.kind === 'dispatcher';
+  const w = Math.min(desktop ? 1100 : files ? 960 : editor ? 760 : quality ? 520 : dispatcher ? 800 : DEFAULT_W, vw - 32);
+  const h = Math.min(desktop ? 740 : files ? 620 : editor ? 520 : quality ? 580 : dispatcher ? 560 : DEFAULT_H, vh - 96);
   const step = (list.length % 8) * CASCADE;
   const x = Math.max(16, Math.min(Math.round((vw - w) / 2) + step - 3 * CASCADE, vw - w - 16));
   const y = Math.max(16, Math.min(72 + step, vh - h - 16));

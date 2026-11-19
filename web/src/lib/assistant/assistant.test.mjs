@@ -5,6 +5,7 @@ import { CLIP_MAX, WheelNotches, cleanMonitors, encodeClipGet, encodeClipSet, en
 import { scanKey } from './scancodes.ts';
 import { PRESETS, estimateMbit, presetOf } from './quality.ts';
 import { planKey } from '../desktop/keys.ts';
+import { heat, nextSort, procName, serviceActions, sortProcs, sortServices } from './dispatcher.ts';
 
 function tilesPayload(tiles) {
   const parts = [Buffer.from([tiles.length >> 8, tiles.length & 255])];
@@ -166,4 +167,49 @@ test('the remote desktop keyboard: Cmd of a Mac is Ctrl, clipboard shortcuts are
   assert.equal(planKey(k('KeyV', { ctrlKey: true, altKey: true }), false), 'pass'); // AltGr
   assert.equal(planKey(k('ControlLeft', { ctrlKey: true }), true), 'pass');
   assert.equal(planKey(k('KeyV'), true), 'pass');
+});
+
+test('the Dispatcher: a column click starts as in the Task Manager and turns over on a second click', () => {
+  assert.deepEqual(nextSort({ key: 'cpu', dir: 'desc' }, 'name', true), { key: 'name', dir: 'asc' });
+  assert.deepEqual(nextSort({ key: 'name', dir: 'asc' }, 'cpu', false), { key: 'cpu', dir: 'desc' });
+  assert.deepEqual(nextSort({ key: 'cpu', dir: 'desc' }, 'cpu', false), { key: 'cpu', dir: 'asc' });
+  assert.deepEqual(nextSort({ key: 'cpu', dir: 'asc' }, 'cpu', false), { key: 'cpu', dir: 'desc' });
+});
+
+test('the Dispatcher: the process name is taken from the command line', () => {
+  assert.equal(procName('"C:\\Program Files\\Google\\chrome.exe" --type=renderer'), 'chrome.exe');
+  assert.equal(procName('C:\\Windows\\System32\\svchost.exe -k netsvcs'), 'svchost.exe');
+  assert.equal(procName('System'), 'System');
+  assert.equal(procName('/usr/bin/sshd -D'), 'sshd');
+});
+
+test('the Dispatcher: processes are sorted by the column, the name and PID break a tie', () => {
+  const p = (pid, cmd, user, cpu, rss) => ({ pid, cmd, user, cpu, mem_pct: 0, rss, state: 'R' });
+  const list = [p(3, 'b.exe', 'SYSTEM', 1, 100), p(2, 'a.exe', 'bolgov', 5, 100), p(1, 'A.exe', 'bolgov', 1, 300)];
+  assert.deepEqual(sortProcs(list, { key: 'cpu', dir: 'desc' }).map((x) => x.pid), [2, 1, 3]);
+  assert.deepEqual(sortProcs(list, { key: 'ram', dir: 'desc' }).map((x) => x.pid), [1, 2, 3]);
+  assert.deepEqual(sortProcs(list, { key: 'name', dir: 'asc' }).map((x) => x.pid), [1, 2, 3]);
+  assert.deepEqual(sortProcs(list, { key: 'user', dir: 'asc' }).map((x) => x.pid), [1, 2, 3]);
+  assert.deepEqual(sortProcs(list, { key: 'pid', dir: 'asc' }).map((x) => x.pid), [1, 2, 3]);
+  assert.equal(list[0].pid, 3); // the list given is left as it was
+});
+
+test('the Dispatcher: services are sorted by state (failed first), name or autostart', () => {
+  const u = (name, active, enabled, sub = '') => ({ name, description: '', active, sub, enabled });
+  const list = [u('b', 'inactive', 'static'), u('c', 'active', 'enabled'), u('a', 'failed', 'enabled'), u('d', 'active', 'disabled')];
+  assert.deepEqual(sortServices(list, { key: 'state', dir: 'asc' }).map((x) => x.name), ['a', 'c', 'd', 'b']);
+  assert.deepEqual(sortServices(list, { key: 'state', dir: 'desc' }).map((x) => x.name), ['b', 'c', 'd', 'a']);
+  assert.deepEqual(sortServices(list, { key: 'name', dir: 'desc' }).map((x) => x.name), ['d', 'c', 'b', 'a']);
+  assert.deepEqual(sortServices(list, { key: 'auto', dir: 'asc' }).map((x) => x.name), ['a', 'c', 'b', 'd']);
+});
+
+test('the Dispatcher: the bottom bar offers restart and stop for a running service and start for the others', () => {
+  const u = (active, sub = '') => ({ name: 'x', description: '', active, sub, enabled: 'enabled' });
+  assert.deepEqual(serviceActions(u('active')), ['restart', 'stop']);
+  assert.deepEqual(serviceActions(u('inactive')), ['start']);
+  assert.deepEqual(serviceActions(u('failed')), ['start']);
+  assert.deepEqual(serviceActions(undefined), []);
+  assert.equal(heat(0, 50), 0);
+  assert.equal(heat(25, 50), 0.5);
+  assert.equal(heat(500, 50), 1);
 });

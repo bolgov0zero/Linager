@@ -32,6 +32,7 @@
   "pult.winDesktop": "Рабочий стол",
   "pult.winAssistant": "Помощник",
   "pult.winQuality": "Качество",
+  "pult.winDispatcher": "Диспетчер",
   "pult.filesTitle": "Файлы · {name}",
   "pult.loadFailed": "Не удалось загрузить список серверов."
 }

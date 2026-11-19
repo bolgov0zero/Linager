@@ -32,6 +32,7 @@
   "pult.winDesktop": "Desktop",
   "pult.winAssistant": "Assistant",
   "pult.winQuality": "Quality",
+  "pult.winDispatcher": "Dispatcher",
   "pult.filesTitle": "Files · {name}",
   "pult.loadFailed": "Could not load the list of servers."
 }

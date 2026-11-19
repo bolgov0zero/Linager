@@ -163,6 +163,8 @@ var criticalProcesses = map[string]bool{
 	"csrss.exe": true, "wininit.exe": true, "winlogon.exe": true, "services.exe": true, "lsass.exe": true, "smss.exe": true, "system": true,
 }
 
+// procKill ends a process. "TERM" ends that process only; "KILL" ends it together with every process it started (the tree),
+// like taskkill /F /T. Windows has no softer signal that a service can send into the session of the person.
 func procKill(ctx context.Context, raw json.RawMessage, _ bool) (any, error) {
 	var p struct {
 		PID    int
@@ -172,7 +174,7 @@ func procKill(ctx context.Context, raw json.RawMessage, _ bool) (any, error) {
 		return nil, errors.New("invalid request")
 	}
 	switch p.Signal {
-	case "", "TERM", "KILL": // Windows has one way to end a process
+	case "", "TERM", "KILL":
 	default:
 		return nil, errors.New("unsupported signal")
 	}
@@ -186,8 +188,47 @@ func procKill(ctx context.Context, raw json.RawMessage, _ bool) (any, error) {
 	if name, err := pr.NameWithContext(ctx); err == nil && criticalProcesses[strings.ToLower(name)] {
 		return nil, errors.New("refusing to end a system process")
 	}
+	ended := 0
+	if p.Signal == "KILL" {
+		ended = killTree(ctx, pr.Pid)
+	}
 	if err := pr.KillWithContext(ctx); err != nil {
 		return nil, err
 	}
-	return map[string]bool{"ok": true}, nil
+	return map[string]any{"ok": true, "children": ended}, nil
+}
+
+// killTree ends the processes below root (the deepest first) and returns how many it ended; the ones it must not touch
+// (the agent itself, the system processes) and the ones that refuse are skipped.
+func killTree(ctx context.Context, root int32) int {
+	procs, err := process.ProcessesWithContext(ctx)
+	if err != nil {
+		return 0
+	}
+	parent := make(map[int32]int32, len(procs))
+	created := make(map[int32]int64, len(procs))
+	byPID := make(map[int32]*process.Process, len(procs))
+	for _, pr := range procs {
+		byPID[pr.Pid] = pr
+		if pp, err := pr.PpidWithContext(ctx); err == nil {
+			parent[pr.Pid] = pp
+		}
+		if ct, err := pr.CreateTimeWithContext(ctx); err == nil {
+			created[pr.Pid] = ct
+		}
+	}
+	n := 0
+	for _, pid := range processDescendants(parent, created, root) {
+		if pid <= 4 || int(pid) == os.Getpid() {
+			continue
+		}
+		pr := byPID[pid]
+		if name, err := pr.NameWithContext(ctx); err == nil && criticalProcesses[strings.ToLower(name)] {
+			continue
+		}
+		if pr.KillWithContext(ctx) == nil {
+			n++
+		}
+	}
+	return n
 }

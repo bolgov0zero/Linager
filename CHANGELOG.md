@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+- New: **the Dispatcher in the Assistant.** An icon button on the bar of the Assistant (window, tab and the Console; shown to whoever has the right "Processes" or "Services") opens a floating window like the Task Manager, one per server, closed with the cross. **Processes:** refreshes every 3 s, sorted by any column (process, PID, user, CPU, RAM; the second click turns the order over), the totals of CPU and RAM in the headers, cells get warmer with the load, search by name, PID and user; "End" and "Force end", both with a confirmation and an audit entry. **Services:** the filters All / Running / Stopped / Failed, sorting by a column, "Restart" and "Stop" for a running service, "Start" for a stopped or failed one; protected services ask for confirmation as on the "Services" tab. A tab the person has no right for is not shown.
+- Change (Windows agent): **"Force end" ends the process together with every process it started** (the tree, like `taskkill /F /T`; the deepest first, system processes and the agent are skipped; a parent that started later than its child is not taken for a parent, its PID was reused). "End" ends that process only. Windows has no softer way that a service can use for a window in the session of the person, so what is not saved is lost in both cases; the texts of the confirmation say so. **The Windows agent needs this version** for the tree; an older one ends only the process in both cases. Linux is not affected. The rules are in `dispatcher.ts` (sorting and actions, tested) and `agent/proctree.go` (tested).
+
+
 ## 0.5.4
 
 - Fix: **the picture settings window of the Assistant blinked while it was moved** ("Loading..." and the form again). Every move gives the window a new object, and the form took that as a new computer and read the settings once more (an unsaved edit was lost too). The form follows the id of the computer only now.

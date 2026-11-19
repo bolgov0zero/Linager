@@ -4,6 +4,7 @@
   import ActionMenu from '../ui/ActionMenu.svelte';
   import type AssistantSession from './AssistantSession.svelte';
   import type { AssistInfo, AssistPhase } from './AssistantSession.svelte';
+  import { dispatcherTabs, myAccess } from './access';
   import { sessionValue } from './nav';
   import { assistInfoShown, toggleAssistInfo } from './settings';
 
@@ -18,6 +19,7 @@
     info = null,
     screen,
     onsettings,
+    ondispatcher,
     layout = 'tab',
     display = $bindable('fit'),
   }: {
@@ -30,6 +32,8 @@
     screen: AssistantSession | null;
     /** The "Quality and frame rate" item: the owner opens the settings (a floating window). */
     onsettings: () => void;
+    /** The Dispatcher button (processes and services): the owner opens the floating window. */
+    ondispatcher?: () => void;
     /** Where the screen is: a page tab (the picture is fitted or shown at 100%) or a floating window (the window can follow the picture). */
     layout?: 'tab' | 'window';
     /** How the picture and the window go together; the owner applies it. */
@@ -37,6 +41,11 @@
   } = $props();
 
   const live = $derived(phase === 'open');
+  // the Dispatcher needs the modules of the processes or the services: the button is there for whoever has one of them
+  const canDispatcher = $derived.by(() => {
+    const t = dispatcherTabs($myAccess.role, $myAccess.modules);
+    return t.proc || t.svc;
+  });
 
   let list = $state<AssistSession[]>([]);
 
@@ -142,5 +151,17 @@
 <ActionMenu compact iconSize={layout === 'window' ? 13.5 : 18} label="" icon="desktop" title={$tr('assist.display')} items={displayItems} />
 {#if live}
   <button class="btn sm" type="button" title={canCad ? $tr('assist.cadHint') : $tr('assist.cadConsoleOnly')} disabled={!canCad} onclick={() => screen?.ctrlAltDel()}>Ctrl+Alt+Del</button>
+  {#if ondispatcher && canDispatcher}
+    <button class="btn sm dispbtn" type="button" title={$tr('disp.button')} aria-label={$tr('disp.button')} onclick={ondispatcher}>
+      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" shape-rendering="crispEdges"><path d="M2 2h12v12H2zM2 6h12M5 9h3M5 12h6" /></svg>
+    </button>
+  {/if}
   <ActionMenu compact label={$tr('assist.more')} {items} />
 {/if}
+
+<style>
+  .dispbtn {
+    padding: 0;
+    width: var(--ctl-sm, 28px);
+  }
+</style>

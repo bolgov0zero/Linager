@@ -25,6 +25,7 @@
   import ViewSwitch from './lib/dashboard/ViewSwitch.svelte';
   import TabBar, { type TabBarItem } from './lib/ui/TabBar.svelte';
   import { isPhone } from './lib/ui/viewport';
+  import { myAccess } from './lib/assistant/access';
 
   type Theme = 'light' | 'dark';
   type Phase = 'loading' | 'login' | 'app';
@@ -88,6 +89,11 @@
   let updatesCount = $state(0);
   /** Only an administrator changes the settings, adds and removes servers and agents, and edits the dashboard. */
   const isAdmin = $derived((session?.role ?? 'admin') === 'admin');
+
+  // what the person may do, for the parts that are far from the session (the Dispatcher of the Assistant)
+  $effect(() => {
+    myAccess.set({ role: session?.role ?? 'auditor', modules: session?.modules ?? [] });
+  });
   const clock = $derived(lastLive ? fmtClock(lastLive) : '--:--:--');
 
   /** Phone: the bottom bar of the dashboard. The server page has its own bar. */
