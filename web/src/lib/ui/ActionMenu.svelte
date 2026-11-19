@@ -12,11 +12,14 @@
     icon,
     title,
     compact = false,
+    iconSize = 18,
   }: {
     /** Text of the button; may be empty when `icon` stands for it (then `title` names the button). */
     label: string;
     /** Name of a pixel icon shown before the text. */
     icon?: string;
+    /** Size of the icon in pixels: 18 keeps every square of the pixel icon at 2 px, 13.5 suits the 11 px text of a window header. */
+    iconSize?: number;
     /** The small button (`btn sm`) of window headers and toolbars. */
     compact?: boolean;
     /** Tooltip and name of the button and of its list; defaults to the label. */
@@ -129,7 +132,7 @@
   {onkeydown}
   onclick={() => (open ? hide() : void show())}
 >
-  {#if icon}<PixIcon name={icon} size={compact ? 13.5 : 18} />{/if}
+  {#if icon}<PixIcon name={icon} size={iconSize} />{/if}
   {label}
   <span class="arrow" aria-hidden="true"></span>
 </button>

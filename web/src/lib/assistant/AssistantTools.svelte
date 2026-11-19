@@ -137,7 +137,7 @@
 </script>
 
 <ActionMenu compact label={$tr('assist.sessionBtn')} title={$tr('assist.sessionBtn')} items={sessionItems} />
-<ActionMenu compact label="" icon="desktop" title={$tr('assist.display')} items={displayItems} />
+<ActionMenu compact iconSize={layout === 'window' ? 13.5 : 18} label="" icon="desktop" title={$tr('assist.display')} items={displayItems} />
 {#if live}
   <button class="btn sm" type="button" title={canCad ? $tr('assist.cadHint') : $tr('assist.cadConsoleOnly')} disabled={!canCad} onclick={() => screen?.ctrlAltDel()}>Ctrl+Alt+Del</button>
   <ActionMenu compact label={$tr('assist.more')} {items} />
