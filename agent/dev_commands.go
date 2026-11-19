@@ -6,7 +6,16 @@ package agent
 var (
 	devCommands map[string]CmdFunc
 	devStreams  map[string]StreamFunc
+	devModules  []string // when set, the simulator offers exactly these modules (a Windows host has other tabs)
+	devPlatform func(platform string)
 )
+
+// SetDevPlatform makes the simulator answer like another platform ("windows"). A normal build has nothing to switch.
+func SetDevPlatform(platform string) {
+	if devPlatform != nil {
+		devPlatform(platform)
+	}
+}
 
 func (r *Registry) applyDevOverrides() {
 	for name, fn := range devCommands {
@@ -14,6 +23,10 @@ func (r *Registry) applyDevOverrides() {
 	}
 	for name, fn := range devStreams {
 		r.streams[name] = fn
+	}
+	if devModules != nil {
+		r.modules = devModules
+		return
 	}
 	if _, ok := devCommands["docker.state"]; ok {
 		for _, m := range r.modules {

@@ -171,15 +171,25 @@ func simSecurity() secState {
 }
 
 func simDocker() map[string]any {
-	c := func(id, name, image, state, status string, cpu float64, used uint64) map[string]any {
-		return map[string]any{"id": id, "name": name, "image": image, "state": state, "status": status, "ports": []string{"0.0.0.0:8080->80/tcp"}, "created": time.Now().Add(-72 * time.Hour).Unix(), "compose": false, "cpu": cpu, "mem_used": used << 20, "mem_limit": uint64(2048) << 20}
+	c := func(id, name, image, state, status string, ports []string, cpu float64, used uint64) map[string]any {
+		return map[string]any{"id": id, "name": name, "image": image, "state": state, "status": status, "ports": ports, "created": time.Now().Add(-72 * time.Hour).Unix(), "compose": false, "cpu": cpu, "mem_used": used << 20, "mem_limit": uint64(2048) << 20}
 	}
-	cont := []map[string]any{c("a1b2c3d4e5f6", "web", "nginx:1.25", "running", "Up 3 days", 1.4, 64), c("b1b2c3d4e5f6", "db", "postgres:16", "running", "Up 3 days", 4.2, 512), c("c1b2c3d4e5f6", "cache", "redis:7", "exited", "Exited (1) 2 hours ago", 0, 0)}
-	cont[0]["compose"], cont[0]["project"], cont[0]["service"] = true, "shop", "web"
+	cont := []map[string]any{
+		c("a1b2c3d4e5f6", "web", "nginx:1.25", "running", "Up 3 days", []string{"0.0.0.0:80->80/tcp", "0.0.0.0:443->443/tcp"}, 1.4, 64),
+		c("d1b2c3d4e5f6", "api", "registry.example.com/shop/api:2.4.1", "running", "Up 3 days", []string{"127.0.0.1:3000->3000/tcp"}, 3.1, 212),
+		c("b1b2c3d4e5f6", "db", "postgres:16", "running", "Up 12 days", []string{"127.0.0.1:5432->5432/tcp"}, 4.2, 512),
+		c("c1b2c3d4e5f6", "cache", "redis:7", "exited", "Exited (1) 2 hours ago", []string{}, 0, 0),
+		c("e1b2c3d4e5f6", "grafana", "grafana/grafana:10.4.2", "running", "Up 9 days", []string{"0.0.0.0:3001->3000/tcp"}, 0.8, 148),
+	}
+	for _, i := range []int{0, 1} {
+		cont[i]["compose"], cont[i]["project"] = true, "shop"
+	}
+	cont[0]["service"], cont[1]["service"] = "web", "api"
 	cont[0]["upd"], cont[0]["upd_local"], cont[0]["upd_remote"] = "new", "aaaa11112222", "bbbb33334444"
-	cont[1]["upd"], cont[1]["upd_local"], cont[1]["upd_remote"] = "new", "cccc11112222", "dddd33334444"
-	cont[2]["upd"] = "current"
-	imgs := []map[string]any{{"id": "111111111111", "repo_tags": []string{"nginx:1.25"}, "size": 190 << 20, "created": time.Now().Add(-100 * 24 * time.Hour).Unix(), "used": true}, {"id": "222222222222", "repo_tags": []string{"postgres:16"}, "size": 430 << 20, "created": time.Now().Add(-60 * 24 * time.Hour).Unix(), "used": true}, {"id": "333333333333", "repo_tags": []string{}, "size": 80 << 20, "created": time.Now().Add(-200 * 24 * time.Hour).Unix(), "used": false}}
+	cont[1]["upd"] = "current"
+	cont[2]["upd"], cont[2]["upd_local"], cont[2]["upd_remote"] = "new", "cccc11112222", "dddd33334444"
+	cont[3]["upd"], cont[4]["upd"] = "current", "current"
+	imgs := []map[string]any{{"id": "111111111111", "repo_tags": []string{"nginx:1.25"}, "size": 190 << 20, "created": time.Now().Add(-100 * 24 * time.Hour).Unix(), "used": true}, {"id": "222222222222", "repo_tags": []string{"postgres:16"}, "size": 430 << 20, "created": time.Now().Add(-60 * 24 * time.Hour).Unix(), "used": true}, {"id": "444444444444", "repo_tags": []string{"redis:7"}, "size": 117 << 20, "created": time.Now().Add(-40 * 24 * time.Hour).Unix(), "used": true}, {"id": "555555555555", "repo_tags": []string{"grafana/grafana:10.4.2"}, "size": 398 << 20, "created": time.Now().Add(-30 * 24 * time.Hour).Unix(), "used": true}, {"id": "666666666666", "repo_tags": []string{"registry.example.com/shop/api:2.4.1"}, "size": 241 << 20, "created": time.Now().Add(-9 * 24 * time.Hour).Unix(), "used": true}, {"id": "333333333333", "repo_tags": []string{}, "size": 80 << 20, "created": time.Now().Add(-200 * 24 * time.Hour).Unix(), "used": false}}
 	return map[string]any{"available": true, "containers": cont, "images": imgs, "checked_at": time.Now().Add(-time.Hour).Unix()}
 }
 

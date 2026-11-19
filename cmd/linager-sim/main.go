@@ -25,21 +25,29 @@ import (
 )
 
 type persona struct {
-	name                  string
+	name, os              string
 	cpu, mem, disk        float64
 	updates, failed       int
 	reboot, offline, wavy bool
 }
 
 var personas = []persona{
-	{"web-01", 36, 52, 41, 3, 0, false, false, true},
-	{"web-02", 27, 49, 44, 12, 0, true, false, true},
-	{"db-primary", 46, 78, 63, 0, 0, false, false, true},
-	{"db-replica", 21, 71, 63, 5, 1, false, false, true},
-	{"cache-01", 11, 65, 18, 2, 0, false, false, true},
-	{"mail-01", 0, 0, 0, 7, 0, false, true, false},
-	{"build-runner", 93, 86, 72, 8, 0, false, false, false},
-	{"backup-nas", 4, 31, 91, 1, 0, false, false, false},
+	{"web-01", "", 36, 52, 41, 3, 0, false, false, true},
+	{"web-02", "", 27, 49, 44, 12, 0, true, false, true},
+	{"db-primary", "", 46, 78, 63, 0, 0, false, false, true},
+	{"db-replica", "", 21, 71, 63, 5, 1, false, false, true},
+	{"cache-01", "", 11, 65, 18, 2, 0, false, false, true},
+	{"mail-01", "", 0, 0, 0, 7, 0, false, true, false},
+	{"build-runner", "", 93, 86, 72, 8, 0, false, false, false},
+	{"backup-nas", "", 4, 31, 91, 1, 0, false, false, false},
+	{"proxy-01", "", 9, 24, 29, 0, 0, false, false, true},
+	{"monitoring", "", 22, 58, 47, 1, 0, false, false, true},
+}
+
+// winPersonas are what -windows enrolls instead: the simulator answers like a Windows host (agent.SetDevPlatform).
+var winPersonas = []persona{
+	{"office-pc", "Windows 11 Pro 24H2", 18, 61, 55, 4, 0, true, false, true},
+	{"dc-01", "Windows Server 2022 Standard", 14, 47, 38, 2, 0, false, false, true},
 }
 
 type fake struct {
@@ -53,17 +61,42 @@ func (f *fake) Collect(now time.Time) protocol.Sample {
 		w = 8 * math.Sin(float64(now.Unix())/20)
 	}
 	cl := func(v float64) float64 { return math.Max(0, math.Min(100, v)) }
+	root, second, iface, load := "/", "/data", "ens18", [3]float64{f.p.cpu / 25, f.p.cpu / 30, f.p.cpu / 35}
+	if f.p.os != "" {
+		root, second, iface, load = "C:", "D:", "Ethernet", [3]float64{} // Windows has no load average
+	}
 	return protocol.Sample{TS: now.Unix(), CPU: cl(f.p.cpu + w), MemPct: cl(f.p.mem + w/4), MemTotal: 8 << 30, MemUsed: uint64(cl(f.p.mem) / 100 * (8 << 30)),
-		DiskPct: f.p.disk, BootTime: f.boot, Uptime: now.Unix() - f.boot, Load: [3]float64{f.p.cpu / 25, f.p.cpu / 30, f.p.cpu / 35},
+		DiskPct: f.p.disk, BootTime: f.boot, Uptime: now.Unix() - f.boot, Load: load,
 		RxBps: 3e5 + 1e6*(1+math.Sin(float64(now.Unix())/9)), TxBps: 1e5 + 4e5*(1+math.Cos(float64(now.Unix())/7)),
 		Updates: f.p.updates, FailedServices: f.p.failed, RebootRequired: f.p.reboot, Procs: 120,
-		Disks: []protocol.Disk{{Mount: "/", Device: "/dev/vda1", FS: "ext4", Total: 100 << 30, Used: uint64(f.p.disk) << 30, Pct: f.p.disk},
-			{Mount: "/data", Device: "/dev/vdb1", FS: "xfs", Total: 500 << 30, Used: 120 << 30, Pct: 24}},
-		Net: []protocol.NetIface{{Iface: "ens18", Up: true, IP: "10.0.1.10", MAC: "52:54:00:aa:bb:cc", SpeedMbps: 1000, RxBps: 1e6, TxBps: 4e5, RxTotal: 9 << 30, TxTotal: 3 << 30}}}
+		Disks: []protocol.Disk{{Mount: root, Device: "/dev/vda1", FS: "ext4", Total: 100 << 30, Used: uint64(f.p.disk) << 30, Pct: f.p.disk},
+			{Mount: second, Device: "/dev/vdb1", FS: "xfs", Total: 500 << 30, Used: 120 << 30, Pct: 24}},
+		Net: []protocol.NetIface{{Iface: iface, Up: true, IP: "10.0.1.10", MAC: "52:54:00:aa:bb:cc", SpeedMbps: 1000, RxBps: 1e6, TxBps: 4e5, RxTotal: 9 << 30, TxTotal: 3 << 30}}}
+}
+
+func (f *fake) osName() string {
+	if f.p.os != "" {
+		return f.p.os
+	}
+	return "Debian GNU/Linux 12 (bookworm)"
+}
+
+func (f *fake) cpuModel() string {
+	if f.p.os != "" {
+		return "Intel(R) Core(TM) i7-12700 CPU @ 2.10GHz"
+	}
+	return "Intel(R) Xeon(R) CPU E5-2680 v4 @ 2.40GHz"
+}
+
+func (f *fake) kernel() string {
+	if f.p.os != "" {
+		return "10.0.26100"
+	}
+	return "6.1.0-18-amd64"
 }
 
 func (f *fake) System(v string) protocol.SystemInfo {
-	return protocol.SystemInfo{Hostname: f.p.name, OS: "Debian GNU/Linux 12 (bookworm)", Kernel: "6.1.0-18-amd64", Arch: "amd64", CPUModel: "Simulated CPU", CPUCores: 4, MemTotal: 8 << 30, AgentVersion: v}
+	return protocol.SystemInfo{Hostname: f.p.name, OS: f.osName(), Kernel: f.kernel(), Arch: "amd64", CPUModel: f.cpuModel(), CPUCores: 8, MemTotal: 8 << 30, AgentVersion: v}
 }
 
 func main() {
@@ -72,7 +105,12 @@ func main() {
 	login := flag.String("login", "admin", "admin login")
 	password := flag.String("password", "", "admin password")
 	dsn := flag.String("dsn", "", "database DSN for history backfill (optional)")
+	windows := flag.Bool("windows", false, "enroll a simulated Windows host instead of the Linux ones")
 	flag.Parse()
+	if *windows {
+		agent.SetDevPlatform("windows")
+		personas = winPersonas
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
@@ -176,7 +214,7 @@ func backfill(ctx context.Context, db *store.Store) error {
 			FROM servers s, generate_series(date_trunc('minute', now()) - $1::interval, now(), $2::interval) g,
 			LATERAL (SELECT 25 + 20*sin(extract(epoch FROM g)/86400*6.283 + length(s.name)) + 5*random() AS c,
 			                50 + 10*sin(extract(epoch FROM g)/86400*6.283) + 3*random() AS m,
-			                40 + extract(epoch FROM g)/3e7 AS d,
+			                40 + (extract(epoch FROM g) - extract(epoch FROM now()))/3e7 AS d,
 			                5e5 + 4e5*sin(extract(epoch FROM g)/43200) + 1e5*random() AS r,
 			                2e5 + 1e5*sin(extract(epoch FROM g)/40000) + 5e4*random() AS t) v
 			ON CONFLICT DO NOTHING`, tr.Table)
