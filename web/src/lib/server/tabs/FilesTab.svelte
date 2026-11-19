@@ -68,9 +68,6 @@
   let pathEl = $state<HTMLElement | null>(null);
   let pathClipped = $state(false);
 
-  /** 8x8 pixel icon of a file (the folder icon comes from the shared set). */
-  const FILE_ICON = ['01111100', '01000110', '01000111', '01000001', '01000001', '01000001', '01000001', '01111111'];
-
   const TREE_KEY = 'linager.files.treeWidth';
   function savedTreeWidth(): number {
     try {
@@ -850,9 +847,7 @@
               {#if entry.type === 'dir'}
                 <PixIcon name="folder" />
               {:else}
-                <svg class="fileic" viewBox="0 0 8 8" width="16" height="16" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">
-                  {#each FILE_ICON as row, y (y)}{#each [...row] as cell, x (x)}{#if cell === '1'}<rect {x} {y} width="1" height="1" />{/if}{/each}{/each}
-                </svg>
+                <span class="fileic"><PixIcon name="file" size={16} /></span>
               {/if}
               <span class="mn">
                 <span class="l1"><b>{entry.name}</b></span>
@@ -1474,7 +1469,7 @@
 
   .fileic {
     flex: none;
-    display: block;
+    display: inline-flex;
   }
 
   .box {

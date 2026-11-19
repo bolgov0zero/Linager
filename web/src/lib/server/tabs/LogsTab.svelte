@@ -186,18 +186,7 @@
           />
         </div>
         <button class="btn ib" type="button" aria-pressed={paused} aria-label={paused ? $tr('logs.resume') : $tr('logs.pause')} onclick={togglePause}>
-          <svg viewBox="0 0 16 16" width="16" height="16" shape-rendering="crispEdges" fill="currentColor" aria-hidden="true">
-            {#if paused}
-              <rect x="4" y="2" width="2" height="12" />
-              <rect x="6" y="3" width="2" height="10" />
-              <rect x="8" y="4" width="2" height="8" />
-              <rect x="10" y="5" width="2" height="6" />
-              <rect x="12" y="6" width="1" height="4" />
-            {:else}
-              <rect x="4" y="2" width="3" height="12" />
-              <rect x="9" y="2" width="3" height="12" />
-            {/if}
-          </svg>
+          <PixIcon name={paused ? 'play' : 'pause'} size={16} />
         </button>
         <button class="btn ib" type="button" aria-label={$tr('logs.clear')} onclick={clearLines}><PixIcon name="x" /></button>
       </div>

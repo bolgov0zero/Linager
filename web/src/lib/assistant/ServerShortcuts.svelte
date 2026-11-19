@@ -15,22 +15,31 @@
   const tabs = $derived(dispatcherTabs($myAccess.role, $myAccess.modules));
   const canDispatcher = $derived(tabs.proc || tabs.svc);
   const size = $derived(small ? 13.5 : 18);
+  // a square button: a window header's buttons have 2 px above and below, those of a tab 5 px
+  const pad = $derived(small ? 'padding:2px 5px' : 'padding:5px 8px');
 </script>
 
 {#if canFiles}
-  <button class="btn sc" class:sm={small} type="button" title={$tr('shortcut.files')} aria-label={$tr('shortcut.files')} onclick={() => openFilesWindow(serverId, serverName)}><PixIcon name="folder" {size} /></button>
+  <button class="btn sc" class:sm={small} style={pad} type="button" title={$tr('shortcut.files')} aria-label={$tr('shortcut.files')} onclick={() => openFilesWindow(serverId, serverName)}><span class="strut" aria-hidden="true">&#8203;</span><PixIcon name="folder" {size} /></button>
 {/if}
 {#if canDispatcher}
-  <button class="btn sc" class:sm={small} type="button" title={$tr('disp.button')} aria-label={$tr('disp.button')} onclick={() => openDispatcherWindow(serverId, serverName)}><PixIcon name="tasks" {size} /></button>
+  <button class="btn sc" class:sm={small} style={pad} type="button" title={$tr('disp.button')} aria-label={$tr('disp.button')} onclick={() => openDispatcherWindow(serverId, serverName)}><span class="strut" aria-hidden="true">&#8203;</span><PixIcon name="tasks" {size} /></button>
 {/if}
 
 <style>
+  /*
+   * The height of the neighbours' text buttons: the invisible character below sits on a line of the button's own font, so the
+   * button is as tall as a button with words. The padding is set inline: the header of a window sets its own for .btn.sm.
+   */
   .sc {
-    padding: 0;
-    width: var(--ctl, 36px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  .sc.sm {
-    width: var(--ctl-sm, 28px);
+  .strut {
+    display: block;
+    width: 0;
+    overflow: hidden;
   }
 </style>

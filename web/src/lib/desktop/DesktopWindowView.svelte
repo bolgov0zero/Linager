@@ -27,7 +27,7 @@
     <span class="muted status">· {statusText}</span>
   {/snippet}
   {#snippet tools()}
-    <DesktopTools {session} {phase} {serverId} serverName={win.serverName ?? win.name} bind:autoResize />
+    <DesktopTools {session} {phase} {serverId} serverName={win.serverName ?? win.name} small bind:autoResize />
   {/snippet}
   <DesktopSession {serverId} {address} bind:phase bind:autoResize bind:this={session} />
 </WindowFrame>

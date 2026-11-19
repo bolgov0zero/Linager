@@ -9,9 +9,21 @@
   import QualityWindowView from '../assistant/QualityWindowView.svelte';
   import TermWindowView from './TermWindowView.svelte';
   import { lockScroll } from '../ui/scrolllock';
+  import PixIcon from '../ui/PixIcon.svelte';
   import { isPhone } from '../ui/viewport';
   import { viewBox } from './vv';
-  import { focusTermWindow, termWindows, updateTermWindow } from './windows';
+  import { focusTermWindow, termWindows, updateTermWindow, type TermWindow } from './windows';
+
+  /** The icon of a window on the dock. */
+  const DOCK_ICON: Record<TermWindow['kind'], string> = {
+    terminal: 'terminal',
+    editor: 'pencil',
+    desktop: 'desktop',
+    assistant: 'assistant',
+    files: 'folder',
+    quality: 'gear',
+    dispatcher: 'tasks',
+  };
 
   /** The administrator, or an operator who was given the Users module, may pick the account of a shell. */
   let { canUsers = false }: { canUsers?: boolean } = $props();
@@ -85,7 +97,7 @@
           class:off={win.minimized}
           type="button"
           title={win.minimized ? $tr('termwin.restore') : $tr('termwin.minimize')}
-          onclick={() => toggle(win.key, win.minimized)}>{win.kind === 'editor' ? '✎' : win.kind === 'files' ? '▤' : win.kind === 'assistant' ? '▣' : win.kind === 'quality' ? '⚙' : win.kind === 'dispatcher' ? '☰' : '>_'} {win.name}</button>
+          onclick={() => toggle(win.key, win.minimized)}><span class="dk"><PixIcon name={DOCK_ICON[win.kind]} size={14} /></span> {win.name}</button>
       {/each}
     </nav>
     {/if}
@@ -93,6 +105,11 @@
 {/if}
 
 <style>
+  .dk {
+    display: inline-flex;
+    vertical-align: middle;
+  }
+
   /* Above the page, below modal dialogs (z 20) and the toast (z 30); the dashboard stays usable. */
   .layer {
     position: fixed;

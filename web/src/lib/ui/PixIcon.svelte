@@ -1,20 +1,14 @@
 <script lang="ts">
-  import { iconRows } from './pixicons';
+  import { iconPath } from './pixicons';
 
   /**
-   * A 9x9 pixel icon drawn at 18 px: every square is exactly 2 px, so it stays sharp on 1x, 2x and 3x screens. The
-   * small buttons use 13.5 px: 1.5 px per square, exactly 3 device pixels on a 2x screen.
+   * An icon of Pixelarticons (24x24 grid, one square is 1/24 of the size). It is sharpest where a square is a whole number of
+   * device pixels: 24 px (and 12 px on a 2x screen); other sizes are scaled and a little softer.
    */
   let { name, size = 18 }: { name: string; size?: number } = $props();
 </script>
 
-<svg class="pix" viewBox="0 0 9 9" width={size} height={size} fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">
-  {#each iconRows(name) as row, y (y)}
-    {#each [...row] as cell, x (x)}
-      {#if cell === '1'}<rect {x} {y} width="1" height="1" />{/if}
-    {/each}
-  {/each}
-</svg>
+<svg class="pix" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" aria-hidden="true"><path d={iconPath(name)} /></svg>
 
 <style>
   .pix {

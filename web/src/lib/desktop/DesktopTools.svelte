@@ -11,8 +11,9 @@
     phase,
     serverId,
     serverName,
+    small = false,
     autoResize = $bindable(true),
-  }: { session: DesktopSession | null; phase: DeskPhase; serverId: string; serverName: string; autoResize?: boolean } = $props();
+  }: { session: DesktopSession | null; phase: DeskPhase; serverId: string; serverName: string; /** In the header of a floating window (smaller buttons). */ small?: boolean; autoResize?: boolean } = $props();
 
   const live = $derived(phase === 'open');
 
@@ -41,6 +42,6 @@
 
 {#if live}
   <button class="btn sm" type="button" title={$tr('desk.cadHint')} onclick={() => session?.ctrlAltDel()}>Ctrl+Alt+Del</button>
-  <ServerShortcuts {serverId} {serverName} small />
+  <ServerShortcuts {serverId} {serverName} {small} />
   <ActionMenu compact label={$tr('desk.more')} {items} />
 {/if}

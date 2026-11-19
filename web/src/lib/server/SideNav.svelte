@@ -1,7 +1,8 @@
 <script lang="ts">
   import { tr } from '../../i18n';
   import TermIcon from '../terminal/TermIcon.svelte';
-  import { groupTabs, TAB_ICONS, type TabId, type TABS } from './model';
+  import PixIcon from '../ui/PixIcon.svelte';
+  import { groupTabs, type TabId, type TABS } from './model';
 
   let {
     tabs,
@@ -150,19 +151,13 @@
 </script>
 
 {#snippet icon(id: TabId)}
-  <svg class="ic" viewBox="0 0 9 9" fill="currentColor" aria-hidden="true">
-    {#each TAB_ICONS[id] as row, y (y)}
-      {#each [...row] as cell, x (x)}
-        {#if cell === '1'}<rect {x} {y} width="1" height="1" />{/if}
-      {/each}
-    {/each}
-  </svg>
+  <span class="ic"><PixIcon name={id} size={16} /></span>
 {/snippet}
 
 <aside class="side" class:rail class:open={menuOpen} bind:this={side}>
   <button class="menu-btn" type="button" aria-expanded={menuOpen} onclick={() => (menuOpen = !menuOpen)}>
     <span class="cur">{currentGroup ? $tr(currentGroup.key) : ''} · {currentTab ? $tr(currentTab.key) : ''}</span>
-    <svg viewBox="0 0 8 8" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M0 2h8v2H6v2H4V4H2V2z" /></svg>
+    <PixIcon name="chev" size={12} />
   </button>
 
   <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
@@ -172,7 +167,7 @@
       <div class="grp">
         <button class="grp-h" type="button" aria-expanded={!isFolded} onclick={() => toggleGroup(g.id)}>
           <span>{$tr(g.key)}</span>
-          <svg class="chev" class:folded={isFolded} viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><path d="M0 2h8v2H6v2H4V4H2V2z" /></svg>
+          <span class="chev" class:folded={isFolded}><PixIcon name="chev" size={12} /></span>
         </button>
         {#if !isFolded}
           <div class="items">
@@ -236,7 +231,7 @@
       aria-label={$tr(rail ? 'srv.nav.expand' : 'srv.nav.collapse')}
       onclick={toggleRail}
     >
-      <svg viewBox="1 0 7 7" fill="currentColor" aria-hidden="true"><path d="M5 0h2v1H5zM4 1h2v1H4zM3 2h2v1H3zM2 3h2v1H2zM3 4h2v1H3zM4 5h2v1H4zM5 6h2v1H5z" /></svg>
+      <PixIcon name="chevron-left" size={13} />
     </button>
   </div>
 </aside>
@@ -297,10 +292,8 @@
   }
 
   .chev {
-    width: 7px;
-    height: 7px;
+    display: inline-flex;
     flex: none;
-    shape-rendering: crispEdges;
     transition: transform 0.12s;
   }
 
@@ -399,10 +392,10 @@
   }
 
   .ic {
+    display: inline-flex;
     width: 16px;
     height: 16px;
     flex: none;
-    shape-rendering: crispEdges;
   }
 
   .lbl {
@@ -467,13 +460,7 @@
     cursor: pointer;
   }
 
-  .collapse svg {
-    width: 13px;
-    height: 13px;
-    shape-rendering: crispEdges;
-  }
-
-  .rail .collapse svg {
+  .rail .collapse :global(svg) {
     transform: rotate(180deg);
   }
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from './ui/PixIcon.svelte';
   import { locale, tr, type Locale } from '../i18n';
 
   /**
@@ -67,11 +68,7 @@
     aria-haspopup="menu"
     aria-expanded={open}
     onclick={() => (open = !open)}>
-    <svg viewBox="0 0 8 8" width="16" height="16" shape-rendering="crispEdges" aria-hidden="true">
-      <rect x="0" y="1" width="8" height="1.5" fill="currentColor" />
-      <rect x="0" y="3.25" width="8" height="1.5" fill="currentColor" />
-      <rect x="0" y="5.5" width="8" height="1.5" fill="currentColor" />
-    </svg>
+    <PixIcon name="menu" size={16} />
     {#if signedIn && isAdmin && updatesCount > 0}<span class="dotmark" aria-hidden="true"></span>{/if}
   </button>
 

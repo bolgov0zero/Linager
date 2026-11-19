@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0
+
+- Fix: **the buttons "Files" and "Dispatcher" were smaller than their neighbours** in the header of a window and on a tab: they were as tall as the icon. They are as tall as a button with words now, and nearly square (the remote desktop passes the size of the header, as the others do).
+- Change: **all icons of the interface are the Pixelarticons set** (2.4.2, MIT, the license is in `web/src/lib/ui/pixelarticons-LICENSE.txt` and in `NOTICE`) instead of the hand-drawn 9x9 ones: the buttons, the tabs of a server page and the phone bar, the Console, the card buttons, the terminal keys, the dock of the windows, the marks of the security checks, the file icon, the pause and play of the logs, the menu. One place gives the paths (`ui/pixelart.ts`) and one maps the names (`ui/pixicons.ts`); the old inline drawings are gone. Pixelarticons is drawn on a 24x24 grid, so it is sharpest at 24 px (and 12 px on a 2x screen); the sizes that the buttons had (18, 16, 14, 13.5 px) are kept, so the icons are scaled there and a little softer. The icon for the Dispatcher is `analytics`, for the Assistant `mouse`. The logo and the picture of the home screen are not touched.
+
 ## 0.6.1
 
 - New: **the buttons "Files" and "Dispatcher" on every connection.** Two icon buttons on the bar of the terminal, of the remote desktop (RDP) and of the Assistant, in a tab, in a floating window and in the Console. "Files" opens the "Files" tab in a floating window (the same as the item of the context menu of the Console); a button is there for whoever has the right for the module.

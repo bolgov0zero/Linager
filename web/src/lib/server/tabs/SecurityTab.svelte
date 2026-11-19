@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../../ui/PixIcon.svelte';
   import { untrack } from 'svelte';
   import { api, ApiError, type SecState, type ServerDetail } from '../../../api';
   import { locale, t, tr as T } from '../../../i18n';
@@ -162,12 +163,8 @@
   }
 
   /** 8x8 pixel marks of the checks: a tick, an exclamation, a cross and a dash for the informational ones. */
-  const MARKS: Record<Tone, readonly string[]> = {
-    ok: ['00000000', '00000001', '00000011', '10000110', '11001100', '01111000', '00110000', '00000000'],
-    warn: ['00011000', '00011000', '00011000', '00011000', '00011000', '00000000', '00011000', '00011000'],
-    crit: ['10000001', '11000011', '01100110', '00111100', '00111100', '01100110', '11000011', '10000001'],
-    muted: ['00000000', '00000000', '00000000', '01111110', '01111110', '00000000', '00000000', '00000000'],
-  };
+  /** The mark of a check by its tone. */
+  const MARK: Record<Tone, string> = { ok: 'check', warn: 'warn', crit: 'x', muted: 'minus' };
 
   const method = (m: string) => {
     const key = `sec.method.${m}`;
@@ -473,13 +470,7 @@
 {#snippet checkRow(c: Check)}
   {@const hint = hintKey(c)}
   <li class="crow">
-    <svg class="mark tone-{c.tone}" viewBox="0 0 8 8" width="16" height="16" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">
-      {#each MARKS[c.tone] as row, y (y)}
-        {#each [...row] as cell, x (x)}
-          {#if cell === '1'}<rect {x} {y} width="1" height="1" />{/if}
-        {/each}
-      {/each}
-    </svg>
+    <span class="mark tone-{c.tone}"><PixIcon name={MARK[c.tone]} size={16} /></span>
     <div class="cbody">
       <div class="cline">
         <span class="clabel">{$T(c.label)}</span>
@@ -717,7 +708,7 @@
 
   .mark {
     flex: none;
-    display: block;
+    display: inline-flex;
     margin-top: 1px;
   }
 

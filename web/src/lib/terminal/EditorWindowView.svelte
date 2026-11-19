@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../ui/PixIcon.svelte';
   import { untrack } from 'svelte';
   import { api } from '../../api';
   import { get } from 'svelte/store';
@@ -99,13 +100,7 @@
   {#snippet tools()}
     <button class="btn sm" class:ink={wrap} type="button" title={$tr('files.editor.wrap')} aria-label={$tr('files.editor.wrap')} aria-pressed={wrap} onclick={toggleWrap}>
       <span class="wrapic" aria-hidden="true">
-        <svg viewBox="0 0 16 16" width="14" height="14" shape-rendering="crispEdges" fill="currentColor">
-          <rect x="1" y="3" width="14" height="2" />
-          <rect x="1" y="7" width="10" height="2" />
-          <rect x="11" y="7" width="2" height="5" />
-          <rect x="5" y="11" width="8" height="2" />
-          <rect x="3" y="10" width="2" height="4" />
-        </svg>
+        <PixIcon name="wrap" size={14} />
       </span>
       <span class="wraptx">{$tr('files.editor.wrap')}</span>
     </button>

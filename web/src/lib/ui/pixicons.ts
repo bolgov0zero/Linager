@@ -1,29 +1,50 @@
-import { TAB_ICONS } from '../server/model';
+import { PIXELART } from './pixelart';
 
-/** 9x9 pixel icons of the buttons and the phone navigation (2 px a square at 18 px); the server tabs reuse the icons of the side menu. */
-const EXTRA: Record<string, readonly string[]> = {
-  more: ['000000000', '000000000', '000000000', '110111011', '110111011', '110111011', '000000000', '000000000', '000000000'],
-  plus: ['000000000', '000111000', '000111000', '011111110', '011111110', '011111110', '000111000', '000111000', '000000000'],
-  back: ['000010000', '000110000', '001110000', '011111111', '111111111', '011111111', '001110000', '000110000', '000010000'],
-  x: ['110000011', '111000111', '011101110', '001111100', '000111000', '001111100', '011101110', '111000111', '110000011'],
-  search: ['001110000', '010001000', '100000100', '100000100', '100000100', '010001000', '001110110', '000000111', '000000011'],
-  cards: ['111111111', '100000001', '100000001', '111111111', '000000000', '111111111', '100000001', '100000001', '111111111'],
-  map: ['110111011', '110111011', '000000000', '110111011', '110111011', '110111011', '000000000', '110111011', '110111011'],
-  gear: ['000111000', '011111110', '011111110', '111000111', '111000111', '111000111', '011111110', '011111110', '000111000'],
-  next: ['000000000', '111000000', '011100000', '001110000', '000111000', '001110000', '011100000', '111000000', '000000000'],
-  chev: ['000000000', '000000000', '000000000', '110000011', '011000110', '001101100', '000111000', '000000000', '000000000'],
-  audit: ['000111000', '111111111', '100000001', '101111101', '100000001', '101111101', '100000001', '101111101', '111111111'],
-  folder: ['111110000', '111110000', '111111111', '111111111', '111111111', '111111111', '111111111', '111111111', '111111111'],
-  note: ['111111111', '100000001', '101111101', '100000001', '101111101', '100000001', '101110001', '100000001', '111111111'],
-  pencil: ['000000011', '000001111', '000011110', '000111100', '001111000', '011110000', '111100000', '110000000', '000000000'],
-  reboot: ['000010000', '010010010', '100010001', '100010001', '100000001', '100000001', '010000010', '001111100', '000000000'],
-  trash: ['000111000', '111111111', '000000000', '011111110', '011010110', '011010110', '011010110', '011010110', '011111110'],
-  tasks: ['111111111', '111111111', '100000001', '101110001', '100000001', '101111101', '100000001', '101100001', '111111111'],
-  servers: ['111101111', '101101101', '101101101', '111101111', '000000000', '111101111', '101101101', '101101101', '111101111'],
+/**
+ * The names the interface uses for its icons, and the Pixelarticons icon each one is drawn with. A name that is not here is
+ * looked up in Pixelarticons itself, so a new icon only needs its path in pixelart.ts.
+ */
+const ALIAS: Record<string, string> = {
+  // buttons
+  more: 'more-horizontal',
+  back: 'arrow-left',
+  x: 'close',
+  cards: 'grid-2x2-2',
+  gear: 'settings-cog',
+  next: 'chevron-right',
+  chev: 'chevron-down',
+  audit: 'file-text',
+  reboot: 'power',
+  servers: 'server',
+  tasks: 'analytics',
+  menu: 'menu',
+  paste: 'clipboard',
+  window: 'window-frame',
+  bolt: 'zap',
+  wrap: 'text-wrap',
+  warn: 'warning-diamond',
+  // the connections (the Console, the cards)
+  desktop: 'monitor',
+  assistant: 'mouse',
+  // the tabs of a server page
+  overview: 'grid-2x2-2',
+  metrics: 'chart-bar-big',
+  manage: 'sliders',
+  services: 'bulletlist',
+  processes: 'cpu',
+  logs: 'article',
+  updates: 'download',
+  files: 'folder',
+  disk: 'database',
+  network: 'globe',
+  firewall: 'fire',
+  security: 'shield',
+  docker: 'docker',
 };
 
-const EMPTY: readonly string[] = EXTRA.more;
+const FALLBACK = 'more-horizontal';
 
-export function iconRows(name: string): readonly string[] {
-  return EXTRA[name] ?? (TAB_ICONS as Record<string, readonly string[]>)[name] ?? EMPTY;
+/** The path data of an icon by the name the interface uses. */
+export function iconPath(name: string): string {
+  return PIXELART[ALIAS[name] ?? name] ?? PIXELART[FALLBACK];
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PixIcon from '../ui/PixIcon.svelte';
   import { tick } from 'svelte';
   import { api, type Snippet } from '../../api';
   import { tr } from '../../i18n';
@@ -106,14 +107,7 @@
       <li class="row" role="none">
         <button class="run" type="button" role="menuitem" title={sn.command} onclick={() => run(sn)}>{sn.name}</button>
         <button class="paste" type="button" aria-label="{$tr('term.snippetPaste')}: {sn.name}" title={$tr('term.snippetPaste')} onclick={() => paste(sn)}>
-          <svg viewBox="0 0 16 16" width="14" height="14" shape-rendering="crispEdges" fill="currentColor" aria-hidden="true">
-            <rect x="5" y="1" width="6" height="2" />
-            <rect x="3" y="3" width="2" height="11" />
-            <rect x="11" y="3" width="2" height="11" />
-            <rect x="3" y="12" width="10" height="2" />
-            <rect x="6" y="6" width="4" height="2" />
-            <rect x="6" y="9" width="4" height="2" />
-          </svg>
+          <PixIcon name="paste" size={14} />
         </button>
       </li>
     {:else}

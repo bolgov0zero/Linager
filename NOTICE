@@ -3,3 +3,6 @@ Copyright 2026 bolgov0zero
 
 This product includes the Medeo Mono and Medeo Pixel fonts, licensed under
 the SIL Open Font License 1.1. See docs/design/mockup/fonts/LICENSE-Medeo-OFL.txt.
+
+This product includes icons from Pixelarticons 2.4.2 (https://pixelarticons.com), licensed under the MIT License.
+See web/src/lib/ui/pixelarticons-LICENSE.txt.
