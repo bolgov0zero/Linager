@@ -10,6 +10,7 @@
     updates = 0,
     securityUpdates = 0,
     failedServices = 0,
+    imageUpdates = 0,
     agentVersion = '',
     onterminalwindow,
     ondesktopwindow,
@@ -21,6 +22,8 @@
     updates?: number;
     securityUpdates?: number;
     failedServices?: number;
+    /** Docker containers with a newer image (-1 = unknown, hidden like 0). */
+    imageUpdates?: number;
     agentVersion?: string;
     /** Opens the terminal of the server in a floating window; the button sits next to the Terminal item. */
     onterminalwindow?: () => void;
@@ -81,6 +84,9 @@
     }
     if (id === 'services' && failedServices > 0) {
       return { text: String(failedServices), tone: 'crit', hint: $tr('srv.nav.badgeFailed', { n: failedServices }) };
+    }
+    if (id === 'docker' && imageUpdates > 0) {
+      return { text: String(imageUpdates), tone: 'warn', hint: $tr('srv.nav.badgeImages', { n: imageUpdates }) };
     }
     return null;
   }

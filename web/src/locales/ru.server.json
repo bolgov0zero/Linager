@@ -115,6 +115,7 @@
   "srv.nav.expand": "Развернуть меню",
   "srv.nav.badgeUpdates": "Доступно обновлений: {n}",
   "srv.nav.badgeFailed": "Упавших служб: {n}",
+  "srv.nav.badgeImages": "Контейнеров с новым образом: {n}",
   "srv.note.open": "Заметка",
   "srv.note.title": "Заметка",
   "srv.note.edit": "Редактировать заметку",

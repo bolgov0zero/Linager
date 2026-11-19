@@ -2,13 +2,23 @@
   import { tr } from '../../i18n';
   import type { Tag } from './status';
 
-  let { tags }: { tags: Tag[] } = $props();
+  /** compact: the short forms for the map tiles (reboot, updates, images, agent); the full text stays in the tooltip. */
+  let { tags, compact = false }: { tags: Tag[]; compact?: boolean } = $props();
+
+  const SHORT = new Set<Tag['id']>(['reboot', 'updates', 'images', 'agentUpdate', 'agentOld']);
+
+  function full(tag: Tag): string {
+    return $tr(`dash.tag.${tag.id}`, { n: tag.n ?? 0 });
+  }
 </script>
 
 <div class="tags">
   {#each tags as tag (tag.id)}
-    <span class="tag {tag.tone}">
-      {#if tag.id === 'reboot'}
+    {@const short = compact && SHORT.has(tag.id)}
+    <span class="tag {tag.tone}" title={short ? full(tag) : undefined}>
+      {#if short}
+        {$tr(`dash.tag.short.${tag.id}`, { n: tag.n ?? 0 })}
+      {:else if tag.id === 'reboot'}
         {$tr('dash.tag.reboot')}
       {:else if tag.id === 'updates'}
         {$tr('dash.tag.updates', { n: tag.n ?? 0 })}

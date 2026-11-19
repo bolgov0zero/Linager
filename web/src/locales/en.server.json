@@ -115,6 +115,7 @@
   "srv.nav.expand": "Expand menu",
   "srv.nav.badgeUpdates": "Updates available: {n}",
   "srv.nav.badgeFailed": "Failed services: {n}",
+  "srv.nav.badgeImages": "Docker images with updates: {n}",
   "srv.note.open": "Note",
   "srv.note.title": "Note",
   "srv.note.edit": "Edit the note",

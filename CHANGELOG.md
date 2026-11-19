@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.10
+
+- New: **a badge with the number of Docker updates in the side menu of the server page**, next to the "Docker" item (and in the "Sections" sheet and the bottom bar on a phone), like the one of the "Updates" item. It counts the containers with a newer image (`Sample.ImageUpdates`, ignored containers are not counted), hidden at 0 or while unknown; the tooltip says "Docker images with updates: N".
+- Change: **shorter badges on the tiles of the Map view.** "reboot required" is `R!` (`П!`), "updates: N" (packages or Windows updates) is `U↑: N` (`О↑: N`), "images: N" (Docker) is `D↑: N` (`Д↑: N`), both agent badges (update available, outdated) are `A!` (`А!`; the colour tells them apart); the full text is the tooltip. The other badges and the card view are unchanged.
+
 ## 0.3.9
 
 - Docs: **the README (en, ru) and the landing page are brought up to date.** New: the Windows agent with the remote desktop, editing a Docker container, ignoring updates, the top bar with the menu, the phone layout, the Linux and Windows install links. A block about Windows and a block about the phone layout on the landing, a Windows and an "Add server" tab in its screenshot gallery, "Windows and adding servers" and "Docker: editing a container" in the README. The "new in 0.1.69" labels are gone, and Windows is no longer called beta (README, landing, site, docs).

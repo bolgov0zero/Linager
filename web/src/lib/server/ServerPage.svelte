@@ -89,6 +89,7 @@
   });
   const badges = $derived<Partial<Record<TabId, { text: string; tone: 'warn' | 'crit' }>>>({
     ...((sample?.updates ?? 0) > 0 ? { updates: { text: String(sample?.updates), tone: (sample?.security_updates ?? 0) > 0 ? 'crit' : 'warn' } } : {}),
+    ...((sample?.image_updates ?? 0) > 0 ? { docker: { text: String(sample?.image_updates), tone: 'warn' } } : {}),
     ...((sample?.failed_services ?? 0) > 0 ? { services: { text: String(sample?.failed_services), tone: 'crit' } } : {}),
   } as Partial<Record<TabId, { text: string; tone: 'warn' | 'crit' }>>);
   const barItems = $derived<TabBarItem[]>([
@@ -231,6 +232,7 @@
         updates={sample?.updates ?? 0}
         securityUpdates={sample?.security_updates ?? 0}
         failedServices={sample?.failed_services ?? 0}
+        imageUpdates={sample?.image_updates ?? 0}
         agentVersion={detail.agent_version ? `agent ${detail.agent_version}` : ''}
         onterminalwindow={canTerminal && online ? () => openTermWindow(detail!.id, detail!.name) : undefined}
         ondesktopwindow={canDesktop && online ? () => openDesktopWindow(detail!.id, detail!.name, detail!.address) : undefined}

@@ -591,7 +591,7 @@
               </div>
             {/if}
             <span class="tsub mono tup">{uptimeText(card)}</span>
-            <div class="ttags"><Tags tags={tagsOf(card, agentFlags[card.id] ?? null)} /></div>
+            <div class="ttags"><Tags compact tags={tagsOf(card, agentFlags[card.id] ?? null)} /></div>
           </div>
         {/each}
       </div>
