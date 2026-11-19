@@ -2,6 +2,7 @@
   import { tr } from '../../i18n';
   import WindowFrame from '../terminal/WindowFrame.svelte';
   import { updateTermWindow, type TermWindow } from '../terminal/windows';
+  import AssistantBadge from './AssistantBadge.svelte';
   import AssistantSession, { type AssistInfo, type AssistPhase } from './AssistantSession.svelte';
   import AssistantStats from './AssistantStats.svelte';
   import AssistantTools from './AssistantTools.svelte';
@@ -27,14 +28,14 @@
   {#snippet title()}
     <span class="dot" class:on={phase === 'open'} aria-hidden="true"></span>
     <span class="label">{serverName}</span>
-    <span class="muted status">· {$tr('assist.name')} · {statusText}</span>
+    <span class="muted status">· {$tr('assist.name')} · {statusText}{#if phase === 'open'} <AssistantBadge desktop={info?.desktop} />{/if}</span>
   {/snippet}
   {#snippet tools()}
-    <AssistantTools {serverId} bind:session={() => session, (v) => updateTermWindow(win.key, { session: v })} {phase} {screen} onsettings={() => gotoServerTab(serverName, 'manage')} />
+    <AssistantTools {serverId} bind:session={() => session, (v) => updateTermWindow(win.key, { session: v })} {phase} {info} {screen} onsettings={() => gotoServerTab(serverName, 'manage')} />
   {/snippet}
   <div class="col">
     <div class="screenbox"><AssistantSession {serverId} {session} bind:phase bind:info bind:this={screen} /></div>
-    <AssistantStats {serverId} {phase} {info} onsettings={() => gotoServerTab(serverName, 'manage')} />
+    <AssistantStats {serverId} {phase} {info} />
   </div>
 </WindowFrame>
 

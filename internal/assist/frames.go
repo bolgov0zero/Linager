@@ -22,8 +22,12 @@ const (
 	TypeTiles    byte = 2  // packed tiles of changed JPEG pictures, see PackTiles
 	TypeStats    byte = 3  // JSON Stats, about once a second
 	TypeEnd      byte = 4  // JSON End: the helper stops and says why
+	TypeClip     byte = 5  // JSON Clip: the text of the clipboard of the computer, the answer to TypeClipGet
 	TypeInput    byte = 16 // JSON Input: mouse and keys, from the browser
 	TypeSettings byte = 17 // JSON Settings, from the panel
+	TypeClipSet  byte = 18 // JSON Clip: put this text on the clipboard of the computer
+	TypeClipGet  byte = 19 // no payload: send the text of the clipboard of the computer
+	TypeMonitor  byte = 20 // JSON MonitorSel: show this monitor
 )
 
 // MaxFrame is the largest frame accepted: a full 4K screen in poor JPEG is far below it.
@@ -107,12 +111,23 @@ func (r *Reassembler) Push(chunk []byte) ([]Frame, error) {
 	return out, nil
 }
 
-// Hello tells the browser what it will see.
+// Monitor is one display of the computer, in the pixels of the whole desktop.
+type Monitor struct {
+	X       int  `json:"x"`
+	Y       int  `json:"y"`
+	W       int  `json:"w"`
+	H       int  `json:"h"`
+	Primary bool `json:"primary,omitempty"`
+}
+
+// Hello tells the browser what it will see: the size of the picture, the displays and which one is shown.
 type Hello struct {
-	Width   int    `json:"w"`
-	Height  int    `json:"h"`
-	Session int    `json:"session"`
-	User    string `json:"user,omitempty"`
+	Width    int       `json:"w"`
+	Height   int       `json:"h"`
+	Session  int       `json:"session"`
+	User     string    `json:"user,omitempty"`
+	Monitors []Monitor `json:"monitors,omitempty"` // the primary one first
+	Monitor  int       `json:"monitor"`            // the index shown, -1 for all of them as one picture
 }
 
 // Stats is what the helper measured in the last second.
@@ -120,6 +135,7 @@ type Stats struct {
 	FPS     float64 `json:"fps"`
 	Kbps    int     `json:"kbps"`
 	Quality int     `json:"q"`
+	Desktop string  `json:"desktop,omitempty"` // "default", or "winlogon" while the screen is locked, a sign-in or a UAC prompt is shown
 }
 
 // End is the reason the helper stops.

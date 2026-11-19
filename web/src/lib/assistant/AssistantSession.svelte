@@ -11,6 +11,11 @@
     fps: number;
     kbps: number;
     q: number;
+    /** "default" normally; "winlogon" on the lock, sign-in or UAC screen (see isSecureDesktop). */
+    desktop: string;
+    /** The monitors of the computer (primary first; empty when it did not say) and the picked one, -1 for all as one picture. */
+    monitors: Monitor[];
+    monitor: number;
   }
 </script>
 
@@ -18,19 +23,27 @@
   import { untrack } from 'svelte';
   import { assistantSocketUrl } from '../../api';
   import { tr, t } from '../../i18n';
+  import { showToast } from '../toast';
   import {
     ASSIST_LIMIT_CODE,
+    MSG_CLIP,
     MSG_END,
     MSG_HELLO,
     MSG_STATS,
     MSG_TILES,
     WheelNotches,
+    cleanMonitors,
+    encodeClipGet,
+    encodeClipSet,
     encodeInput,
+    encodeMonitor,
     parseTiles,
     type Hello,
+    type Monitor,
     type Stats,
   } from './protocol';
   import { scanKey, type ScanKey } from './scancodes';
+  import { assistSettings, refreshAssistSettings } from './settings';
 
   /**
    * The screen of a Windows session in the browser: a canvas that gets the picture as JPEG tiles over a WebSocket of
@@ -67,6 +80,11 @@
   let pendingMove: { x: number; y: number } | null = null;
   let frame = 0;
   const wheel = new WheelNotches();
+  /** Set while the clipboard of the computer is asked for: only an answer to that is put into the local clipboard. */
+  let clipWanted = 0;
+
+  // The pointer is part of the picture unless the settings say it is not drawn there; then the local one is shown (no lag).
+  const hideCursor = $derived($assistSettings[serverId]?.hide_cursor === true);
 
   const factor = $derived(mode === 'real' || box.w <= 0 || box.h <= 0 || size.w <= 0 ? 1 : Math.min(box.w / size.w, box.h / size.h));
   const cssW = $derived(Math.max(1, Math.floor(size.w * factor)));
@@ -79,6 +97,7 @@
     const mine = ++generation;
     message = '';
     info = null;
+    clipWanted = 0;
     size = { w: 0, h: 0 };
     phase = 'connecting';
     const ws = new WebSocket(assistantSocketUrl(serverId, session));
@@ -136,7 +155,17 @@
           canvas.width = hello.w; // resizing clears the picture; the tiles that follow fill it again
           canvas.height = hello.h;
         }
-        info = { w: hello.w, h: hello.h, user: hello.user ?? '', fps: info?.fps ?? 0, kbps: info?.kbps ?? 0, q: info?.q ?? 0 };
+        info = {
+          w: hello.w,
+          h: hello.h,
+          user: hello.user ?? '',
+          fps: info?.fps ?? 0,
+          kbps: info?.kbps ?? 0,
+          q: info?.q ?? 0,
+          desktop: info?.desktop ?? 'default',
+          monitors: cleanMonitors(hello.monitors),
+          monitor: Number.isInteger(hello.monitor) ? (hello.monitor as number) : -1,
+        };
         phase = 'open';
         return;
       }
@@ -145,12 +174,34 @@
         return;
       case MSG_STATS: {
         const s = json<Stats>(body);
-        if (s && info) info = { ...info, fps: Number(s.fps) || 0, kbps: Number(s.kbps) || 0, q: Number(s.q) || 0 };
+        if (s && info) {
+          info = { ...info, fps: Number(s.fps) || 0, kbps: Number(s.kbps) || 0, q: Number(s.q) || 0, desktop: typeof s.desktop === 'string' && s.desktop ? s.desktop : 'default' };
+        }
         return;
       }
+      case MSG_CLIP:
+        await takeClip(json<{ text?: string }>(body)?.text);
+        return;
       case MSG_END:
         end(json<{ reason?: string }>(body)?.reason || t('assist.ended'));
         return;
+    }
+  }
+
+  /** The clipboard of the computer came (the answer to getClipboard): it goes into the local clipboard. */
+  async function takeClip(text: string | undefined): Promise<void> {
+    if (Date.now() > clipWanted) return; // nobody asked: the clipboard of the person is not touched
+    clipWanted = 0;
+    if (typeof text !== 'string') return;
+    if (text === '') {
+      showToast(t('assist.clipEmpty'));
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(t('desk.clipboardSaved'));
+    } catch {
+      showToast(t('assist.clipDenied'));
     }
   }
 
@@ -183,6 +234,11 @@
     void session;
     untrack(connect);
     return shutdown;
+  });
+
+  // The setting of the pointer is needed as soon as the picture is there (the line under the screen reads it again from time to time).
+  $effect(() => {
+    if (phase === 'open') void refreshAssistSettings(serverId);
   });
 
   // ---- input ----
@@ -312,6 +368,37 @@
     focus();
   }
 
+  /** Picks a monitor of the computer (its index in info.monitors) or -1 for all of them as one picture; the computer answers with a new Hello. */
+  export function selectMonitor(index: number): void {
+    if (socket?.readyState === WebSocket.OPEN && phase === 'open') socket.send(encodeMonitor(index));
+    focus();
+  }
+
+  export const clipboardAvailable = (): boolean => typeof navigator !== 'undefined' && !!navigator.clipboard?.readText && !!navigator.clipboard?.writeText;
+
+  /** The local clipboard (text) to the computer; the browser asks for permission. */
+  export async function sendClipboard(): Promise<void> {
+    if (socket?.readyState !== WebSocket.OPEN || phase !== 'open') return;
+    try {
+      const msg = encodeClipSet(await navigator.clipboard.readText());
+      if (!msg) {
+        showToast(t('assist.clipTooBig'));
+        return;
+      }
+      socket?.send(msg);
+      showToast(t('assist.clipSent'));
+    } catch {
+      showToast(t('assist.clipDenied'));
+    }
+  }
+
+  /** Asks for the clipboard (text) of the computer; it goes into the local one when the answer comes. */
+  export function getClipboard(): void {
+    if (socket?.readyState !== WebSocket.OPEN || phase !== 'open') return;
+    clipWanted = Date.now() + 15000;
+    socket.send(encodeClipGet());
+  }
+
   /** Presses the keys one after the other and lets them go in reverse; the codes are KeyboardEvent.code names. */
   export function combo(codes: string[]): void {
     const keys = codes.map((c) => scanKey(c)).filter((k): k is ScanKey => k !== null);
@@ -343,6 +430,7 @@
       aria-label={$tr('assist.screenLabel', { name: label })}
       style:width="{cssW}px"
       style:height="{cssH}px"
+      style:cursor={hideCursor ? 'default' : 'none'}
       {onpointermove}
       {onpointerdown}
       {onpointerup}

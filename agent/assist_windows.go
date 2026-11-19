@@ -15,6 +15,7 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/registry"
 )
 
 // assistTokenEnv is the environment variable that carries the one-time token to the helper. The environment of a
@@ -126,8 +127,50 @@ func listAssistSessions() []AssistSession {
 	return out
 }
 
+const sasPolicyKey = `SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System`
+
+// sasState is the policy "Software SAS generation": 0 off, 1 services, 2 Ease of Access apps, 3 both. The agent is a
+// service, so 1 and 3 let it send Ctrl+Alt+Del.
+func sasState() map[string]any {
+	v, _ := regDWORD(sasPolicyKey, "SoftwareSASGeneration")
+	return map[string]any{"policy": v, "enabled": v == 1 || v == 3}
+}
+
 func assistSessionsCmd(context.Context, json.RawMessage, bool) (any, error) {
-	return map[string]any{"sessions": listAssistSessions()}, nil
+	return map[string]any{"sessions": listAssistSessions(), "sas": sasState()}, nil
+}
+
+// assistSasCmd lets Windows accept Ctrl+Alt+Del from services or stops it. It changes a Windows policy, so it is a
+// dangerous action: the panel asks for a confirmation and writes it to the audit log.
+func assistSasCmd(_ context.Context, params json.RawMessage, dangerous bool) (any, error) {
+	if !dangerous {
+		return nil, errDangerous
+	}
+	var p struct {
+		Enable bool `json:"enable"`
+	}
+	if err := json.Unmarshal(params, &p); err != nil {
+		return nil, errors.New("bad request")
+	}
+	cur, _ := regDWORD(sasPolicyKey, "SoftwareSASGeneration")
+	val := uint32(0)
+	if p.Enable {
+		val = 1
+		if cur == 2 || cur == 3 {
+			val = 3 // keep what the administrator allowed to the Ease of Access apps
+		}
+	} else if cur == 3 {
+		val = 2
+	}
+	k, _, err := registry.CreateKey(registry.LOCAL_MACHINE, sasPolicyKey, registry.SET_VALUE)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = k.Close() }()
+	if err := k.SetDWordValue("SoftwareSASGeneration", val); err != nil {
+		return nil, err
+	}
+	return sasState(), nil
 }
 
 // resolveAssistSession turns what the panel asked for ("console" or a number) into a session that has a screen.
@@ -160,7 +203,14 @@ func assistantStream(ctx context.Context, params json.RawMessage, sio *StreamIO)
 		Session string `json:"session"`
 	}
 	_ = json.Unmarshal(params, &p)
-	return runAssistRelay(ctx, sio, p.Session, launchAssistHelper)
+	// Ctrl+Alt+Del reaches the console session only: that is where a service can send it
+	cad := func() error {
+		if id, err := resolveAssistSession(p.Session); err != nil || id != windows.WTSGetActiveConsoleSessionId() {
+			return errors.New("Ctrl+Alt+Del can be sent to the console session only")
+		}
+		return sendSAS()
+	}
+	return runAssistRelay(ctx, sio, p.Session, launchAssistHelper, cad)
 }
 
 // winHelper is the helper process in a session.

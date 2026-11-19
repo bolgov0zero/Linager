@@ -27,21 +27,18 @@ func useSimWindows() {
 	}
 	devModules = []string{"metrics", "terminal", "desktop", "assistant", "services", "processes", "logs", "files", "disk", "users", "winupdate", "network", "system"}
 	devCommands = map[string]CmdFunc{
-		"services.list":  ok(simWinServices()),
-		"processes.list": ok(simProcesses()),
-		"disk.state":     ok(simWinDisk()),
-		"disk.scan":      ok(simWinScan()),
-		"users.state":    ok(simWinUsers()),
-		"winupdate.list": ok(map[string]any{"updates": simWinUpdates(), "reboot_pending": true}),
-		"network.state":  ok(simWinNet()),
-		"assistant.sessions": ok(map[string]any{"sessions": []AssistSession{
-			{ID: 1, Type: "console", User: "ACME\\i.petrova", State: "active", Console: true, Screen: true},
-			{ID: 2, Type: "rdp", User: "ACME\\a.sidorov", State: "active", Client: "10.0.2.15", Screen: true},
-			{ID: 3, Type: "rdp", User: "ACME\\m.kuznetsov", State: "disconnected", Client: "10.0.2.41"},
-		}}),
-		"desktop.state":   simDesktopStateCmd,
-		"desktop.enable":  simDesktopToggle(true),
-		"desktop.disable": simDesktopToggle(false),
+		"services.list":      ok(simWinServices()),
+		"processes.list":     ok(simProcesses()),
+		"disk.state":         ok(simWinDisk()),
+		"disk.scan":          ok(simWinScan()),
+		"users.state":        ok(simWinUsers()),
+		"winupdate.list":     ok(map[string]any{"updates": simWinUpdates(), "reboot_pending": true}),
+		"network.state":      ok(simWinNet()),
+		"assistant.sessions": simAssistSessions,
+		"assistant.sas":      simSasToggle,
+		"desktop.state":      simDesktopStateCmd,
+		"desktop.enable":     simDesktopToggle(true),
+		"desktop.disable":    simDesktopToggle(false),
 	}
 	devStreams = map[string]StreamFunc{"logs": simLogs, "assistant": fakeAssistStream(nil)}
 }
@@ -138,4 +135,32 @@ func simDesktopToggle(on bool) CmdFunc {
 		simRDPOn.Store(on)
 		return simDesktopStateCmd(ctx, p, d)
 	}
+}
+
+var simSasOn atomic.Bool
+
+func simSasState() map[string]any {
+	on := simSasOn.Load()
+	v := 0
+	if on {
+		v = 1
+	}
+	return map[string]any{"policy": v, "enabled": on}
+}
+
+func simAssistSessions(context.Context, json.RawMessage, bool) (any, error) {
+	return map[string]any{"sessions": []AssistSession{
+		{ID: 1, Type: "console", User: "ACME\\i.petrova", State: "active", Console: true, Screen: true},
+		{ID: 2, Type: "rdp", User: "ACME\\a.sidorov", State: "active", Client: "10.0.2.15", Screen: true},
+		{ID: 3, Type: "rdp", User: "ACME\\m.kuznetsov", State: "disconnected", Client: "10.0.2.41"},
+	}, "sas": simSasState()}, nil
+}
+
+func simSasToggle(_ context.Context, p json.RawMessage, _ bool) (any, error) {
+	var in struct {
+		Enable bool `json:"enable"`
+	}
+	_ = json.Unmarshal(p, &in)
+	simSasOn.Store(in.Enable)
+	return simSasState(), nil
 }

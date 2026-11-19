@@ -41,14 +41,18 @@ func TestEnvBlockRoundTrip(t *testing.T) {
 }
 
 func TestAbsoluteMouse(t *testing.T) {
-	if absolute(0, 1920) != 0 || absolute(1919, 1920) != 65535 || absolute(-5, 1920) != 0 || absolute(5000, 1920) != 65535 {
+	if absolute(0, 0, 1920) != 0 || absolute(1919, 0, 1920) != 65535 || absolute(-5, 0, 1920) != 0 || absolute(5000, 0, 1920) != 65535 {
 		t.Fatal("the ends of the screen must map to the ends of the range")
 	}
-	if m := absolute(960, 1920); m < 32000 || m > 33500 {
+	if m := absolute(960, 0, 1920); m < 32000 || m > 33500 {
 		t.Fatalf("the middle: %d", m)
 	}
-	if absolute(10, 1) != 0 {
+	if absolute(10, 0, 1) != 0 {
 		t.Fatal("a screen of one pixel")
+	}
+	// a display to the left of the primary one has negative coordinates: the virtual desktop starts at -1920
+	if absolute(-1920, -1920, 3840) != 0 || absolute(1919, -1920, 3840) != 65535 {
+		t.Fatal("the virtual desktop is counted from its own left edge")
 	}
 }
 
@@ -68,21 +72,34 @@ func TestAssistSessions(t *testing.T) {
 }
 
 // Where the test runs in a desktop session (a developer's machine, the Windows runner) the GDI picture is a real one.
-func TestGDIScreen(t *testing.T) {
-	s, err := newGDIScreen()
+func TestWinHost(t *testing.T) {
+	h, err := newWinHost()
 	if err != nil {
 		t.Skipf("no desktop here: %v", err)
 	}
-	defer s.release()
-	pix, w, h, err := s.Grab()
+	defer h.release()
+	pix, w, ht, err := h.Grab()
 	if err != nil {
 		t.Skipf("the desktop cannot be read here: %v", err)
 	}
-	if w <= 0 || h <= 0 || len(pix) != w*h*4 {
-		t.Fatalf("picture %dx%d, %d bytes", w, h, len(pix))
+	if w <= 0 || ht <= 0 || len(pix) != w*ht*4 {
+		t.Fatalf("picture %dx%d, %d bytes", w, ht, len(pix))
+	}
+	mons, sel := h.Monitors()
+	if len(mons) == 0 || sel != 0 || !mons[0].Primary {
+		t.Fatalf("displays: %+v, shown %d", mons, sel)
+	}
+	if h.Desktop() == "" {
+		t.Error("the desktop has a name")
 	}
 	enc := assist.NewEncoder(assist.DefaultSettings())
-	if _, err := enc.Encode(pix, w, h, time.Now()); err != nil {
+	if _, err := enc.Encode(pix, w, ht, time.Now()); err != nil {
 		t.Fatal(err)
+	}
+	// the clipboard keeps text, with the line ends of Windows turned back into \n
+	if err := h.ClipboardSet("a\nb"); err == nil {
+		if got, err := h.ClipboardGet(); err != nil || got != "a\nb" {
+			t.Fatalf("clipboard round trip: %q %v", got, err)
+		}
 	}
 }

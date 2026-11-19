@@ -16,7 +16,7 @@ export const KNOWN_ACTIONS: ReadonlySet<string> = new Set([
   'update.check', 'update.channel', 'update.prefetch', 'update.cache.prune', 'update.server', 'update.agents',
   'stream.open', 'stream.close',
   'desktop.open', 'desktop.close', 'desktop.enable', 'desktop.disable',
-  'assistant.open', 'assistant.close', 'assistant.settings',
+  'assistant.open', 'assistant.close', 'assistant.settings', 'assistant.sas',
   'metrics.export',
   'dashboard.add', 'dashboard.remove', 'dashboard.reorder',
   'group.create', 'group.rename', 'group.delete', 'group.assign',

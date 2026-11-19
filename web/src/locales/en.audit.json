@@ -138,5 +138,6 @@
   "audit.group.assistant": "Assistant",
   "audit.action.assistant.open": "Assistant: opened",
   "audit.action.assistant.close": "Assistant: closed",
-  "audit.action.assistant.settings": "Assistant: picture settings changed"
+  "audit.action.assistant.settings": "Assistant: picture settings changed",
+  "audit.action.assistant.sas": "Assistant: Ctrl+Alt+Del policy changed"
 }

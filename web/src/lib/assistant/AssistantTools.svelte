@@ -3,7 +3,7 @@
   import { tr } from '../../i18n';
   import ActionMenu from '../ui/ActionMenu.svelte';
   import type AssistantSession from './AssistantSession.svelte';
-  import type { AssistPhase } from './AssistantSession.svelte';
+  import type { AssistInfo, AssistPhase } from './AssistantSession.svelte';
   import { sessionValue } from './nav';
 
   /**
@@ -14,6 +14,7 @@
     serverId,
     session = $bindable('console'),
     phase,
+    info = null,
     screen,
     onsettings,
   }: {
@@ -21,6 +22,8 @@
     /** 'console' or the number of a Windows session. */
     session?: string;
     phase: AssistPhase;
+    /** What the computer reports (the monitors and the picked one); null before the first picture. */
+    info?: AssistInfo | null;
     screen: AssistantSession | null;
     /** The "Quality and frame rate" item: the owner shows the Manage tab. */
     onsettings: () => void;
@@ -77,14 +80,37 @@
     return session === 'console' ? $tr('assist.console') : $tr('assist.sessionN', { n: session });
   });
 
+  // Ctrl+Alt+Del can be sent by the service only into the console session.
+  const canCad = $derived((current?.type ?? (session === 'console' ? 'console' : '')) === 'console');
+
+  const monitorItems = $derived.by(() => {
+    const s = screen;
+    const list = info?.monitors ?? [];
+    if (list.length < 2) return [];
+    const picked = info?.monitor ?? -1;
+    const mark = (on: boolean): string => (on ? '✓ ' : '');
+    return [
+      ...list.map((m, i) => ({
+        key: `mon${i}`,
+        label: `${mark(picked === i)}${$tr('assist.monitorN', { n: i + 1 })}${m.primary ? ` (${$tr('assist.monitorPrimary')})` : ''} · ${m.w}×${m.h}`,
+        onselect: () => s?.selectMonitor(i),
+      })),
+      { key: 'monall', label: `${mark(picked === -1)}${$tr('assist.monitorAll')}`, onselect: () => s?.selectMonitor(-1) },
+    ];
+  });
+
   const items = $derived.by(() => {
     const s = screen;
+    const clip = s?.clipboardAvailable() ?? false;
     return [
       { key: 'tm', label: $tr('assist.taskManager'), onselect: () => s?.combo(['ControlLeft', 'ShiftLeft', 'Escape']) },
       { key: 'win', label: $tr('assist.winKey'), onselect: () => s?.winKey() },
       { key: 'lock', label: $tr('assist.lock'), onselect: () => s?.combo(['MetaLeft', 'KeyL']) },
       { key: 'run', label: $tr('assist.run'), onselect: () => s?.combo(['MetaLeft', 'KeyR']) },
       { key: 'alttab', label: $tr('assist.altTab'), onselect: () => s?.combo(['AltLeft', 'Tab']) },
+      ...monitorItems,
+      { key: 'send', label: $tr('desk.clipSend'), disabled: !clip, onselect: () => void s?.sendClipboard() },
+      { key: 'save', label: $tr('desk.clipSave'), disabled: !clip, onselect: () => s?.getClipboard() },
       { key: 'fit', label: $tr('assist.scaleFit'), onselect: () => s?.setScale('fit') },
       { key: 'real', label: $tr('assist.scaleReal'), onselect: () => s?.setScale('real') },
       { key: 'full', label: $tr('assist.fullscreen'), onselect: () => s?.fullscreen() },
@@ -96,6 +122,6 @@
 
 <ActionMenu label={currentLabel} items={sessionItems} />
 {#if live}
-  <button class="btn sm" type="button" title={$tr('assist.cadHint')} onclick={() => screen?.ctrlAltDel()}>Ctrl+Alt+Del</button>
+  <button class="btn sm" type="button" title={canCad ? $tr('assist.cadHint') : $tr('assist.cadConsoleOnly')} disabled={!canCad} onclick={() => screen?.ctrlAltDel()}>Ctrl+Alt+Del</button>
   <ActionMenu label={$tr('assist.more')} {items} />
 {/if}

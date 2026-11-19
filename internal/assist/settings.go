@@ -21,6 +21,8 @@ type Settings struct {
 	Mbit    float64 `json:"mbit"`    // the limit of the traffic, megabits per second
 	NoLimit bool    `json:"nolimit"` // no limit of the traffic (a local network)
 	Auto    bool    `json:"auto"`    // lower the quality by itself to keep to the limit
+	// HideCursor leaves the pointer of the computer out of the picture; the browser then shows its own pointer without delay.
+	HideCursor bool `json:"hide_cursor,omitempty"`
 }
 
 // Limits of the settings.

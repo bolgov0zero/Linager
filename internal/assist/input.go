@@ -66,3 +66,49 @@ func ParseInput(b []byte) (Input, error) {
 	}
 	return in, nil
 }
+
+// MaxClip is the longest text of the clipboard that is carried (bytes of UTF-8).
+const MaxClip = 1 << 20
+
+// MaxClipFrame is the largest JSON of a clipboard frame: the text with its escapes.
+const MaxClipFrame = 2*MaxClip + 64
+
+// Clip is the payload of TypeClip and TypeClipSet.
+type Clip struct {
+	Text string `json:"text"`
+}
+
+// ParseClip reads and checks a clipboard payload.
+func ParseClip(b []byte) (Clip, error) {
+	var c Clip
+	if len(b) > MaxClipFrame {
+		return c, errors.New("clipboard is too long")
+	}
+	if err := json.Unmarshal(b, &c); err != nil {
+		return c, err
+	}
+	if len(c.Text) > MaxClip {
+		return c, errors.New("clipboard is too long")
+	}
+	return c, nil
+}
+
+// MonitorSel is the payload of TypeMonitor: an index of the list of displays, or -1 for all of them.
+type MonitorSel struct {
+	I int `json:"i"`
+}
+
+// ParseMonitor reads and checks a choice of a display.
+func ParseMonitor(b []byte) (MonitorSel, error) {
+	var m MonitorSel
+	if len(b) > 64 {
+		return m, errors.New("monitor choice is too long")
+	}
+	if err := json.Unmarshal(b, &m); err != nil {
+		return m, err
+	}
+	if m.I < -1 || m.I > 15 {
+		return m, errors.New("unknown monitor")
+	}
+	return m, nil
+}

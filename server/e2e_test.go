@@ -545,7 +545,7 @@ func TestEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("assistant websocket: %v", err)
 	}
-	var gotHello bool
+	var gotHello, gotMonitor bool
 	fullPictures := 0
 	readAssist := func(until func() bool) {
 		for !until() {
@@ -576,6 +576,42 @@ func TestEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := ac.Write(actx, websocket.MessageBinary, append([]byte{assist.TypeInput}, `{"t":"m","x":-9}`...)); err != nil {
+		t.Fatal(err)
+	}
+	// the clipboard goes both ways and the choice of a display gives a new hello; a clipboard that is too long is dropped
+	clipReq := append([]byte{assist.TypeClipSet}, `{"text":"from the browser"}`...)
+	if err := ac.Write(actx, websocket.MessageBinary, clipReq); err != nil {
+		t.Fatal(err)
+	}
+	if err := ac.Write(actx, websocket.MessageBinary, []byte{assist.TypeClipGet}); err != nil {
+		t.Fatal(err)
+	}
+	gotClip := ""
+	readAssistUntil := func(until func() bool) {
+		for !until() {
+			_, b, err := ac.Read(actx)
+			if err != nil {
+				t.Fatalf("assistant frames: %v", err)
+			}
+			switch b[0] {
+			case assist.TypeClip:
+				var c assist.Clip
+				_ = json.Unmarshal(b[1:], &c)
+				gotClip = c.Text
+			case assist.TypeHello:
+				gotHello = bytes.Contains(b[1:], []byte(`"w":960`))
+				if bytes.Contains(b[1:], []byte(`"monitor":1`)) {
+					gotMonitor = true
+				}
+			}
+		}
+	}
+	readAssistUntil(func() bool { return gotClip == "from the browser" })
+	if err := ac.Write(actx, websocket.MessageBinary, append([]byte{assist.TypeMonitor}, `{"i":1}`...)); err != nil {
+		t.Fatal(err)
+	}
+	readAssistUntil(func() bool { return gotMonitor })
+	if err := ac.Write(actx, websocket.MessageBinary, append([]byte{assist.TypeMonitor}, `{"i":1}`...)); err != nil {
 		t.Fatal(err)
 	}
 	before := fullPictures

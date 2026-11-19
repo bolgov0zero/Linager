@@ -1,7 +1,7 @@
 // Run with: node --test src/lib/assistant/assistant.test.mjs (Node 22.18 or newer strips the types by itself).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { WheelNotches, encodeInput, parseTiles } from './protocol.ts';
+import { CLIP_MAX, WheelNotches, cleanMonitors, encodeClipGet, encodeClipSet, encodeInput, encodeMonitor, isSecureDesktop, parseTiles } from './protocol.ts';
 import { scanKey } from './scancodes.ts';
 
 function tilesPayload(tiles) {
@@ -86,4 +86,50 @@ test('every scan code is 1..255 and no two plain keys share one', () => {
     assert.ok(!seen.has(k.sc), `${code} and ${seen.get(k.sc)} share ${k.sc}`);
     seen.set(k.sc, code);
   }
+});
+
+const body = (m) => JSON.parse(new TextDecoder().decode(m.subarray(1)));
+
+test('the monitor message carries the index, -1 for all of them', () => {
+  const m = encodeMonitor(1);
+  assert.equal(m[0], 20);
+  assert.deepEqual(body(m), { i: 1 });
+  assert.deepEqual(body(encodeMonitor(-1)), { i: -1 });
+});
+
+test('the clipboard messages: ClipSet is JSON with the text, ClipGet is the type byte alone', () => {
+  const set = encodeClipSet('привет\nworld');
+  assert.equal(set[0], 18);
+  assert.deepEqual(body(set), { text: 'привет\nworld' });
+  assert.deepEqual([...encodeClipGet()], [19]);
+});
+
+test('a text over the limit of ClipSet is refused, one at the limit is not', () => {
+  assert.equal(encodeClipSet('a'.repeat(CLIP_MAX)), null); // the JSON around the text goes over
+  assert.ok(encodeClipSet('a'.repeat(CLIP_MAX - 20)));
+  assert.equal(encodeClipSet('ы'.repeat(CLIP_MAX / 2)), null); // two bytes a letter
+  assert.ok(encodeClipSet(''));
+});
+
+test('the monitors of a Hello are cleaned: bad entries dropped, missing list is empty', () => {
+  assert.deepEqual(cleanMonitors(undefined), []);
+  assert.deepEqual(cleanMonitors('x'), []);
+  const list = cleanMonitors([
+    { x: 0, y: 0, w: 1920, h: 1080, primary: true },
+    { x: 1920, y: -100, w: 2560, h: 1440 },
+    { x: 0, y: 0, w: 0, h: 10, primary: false },
+    null,
+    5,
+  ]);
+  assert.equal(list.length, 2);
+  assert.deepEqual(list[1], { x: 1920, y: -100, w: 2560, h: 1440, primary: false });
+  assert.equal(list[0].primary, true);
+});
+
+test('only a desktop other than the default (and not empty) is a secure one', () => {
+  assert.equal(isSecureDesktop('default'), false);
+  assert.equal(isSecureDesktop(''), false);
+  assert.equal(isSecureDesktop(undefined), false);
+  assert.equal(isSecureDesktop('winlogon'), true);
+  assert.equal(isSecureDesktop('screen-saver'), true);
 });

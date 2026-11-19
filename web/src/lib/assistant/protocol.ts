@@ -5,14 +5,25 @@ export const MSG_HELLO = 1;
 export const MSG_TILES = 2;
 export const MSG_STATS = 3;
 export const MSG_END = 4;
+export const MSG_CLIP = 5;
 /** Browser to server. */
 export const MSG_INPUT = 16;
+export const MSG_CLIP_SET = 18;
+export const MSG_CLIP_GET = 19;
+export const MSG_MONITOR = 20;
+
+/** The biggest text the browser sends to the clipboard of the computer (the payload of a ClipSet message). */
+export const CLIP_MAX = 1024 * 1024;
 
 /** WebSocket close code of the panel when the session is already open in another Assistant window. */
 export const ASSIST_LIMIT_CODE = 4031;
 
-export interface Hello { w: number; h: number; session: number | string; user: string }
-export interface Stats { fps: number; kbps: number; q: number }
+/** A monitor of the computer; the list has the primary one first. */
+export interface Monitor { x: number; y: number; w: number; h: number; primary: boolean }
+/** `monitors` may be missing or have one entry; `monitor` is the index of the picked one, -1 for all of them as one picture. */
+export interface Hello { w: number; h: number; session: number | string; user: string; monitors?: Monitor[]; monitor?: number }
+/** `desktop` is "default" normally, "winlogon" on the lock, sign-in or UAC screen, "screen-saver" with a screen saver. */
+export interface Stats { fps: number; kbps: number; q: number; desktop?: string }
 export interface Tile { x: number; y: number; w: number; h: number; jpeg: Uint8Array }
 
 /** The tiles of a Tiles payload: u16 count, then x, y, w, h (u16) and the length (u32, big endian) with the JPEG bytes. Null when the payload is cut or lies about a length. */
@@ -35,11 +46,47 @@ export function parseTiles(data: Uint8Array): Tile[] | null {
 
 /** An input event as a message: the type byte, then JSON. */
 export function encodeInput(event: Record<string, unknown>): Uint8Array<ArrayBuffer> {
-  const json = new TextEncoder().encode(JSON.stringify(event));
+  return withJson(MSG_INPUT, event);
+}
+
+/** True when the computer shows something other than the user's desktop (the lock or sign-in screen, a UAC prompt). */
+export const isSecureDesktop = (desktop: string | undefined | null): boolean => !!desktop && desktop !== 'default';
+
+/** The monitors of a Hello as a clean list: entries that are not rectangles are dropped. */
+export function cleanMonitors(list: unknown): Monitor[] {
+  if (!Array.isArray(list)) return [];
+  const out: Monitor[] = [];
+  for (const m of list) {
+    if (!m || typeof m !== 'object') continue;
+    const { x, y, w, h, primary } = m as Record<string, unknown>;
+    if (!(Number(w) > 0) || !(Number(h) > 0)) continue;
+    out.push({ x: Number(x) || 0, y: Number(y) || 0, w: Number(w), h: Number(h), primary: primary === true });
+  }
+  return out;
+}
+
+function withJson(type: number, value: unknown): Uint8Array<ArrayBuffer> {
+  const json = new TextEncoder().encode(JSON.stringify(value));
   const out = new Uint8Array(json.length + 1);
-  out[0] = MSG_INPUT;
+  out[0] = type;
   out.set(json, 1);
   return out;
+}
+
+/** Picks a monitor: its index, or -1 for all of them as one picture. */
+export function encodeMonitor(index: number): Uint8Array<ArrayBuffer> {
+  return withJson(MSG_MONITOR, { i: Math.trunc(index) });
+}
+
+/** The text for the clipboard of the computer. Null when the message would be longer than the limit. */
+export function encodeClipSet(text: string): Uint8Array<ArrayBuffer> | null {
+  const out = withJson(MSG_CLIP_SET, { text });
+  return out.length - 1 > CLIP_MAX ? null : out;
+}
+
+/** The request for the clipboard of the computer: the type byte alone. */
+export function encodeClipGet(): Uint8Array<ArrayBuffer> {
+  return new Uint8Array([MSG_CLIP_GET]);
 }
 
 /** Turns wheel deltas into whole notches, keeping the remainder so a smooth trackpad still scrolls. */

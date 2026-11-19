@@ -187,6 +187,7 @@ func (a *Admin) Handler() http.Handler {
 	a.route(mux, "POST /api/servers/{id}/desktop/disable", "srv:desktop", a.desktopDisable)
 	a.route(mux, "GET /api/servers/{id}/assistant", "srv:assistant", a.assistantWS)
 	a.route(mux, "GET /api/servers/{id}/assistant/sessions", "srv:assistant", a.assistantSessions)
+	a.route(mux, "POST /api/servers/{id}/assistant/sas", "srv:assistant", a.assistantSas)
 	a.route(mux, "GET /api/servers/{id}/assistant/settings", "srv:assistant", a.assistantSettingsGet)
 	a.route(mux, "PUT /api/servers/{id}/assistant/settings", "srv:assistant", a.assistantSettingsSet)
 	a.route(mux, "GET /api/servers/{id}/files", "srv:files", a.filesList)

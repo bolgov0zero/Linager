@@ -10,6 +10,8 @@ import (
 	"io"
 	"net"
 	"time"
+
+	"github.com/bolgov0zero/linager/internal/assist"
 )
 
 // assistConnectTimeout is how long the agent waits for the helper to call back.
@@ -28,9 +30,10 @@ type assistLauncher func(ctx context.Context, session, addr, token string) (assi
 
 // runAssistRelay carries the Assistant stream: it starts the helper, takes its call-back on a port of the loopback
 // (the helper proves itself with a one-time token that only its environment holds) and moves bytes between the
-// helper and the server. The agent does not look into the frames, so nothing but the helper and the browser has to
-// understand them.
-func runAssistRelay(ctx context.Context, sio *StreamIO, session string, launch assistLauncher) error {
+// helper and the server. The way up it reads the frames only to take out the one thing the helper cannot do: Ctrl+Alt+Del
+// (the secure attention sequence may be sent by a service only), which goes to cad; everything else, and everything
+// that comes down, is passed on as it is. cad may be nil.
+func runAssistRelay(ctx context.Context, sio *StreamIO, session string, launch assistLauncher, cad func() error) error {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return err
@@ -85,9 +88,24 @@ func runAssistRelay(ctx context.Context, sio *StreamIO, session string, launch a
 	defer func() { _ = conn.Close() }()
 
 	go func() { // the server -> the helper
+		var re assist.Reassembler
 		for b := range sio.In {
-			if _, err := conn.Write(b); err != nil {
-				return
+			frames, err := re.Push(b)
+			if err != nil {
+				break
+			}
+			for _, f := range frames {
+				if f.Type == assist.TypeInput {
+					if in, err := assist.ParseInput(f.Data); err == nil && in.T == assist.InCAD {
+						if cad != nil {
+							_ = cad()
+						}
+						continue
+					}
+				}
+				if _, err := conn.Write(assist.AppendFrame(nil, f.Type, f.Data)); err != nil {
+					return
+				}
 			}
 		}
 		_ = conn.Close() // the stream ended

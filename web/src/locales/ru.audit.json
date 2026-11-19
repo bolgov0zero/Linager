@@ -138,5 +138,6 @@
   "audit.group.assistant": "Помощник",
   "audit.action.assistant.open": "Помощник: открыт",
   "audit.action.assistant.close": "Помощник: закрыт",
-  "audit.action.assistant.settings": "Помощник: настройки картинки"
+  "audit.action.assistant.settings": "Помощник: настройки картинки",
+  "audit.action.assistant.sas": "Помощник: политика Ctrl+Alt+Del"
 }

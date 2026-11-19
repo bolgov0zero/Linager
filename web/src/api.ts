@@ -829,7 +829,10 @@ export const desktopApi = {
 
 /** A Windows session the Assistant can show; `screen` is false for a disconnected one (nothing to look at). */
 export interface AssistSession { id: number; type: 'console' | 'rdp' | 'other'; user: string; state: string; client?: string; console: boolean; screen: boolean }
-export interface AssistSettings { colors: '24' | '16' | '256' | 'gray'; fps: number; mbit: number; nolimit: boolean; auto: boolean }
+/** `hide_cursor`: the pointer of the computer is not drawn into the picture (the browser shows its own); an older panel leaves it out, which is false. */
+export interface AssistSettings { colors: '24' | '16' | '256' | 'gray'; fps: number; mbit: number; nolimit: boolean; auto: boolean; hide_cursor: boolean }
+/** Whether Windows lets the agent service send Ctrl+Alt+Del (the secure attention sequence); `policy` is the raw registry value 0..3. */
+export interface AssistSas { policy: number; enabled: boolean }
 
 /** The WebSocket of the Assistant: `session` is 'console' or the number of a Windows session. Binary frames both ways. */
 export function assistantSocketUrl(id: string, session: string): string {
@@ -841,7 +844,9 @@ export function assistantSocketUrl(id: string, session: string): string {
 
 export const assistantApi = {
   /** 501 (ApiError) when the agent of the computer has no Assistant module. */
-  sessions: (id: string) => request<{ sessions: AssistSession[] }>('GET', `api/servers/${enc(id)}/assistant/sessions`),
+  sessions: (id: string) => request<{ sessions: AssistSession[]; sas?: AssistSas }>('GET', `api/servers/${enc(id)}/assistant/sessions`),
+  /** Allows or forbids the agent service to send Ctrl+Alt+Del (a Windows policy; sent with the confirmation the person gave). 409 without it, 501 when the module is off. */
+  setSas: (id: string, enable: boolean) => request<AssistSas>('POST', `api/servers/${enc(id)}/assistant/sas`, { enable, confirm: true }),
   settings: (id: string) => request<AssistSettings>('GET', `api/servers/${enc(id)}/assistant/settings`),
   /** 422 (ApiError with the text) for a value out of range; `applied` is the number of open sessions that took it. */
   saveSettings: (id: string, settings: AssistSettings) =>

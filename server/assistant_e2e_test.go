@@ -60,6 +60,16 @@ func TestAssistantRights(t *testing.T) {
 			t.Errorf("%s opens the Assistant: %d, want 403", tc.login, code)
 		}
 	}
+	// the policy for Ctrl+Alt+Del: confirmed, and for the module "assistant" only
+	for login, want := range map[string]int{"helper": 409, "plain": 403, "rdp": 403, "viewer": 403} {
+		c := mustLogin(t, base, login, "operator-long-password")
+		if code := c.do("POST", "/api/servers/"+id+"/assistant/sas", map[string]any{"enable": true}, nil); code != want {
+			t.Errorf("%s changes the policy without confirmation: %d, want %d", login, code, want)
+		}
+	}
+	if code := admin.do("POST", "/api/servers/"+id+"/assistant/sas", map[string]any{"enable": true, "confirm": true}, nil); code != http.StatusServiceUnavailable {
+		t.Errorf("the policy with an agent that is offline: %d", code)
+	}
 	// the confirmed turning off reaches the agent, which is not here
 	if code := admin.do("POST", "/api/servers/"+id+"/desktop/disable", map[string]any{"confirm": true}, nil); code != http.StatusServiceUnavailable {
 		t.Errorf("RDP off with an agent that is offline: %d", code)

@@ -3,6 +3,7 @@
     ApiError,
     assistantApi,
     desktopApi,
+    type AssistSas,
     type AssistSession,
     type AssistSettings,
     type DesktopState,
@@ -10,6 +11,7 @@
   } from '../../../api';
   import { locale, t, tr as T } from '../../../i18n';
   import { gotoServerTab, sessionValue, wantAssistSession } from '../../assistant/nav';
+  import { setAssistSettings } from '../../assistant/settings';
   import Modal from '../../Modal.svelte';
   import { showToast } from '../../toast';
 
@@ -20,9 +22,9 @@
   const online = $derived(server.online);
 
   const PRESETS: Record<'eco' | 'normal' | 'hq', AssistSettings> = {
-    eco: { colors: '256', fps: 8, mbit: 1, nolimit: false, auto: true },
-    normal: { colors: '24', fps: 15, mbit: 4, nolimit: false, auto: true },
-    hq: { colors: '24', fps: 30, mbit: 12, nolimit: false, auto: true },
+    eco: { colors: '256', fps: 8, mbit: 1, nolimit: false, auto: true, hide_cursor: false },
+    normal: { colors: '24', fps: 15, mbit: 4, nolimit: false, auto: true, hide_cursor: false },
+    hq: { colors: '24', fps: 30, mbit: 12, nolimit: false, auto: true, hide_cursor: false },
   };
   const PRESET_IDS = ['eco', 'normal', 'hq'] as const;
   const COLORS = ['24', '16', '256', 'gray'] as const;
@@ -54,7 +56,8 @@
 
   async function loadSettings(): Promise<void> {
     try {
-      draft = await assistantApi.settings(serverId);
+      const got = await assistantApi.settings(serverId);
+      draft = { ...got, hide_cursor: got.hide_cursor === true };
       loadError = '';
       loaded = true;
     } catch (e) {
@@ -80,8 +83,9 @@
     saveError = '';
     try {
       const res = await assistantApi.saveSettings(serverId, draft);
-      draft = res.settings;
+      draft = { ...res.settings, hide_cursor: res.settings.hide_cursor === true };
       applied = res.applied;
+      setAssistSettings(serverId, draft);
     } catch (e) {
       saveError = e instanceof ApiError && e.serverMessage ? e.serverMessage : t('common.genericError');
     } finally {
@@ -143,10 +147,17 @@
 
   let sessions = $state<AssistSession[] | null>(null);
   let sessionsError = $state('');
+  /** The Ctrl+Alt+Del policy of Windows; null while unknown or when the agent does not report it. */
+  let sas = $state<AssistSas | null>(null);
+  let sasBusy = $state(false);
+  /** The dialog of the Ctrl+Alt+Del policy: the value it would set, null when closed. */
+  let confirmSas = $state<boolean | null>(null);
 
   async function loadSessions(): Promise<void> {
     try {
-      sessions = (await assistantApi.sessions(serverId)).sessions;
+      const res = await assistantApi.sessions(serverId);
+      sessions = res.sessions;
+      if (res.sas) sas = res.sas;
       sessionsError = '';
     } catch (e) {
       sessionsError = e instanceof ApiError && e.status === 501 ? t('manage.noModule') : t('common.genericError');
@@ -160,6 +171,19 @@
     const timer = setInterval(() => void loadSessions(), 15000);
     return () => clearInterval(timer);
   });
+
+  async function setSas(enable: boolean): Promise<void> {
+    sasBusy = true;
+    try {
+      sas = await assistantApi.setSas(serverId, enable);
+      showToast(t(sas.enabled ? 'manage.sasAllowed' : 'manage.sasDenied'));
+    } catch (e) {
+      showToast(e instanceof ApiError && e.status === 501 ? t('manage.noModule') : e instanceof ApiError && e.serverMessage ? e.serverMessage : t('common.genericError'));
+    } finally {
+      confirmSas = null;
+      sasBusy = false;
+    }
+  }
 
   const rdpSessions = $derived((sessions ?? []).filter((s) => s.type === 'rdp'));
   const rdpActive = $derived(rdpSessions.filter((s) => s.state === 'active').length);
@@ -194,7 +218,7 @@
           <div class="fl">{$T('manage.presets')}<small>{$T('manage.presetsHint')}</small></div>
           <div class="segctl">
             {#each PRESET_IDS as id (id)}
-              <button class="chip" type="button" aria-pressed={preset === id} onclick={() => edit(PRESETS[id])}>{$T(`manage.preset.${id}`)}</button>
+              <button class="chip" type="button" aria-pressed={preset === id} onclick={() => edit({ ...PRESETS[id], hide_cursor: draft.hide_cursor })}>{$T(`manage.preset.${id}`)}</button>
             {/each}
             <button class="chip" type="button" aria-pressed={preset === 'custom'} disabled>{$T('manage.preset.custom')}</button>
           </div>
@@ -233,6 +257,16 @@
             <input type="checkbox" checked={draft.auto} onchange={(e) => edit({ auto: e.currentTarget.checked })} />
             {$T('manage.auto')}
           </label>
+        </div>
+        <div class="fld">
+          <div class="fl">{$T('manage.cursor')}<small>{$T('manage.cursorSub')}</small></div>
+          <div>
+            <label class="check">
+              <input type="checkbox" checked={!draft.hide_cursor} onchange={(e) => edit({ hide_cursor: !e.currentTarget.checked })} />
+              {$T('manage.cursorShow')}
+            </label>
+            <p class="small muted note">{$T('manage.cursorHint')}</p>
+          </div>
         </div>
         <p class="est">{$T('manage.estimate', { peak: num(estimate), idle: num(0.05, 2) })}</p>
         <div class="savebar">
@@ -327,8 +361,37 @@
         </div>
       {/if}
     </section>
+
+    {#if online && sas}
+      <section class="card">
+        <h3 class="t">{$T('manage.sas')}</h3>
+        <div class="row">
+          <span class="badge" class:ok={sas.enabled} class:warn={!sas.enabled}><span class="dot"></span>{sas.enabled ? $T('manage.sasOn') : $T('manage.sasOff')}</span>
+        </div>
+        <p class="small muted note">{$T('manage.sasNote')}</p>
+        <p class="small muted note">{$T('manage.sasPolicy', { n: sas.policy })}</p>
+        <div class="row">
+          {#if sas.enabled}
+            <button class="btn danger" type="button" disabled={sasBusy} onclick={() => (confirmSas = false)}>{$T('manage.sasDeny')}</button>
+          {:else}
+            <button class="btn primary" type="button" disabled={sasBusy} onclick={() => (confirmSas = true)}>{$T('manage.sasAllow')}</button>
+          {/if}
+        </div>
+      </section>
+    {/if}
   </div>
 </div>
+
+{#if confirmSas !== null}
+  <Modal title={confirmSas ? $T('manage.sasAllowTitle') : $T('manage.sasDenyTitle')} labelId="manage-sas-title" onclose={() => (confirmSas = null)}>
+    <p>{confirmSas ? $T('manage.sasAllowText') : $T('manage.sasDenyText')}</p>
+    <p class="muted small">{$T('manage.sasNote2')}</p>
+    <div class="row end dlg">
+      <button class="btn" type="button" onclick={() => (confirmSas = null)}>{$T('win.cancel')}</button>
+      <button class="btn danger" type="button" disabled={sasBusy} onclick={() => void setSas(confirmSas === true)}>{confirmSas ? $T('manage.sasAllow') : $T('manage.sasDeny')}</button>
+    </div>
+  </Modal>
+{/if}
 
 {#if confirmOff}
   <Modal title={$T('manage.rdpOffTitle')} labelId="manage-rdp-off-title" onclose={() => (confirmOff = false)}>

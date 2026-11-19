@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"regexp"
+	"sync/atomic"
 	"time"
 
 	"github.com/coder/websocket"
@@ -124,7 +125,7 @@ func (a *Admin) assistantWS(w http.ResponseWriter, r *http.Request, u *store.Use
 	if err != nil {
 		return
 	}
-	ws.SetReadLimit(4 << 10)
+	ws.SetReadLimit(assist.MaxClipFrame + 16) // a clipboard text is the largest thing that comes up
 	ctx, cancel := context.WithCancel(context.WithoutCancel(r.Context()))
 	defer cancel()
 	sh, err := a.Hub.OpenStream(ctx, s.ID, "assistant", map[string]any{"session": session})
@@ -143,21 +144,42 @@ func (a *Admin) assistantWS(w http.ResponseWriter, r *http.Request, u *store.Use
 	a.audit(r, u, "assistant.open", "server", s.ID, s.Name, "ok", map[string]any{"session": session, "sid": sh.SID,
 		"colors": set.Colors, "fps": set.FPS})
 	var bytesOut int64
+	var clipSet, clipGet atomic.Int32
 
-	go func() { // browser -> agent: only input, and only what parses
+	go func() { // browser -> agent: input, clipboard and the choice of a display, and only what parses
 		defer cancel()
 		for {
 			typ, b, err := ws.Read(ctx)
 			if err != nil {
 				return
 			}
-			if typ != websocket.MessageBinary || len(b) < 2 || b[0] != assist.TypeInput {
+			if typ != websocket.MessageBinary || len(b) < 1 {
 				continue
 			}
-			if _, err := assist.ParseInput(b[1:]); err != nil {
+			var ok bool
+			switch b[0] {
+			case assist.TypeInput:
+				_, err := assist.ParseInput(b[1:])
+				ok = err == nil
+			case assist.TypeClipSet:
+				_, err := assist.ParseClip(b[1:])
+				ok = err == nil
+				if ok {
+					clipSet.Add(1)
+				}
+			case assist.TypeClipGet:
+				ok = len(b) == 1
+				if ok {
+					clipGet.Add(1)
+				}
+			case assist.TypeMonitor:
+				_, err := assist.ParseMonitor(b[1:])
+				ok = err == nil
+			}
+			if !ok {
 				continue
 			}
-			if sh.Input(ctx, assist.AppendFrame(nil, assist.TypeInput, b[1:])) != nil {
+			if sh.Input(ctx, assist.AppendFrame(nil, b[0], b[1:])) != nil {
 				return
 			}
 		}
@@ -206,7 +228,7 @@ loop:
 		}
 	}
 	a.audit(r, u, "assistant.close", "server", s.ID, s.Name, result, map[string]any{"session": session, "sid": sh.SID,
-		"seconds": int(time.Since(start).Seconds()), "bytes_out": bytesOut, "reason": reason})
+		"seconds": int(time.Since(start).Seconds()), "bytes_out": bytesOut, "clipboard_sent": clipSet.Load(), "clipboard_asked": clipGet.Load(), "reason": reason})
 	if reason != "" {
 		var buf frameBuf
 		_ = assist.WriteJSON(&buf, assist.TypeEnd, assist.End{Reason: reason})
@@ -276,4 +298,25 @@ func (a *Admin) desktopDisable(w http.ResponseWriter, r *http.Request, u *store.
 		return
 	}
 	a.secCall(w, r, u, s, "desktop", "disable", "desktop.disable", map[string]any{}, map[string]any{}, 60*time.Second)
+}
+
+// assistantSas lets Windows accept Ctrl+Alt+Del from the agent service (the Windows policy "Software SAS generation")
+// or stops it. A change of a Windows policy: confirmed, and in the audit log.
+func (a *Admin) assistantSas(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s := a.serverOr404(w, r)
+	if s == nil {
+		return
+	}
+	var req struct {
+		Enable  bool `json:"enable"`
+		Confirm bool `json:"confirm"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	if !req.Confirm {
+		needConfirm(w)
+		return
+	}
+	a.secCall(w, r, u, s, "assistant", "sas", "assistant.sas", map[string]any{"enable": req.Enable}, map[string]any{"enable": req.Enable}, 30*time.Second)
 }

@@ -2,6 +2,7 @@ package assist
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"image"
 	"image/jpeg"
@@ -233,5 +234,32 @@ func TestEncoderKeepsToTheBudget(t *testing.T) {
 	f := NewEncoder(Settings{Colors: Colors24, FPS: 30, Mbit: 0.5})
 	if f.Quality() != fixedQuality {
 		t.Fatalf("fixed quality: %d", f.Quality())
+	}
+}
+
+func TestParseClipAndMonitor(t *testing.T) {
+	if c, err := ParseClip([]byte(`{"text":"привет\nмир"}`)); err != nil || c.Text != "привет\nмир" {
+		t.Fatalf("clip: %+v %v", c, err)
+	}
+	if _, err := ParseClip([]byte(`{"text":"` + string(bytes.Repeat([]byte("a"), MaxClip+1)) + `"}`)); err == nil {
+		t.Fatal("a clipboard over the limit must be refused")
+	}
+	if _, err := ParseClip([]byte(`nope`)); err == nil {
+		t.Fatal("bad JSON must be refused")
+	}
+	for _, ok := range []string{`{"i":-1}`, `{"i":0}`, `{"i":3}`} {
+		if _, err := ParseMonitor([]byte(ok)); err != nil {
+			t.Errorf("%s: %v", ok, err)
+		}
+	}
+	for _, bad := range []string{`{"i":-2}`, `{"i":99}`, `x`} {
+		if _, err := ParseMonitor([]byte(bad)); err == nil {
+			t.Errorf("%s must be refused", bad)
+		}
+	}
+	// the setting that hides the pointer is off when an older record does not know it
+	var s Settings
+	if err := json.Unmarshal([]byte(`{"colors":"24","fps":15,"mbit":4,"auto":true}`), &s); err != nil || s.HideCursor {
+		t.Fatalf("an old record shows the pointer: %+v %v", s, err)
 	}
 }

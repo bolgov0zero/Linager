@@ -38,6 +38,7 @@ func (r *Registry) registerPlatform(cfg *config.Agent, _ Collector, _ *slog.Logg
 	if cfg.Enabled("assistant") {
 		r.streams["assistant"] = assistantStream
 		r.cmds["assistant.sessions"] = assistSessionsCmd
+		r.cmds["assistant.sas"] = assistSasCmd
 	}
 	if cfg.Enabled("users") {
 		r.cmds["users.state"] = usersStateCmd

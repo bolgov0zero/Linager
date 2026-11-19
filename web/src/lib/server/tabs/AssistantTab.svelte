@@ -2,6 +2,7 @@
   import { untrack } from 'svelte';
   import type { ServerDetail } from '../../../api';
   import { tr } from '../../../i18n';
+  import AssistantBadge from '../../assistant/AssistantBadge.svelte';
   import AssistantSession, { type AssistInfo, type AssistPhase } from '../../assistant/AssistantSession.svelte';
   import AssistantStats from '../../assistant/AssistantStats.svelte';
   import AssistantTools from '../../assistant/AssistantTools.svelte';
@@ -37,10 +38,11 @@
       <span class="dot" class:on={server.online && phase === 'open'} aria-hidden="true"></span>
       <span class="hdr">{$tr('assist.header', { name: server.name })}</span>
       {#if server.online}<span class="muted">· {statusText}</span>{/if}
+      {#if server.online && phase === 'open'}<AssistantBadge desktop={info?.desktop} />{/if}
     </p>
     {#if server.online}
       <div class="actions">
-        <AssistantTools {serverId} bind:session {phase} {screen} onsettings={() => gotoServerTab(serverName, 'manage')} />
+        <AssistantTools {serverId} bind:session {phase} {info} {screen} onsettings={() => gotoServerTab(serverName, 'manage')} />
         <button class="btn sm" type="button" onclick={popOut}>{$tr('termwin.openWindow')}</button>
       </div>
     {/if}
