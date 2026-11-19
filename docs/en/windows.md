@@ -19,7 +19,7 @@ Not available on Windows (the tabs are hidden): firewall, security (fail2ban, ke
 
 ## Install
 
-Download `linager_windows_amd64.msi` from the release (a beta release has the tag `vX.Y.Z-beta.N`; check it against `SHA256SUMS`) and install it in an elevated prompt:
+Download `linager_windows_amd64.msi` from the release (check it against `SHA256SUMS`) and install it in an elevated prompt:
 
 ```powershell
 msiexec /i linager_windows_amd64.msi /qn SERVER=panel.example.com:9443
@@ -28,7 +28,7 @@ msiexec /i linager_windows_amd64.msi /qn SERVER=panel.example.com:9443
 `SERVER` is the agent port of the server (`host:port`). `FINGERPRINT=SHA256:...` is optional: with it the agent trusts only that server certificate; without it the pairing is protected by the check code (see below). The package installs `C:\Program Files\Linager\linager.exe`, registers the service **Linager Agent** (`LinagerAgent`, automatic start, runs as SYSTEM, started again after a failure) and starts it.
 
 ### Install by a link (one command)
-The easiest way: in the panel open "Add server", tab "Install by a link", create a link and switch the command to **Windows**. On the new computer open PowerShell **as administrator** and paste the command. It checks the certificate of your server by its fingerprint (carried in the command), downloads the installer from the server, compares it with the signed release, hands the one-time code of the link to the service through a file that only SYSTEM and the administrators can read (`C:\ProgramData\Linager\agent\join.token`), installs and starts the service. The computer appears in the "Confirmations" tab and is confirmed in one click: no key to copy and no file to open. The script can be read first at `https://<server>/v1/join/<link>/windows`. It needs a release that has the installer package (`linager_windows_amd64.msi`, `0.3.0-beta.11` and newer).
+The easiest way: in the panel open "Add server", tab "Install by a link", create a link and switch the command to **Windows**. On the new computer open PowerShell **as administrator** and paste the command. It checks the certificate of your server by its fingerprint (carried in the command), downloads the installer from the server, compares it with the signed release, hands the one-time code of the link to the service through a file that only SYSTEM and the administrators can read (`C:\ProgramData\Linager\agent\join.token`), installs and starts the service. The computer appears in the "Confirmations" tab and is confirmed in one click: no key to copy and no file to open. The script can be read first at `https://<server>/v1/join/<link>/windows`.
 
 ### Install from a local file
 Download `linager_windows_amd64.msi` and `SHA256SUMS` from the release (or take the file from the server: `https://<server>/v1/join/<link>/msi`), compare the checksum (`Get-FileHash -Algorithm SHA256 .\linager_windows_amd64.msi`), copy the MSI to the computer and, in PowerShell as administrator:
@@ -89,9 +89,9 @@ From the panel, like a Linux agent: the "Updates" page (one agent, selected ones
 
 **Rollback.** Before the restart the agent creates a one-shot task of the Windows Task Scheduler, `LinagerAgentRollback` (runs as SYSTEM, about 70 seconds later). The new version confirms itself with its first connection to the server and deletes the task. If it does not (it cannot start, or cannot reach the server), the task runs the OLD exe: it stops the service, puts the old file back and starts the service again. By hand: `linager.exe agent update`, `linager.exe agent status`.
 
-**Agents of beta.1 to beta.3 cannot update from the panel** (they do not have the code for it): the table says "new MSI X". Install the MSI of `0.3.0-beta.4` or newer once; after that the panel updates the agent. The same table message appears when a release has no Windows file. The program list of Windows (the MSI product) keeps showing the version of the MSI after an update from the panel; this changes nothing in how the agent works, and the next MSI installs over it as usual. The server of the release must be updated first, as with Linux agents.
+**An agent from a pre-release build older than `0.3.0-beta.4` cannot update from the panel** (it does not have the code for it): the table says "new MSI X". Install the MSI of `0.3.0` or newer once; after that the panel updates the agent. The same table message appears when a release has no Windows file. The program list of Windows (the MSI product) keeps showing the version of the MSI after an update from the panel; this changes nothing in how the agent works, and the next MSI installs over it as usual. The server of the release must be updated first, as with Linux agents.
 
 ## Limits
-- Only x64. The agent is updated from the panel from `0.3.0-beta.4`; the rollback of a failed update was tested on a Windows runner and on one test machine only. The exe and the MSI are not signed with a code signing certificate, so SmartScreen or an antivirus may warn about them.
+- Only x64. The agent is updated from the panel; the rollback of a failed update was tested on a Windows runner and on one test machine only. The exe and the MSI are not signed with a code signing certificate, so SmartScreen or an antivirus may warn about them.
 - Checked: the code is built and tested on a Windows runner of GitHub Actions (metrics, services, processes, files, terminal, install and removal of the MSI). Not checked on a real fleet.
 - Windows reports one product name "Windows 10" for Windows 11; the agent tells them apart by the build number (22000 and up).
