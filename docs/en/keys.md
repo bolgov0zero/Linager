@@ -41,8 +41,8 @@ In the connection form (the tab "RDP" and the floating window) there is a list *
 
 In the Assistant (the tab and the floating window) of a Windows computer, while the screen is the secure desktop (the lock screen, the sign-in or a UAC prompt; the header has the badge "UAC"), the bar has a **key button**. It opens the list of the keys of the type **UAC** and **Any** (of this server, of its group, for all; the rest behind "Show all"). Every key has three buttons:
 
-- **Login** types the login (with the domain: `DOMAIN\login`);
-- **Password** types the password;
+- **Login** types the login (with the domain: `DOMAIN\login`) and presses Tab: the focus goes to the password field;
+- **Password** types the password and presses Enter: for when the login is already on the sign-in screen;
 - **Sign in** types the login, presses Tab, types the password and presses Enter.
 
 When the vault is closed the list has the button "Open…" (a small window with the file and the passphrase), and the list unfolds after it.

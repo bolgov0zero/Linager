@@ -106,5 +106,7 @@
   "keys.act.login": "Логин",
   "keys.act.password": "Пароль",
   "keys.act.signin": "Войти",
-  "keys.act.signinHint": "Логин, Tab, пароль, Enter"
+  "keys.act.signinHint": "Логин, Tab, пароль, Enter",
+  "keys.act.loginHint": "{account} и Tab",
+  "keys.act.passwordHint": "Пароль и Enter (логин уже введён)"
 }

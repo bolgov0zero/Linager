@@ -106,5 +106,7 @@
   "keys.act.login": "Login",
   "keys.act.password": "Password",
   "keys.act.signin": "Sign in",
-  "keys.act.signinHint": "Login, Tab, password, Enter"
+  "keys.act.signinHint": "Login, Tab, password, Enter",
+  "keys.act.loginHint": "{account} and Tab",
+  "keys.act.passwordHint": "The password and Enter (the login is already there)"
 }

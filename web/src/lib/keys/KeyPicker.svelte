@@ -135,8 +135,8 @@
     <li role="option" aria-selected="false" class="key act">
       <span class="nm" title={accountOf(e)}>{e.name}</span>
       <span class="btns">
-        <button class="btn sm" type="button" title={accountOf(e)} onclick={() => act(e, 'login')}>{$tr('keys.act.login')}</button>
-        <button class="btn sm" type="button" disabled={!e.password} onclick={() => act(e, 'password')}>{$tr('keys.act.password')}</button>
+        <button class="btn sm" type="button" title={$tr('keys.act.loginHint', { account: accountOf(e) })} onclick={() => act(e, 'login')}>{$tr('keys.act.login')}</button>
+        <button class="btn sm" type="button" disabled={!e.password} title={$tr('keys.act.passwordHint')} onclick={() => act(e, 'password')}>{$tr('keys.act.password')}</button>
         <button class="btn sm primary" type="button" disabled={!e.password} title={$tr('keys.act.signinHint')} onclick={() => act(e, 'signin')}>{$tr('keys.act.signin')}</button>
       </span>
     </li>

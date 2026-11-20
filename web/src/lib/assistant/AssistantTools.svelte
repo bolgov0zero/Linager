@@ -105,9 +105,9 @@
     if (!s) return;
     const sent =
       action === 'login'
-        ? s.typeText(accountOf(e), '', e.name)
+        ? s.typeText(accountOf(e), 'tab', e.name) // the login, then Tab to the password field
         : action === 'password'
-          ? s.typeText(e.password, '', e.name)
+          ? s.typeText(e.password, 'enter', e.name) // the password, then Enter (the login is already there)
           : s.typeText(accountOf(e), 'tab', e.name) && s.typeText(e.password, 'enter', e.name);
     if (!sent) showToast($tr('assist.typeFailed'));
     s.focus();

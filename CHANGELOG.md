@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0-beta.4
+
+The web interface and the docs only.
+
+- Change: **in the key list of the Assistant "Login" presses Tab after the login and "Password" presses Enter after the password** (they only typed the text before). "Password" is for a sign-in screen where the login is already there: it types the password and signs in; "Sign in" is still the login, Tab, the password, Enter. The buttons have tooltips that say it.
+
 ## 0.9.0-beta.3
 
 Update the agents too (the Windows agent types the text), and the panel.
