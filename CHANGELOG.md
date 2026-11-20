@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.0
+
+Keys: a personal encrypted file of logins and passwords for RDP and for the sign-in screen and UAC of the Assistant. No database migration. **Update the agents too:** the Windows agent types the text on the sign-in screen (an old agent shows the key button but answers that typing is not supported). The steps of it are the betas 0.9.0-beta.1 to 0.9.0-beta.4 below; the docs are `docs/en/keys.md`, `docs/ru/keys.md`.
+
+- New: **Keys**, the item "Keys" in the menu of the top bar of every user. The file is made and opened in the browser (Argon2id and AES-256-GCM with an authenticated header, plain JavaScript), kept by the person and never stored on the server, in the database or in the audit log. It is opened once per tab, the decrypted keys live only in the memory of the page; a closed tab, a reload, a sign-out and the auto-lock forget them. A key has a name, a type (RDP, UAC or any), a binding to several groups and servers (it only sets the order in the lists), a login, a domain, a password and a note. While the vault is open the menu item has an open lock icon.
+- New: **the list "Key" in the RDP form**: a floating list (this server's keys first, then its group's, then for all); choosing a key connects at once. With a closed vault "Open…" opens a small window with the file and the passphrase. The password stays in the browser and goes into the CredSSP of the client.
+- New: **typing a key into the sign-in screen and into a UAC prompt** (the Assistant of a Windows computer): a key button appears on the bar while the screen is the secure desktop; each key has "Login" (the login and Tab), "Password" (the password and Enter) and "Sign in" (the login, Tab, the password, Enter). The text is typed as characters (`SendInput` Unicode, no clipboard) and only while the active desktop is Winlogon, checked at the moment of typing. The audit log has `assistant.type` (the name of the key and the number of characters, never the text). The password passes through the panel server in memory; there is no "browser to agent" encryption yet.
+- Fix: **the Assistant ended with "Connection closed" after a sign-in.** It connects again by itself now: a connection that ends within 30 seconds after the screen was the sign-in (or after a key was typed into it) is made again silently, patiently (up to twelve tries in a minute), and the last picture stays until the new one comes.
+
 ## 0.9.0-beta.4
 
 The web interface and the docs only.

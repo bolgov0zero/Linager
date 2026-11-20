@@ -37,6 +37,7 @@
     MSG_TILES,
     WheelNotches,
     cleanMonitors,
+    isSignInDesktop,
     encodeClipGet,
     encodeTyping,
     encodeClipSet,
@@ -135,7 +136,10 @@
       releaseAll(false);
       if (phase !== 'closed') {
         const neverOpened = phase === 'connecting';
-        const again = neverOpened && ev.code !== ASSIST_LIMIT_CODE && Date.now() < autoUntil && autoReconnect(mine);
+        // The screen was the sign-in and the connection ended: the person has signed in, and the session of the computer is
+        // another one now (or is being built). Connect again, patiently: a desktop takes some seconds to come.
+        const afterSignIn = !neverOpened && ev.code !== ASSIST_LIMIT_CODE && signedInLately() && autoReconnect(mine, true);
+        const again = afterSignIn || (neverOpened && ev.code !== ASSIST_LIMIT_CODE && Date.now() < autoUntil && autoReconnect(mine, autoPatient));
         if (!again) quiet = false;
         end(ev.code === ASSIST_LIMIT_CODE ? t('assist.limit') : ev.code === 1000 ? t('assist.ended') : t('assist.lost'));
       }
@@ -170,19 +174,26 @@
   // While it goes on nothing is said on the screen (no "closed" or "connecting" notice) and the last picture stays: switching
   // between the desktop and the lock screen must look like a change of the picture, not like a failure. The notice appears
   // only when the reconnection gives up.
+  // After a sign-in (patient) the new session needs time to appear: up to twelve tries in a minute, two seconds apart.
+  // When the screen was the sign-in last, or a key was typed into it: a connection that ends soon after it ends because the
+  // person has signed in (the desktop of the computer changes, often to a new session), not because something broke.
+  let signInSeen = 0;
+  const signedInLately = (): boolean => Date.now() - signInSeen < 30000;
   let autoTimes: number[] = [];
   let autoUntil = 0;
+  let autoPatient = false;
   let quiet = $state(false);
-  function autoReconnect(mine: number): boolean {
+  function autoReconnect(mine: number, patient = false): boolean {
     const now = Date.now();
-    autoTimes = autoTimes.filter((x) => now - x < 40000);
-    if (autoTimes.length >= 4) return false;
+    autoTimes = autoTimes.filter((x) => now - x < (patient ? 60000 : 40000));
+    if (autoTimes.length >= (patient ? 12 : 4)) return false;
     autoTimes.push(now);
-    autoUntil = now + 30000;
+    autoPatient = patient;
+    autoUntil = now + (patient ? 45000 : 30000);
     quiet = true;
     setTimeout(() => {
       if (mine === generation && phase === 'closed') connect();
-    }, 1500);
+    }, patient ? 2000 : 1500);
     return true;
   }
 
@@ -231,6 +242,7 @@
         return;
       case MSG_STATS: {
         const s = json<Stats>(body);
+        if (s && isSignInDesktop(s.desktop)) signInSeen = Date.now();
         if (s && info) {
           info = { ...info, fps: Number(s.fps) || 0, kbps: Number(s.kbps) || 0, q: Number(s.q) || 0, desktop: typeof s.desktop === 'string' && s.desktop ? s.desktop : 'default' };
         }
@@ -246,7 +258,7 @@
       }
       case MSG_END: {
         const e = json<{ reason?: string; reconnect?: boolean }>(body);
-        quiet = e?.reconnect === true && autoReconnect(mine);
+        quiet = (e?.reconnect === true && autoReconnect(mine)) || (signedInLately() && autoReconnect(mine, true));
         end(e?.reason || t('assist.ended'));
         return;
       }
@@ -589,6 +601,7 @@
     const msg = encodeTyping(text, after, label);
     if (!msg) return false;
     socket.send(msg);
+    signInSeen = Date.now();
     return true;
   }
 
