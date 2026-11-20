@@ -25,6 +25,9 @@ const ICONS: Record<string, string[]> = {
   win: ['11111111', '10000001', '10000001', '10000001', '10000001', '11111111', '00011000', '01111110'],
   phone: ['01111110', '01000010', '01000010', '01000010', '01000010', '01011010', '01000010', '01111110'],
   plus: ['00011000', '00011000', '00011000', '11111111', '11111111', '00011000', '00011000', '00011000'],
+  pult: ['11111111', '10110001', '10110001', '10111111', '10110001', '10110001', '10110001', '11111111'],
+  eye: ['00000000', '00111100', '01000010', '10011001', '10011001', '01000010', '00111100', '00000000'],
+  rdp: ['11111111', '10000001', '10100001', '10110001', '10101001', '11111111', '00011000', '01111110'],
   lock: ['00111100', '01000010', '01000010', '11111111', '11111111', '11100111', '11100111', '11111111'],
 };
 function icon(name: string): string {
@@ -37,11 +40,12 @@ const FEATS: [string, string][] = [
   ['dash', 'f1'], ['chart', 'f2'], ['term', 'f3'], ['folder', 'f4'], ['down', 'f5'],
   ['net', 'f6'], ['dock', 'f7'], ['shield', 'f8'], ['lock', 'f9'],
   ['win', 'f10'], ['plus', 'f11'], ['phone', 'f12'],
+  ['pult', 'f13'], ['eye', 'f14'], ['rdp', 'f15'],
 ];
-const TAGS: Record<string, string> = { f10: 'new' };
+const TAGS: Record<string, string> = { f13: 'new', f14: 'new' };
 const STATS: [number, string][] = [[360, 'st.1'], [5, 'st.2'], [30, 'st.3'], [1, 'st.4']];
 const TABS: [string, string, string][] = [
-  ['dashboard', 's.t1', 's.c1'], ['terminal', 's.t2', 's.c2'], ['firewall', 's.t3', 's.c3'],
+  ['dashboard', 's.t1', 's.c1'], ['console', 's.t8', 's.c8'], ['assistant', 's.t9', 's.c9'], ['terminal', 's.t2', 's.c2'], ['firewall', 's.t3', 's.c3'],
   ['docker', 's.t4', 's.c4'], ['windows-overview', 's.t6', 's.c6'], ['add-server', 's.t7', 's.c7'], ['access-restriction', 's.t5', 's.c5'],
 ];
 
@@ -299,7 +303,35 @@ function pick(i: number): void {
     </section>
 
     <section class="sec" style="padding-top: 20px">
+      <div class="wrap spot">
+        <div>
+          <span class="eyebrow">{{ t('k.eyebrow') }}</span>
+          <h2>{{ t('k.h2') }}</h2>
+          <p class="lead">{{ t('k.lead') }}</p>
+          <ul class="checks">
+            <li v-for="n in 5" :key="n" class="reveal" :style="{ '--d': n * 0.07 + 's' }">{{ t('k.' + n) }}</li>
+          </ul>
+        </div>
+        <div class="card reveal"><img alt="" style="display: block; width: 100%" :src="shot('console')" loading="lazy" /></div>
+      </div>
+    </section>
+
+    <section class="sec" style="padding-top: 20px">
       <div class="wrap spot rev">
+        <div>
+          <span class="eyebrow">{{ t('r.eyebrow') }}</span>
+          <h2>{{ t('r.h2') }}</h2>
+          <p class="lead">{{ t('r.lead') }}</p>
+          <ul class="checks">
+            <li v-for="n in 5" :key="n" class="reveal" :style="{ '--d': n * 0.07 + 's' }">{{ t('r.' + n) }}</li>
+          </ul>
+        </div>
+        <div class="card reveal"><img alt="" style="display: block; width: 100%" :src="shot('assistant')" loading="lazy" /></div>
+      </div>
+    </section>
+
+    <section class="sec" style="padding-top: 20px">
+      <div class="wrap spot">
         <div>
           <span class="eyebrow">{{ t('x.eyebrow') }}</span>
           <h2>{{ t('x.h2') }}</h2>
@@ -313,7 +345,7 @@ function pick(i: number): void {
     </section>
 
     <section class="sec" style="padding-top: 20px">
-      <div class="wrap spot">
+      <div class="wrap spot rev">
         <div>
           <span class="eyebrow">{{ t('a.eyebrow') }}</span>
           <h2>{{ t('a.h2') }}</h2>

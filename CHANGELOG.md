@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.5
+
+Documentation, the landing and the screenshots only. No database migration, no change in the panel or the agents.
+
+- Change: **the README (ru, en) and the landing tell about the Console view, the Assistant (Windows and Linux), RDP and the Dispatcher.** New rows in the table of features, a new section of screenshots, two new blocks and three new cards on the landing, the slider of the interface has the Console and the Assistant, and the notes on what the Assistant for Linux needs (GNOME on Wayland) and RDP (Pro, Enterprise or Server).
+- Change: **all screenshots are taken again** (`docs/screenshots/ru` and `en`): the top bar, the Pixelarticons icons and the buttons of 0.7-0.8 were not in the old ones. New shots: `console`, `assistant`, `assistant-linux`, `assistant-manage`, `dispatcher`, `rdp`. The screens of the Assistant are a picture drawn by the demo simulator.
+- New: **the page "The Console view"** (`docs/en/console.md`, `docs/ru/console.md`, in the menu of the site): the side list, the modes, the tabs and the floating windows, the rights.
+- Fix: the Russian docs of the Windows agent call the tab "RDP" (it was "Рабочий стол" in two places since 0.8.3).
+- Dev: the simulator `linager-sim` gives the Linux host "monitoring" a graphical console (`Gui`) and the drawn Assistant stream, so that the Assistant for Linux can be shot; not part of the released binary.
+
 ## 0.8.4
 
 - Change: **the buttons of a card are of one colour.** The button "Assistant" in the card of a Windows or Linux server is no longer set apart by the accent colour: it looks like the Terminal, Open and Delete buttons.

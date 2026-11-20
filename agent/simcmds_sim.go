@@ -44,7 +44,7 @@ func init() {
 		"docker.ignore": ignoreCmd("docker", nil),
 		"docker.config": simDockerConfig,
 	}
-	devStreams = map[string]StreamFunc{"logs": simLogs, "docker.edit": simDockerEdit}
+	devStreams = map[string]StreamFunc{"logs": simLogs, "docker.edit": simDockerEdit, "assistant": fakeAssistStream(nil)}
 }
 
 func simLogs(ctx context.Context, _ json.RawMessage, io *StreamIO) error {

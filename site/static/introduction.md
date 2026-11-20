@@ -7,7 +7,9 @@ Linager is an open-source system for managing Debian, Ubuntu and Windows servers
 - Live metrics every 5 seconds and history up to 360 days.
 - A web terminal, a file manager, systemd services, processes and logs.
 - apt updates, network and firewall editing with an automatic rollback, Docker.
-- A Windows agent: the same server page with a remote desktop in the browser, services, users and Windows Update.
+- A Windows agent: the same server page with RDP and the Assistant in the browser, services, users and Windows Update.
+- The **Assistant**: the screen of a Windows or Linux (GNOME on Wayland) computer and its control in the browser, with no new session; a Dispatcher for processes and services.
+- The **Console** view of the dashboard: a list of servers and live sessions in tabs (terminal, RDP, Assistant), see [the Console view](console).
 - Editing a Docker container, ignoring single package or container updates, a separate phone layout.
 - Roles, 2FA, passkeys and an audit log of every administrator action.
 - Access control for the admin panel: a white or black list by real client address, trusted proxies and an access journal.
@@ -30,7 +32,7 @@ The server keeps its data in a local PostgreSQL and serves the panel. Each agent
 | Ubuntu 22.04, 24.04, 26.04 | amd64 | amd64, arm64 |
 | Windows 10 / 11, Server 2016+ | n/a | amd64 (MSI) |
 
-The agent also runs on a Raspberry Pi 4 with a 64-bit OS. The Windows agent is described in [Windows agent](windows).
+The agent also runs on a Raspberry Pi 4 with a 64-bit OS. The Windows agent is described in [Windows agent](windows). The Assistant for Linux needs GNOME on Wayland ([Agent modules](modules)).
 
 ## Where to go next
 

@@ -5,7 +5,7 @@
 # Linager
 
 **Open-source server management for Debian, Ubuntu and Windows.**
-One web panel, a lightweight agent on every host: live metrics, terminal, files, services, apt, firewall, Docker, a Windows remote desktop and signed self-updates.
+One web panel, a lightweight agent on every host: live metrics, terminal, files, services, apt, firewall, Docker, a remote screen (RDP and the Assistant for Windows and Linux), a Console view for many sessions at once, and signed self-updates.
 
 [![Release](https://img.shields.io/github/v/release/bolgov0zero/linager?style=flat-square&color=2b55d9)](https://github.com/bolgov0zero/linager/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/bolgov0zero/linager/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/bolgov0zero/linager/actions/workflows/ci.yml)
@@ -31,14 +31,19 @@ One web panel, a lightweight agent on every host: live metrics, terminal, files,
 - **Safe by design.** Network and firewall edits are applied with a 30-second rollback timer that lives **on the agent**, so a bad rule that cuts the connection undoes itself. Dangerous actions ask for confirmation, and everything an administrator does lands in an audit log.
 - **Small footprint.** The server runs on Debian and Ubuntu (amd64), the agent also on arm64 (Raspberry Pi 4, 64-bit OS). The web interface is embedded in the binary.
 - **Linux and Windows in one panel.** The Windows agent (10/11, Server 2016+) gives metrics, a terminal, services, users, Windows Update and a **remote desktop right in the browser**.
+- **The screen of a host in the browser.** RDP through the panel for Windows (nothing to install, port 3389 stays closed) and the **Assistant**: the console of a Windows or Linux (GNOME on Wayland) computer, with the sign-in screen, the lock screen and UAC, with no new session and without pushing the person at the computer out. Everything opens in the **Console** view: the servers on the left, the sessions in tabs.
 - **Russian and English**, light and dark themes, and a separate phone layout: a bottom bar, cards and a server page made for a thumb.
 
 ## Features
 
 | | |
 |---|---|
-| **Dashboard** | Cards or a grid of servers, a Linux or Windows badge, groups, filters, search by name or IP. CPU, RAM, disk, network, uptime, pending updates, reboot needed, failed services at a glance. The view switch, "+ Server" and the menu (theme, language, edit, settings, log out) live in the top bar; on a server page the same bar carries its name, state, note, reboot and delete. |
-| **Windows** | An agent for Windows 10/11 and Server 2016+ (MSI, a service): metrics, a PowerShell terminal, a **remote desktop in the browser** (RDP through the panel, nothing to install), services, processes, event logs, files, disk, users and sessions, Windows Update, network settings with a rollback. Installed by one PowerShell command from a link. Details: [docs/en/windows.md](docs/en/windows.md). |
+| **Dashboard** | Cards, a grid or the Console, a Linux or Windows badge, groups, filters, search by name or IP. CPU, RAM, disk, network, uptime, pending updates, reboot needed, failed services at a glance. The view switch, "+ Server" and the menu (theme, language, edit, settings, log out) live in the top bar; on a server page the same bar carries its name, state, note, reboot and delete. |
+| **Console** | The third view of the dashboard next to Cards and Grid: a list of servers by group on the left (a switch decides what a click opens: Terminal, RDP or Assistant), the live sessions in tabs on top, the state is remembered. Floating windows (terminals, Files, Dispatcher) stay on top and are listed in the side list. Many servers on one screen without a dozen browser tabs. |
+| **Assistant** | The screen of a computer and its control in the browser: the mouse, the keys, the text clipboard, a choice of monitor. **Windows** (Home too): the console or the session of another user, the lock screen, sign-in and UAC, Ctrl+Alt+Del. **Linux** (GNOME on Wayland): the desktop, and below the compositor the GDM sign-in screen, the lock screen and X11. No new session and no question to the person at the computer; every opening goes to the audit log. The picture is set in the "Management" tab: presets, colours, frame rate, traffic limit. |
+| **RDP** | A Windows remote desktop in the page or in a floating window. The client is part of the panel (WebAssembly), nothing to install, port 3389 stays closed: the connection goes through the agent. Clipboard both ways, the resolution follows the window, Ctrl+Alt+Del; on a Mac Cmd works as Ctrl. You sign in with a Windows account, the password is not stored. |
+| **Dispatcher** | Processes and services in a floating window like the Task Manager, for Windows and Linux: search, sorting, end or force end, start, restart, stop. It opens from a button on the bar of any connection, next to **Files**. |
+| **Windows** | An agent for Windows 10/11 and Server 2016+ (MSI, a service): metrics, a PowerShell terminal, **RDP** and the **Assistant** in the browser (nothing to install), services, processes, event logs, files, disk, users and sessions, Windows Update, network settings with a rollback. Installed by one PowerShell command from a link. Details: [docs/en/windows.md](docs/en/windows.md). |
 | **Metrics** | Live values every 5 seconds and history up to 360 days, charts for CPU, RAM, disk and network, events and reboots on the chart, CSV export, synchronized hover across charts. |
 | **Terminal** | A web terminal on the host through the agent: floating windows, a key panel for phones, shared snippets, start the shell as another user. |
 | **Files** | An explorer with a folder tree, multiple selection, copy, move, zip, `chmod` and `chown`, and an editor with syntax highlighting (CodeMirror 6). |
@@ -58,6 +63,25 @@ Details per module: [docs/en/modules.md](docs/en/modules.md). History of changes
 ## Screenshots
 
 The screenshots use demo data: fictional servers and documentation addresses.
+
+### Console, Assistant and Dispatcher
+
+The screens of the Assistant in these shots are a picture drawn by the demo simulator, not a real desktop.
+
+<img src="docs/screenshots/en/console.png" alt="The Console view: servers on the left, sessions in tabs" width="100%">
+
+<sub><b>Console.</b> A side list of servers, tabs of live sessions: a terminal, RDP and the Assistant side by side.</sub>
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/en/assistant.png" alt="Assistant: the screen of a Windows computer"><br><sub><b>Assistant, Windows.</b> The screen of the console or of another user's session; no new session, nobody is pushed out.</sub></td>
+<td width="50%"><img src="docs/screenshots/en/assistant-linux.png" alt="Assistant: the desktop of a Linux computer"><br><sub><b>Assistant, Linux.</b> The GNOME desktop on Wayland, the sign-in and lock screens included.</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/en/assistant-manage.png" alt="The Management tab: picture settings and RDP"><br><sub><b>Management.</b> Presets, colours, frame rate, traffic limit; RDP on and off; the sessions of Windows.</sub></td>
+<td width="50%"><img src="docs/screenshots/en/dispatcher.png" alt="Dispatcher: processes in a floating window"><br><sub><b>Dispatcher.</b> Processes and services in a floating window, on Windows and Linux.</sub></td>
+</tr>
+</table>
 
 ### Server page and metrics
 
@@ -95,12 +119,16 @@ The screenshots use demo data: fictional servers and documentation addresses.
 
 <table>
 <tr>
-<td width="50%"><img src="docs/screenshots/en/windows-overview.png" alt="Windows server overview"><br><sub><b>Windows.</b> The same server page with Windows tabs: desktop, services, users.</sub></td>
+<td width="50%"><img src="docs/screenshots/en/windows-overview.png" alt="Windows server overview"><br><sub><b>Windows.</b> The same server page with Windows tabs: RDP, Assistant, services, users.</sub></td>
 <td width="50%"><img src="docs/screenshots/en/windows-disk.png" alt="Disk of a Windows server"><br><sub><b>Disk.</b> Volumes, a fill-up forecast, cleanup (temp files, the Windows Update cache, <code>Windows.old</code>).</sub></td>
 </tr>
 <tr>
 <td width="50%"><img src="docs/screenshots/en/windows-users.png" alt="Windows users"><br><sub><b>Users and sessions.</b> Local accounts, groups, ending a session.</sub></td>
 <td width="50%"><img src="docs/screenshots/en/add-server.png" alt="The Add server window"><br><sub><b>+ Server.</b> An install link for Linux and Windows, install over SSH, confirm a key.</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/en/rdp.png" alt="The RDP tab of a Windows server"><br><sub><b>RDP.</b> The sign-in form of the remote desktop; the client is part of the panel.</sub></td>
+<td width="50%"><img src="docs/screenshots/en/windows-updates.png" alt="Windows Update of a Windows server"><br><sub><b>Windows Update.</b> Updates, their kind and size, a restart when one is pending.</sub></td>
 </tr>
 </table>
 
@@ -163,6 +191,8 @@ After either install the Linager menu opens on the new host. Details and the sec
 | Windows 10 / 11, Server 2016+ | — | amd64 (MSI), see [docs/en/windows.md](docs/en/windows.md); no firewall, security or Docker |
 | Init system | systemd | systemd (Windows: service) |
 
+The Assistant for Linux needs GNOME on Wayland (the Ubuntu Desktop default) and somebody signed in at the screen or the sign-in screen showing; the Assistant for Windows works on Windows 10/11 and Server, Home included; RDP needs Pro, Enterprise or Server.
+
 The panel can run behind Caddy (Let's Encrypt is set up by the installer) or behind your own reverse proxy: [docs/en/proxy.md](docs/en/proxy.md) has examples for nginx, Caddy and Nginx Proxy Manager.
 
 ## How it works
@@ -207,6 +237,7 @@ Details and known limits: [docs/en/security.md](docs/en/security.md). To report 
 | Agent modules and configuration | [modules](docs/en/modules.md) | [модули](docs/ru/modules.md) |
 | Updates, backups, rollback | [updates](docs/en/updates.md) | [обновления](docs/ru/updates.md) |
 | Terminal menu (`linager`) | [menu](docs/en/menu.md) | [меню](docs/ru/menu.md) |
+| The Console view | [console](docs/en/console.md) | [консоль](docs/ru/console.md) |
 | Security | [security](docs/en/security.md) | [безопасность](docs/ru/security.md) |
 | Architecture | [architecture](docs/en/architecture.md) | [архитектура](docs/architecture.md) |
 
