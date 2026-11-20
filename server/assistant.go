@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 
 	"github.com/coder/websocket"
 
@@ -17,6 +18,9 @@ import (
 // assistLimitCode is the WebSocket close code sent when the Assistant of this session is already open: one person
 // at a time sees and controls a session.
 const assistLimitCode websocket.StatusCode = 4031
+
+// maxAssistTypings is how many texts of keys a browser may type into the sign-in or UAC screen in one open Assistant.
+const maxAssistTypings = 60
 
 // assistSessionRe is the session the browser asks for: the one at the console of the computer or a number of Windows.
 var assistSessionRe = regexp.MustCompile(`^(console|[0-9]{1,6})$`)
@@ -144,7 +148,7 @@ func (a *Admin) assistantWS(w http.ResponseWriter, r *http.Request, u *store.Use
 	a.audit(r, u, "assistant.open", "server", s.ID, s.Name, "ok", map[string]any{"session": session, "sid": sh.SID,
 		"colors": set.Colors, "fps": set.FPS})
 	var bytesOut int64
-	var clipSet, clipGet atomic.Int32
+	var clipSet, clipGet, typed atomic.Int32
 
 	go func() { // browser -> agent: input, clipboard and the choice of a display, and only what parses
 		defer cancel()
@@ -171,6 +175,16 @@ func (a *Admin) assistantWS(w http.ResponseWriter, r *http.Request, u *store.Use
 				ok = len(b) == 1
 				if ok {
 					clipGet.Add(1)
+				}
+			case assist.TypeType:
+				// a login or a password of a key of the vault for the sign-in or UAC screen: the text is never logged,
+				// only that it was typed and the name of the key the browser says it is
+				t, err := assist.ParseTyping(b[1:])
+				ok = err == nil && typed.Load() < maxAssistTypings
+				if ok {
+					typed.Add(1)
+					a.audit(r, u, "assistant.type", "server", s.ID, s.Name, "ok", map[string]any{"session": session, "sid": sh.SID,
+						"label": t.Label, "chars": utf8.RuneCountInString(t.Text), "after": t.After})
 				}
 			case assist.TypeMonitor:
 				_, err := assist.ParseMonitor(b[1:])
@@ -231,7 +245,7 @@ loop:
 		}
 	}
 	a.audit(r, u, "assistant.close", "server", s.ID, s.Name, result, map[string]any{"session": session, "sid": sh.SID,
-		"seconds": int(time.Since(start).Seconds()), "bytes_out": bytesOut, "clipboard_sent": clipSet.Load(), "clipboard_asked": clipGet.Load(), "reason": reason})
+		"seconds": int(time.Since(start).Seconds()), "bytes_out": bytesOut, "typed": typed.Load(), "clipboard_sent": clipSet.Load(), "clipboard_asked": clipGet.Load(), "reason": reason})
 	if reason != "" {
 		var buf frameBuf
 		_ = assist.WriteJSON(&buf, assist.TypeEnd, assist.End{Reason: reason})

@@ -25,7 +25,7 @@ The auto-lock (15 minutes of silence by default; 5, 30 or off; the choice is rem
 | Field | What it is |
 |---|---|
 | Name | Shown in the lists instead of the login and the password. |
-| Use for | **RDP**, **UAC** or **Any**. The RDP form offers the keys RDP and Any. The type UAC is kept for typing into the UAC prompt and the Windows sign-in screen (in the Assistant); that part comes later. |
+| Use for | **RDP**, **UAC** or **Any**. The RDP form offers the keys RDP and Any. The type UAC is for typing into the UAC prompt and the Windows sign-in screen in the Assistant (see below). |
 | Binding | To groups and servers of the panel (several of them): the servers are grouped by their groups, the switch of a group covers all its servers, the ones that appear later too. Nothing chosen: the key is for all servers. |
 | Login, domain | The domain is optional. |
 | Password | Can be shown, and a random one (20 characters) can be generated. |
@@ -37,10 +37,30 @@ The auto-lock (15 minutes of silence by default; 5, 30 or off; the choice is rem
 
 In the connection form (the tab "RDP" and the floating window) there is a list **"Key"** above the login. When the vault is closed, the list has the button "Open…": it opens a small window with the file and the passphrase (not the whole window "Keys"), and once the vault is open the list of keys unfolds by itself. Choosing a key **connects at once**: the login, the domain and the password go to the RDP client in the browser (CredSSP), the password is not sent to the panel server. If the connection fails, the form comes back with the fields filled. The list opens over the page like the other drop-down lists (as a sheet from the bottom on a phone) and does not make the window taller. The connection is written to the audit with the login, as before.
 
+## Typing on the lock screen, the sign-in screen and into a UAC prompt
+
+In the Assistant (the tab and the floating window) of a Windows computer, while the screen is the secure desktop (the lock screen, the sign-in or a UAC prompt; the header has the badge "UAC"), the bar has a **key button**. It opens the list of the keys of the type **UAC** and **Any** (of this server, of its group, for all; the rest behind "Show all"). Every key has three buttons:
+
+- **Login** types the login (with the domain: `DOMAIN\login`);
+- **Password** types the password;
+- **Sign in** types the login, presses Tab, types the password and presses Enter.
+
+When the vault is closed the list has the button "Open…" (a small window with the file and the passphrase), and the list unfolds after it.
+
+How it works and what to expect:
+
+- The text is typed as **characters** (`SendInput` with `KEYEVENTF_UNICODE`), not as keys: the keyboard layout of the computer does not matter and the clipboard is not used, so the password does not stay in it.
+- **The agent types only on the secure desktop and checks it at the moment of typing.** If a UAC prompt went away between the click and the typing, the password is not typed into the window of the person: the helper refuses and the panel shows "Typing refused".
+- **The password passes through the panel server in memory**: the browser, the server, the agent (through the same protected channels as the screen). The server writes it neither to the database nor to the journal, but it sees it in memory while it is typed. Unlike RDP, where the password stays in the browser, this cannot be avoided here: the agent types it. There is no "browser to agent" encryption on top of the channel yet.
+- The audit journal gets `assistant.type`: the session, the **name of the key** (the browser sends it), the number of characters and what is pressed after (Tab, Enter); **no text**. `assistant.close` has the number of typings (`typed`). At most 60 typings per opening of the Assistant.
+- Rights: the same as for the Assistant (the module "Assistant"); there is no separate right.
+- Windows only. A Linux computer (GNOME, the sign-in screen) has no button. Update the agents to this version: an old agent shows the button but answers that typing is not supported.
+- If the sign-in screen offers a PIN or Windows Hello by default, open "Sign-in options" first and choose the password: Windows decides where the text goes.
+
 ## The file and the encryption
 
 The format `.lvault`: a header (the mark `LGRK`, the version, the parameters, a salt, a nonce) and the encrypted content. The encryption key comes from the passphrase with **Argon2id** (64 MiB of memory, 3 passes, 1 lane; the parameters are written in the file), the content is encrypted with **AES-256-GCM**, and the header is authenticated: a changed byte anywhere in the file gives an error, not garbled data. The passphrase is brought to one Unicode form (NFKC), so the same word typed on another keyboard opens the file. The file is at most 1 MB and has at most 500 keys; a file with foreign parameters that ask for too much memory is not opened. The cryptography (`@noble/hashes`, `@noble/ciphers`) is plain JavaScript: it works over HTTP, where `crypto.subtle` is not available, and needs no WebAssembly.
 
 ## What is not included
 
-Typing the login and the password into the UAC prompt and the Windows sign-in screen (a key button in the Assistant), syncing the file between devices (the file can be put in iCloud, Syncthing and the like; two copies edited at once are not merged), a shared team file with access control, history and attachments.
+"Browser to agent" encryption of the password when it is typed into UAC, typing on the usual desktop, syncing the file between devices (the file can be put in iCloud, Syncthing and the like; two copies edited at once are not merged), a shared team file with access control, history and attachments.

@@ -8,12 +8,16 @@ export const MSG_END = 4;
 export const MSG_CLIP = 5;
 /** The screen of the computer is off and is being woken (`{on: true}`), or it is awake again (`{on: false}`). */
 export const MSG_WAKING = 6;
+/** The answer to a MSG_TYPE: `{ok: true}`, or `{ok: false, reason}` with "desktop" (the screen is not a sign-in or a UAC prompt now), "unsupported" or "failed". */
+export const MSG_TYPED = 7;
 /** Browser to server. */
 export const MSG_INPUT = 16;
 export const MSG_CLIP_SET = 18;
 export const MSG_CLIP_GET = 19;
 export const MSG_MONITOR = 20;
 export const MSG_PAUSE = 21;
+/** Type a text on the sign-in or the UAC screen (a login or a password of a key); never logged. */
+export const MSG_TYPE = 22;
 
 /** The biggest text the browser sends to the clipboard of the computer (the payload of a ClipSet message). */
 export const CLIP_MAX = 1024 * 1024;
@@ -53,6 +57,19 @@ export function encodeInput(event: Record<string, unknown>): Uint8Array<ArrayBuf
 }
 
 /** True when the computer shows something other than the user's desktop (the lock or sign-in screen, a UAC prompt). */
+/** The desktop a text may be typed on: the lock screen, the sign-in or a UAC prompt (the helper checks it again when it types). */
+export const isSignInDesktop = (desktop: string | undefined | null): boolean => desktop === 'winlogon';
+
+/** The longest text of one typing (a password of a key). */
+export const TYPING_MAX = 512;
+
+/** A text to type on the sign-in or UAC screen, then Tab or Enter or nothing. Null when the text is empty, too long or has control characters. */
+export function encodeTyping(text: string, after: '' | 'tab' | 'enter', label: string): Uint8Array<ArrayBuffer> | null {
+  // eslint-disable-next-line no-control-regex
+  if (!text || [...text].length > TYPING_MAX || /[\u0000-\u001f\u007f]/.test(text)) return null;
+  return withJson(MSG_TYPE, { text, after: after || undefined, label: [...label.replace(/[\u0000-\u001f\u007f]/g, ' ')].slice(0, 80).join('') });
+}
+
 export const isSecureDesktop = (desktop: string | undefined | null): boolean => !!desktop && desktop !== 'default';
 
 /** The monitors of a Hello as a clean list: entries that are not rectangles are dropped. */

@@ -24,12 +24,14 @@ const (
 	TypeEnd      byte = 4  // JSON End: the helper stops and says why
 	TypeClip     byte = 5  // JSON Clip: the text of the clipboard of the computer, the answer to TypeClipGet
 	TypeWaking   byte = 6  // JSON Waking: the screen of the computer is off and is being woken, or it is awake again
+	TypeTyped    byte = 7  // JSON Typed: the answer to TypeType (it was typed, or why it was refused)
 	TypeInput    byte = 16 // JSON Input: mouse and keys, from the browser
 	TypeSettings byte = 17 // JSON Settings, from the panel
 	TypeClipSet  byte = 18 // JSON Clip: put this text on the clipboard of the computer
 	TypeClipGet  byte = 19 // no payload: send the text of the clipboard of the computer
 	TypeMonitor  byte = 20 // JSON MonitorSel: show this monitor
 	TypePause    byte = 21 // JSON Pause: stop sending pictures (the tab is hidden) or go on
+	TypeType     byte = 22 // JSON Typing: type this text on the sign-in or the UAC screen (Windows only)
 )
 
 // MaxFrame is the largest frame accepted: a full 4K screen in poor JPEG is far below it.

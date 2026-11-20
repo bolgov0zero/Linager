@@ -417,6 +417,9 @@ func (h *kmsHost) ClipboardGet() (string, error) {
 	return "", errors.New("the clipboard is not available below the compositor")
 }
 
+// TypeText: typing into the sign-in screen is a Windows feature for now.
+func (h *kmsHost) TypeText(string, string) error { return errTypeUnsupported }
+
 func (h *kmsHost) ClipboardSet(string) error {
 	return errors.New("the clipboard is not available below the compositor")
 }

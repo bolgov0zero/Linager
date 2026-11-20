@@ -332,3 +332,45 @@ func TestWakingFrame(t *testing.T) {
 		t.Errorf("waking = %+v, err = %v", w, err)
 	}
 }
+
+func TestParseTyping(t *testing.T) {
+	good := []string{
+		`{"text":"secret"}`,
+		`{"text":"CORP\\ann","after":"tab","label":"Home Pass"}`,
+		`{"text":"пароль ✓ 😀","after":"enter"}`,
+	}
+	for _, g := range good {
+		if _, err := ParseTyping([]byte(g)); err != nil {
+			t.Errorf("%s: %v", g, err)
+		}
+	}
+	long := make([]byte, 0, MaxTypingRunes+30)
+	long = append(long, `{"text":"`...)
+	for i := 0; i < MaxTypingRunes+1; i++ {
+		long = append(long, 'a')
+	}
+	long = append(long, `"}`...)
+	bad := []string{
+		``, `{}`, `{"text":""}`, `not json`,
+		`{"text":"a\nb"}`, `{"text":"a\u0000b"}`, `{"text":"a","after":"space"}`,
+		`{"text":"a","label":"x\ty"}`, string(long),
+	}
+	for _, b := range bad {
+		if _, err := ParseTyping([]byte(b)); err == nil {
+			t.Errorf("accepted %q", b)
+		}
+	}
+	if _, err := ParseTyping(make([]byte, MaxTyping+1)); err == nil {
+		t.Error("accepted a frame over the limit")
+	}
+	// exactly the limit in runes is fine
+	long = long[:0]
+	long = append(long, `{"text":"`...)
+	for i := 0; i < MaxTypingRunes; i++ {
+		long = append(long, 'a')
+	}
+	long = append(long, `"}`...)
+	if _, err := ParseTyping(long); err != nil {
+		t.Errorf("the limit: %v", err)
+	}
+}

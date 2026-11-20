@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0-beta.3
+
+Update the agents too (the Windows agent types the text), and the panel.
+
+- New: **typing a key into the sign-in screen and into a UAC prompt** (the Assistant of a Windows computer; the docs `docs/en/keys.md`, `docs/ru/keys.md`). While the screen is the secure desktop (the lock screen, the sign-in, a UAC prompt; the badge "UAC"), the bar of the Assistant has a key button with the list of the keys of the type UAC and Any; each key has "Login", "Password" and "Sign in" (the login, Tab, the password, Enter). The text is typed as characters (`SendInput` with `KEYEVENTF_UNICODE`): the layout does not matter and the clipboard is not used. A new frame `Type` (22) and its answer `Typed` (7) in `internal/assist`; the helper types only while the active desktop is Winlogon and checks it at the moment of typing on the thread that sends the input, so a prompt that is gone does not get a password typed into the window of the person ("Typing refused"). The password passes through the panel server in memory (no "browser to agent" encryption yet). The audit log has `assistant.type` (the session, the name of the key, the number of characters, what is pressed after; never the text) and `typed` in `assistant.close`; at most 60 typings per opening. The rights are those of the Assistant. Windows only (a Linux computer answers "not supported"). NOT tried on a real Windows yet: the typing on the Winlogon desktop.
+- Change: `KeyPicker` has a second look, a key button of a toolbar whose list has the buttons of what to type.
+
 ## 0.9.0-beta.2
 
 The web interface and the docs only.

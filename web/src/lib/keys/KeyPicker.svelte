@@ -14,14 +14,23 @@
   let {
     serverId,
     use,
+    variant = 'field',
     picked = null,
     onpick,
+    onact,
+    title = '',
   }: {
     serverId: string;
     use: 'rdp' | 'uac';
+    /** "field": a labelled field of a form (a pick fills the form); "icon": a key button of a toolbar, each key with the buttons of what to type. */
+    variant?: 'field' | 'icon';
     /** The name of the key the form was filled from, shown on the button. */
     picked?: string | null;
-    onpick: (entry: Entry) => void;
+    onpick?: (entry: Entry) => void;
+    /** The icon variant: what to type of the key (the login, the password, or the whole sign-in: login, Tab, password, Enter). */
+    onact?: (entry: Entry, action: 'login' | 'password' | 'signin') => void;
+    /** The tooltip and the name of the icon button. */
+    title?: string;
   } = $props();
 
   const uid = `keys-${Math.random().toString(36).slice(2, 9)}`;
@@ -54,7 +63,10 @@
     const below = window.innerHeight - r.bottom - 8;
     const above = r.top - 8;
     const up = below < 180 && above > below;
-    pos = { left: r.left, top: up ? r.top : r.bottom, width: r.width, up, max: Math.max(120, Math.min(300, up ? above : below)) };
+    // a key button of a toolbar is narrow: its list is wider, and kept inside the window
+    const width = variant === 'icon' ? Math.min(360, window.innerWidth - 16) : r.width;
+    const left = variant === 'icon' ? Math.max(8, Math.min(r.left, window.innerWidth - width - 8)) : r.left;
+    pos = { left, top: up ? r.top : r.bottom, width, up, max: Math.max(120, Math.min(300, up ? above : below)) };
   }
 
   async function show(): Promise<void> {
@@ -85,7 +97,13 @@
     hide();
     button?.focus();
     touch();
-    onpick(entry);
+    onpick?.(entry);
+  }
+
+  function act(entry: Entry, action: 'login' | 'password' | 'signin'): void {
+    hide();
+    touch();
+    onact?.(entry, action);
   }
 
   function onkeydown(event: KeyboardEvent): void {
@@ -113,6 +131,16 @@
 <svelte:window onpointerdown={onOutside} onresize={hide} onscrollcapture={onScroll} {onkeydown} />
 
 {#snippet item(e: Entry)}
+  {#if variant === 'icon'}
+    <li role="option" aria-selected="false" class="key act">
+      <span class="nm" title={accountOf(e)}>{e.name}</span>
+      <span class="btns">
+        <button class="btn sm" type="button" title={accountOf(e)} onclick={() => act(e, 'login')}>{$tr('keys.act.login')}</button>
+        <button class="btn sm" type="button" disabled={!e.password} onclick={() => act(e, 'password')}>{$tr('keys.act.password')}</button>
+        <button class="btn sm primary" type="button" disabled={!e.password} title={$tr('keys.act.signinHint')} onclick={() => act(e, 'signin')}>{$tr('keys.act.signin')}</button>
+      </span>
+    </li>
+  {:else}
   <li
     role="option"
     aria-selected="false"
@@ -129,8 +157,25 @@
     <span class="nm">{e.name}</span>
     <small>{accountOf(e)}</small>
   </li>
+  {/if}
 {/snippet}
 
+{#if variant === 'icon'}
+  <button
+    bind:this={button}
+    class="btn sm ic"
+    class:ink={open}
+    type="button"
+    role="combobox"
+    aria-haspopup="listbox"
+    aria-expanded={open}
+    aria-controls={open ? `${uid}-list` : undefined}
+    {title}
+    aria-label={title}
+    onclick={() => (open ? hide() : void show())}>
+    <PixIcon name={$vault ? 'unlock' : 'key'} size={16} />
+  </button>
+{:else}
 <div class="pick">
   <span class="cap">{$tr('keys.pick.label')}</span>
   <button
@@ -148,6 +193,7 @@
     <span class="arrow" class:open aria-hidden="true"></span>
   </button>
 </div>
+{/if}
 
 {#if open}
   <div use:portal class="sheet-scrim"></div>
@@ -312,6 +358,28 @@
 
   :global(.keylist li.key[aria-selected='false']:hover) {
     background: var(--seg-off);
+  }
+
+  /* the icon variant: a key with the buttons of what to type */
+  :global(.keylist li.act) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 9px;
+    cursor: default;
+  }
+
+  :global(.keylist li.act .nm) {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :global(.keylist li.act .btns) {
+    display: flex;
+    flex: none;
+    gap: 5px;
   }
 
   :global(.keylist li.note) {

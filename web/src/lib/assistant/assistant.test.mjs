@@ -1,7 +1,7 @@
 // Run with: node --test src/lib/assistant/assistant.test.mjs (Node 22.18 or newer strips the types by itself).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CLIP_MAX, WheelNotches, cleanMonitors, encodeClipGet, encodeClipSet, encodeInput, encodeMonitor, isSecureDesktop, parseTiles } from './protocol.ts';
+import { CLIP_MAX, MSG_TYPE, TYPING_MAX, WheelNotches, cleanMonitors, encodeClipGet, encodeClipSet, encodeInput, encodeMonitor, encodeTyping, isSecureDesktop, isSignInDesktop, parseTiles } from './protocol.ts';
 import { scanKey } from './scancodes.ts';
 import { PRESETS, estimateMbit, presetOf } from './quality.ts';
 import { planKey } from '../desktop/keys.ts';
@@ -229,4 +229,32 @@ test('the modules of an operator are grouped like the sidebar', async () => {
       ['apps', ['docker']],
     ],
   );
+});
+
+test('a typing frame carries the text, what comes after and the name of the key', () => {
+  const m = encodeTyping('CORP\\ann', 'tab', 'Home Pass');
+  assert.equal(m[0], MSG_TYPE);
+  assert.deepEqual(JSON.parse(new TextDecoder().decode(m.subarray(1))), { text: 'CORP\\ann', after: 'tab', label: 'Home Pass' });
+  const plain = JSON.parse(new TextDecoder().decode(encodeTyping('пароль ✓', '', 'k').subarray(1)));
+  assert.equal(plain.after, undefined);
+  assert.equal(plain.text, 'пароль ✓');
+  // the label loses control characters and is cut at 80
+  const l = JSON.parse(new TextDecoder().decode(encodeTyping('x', 'enter', 'a\nb' + 'c'.repeat(100)).subarray(1))).label;
+  assert.equal(l.startsWith('a b'), true);
+  assert.equal([...l].length, 80);
+});
+
+test('a typing that the panel would drop is not made', () => {
+  assert.equal(encodeTyping('', 'enter', 'k'), null);
+  assert.equal(encodeTyping('a\nb', '', 'k'), null);
+  assert.equal(encodeTyping('a'.repeat(TYPING_MAX + 1), '', 'k'), null);
+  assert.notEqual(encodeTyping('a'.repeat(TYPING_MAX), '', 'k'), null);
+});
+
+test('only the sign-in desktop gets a typing (the screen saver and the usual desktop do not)', () => {
+  assert.equal(isSignInDesktop('winlogon'), true);
+  assert.equal(isSignInDesktop('default'), false);
+  assert.equal(isSignInDesktop('screen-saver'), false);
+  assert.equal(isSignInDesktop(undefined), false);
+  assert.equal(isSecureDesktop('screen-saver'), true);
 });

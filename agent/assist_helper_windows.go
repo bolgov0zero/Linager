@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf16"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -153,6 +154,7 @@ const (
 	kevExtended = 0x0001
 	kevKeyUp    = 0x0002
 	kevScancode = 0x0008
+	kevUnicode  = 0x0004
 )
 
 var (
@@ -610,6 +612,44 @@ func (h *winHost) Do(in assist.Input) (err error) {
 			err = sendKey(uint16(in.Sc), f) //nolint:gosec // 1..255
 		}
 		// Ctrl+Alt+Del is not here: only a service may send it, the agent takes it out of the stream.
+	})
+	return
+}
+
+// TypeText types a text as characters (SendInput with KEYEVENTF_UNICODE: no key codes, so the layout of the computer does not
+// matter and the clipboard is not used) and then presses Tab or Enter. Only while the input desktop is Winlogon (the sign-in,
+// the lock screen or a UAC prompt): this is checked here, on the thread that sends the input, so a prompt that went away a
+// moment ago cannot get a password typed into the window of the person.
+func (h *winHost) TypeText(text, after string) (err error) {
+	h.ui.do(func() {
+		h.syncDesktop()
+		if h.deskName != "winlogon" {
+			err = errTypeDesktop
+			return
+		}
+		for _, u := range utf16.Encode([]rune(text)) {
+			if err = sendKey(u, kevUnicode); err != nil {
+				return
+			}
+			if err = sendKey(u, kevUnicode|kevKeyUp); err != nil {
+				return
+			}
+			time.Sleep(4 * time.Millisecond) // a field of a sign-in screen drops characters that come too fast
+		}
+		var sc uint16
+		switch after {
+		case "tab":
+			sc = 0x0F
+		case "enter":
+			sc = 0x1C
+		}
+		if sc != 0 {
+			time.Sleep(40 * time.Millisecond)
+			if err = sendKey(sc, kevScancode); err != nil {
+				return
+			}
+			err = sendKey(sc, kevScancode|kevKeyUp)
+		}
 	})
 	return
 }

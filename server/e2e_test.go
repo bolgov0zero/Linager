@@ -593,6 +593,7 @@ func TestEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	gotClip := ""
+	var gotTyped *assist.Typed
 	readAssistUntil := func(until func() bool) {
 		for !until() {
 			_, b, err := ac.Read(actx)
@@ -604,6 +605,10 @@ func TestEndToEnd(t *testing.T) {
 				var c assist.Clip
 				_ = json.Unmarshal(b[1:], &c)
 				gotClip = c.Text
+			case assist.TypeTyped:
+				var ty assist.Typed
+				_ = json.Unmarshal(b[1:], &ty)
+				gotTyped = &ty
 			case assist.TypeHello:
 				gotHello = bytes.Contains(b[1:], []byte(`"w":960`))
 				if bytes.Contains(b[1:], []byte(`"monitor":1`)) {
@@ -613,6 +618,18 @@ func TestEndToEnd(t *testing.T) {
 		}
 	}
 	readAssistUntil(func() bool { return gotClip == "from the browser" })
+	// a text for the sign-in or UAC screen passes the panel (a bad one does not) and is audited without its text; the helper
+	// refuses it on the usual desktop and says so
+	if err := ac.Write(actx, websocket.MessageBinary, append([]byte{assist.TypeType}, `{"text":"s3cret-text-42","after":"enter","label":"Home Pass"}`...)); err != nil {
+		t.Fatal(err)
+	}
+	if err := ac.Write(actx, websocket.MessageBinary, append([]byte{assist.TypeType}, `{"text":"bad\u0007"}`...)); err != nil {
+		t.Fatal(err)
+	}
+	readAssistUntil(func() bool { return gotTyped != nil })
+	if gotTyped.OK || gotTyped.Reason != "desktop" {
+		t.Fatalf("typing on the usual desktop: %+v", gotTyped)
+	}
 	if err := ac.Write(actx, websocket.MessageBinary, append([]byte{assist.TypeMonitor}, `{"i":1}`...)); err != nil {
 		t.Fatal(err)
 	}
@@ -632,6 +649,11 @@ func TestEndToEnd(t *testing.T) {
 		_ = db.Pool.QueryRow(ctx, `SELECT count(*) FROM audit_log WHERE action IN ('assistant.open','assistant.close','assistant.settings')`).Scan(&n)
 		return n >= 4
 	})
+	var typedRows, leaks int
+	_ = db.Pool.QueryRow(ctx, `SELECT count(*), count(*) FILTER (WHERE details::text LIKE '%s3cret%') FROM audit_log WHERE action = 'assistant.type' AND details->>'label' = 'Home Pass' AND (details->>'chars')::int = 14`).Scan(&typedRows, &leaks)
+	if typedRows != 1 || leaks != 0 {
+		t.Fatalf("audit of the typing: %d rows, %d with the text (want 1 and 0)", typedRows, leaks)
+	}
 
 	// --- files: list, edit with conflict detection, create, upload, download, delete ---
 	fdir := t.TempDir()

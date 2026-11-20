@@ -101,5 +101,10 @@
   "keys.bindModal.none": "Ключ для всех серверов",
   "keys.pick.thisServer": "Для этого сервера",
   "keys.unlock.title": "Открыть хранилище",
-  "keys.unlock.hint": "Файл и фраза нужны один раз за вкладку. Потом ключи доступны, пока вкладка открыта."
+  "keys.unlock.hint": "Файл и фраза нужны один раз за вкладку. Потом ключи доступны, пока вкладка открыта.",
+  "keys.act.title": "Ключи: ввести логин или пароль",
+  "keys.act.login": "Логин",
+  "keys.act.password": "Пароль",
+  "keys.act.signin": "Войти",
+  "keys.act.signinHint": "Логин, Tab, пароль, Enter"
 }

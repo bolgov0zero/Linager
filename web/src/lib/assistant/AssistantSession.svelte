@@ -29,6 +29,7 @@
   import {
     ASSIST_LIMIT_CODE,
     MSG_CLIP,
+    MSG_TYPED,
     MSG_WAKING,
     MSG_END,
     MSG_HELLO,
@@ -37,6 +38,7 @@
     WheelNotches,
     cleanMonitors,
     encodeClipGet,
+    encodeTyping,
     encodeClipSet,
     encodeInput,
     encodeMonitor,
@@ -237,6 +239,11 @@
       case MSG_CLIP:
         await takeClip(json<{ text?: string }>(body)?.text);
         return;
+      case MSG_TYPED: {
+        const r = json<{ ok?: boolean; reason?: string }>(body);
+        if (r && r.ok === false) showToast(t(r.reason === 'desktop' ? 'assist.typeDesktop' : r.reason === 'unsupported' ? 'assist.typeUnsupported' : 'assist.typeFailed'));
+        return;
+      }
       case MSG_END: {
         const e = json<{ reason?: string; reconnect?: boolean }>(body);
         quiet = e?.reconnect === true && autoReconnect(mine);
@@ -574,6 +581,15 @@
     for (const k of keys) send({ t: 'k', sc: k.sc, ext: k.ext, d: true });
     for (const k of [...keys].reverse()) send({ t: 'k', sc: k.sc, ext: k.ext });
     focus();
+  }
+
+  /** Types a text on the sign-in or UAC screen (a login or a password of a key), then Tab, Enter or nothing. False when it was not sent. */
+  export function typeText(text: string, after: '' | 'tab' | 'enter', label: string): boolean {
+    if (socket?.readyState !== WebSocket.OPEN || phase !== 'open') return false;
+    const msg = encodeTyping(text, after, label);
+    if (!msg) return false;
+    socket.send(msg);
+    return true;
   }
 
   export function winKey(): void {

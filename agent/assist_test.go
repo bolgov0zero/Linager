@@ -337,3 +337,59 @@ func TestAssistLoopAsksTheBrowserToConnectAgain(t *testing.T) {
 		t.Errorf("%+v", e)
 	}
 }
+
+// A text for the sign-in or UAC screen is typed only while the screen is the secure desktop; the helper says what happened.
+func TestAssistLoopTypesOnlyOnTheSecureDesktop(t *testing.T) {
+	a, host, _ := startLoop(t)
+	readUntil(t, a, assist.TypeHello)
+	readUntil(t, a, assist.TypeTiles)
+	typed := func() assist.Typed {
+		var r assist.Typed
+		if err := json.Unmarshal(readUntil(t, a, assist.TypeTyped).Data, &r); err != nil {
+			t.Fatal(err)
+		}
+		return r
+	}
+
+	// the usual desktop: refused, nothing typed
+	if err := assist.WriteJSON(a, assist.TypeType, assist.Typing{Text: "secret", After: "enter", Label: "Home"}); err != nil {
+		t.Fatal(err)
+	}
+	if r := typed(); r.OK || r.Reason != "desktop" {
+		t.Fatalf("on the usual desktop: %+v", r)
+	}
+
+	// Ctrl+Alt+Del of the fake host locks the screen: the secure desktop
+	_ = assist.WriteJSON(a, assist.TypeInput, assist.Input{T: assist.InCAD})
+	waitFor(t, "locked", func() bool { _, _, _, l := host.state(); return l })
+
+	// a login with Tab, then a password with Enter
+	_ = assist.WriteJSON(a, assist.TypeType, assist.Typing{Text: "CORP\\ann", After: "tab"})
+	if r := typed(); !r.OK {
+		t.Fatalf("login: %+v", r)
+	}
+	_ = assist.WriteJSON(a, assist.TypeType, assist.Typing{Text: "пароль ✓", After: "enter"})
+	if r := typed(); !r.OK {
+		t.Fatalf("password: %+v", r)
+	}
+	host.mu.Lock()
+	got := append([]string(nil), host.typed...)
+	host.mu.Unlock()
+	if len(got) != 2 || got[0] != "CORP\\ann|tab" || got[1] != "пароль ✓|enter" {
+		t.Fatalf("typed: %q", got)
+	}
+
+	// a frame that does not parse is dropped without an answer: the next good one is still served
+	_ = assist.WriteJSON(a, assist.TypeType, assist.Typing{Text: "bad\x07", After: "enter"})
+	_ = assist.WriteJSON(a, assist.TypeType, assist.Typing{Text: "x", After: "space"})
+	_ = assist.WriteJSON(a, assist.TypeType, assist.Typing{Text: "last"})
+	if r := typed(); !r.OK {
+		t.Fatalf("last: %+v", r)
+	}
+	host.mu.Lock()
+	n := len(host.typed)
+	host.mu.Unlock()
+	if n != 3 {
+		t.Fatalf("only the good frames are typed, got %d", n)
+	}
+}

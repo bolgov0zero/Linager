@@ -23,6 +23,7 @@ type fakeHost struct {
 	locked     bool
 	clip       string
 	showCursor bool
+	typed      []string // what TypeText was asked to type, "text|after"
 }
 
 const (
@@ -141,6 +142,17 @@ func (f *fakeHost) ClipboardGet() (string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.clip, nil
+}
+
+// TypeText records what was typed; it is refused unless the drawn screen is locked (the secure desktop).
+func (f *fakeHost) TypeText(text, after string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if !f.locked { // the drawn lock screen is the secure desktop
+		return errTypeDesktop
+	}
+	f.typed = append(f.typed, text+"|"+after)
+	return nil
 }
 
 func (f *fakeHost) ClipboardSet(text string) error {

@@ -4,8 +4,12 @@
   import ActionMenu from '../ui/ActionMenu.svelte';
   import type AssistantSession from './AssistantSession.svelte';
   import type { AssistInfo, AssistPhase } from './AssistantSession.svelte';
+  import KeyPicker from '../keys/KeyPicker.svelte';
   import ServerShortcuts from './ServerShortcuts.svelte';
   import { sessionValue } from './nav';
+  import { isSignInDesktop } from './protocol';
+  import { accountOf, type Entry } from '../keys/vault';
+  import { showToast } from '../toast';
   import { assistInfoShown, toggleAssistInfo } from './settings';
 
   /**
@@ -92,6 +96,23 @@
   const linux = $derived(info?.platform === 'linux');
   const canCad = $derived((current?.type ?? (session === 'console' ? 'console' : '')) === 'console');
 
+  // The key button: on the lock, sign-in or UAC screen of a Windows computer only; the helper checks it again when it types.
+  const canType = $derived(live && !linux && isSignInDesktop(info?.desktop));
+
+  /** Types the login, the password, or both (login, Tab, password, Enter) of a key. */
+  function typeKey(e: Entry, action: 'login' | 'password' | 'signin'): void {
+    const s = screen;
+    if (!s) return;
+    const sent =
+      action === 'login'
+        ? s.typeText(accountOf(e), '', e.name)
+        : action === 'password'
+          ? s.typeText(e.password, '', e.name)
+          : s.typeText(accountOf(e), 'tab', e.name) && s.typeText(e.password, 'enter', e.name);
+    if (!sent) showToast($tr('assist.typeFailed'));
+    s.focus();
+  }
+
   const monitorItems = $derived.by(() => {
     const s = screen;
     const list = info?.monitors ?? [];
@@ -148,6 +169,9 @@
 {#if live}
   {#if !linux}
     <button class="btn sm" type="button" title={canCad ? $tr('assist.cadHint') : $tr('assist.cadConsoleOnly')} disabled={!canCad} onclick={() => screen?.ctrlAltDel()}>Ctrl+Alt+Del</button>
+  {/if}
+  {#if canType}
+    <KeyPicker variant="icon" use="uac" {serverId} title={$tr('keys.act.title')} onact={typeKey} />
   {/if}
   <ServerShortcuts {serverId} {serverName} small />
   <ActionMenu compact label={$tr('assist.more')} {items} />

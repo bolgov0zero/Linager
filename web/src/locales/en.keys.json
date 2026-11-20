@@ -101,5 +101,10 @@
   "keys.bindModal.none": "The key is for all servers",
   "keys.pick.thisServer": "For this server",
   "keys.unlock.title": "Open the vault",
-  "keys.unlock.hint": "The file and the passphrase are needed once per tab. The keys are then available while the tab is open."
+  "keys.unlock.hint": "The file and the passphrase are needed once per tab. The keys are then available while the tab is open.",
+  "keys.act.title": "Keys: type a login or a password",
+  "keys.act.login": "Login",
+  "keys.act.password": "Password",
+  "keys.act.signin": "Sign in",
+  "keys.act.signinHint": "Login, Tab, password, Enter"
 }

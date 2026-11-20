@@ -541,6 +541,9 @@ func (h *mutterHost) ClipboardGet() (string, error) {
 	return string(b), nil
 }
 
+// TypeText: typing into the sign-in screen is a Windows feature for now.
+func (h *mutterHost) TypeText(string, string) error { return errTypeUnsupported }
+
 func (h *mutterHost) ClipboardSet(text string) error {
 	h.mu.Lock()
 	rd, on := h.rd, h.clipOn

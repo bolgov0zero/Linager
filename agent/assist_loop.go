@@ -32,7 +32,18 @@ type assistHost interface {
 	Desktop() string
 	// SetShowCursor says whether the pointer of the computer is drawn into the picture.
 	SetShowCursor(show bool)
+	// TypeText types a text as characters and then presses Tab or Enter (after is "", "tab" or "enter"). It is done only
+	// while the screen of the computer is a sign-in or a UAC prompt; the host checks it at the moment of typing and
+	// returns errTypeDesktop when it is not. A host that cannot type returns errTypeUnsupported.
+	TypeText(text, after string) error
 }
+
+var (
+	// errTypeDesktop: the screen is not a sign-in or a UAC prompt (any more), so nothing is typed.
+	errTypeDesktop = errors.New("the screen is not a sign-in or a UAC prompt")
+	// errTypeUnsupported: this computer cannot type text.
+	errTypeUnsupported = errors.New("typing is not supported here")
+)
 
 // idleAfter is the number of pictures without a change after which the capture slows down until something happens.
 const idleAfter = 20
@@ -109,6 +120,30 @@ func runAssistLoop(ctx context.Context, rw io.ReadWriter, host assistHost, info 
 				}
 				if err := host.ClipboardSet(c.Text); err != nil && log != nil {
 					log.Debug("assistant clipboard", "err", err)
+				}
+			case assist.TypeType:
+				t, err := assist.ParseTyping(f.Data)
+				if err != nil {
+					continue
+				}
+				res := assist.Typed{OK: true}
+				if err := host.TypeText(t.Text, t.After); err != nil {
+					res = assist.Typed{Reason: "failed"}
+					switch {
+					case errors.Is(err, errTypeDesktop):
+						res.Reason = "desktop"
+					case errors.Is(err, errTypeUnsupported):
+						res.Reason = "unsupported"
+					case log != nil:
+						log.Debug("assistant typing", "err", err) // never the text
+					}
+				}
+				if err := sendJSON(assist.TypeTyped, res); err != nil {
+					return
+				}
+				select {
+				case wake <- struct{}{}:
+				default:
 				}
 			case assist.TypePause:
 				if p, err := assist.ParsePause(f.Data); err == nil {

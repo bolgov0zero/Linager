@@ -184,5 +184,8 @@
   "assist.mode.window": "Окно по размеру картинки",
   "assist.mode.max": "Окно на весь браузер",
   "assist.mode.real": "Картинка 100% (с прокруткой)",
-  "assist.mode.full": "Полный экран"
+  "assist.mode.full": "Полный экран",
+  "assist.typeDesktop": "Ввод отклонён: сейчас на экране не вход и не запрос UAC.",
+  "assist.typeUnsupported": "Этот компьютер не умеет вводить текст на экране входа.",
+  "assist.typeFailed": "Не удалось ввести текст."
 }
