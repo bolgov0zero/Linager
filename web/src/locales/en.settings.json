@@ -51,7 +51,7 @@
   "users.create": "Create",
   "users.created": "created {date}",
   "users.createdToast": "User created",
-  "users.role.admin": "administrator",
+  "users.role.admin": "Administrator",
   "users.you": "you",
   "users.2fa.on": "2FA",
   "users.2fa.off": "no 2FA",

@@ -138,7 +138,7 @@
   "dash.unit.min": "мин",
   "app.updates": "Обновления",
   "app.audit": "Журнал",
-  "dash.view.map": "Карта",
+  "dash.view.map": "Сетка",
   "dash.menu": "Действия с сервером",
   "dash.deleteServer": "Удалить сервер"
 }

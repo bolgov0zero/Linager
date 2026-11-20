@@ -37,7 +37,7 @@ One web panel, a lightweight agent on every host: live metrics, terminal, files,
 
 | | |
 |---|---|
-| **Dashboard** | Cards or a map of servers, a Linux or Windows badge, groups, filters, search by name or IP. CPU, RAM, disk, network, uptime, pending updates, reboot needed, failed services at a glance. The view switch, "+ Server" and the menu (theme, language, edit, settings, log out) live in the top bar; on a server page the same bar carries its name, state, note, reboot and delete. |
+| **Dashboard** | Cards or a grid of servers, a Linux or Windows badge, groups, filters, search by name or IP. CPU, RAM, disk, network, uptime, pending updates, reboot needed, failed services at a glance. The view switch, "+ Server" and the menu (theme, language, edit, settings, log out) live in the top bar; on a server page the same bar carries its name, state, note, reboot and delete. |
 | **Windows** | An agent for Windows 10/11 and Server 2016+ (MSI, a service): metrics, a PowerShell terminal, a **remote desktop in the browser** (RDP through the panel, nothing to install), services, processes, event logs, files, disk, users and sessions, Windows Update, network settings with a rollback. Installed by one PowerShell command from a link. Details: [docs/en/windows.md](docs/en/windows.md). |
 | **Metrics** | Live values every 5 seconds and history up to 360 days, charts for CPU, RAM, disk and network, events and reboots on the chart, CSV export, synchronized hover across charts. |
 | **Terminal** | A web terminal on the host through the agent: floating windows, a key panel for phones, shared snippets, start the shell as another user. |

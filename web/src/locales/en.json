@@ -138,7 +138,7 @@
   "dash.unit.min": "min",
   "app.updates": "Updates",
   "app.audit": "Audit log",
-  "dash.view.map": "Map",
+  "dash.view.map": "Grid",
   "dash.menu": "Server actions",
   "dash.deleteServer": "Delete server"
 }

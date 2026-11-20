@@ -28,6 +28,7 @@
   --good: #1e8a4b;
   --warn: #b36f0e;
   --crit: #c4352a;
+  --os-linux: #cf6a12; /* the badge of a Linux server; Windows uses --accent */
   --seg-off: #d5d9d0;
   --shade: #c3c8bd;
   /* Chart series pair (network receive / send), validated for colour-blind separation. */
@@ -61,6 +62,7 @@
   --good: #4fcf86;
   --warn: #e6b04b;
   --crit: #ff6d60;
+  --os-linux: #f29b45;
   --seg-off: #272d39;
   --shade: #0a0c10;
   --series-1: #5b84f0;

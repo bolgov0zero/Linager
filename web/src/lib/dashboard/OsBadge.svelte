@@ -12,8 +12,8 @@
   .os {
     flex: none;
     padding: 1px 5px;
-    border: 2px solid var(--line);
-    color: var(--muted);
+    border: 2px solid var(--os-linux);
+    color: var(--os-linux);
     background: var(--surface);
     font-size: 10px;
     line-height: 1.3;

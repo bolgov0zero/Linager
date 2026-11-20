@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.4
+
+- Change: **the buttons of a card are of one colour.** The button "Assistant" in the card of a Windows or Linux server is no longer set apart by the accent colour: it looks like the Terminal, Open and Delete buttons.
+- Change: **the badge of Linux is orange** (`--os-linux`; Windows stays blue), and the colours of the badges are the same in all the views: the cards, the grid and the Console (where the short "LIN" and "WIN" were grey before).
+- Change: **the views of the dashboard are "Cards / Grid / Console"** (Russian: "Карточки / Сетка / Консоль"; they were "Map" and "Пульт"). Only the names changed, in the interface, the docs, the README and the landing.
+- Fix: **the role "Administrator" is written with a capital letter** in the list of roles and in the badge of the list of users, like "Operator" and "Auditor".
+
 ## 0.8.3
 
 - Change: **the tab "Desktop" of a Windows computer is called "RDP"** (the tab, the floating window, the item in the lists of windows and in the context menu of a tile, the right of an operator, the audit journal and the docs). The name says what it is, and it is no longer mixed up with the screen of the Assistant. Only the names changed.

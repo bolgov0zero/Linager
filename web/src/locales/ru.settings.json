@@ -51,7 +51,7 @@
   "users.create": "Создать",
   "users.created": "создан {date}",
   "users.createdToast": "Пользователь создан",
-  "users.role.admin": "администратор",
+  "users.role.admin": "Администратор",
   "users.you": "это вы",
   "users.2fa.on": "2FA",
   "users.2fa.off": "без 2FA",

@@ -127,7 +127,7 @@
     <div class="row end">
       <button class="btn ic" type="button" title={$tr('dash.terminal')} aria-label={$tr('dash.terminal')} disabled={!card.online} onclick={() => openTermWindow(card.id, card.name)}><CardIcon name="terminal" /></button>
       {#if assistantOffered(card.os, sample)}
-        <button class="btn ic assist" type="button" title={$tr('dash.assistant')} aria-label={$tr('dash.assistant')} disabled={!card.online} onclick={() => openAssistantWindow(card.id, card.name)}><CardIcon name="assistant" /></button>
+        <button class="btn ic" type="button" title={$tr('dash.assistant')} aria-label={$tr('dash.assistant')} disabled={!card.online} onclick={() => openAssistantWindow(card.id, card.name)}><CardIcon name="assistant" /></button>
       {/if}
       <button class="btn ic" type="button" title={$tr('dash.open')} aria-label={$tr('dash.open')} onclick={() => onopen(card.name)}><CardIcon name="open" /></button>
       <button class="btn ic del" type="button" title={$tr('dash.deleteServer')} aria-label={$tr('dash.deleteServer')} onclick={ondelete}><CardIcon name="trash" /></button>
@@ -265,12 +265,6 @@
   /* Icon buttons: the same height as text buttons, square-ish. */
   .foot .btn.ic {
     flex: none;
-  }
-
-  /* The Assistant is the one action of a Windows card that is set apart by the accent colour. */
-  .foot .btn.assist:not(:disabled) {
-    color: var(--accent);
-    border-color: var(--accent);
   }
 
   .foot .btn.del:hover:not(:disabled) {

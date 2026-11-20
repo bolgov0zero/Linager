@@ -327,7 +327,7 @@
                 oncontextmenu={(e) => showMenu(e, card)}>
                 <span class="dot {lvl}" aria-hidden="true"></span>
                 <span class="nm">{card.name}</span>
-                <span class="os">{osKind(card.os) === 'windows' ? $tr('pult.os.win') : $tr('pult.os.lin')}</span>
+                <span class="os" class:win={osKind(card.os) === 'windows'}>{osKind(card.os) === 'windows' ? $tr('pult.os.win') : $tr('pult.os.lin')}</span>
               </button>
             {/each}
           {/if}
@@ -554,9 +554,14 @@
     flex: none;
     font-family: var(--font-display);
     font-size: 10px;
-    color: var(--muted);
+    color: var(--os-linux);
     border: 1px solid currentColor;
     padding: 0 3px;
+  }
+
+  /* The colours of the badges are the same as on the cards and in the grid: Linux orange, Windows blue. */
+  .srv .os.win {
+    color: var(--accent);
   }
 
   .srv.off {
