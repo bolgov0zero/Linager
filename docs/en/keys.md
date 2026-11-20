@@ -1,6 +1,6 @@
 # Keys
 
-"Keys" is your personal encrypted file of logins and passwords. It saves typing them: in the RDP form you choose a key and the login, the domain and the password are filled in. The item "Keys" is in the menu of the top bar of every user of the panel (an administrator, an operator, an auditor); everyone has their own file.
+"Keys" is your personal encrypted file of logins and passwords. It saves typing them: in the RDP form you choose a key and the login, the domain and the password are filled in. The item "Keys" is in the menu of the top bar of every user of the panel (an administrator, an operator, an auditor); everyone has their own file. While the vault is open, the item in the menu has an open lock icon of the dark orange colour.
 
 ## The main points
 
@@ -35,7 +35,7 @@ The auto-lock (15 minutes of silence by default; 5, 30 or off; the choice is rem
 
 ## The RDP form
 
-In the connection form (the tab "RDP" and the floating window) there is a list **"Key"** above the login. When the vault is closed, the list has the button "Open…" that opens the window "Keys". Choosing a key fills the login, the domain and the password; the connection then goes as usual, the password enters the CredSSP of the client and is sent nowhere. The connection is written to the audit with the login, as before.
+In the connection form (the tab "RDP" and the floating window) there is a list **"Key"** above the login. When the vault is closed, the list has the button "Open…": it opens a small window with the file and the passphrase (not the whole window "Keys"), and once the vault is open the list of keys unfolds by itself. Choosing a key **connects at once**: the login, the domain and the password go to the RDP client in the browser (CredSSP), the password is not sent to the panel server. If the connection fails, the form comes back with the fields filled. The list opens over the page like the other drop-down lists (as a sheet from the bottom on a phone) and does not make the window taller. The connection is written to the audit with the login, as before.
 
 ## The file and the encryption
 

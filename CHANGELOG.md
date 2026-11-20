@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.0-beta.2
+
+The web interface and the docs only.
+
+- Fix: **the list "Key" of the RDP form is a floating list.** It was opened inside the form and made the window taller; it is now moved to the page like the other drop-down lists (`Select`: on a phone a sheet from the bottom, closes on a click outside, on scroll and on Escape).
+- Fix: **the first line of the list was "For <the id of the server>"** (a long UUID). It shows the name of the server now ("For this server" when the name is not known).
+- Change: **"Open…" in the list of the RDP form (the vault is closed) opens a small window** with the file and the passphrase, not the whole window "Keys"; when the vault is open the list of keys unfolds by itself (`KeyOpenForm`, `KeyUnlockModal`; the window "Keys" uses the same form).
+- Change: **an open lock in the menu.** While the vault is open, the item "Keys" of the menu has an open lock icon of the dark orange colour (`--os-linux`); in the "More" sheet of a phone the key icon becomes the lock. Icon `unlock` (Pixelarticons 2.4.2).
+- Change: **choosing a key in the RDP form connects at once** (the login, the domain and the password go to the client and the connection starts). If it fails, the form comes back with the fields filled.
+
 ## 0.9.0-beta.1
 
 Beta channel. The web interface and the docs only: no database migration, no change in the server or the agents.

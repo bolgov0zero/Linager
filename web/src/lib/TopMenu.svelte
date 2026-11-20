@@ -1,6 +1,7 @@
 <script lang="ts">
   import PixIcon from './ui/PixIcon.svelte';
   import { locale, tr, type Locale } from '../i18n';
+  import { vault } from './keys/store';
 
   /**
    * The menu button of the top bar and its drop-down: theme, language, edit mode, settings, log out.
@@ -96,6 +97,7 @@
         </button>
         <button class="row" type="button" role="menuitem" onclick={() => run(onkeys)}>
           <span class="lab">{$tr('keys.menu')}</span>
+          {#if $vault}<span class="open" title={$tr('keys.state.open')}><PixIcon name="unlock" size={16} /></span>{/if}
         </button>
         <button class="row logout" type="button" role="menuitem" onclick={() => run(onlogout)}>
           <span class="lab">{$tr('app.logout')}</span>
@@ -175,6 +177,17 @@
 
   .row:hover .val,
   .row:focus-visible .val {
+    color: inherit;
+  }
+
+  /* The vault of the Keys is open: an open lock at the end of the row. */
+  .open {
+    display: inline-flex;
+    color: var(--os-linux); /* the dark orange of the panel */
+  }
+
+  .row:hover .open,
+  .row:focus-visible .open {
     color: inherit;
   }
 

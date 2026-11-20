@@ -98,6 +98,8 @@
   "keys.pick.none": "There are no keys for this server.",
   "keys.pick.closed": "The vault is closed.",
   "keys.pick.open": "Open…",
-  "keys.pick.from": "Filled from the key \"{name}\". The password stays in the browser and is not sent to the server.",
-  "keys.bindModal.none": "The key is for all servers"
+  "keys.bindModal.none": "The key is for all servers",
+  "keys.pick.thisServer": "For this server",
+  "keys.unlock.title": "Open the vault",
+  "keys.unlock.hint": "The file and the passphrase are needed once per tab. The keys are then available while the tab is open."
 }

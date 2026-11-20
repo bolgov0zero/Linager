@@ -530,7 +530,7 @@ function renderPick(){
     $('#r-login').value=e.login;$('#r-domain').value=e.domain;$('#r-pass').value=e.pass;
     $('#pick-l').innerHTML=KEY+'<span>'+esc(e.name)+'</span>';
     $('#r-from').textContent='Подставлено из ключа «'+e.name+'». Пароль остаётся в браузере и на сервер не отправляется.';
-    m.classList.remove('on');$('#pick-btn').setAttribute('aria-expanded','false');
+    m.classList.remove('on');$('#pick-btn').setAttribute('aria-expanded','false');toast('В макете выбор ключа сразу подключает: поля заполнены, идёт подключение.');
   });
 }
 function openRdp(){

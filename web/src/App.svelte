@@ -21,7 +21,7 @@
   import PixIcon from './lib/ui/PixIcon.svelte';
   import TopMenu from './lib/TopMenu.svelte';
   import KeysModal from './lib/keys/KeysModal.svelte';
-  import { closeVault, keysOpen } from './lib/keys/store';
+  import { closeVault, keysOpen, vault } from './lib/keys/store';
   import RebootButton from './lib/server/tabs/RebootButton.svelte';
   import { serverBar } from './lib/server/serverbar';
   import ViewSwitch from './lib/dashboard/ViewSwitch.svelte';
@@ -398,7 +398,7 @@
         <PixIcon name="next" />
       </button>
       <button class="act" type="button" onclick={openKeys}>
-        <PixIcon name="key" />{$tr('keys.menu')}
+        <PixIcon name={$vault ? 'unlock' : 'key'} />{$tr('keys.menu')}
         <PixIcon name="next" />
       </button>
       {#if isAdmin}

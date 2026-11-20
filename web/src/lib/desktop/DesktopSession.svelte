@@ -212,6 +212,7 @@
     domain = entry.domain;
     password = entry.password;
     fromKey = entry.name;
+    void connect(); // a chosen key signs in at once
   }
 
   export async function connect(): Promise<void> {
@@ -423,7 +424,6 @@
           <button class="btn" type="button" disabled={enabling} onclick={() => void enable()}>{$tr('desk.enable')}</button>
         {/if}
         <KeyPicker {serverId} use="rdp" picked={fromKey} onpick={useKey} />
-        {#if fromKey}<p class="small muted">{$tr('keys.pick.from', { name: fromKey })}</p>{/if}
         <label>
           <span>{$tr('desk.login')}</span>
           <input type="text" bind:value={login} autocomplete="username" spellcheck="false" autocapitalize="off" />

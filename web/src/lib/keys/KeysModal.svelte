@@ -5,9 +5,10 @@
   import Select from '../ui/Select.svelte';
   import { showToast } from '../toast';
   import KeyEditModal from './KeyEditModal.svelte';
-  import { LOCK_CHOICES, closeVault, createVault, lockMinutes, lockWaiting, openFile, removeEntry, saveFile, setLockMinutes, touch, vault } from './store';
+  import KeyOpenForm from './KeyOpenForm.svelte';
+  import { LOCK_CHOICES, closeVault, createVault, lockMinutes, lockWaiting, removeEntry, saveFile, setLockMinutes, touch, vault } from './store';
   import { TYPES, bindText } from './labels';
-  import { DEFAULT_FILE, FILE_EXT, PASSPHRASE_MIN, VaultError, accountOf, type Entry, type EntryType } from './vault';
+  import { DEFAULT_FILE, PASSPHRASE_MIN, VaultError, accountOf, type Entry, type EntryType } from './vault';
 
   /** The window "Keys": create or open the personal vault, then list, add, change and delete the keys. */
   let { onclose }: { onclose: () => void } = $props();
@@ -17,12 +18,6 @@
   let p2 = $state('');
   let createBusy = $state(false);
   let createError = $state('');
-
-  let file = $state<File | null>(null);
-  let openPass = $state('');
-  let openBusy = $state(false);
-  let openError = $state('');
-  let fileInput = $state<HTMLInputElement | null>(null);
 
   const strength = $derived(p1.length < 8 ? 1 : p1.length < 12 ? 2 : p1.length < 16 ? 3 : 4);
   const createHint = $derived(
@@ -47,22 +42,6 @@
       createError = explain(e);
     } finally {
       createBusy = false;
-    }
-  }
-
-  async function open(event: SubmitEvent): Promise<void> {
-    event.preventDefault();
-    if (!file || !openPass || openBusy) return;
-    openBusy = true;
-    openError = '';
-    try {
-      await openFile(file, openPass);
-      openPass = '';
-      file = null;
-    } catch (e) {
-      openError = explain(e);
-    } finally {
-      openBusy = false;
     }
   }
 
@@ -132,36 +111,10 @@
           <button class="btn primary" type="submit" disabled={!canCreate}>{createBusy ? $i18n('keys.create.busy') : $i18n('keys.create.go')}</button>
         </form>
 
-        <form class="pane stack" onsubmit={open}>
+        <div class="pane stack">
           <h3>{$i18n('keys.open.title')}</h3>
-          <div class="field">
-            <span class="label">{$i18n('keys.file')}</span>
-            <div class="row fileline">
-              <span class="fn" class:none={!file}>{file?.name ?? $i18n('keys.file.none')}</span>
-              <button class="btn" type="button" onclick={() => fileInput?.click()}>{$i18n('keys.file.pick')}</button>
-              <input
-                bind:this={fileInput}
-                type="file"
-                accept={FILE_EXT}
-                hidden
-                onchange={() => {
-                  file = fileInput?.files?.[0] ?? null;
-                  openError = '';
-                }} />
-            </div>
-          </div>
-          <label class="field">
-            <span class="label">{$i18n('keys.pass')}</span>
-            <input
-              class="input"
-              type="password"
-              bind:value={openPass}
-              autocomplete="current-password"
-              oninput={() => (openError = '')} />
-          </label>
-          {#if openError}<p class="error" role="alert">{openError}</p>{/if}
-          <button class="btn primary" type="submit" disabled={!file || !openPass || openBusy}>{openBusy ? $i18n('keys.open.busy') : $i18n('keys.open.go')}</button>
-        </form>
+          <KeyOpenForm />
+        </div>
       </div>
     {:else}
       <div class="strip">
@@ -306,24 +259,8 @@
     background: var(--crit);
   }
 
-  .fileline {
-    flex-wrap: nowrap;
-  }
 
-  .fn {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    padding: 6px 9px;
-    border: 2px dashed var(--seg-off);
-    font-size: 13px;
-  }
 
-  .fn.none {
-    color: var(--muted);
-  }
 
   .strip {
     display: flex;
