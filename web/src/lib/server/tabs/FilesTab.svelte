@@ -22,10 +22,12 @@
     openErrorText,
     parentPath,
     sortEntries,
+    type SortDir,
+    type SortKey,
     unavailable,
   } from './files-util';
 
-  let { server }: { server: ServerDetail } = $props();
+  let { server, embedded = false }: { server: ServerDetail; embedded?: boolean } = $props();
 
   type LoadState = 'loading' | 'ready' | 'offline' | 'disabled' | 'error';
 
@@ -84,7 +86,8 @@
   let panesEl = $state<HTMLDivElement | null>(null);
   let panesH = $state(480);
   function fitPanes(): void {
-    if (!panesEl) return;
+    // In a floating window the panes fill the window by CSS; only the page layout needs measuring.
+    if (embedded || !panesEl) return;
     const top = panesEl.getBoundingClientRect().top + window.scrollY;
     panesH = Math.max(320, Math.floor(window.innerHeight - top - 44));
   }
@@ -95,6 +98,22 @@
     window.addEventListener('resize', fitPanes);
     return () => window.removeEventListener('resize', fitPanes);
   });
+
+  /** The list order: the column and the direction (the name, ascending, by default; folders stay on top). */
+  let sortKey = $state<SortKey>('name');
+  let sortDir = $state<SortDir>('asc');
+  function sortBy(key: SortKey): void {
+    if (sortKey === key) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    else {
+      sortKey = key;
+      // size and date are most useful with the biggest and newest first
+      sortDir = key === 'size' || key === 'mtime' ? 'desc' : 'asc';
+    }
+    if (listing) listing = sortEntries(listing, sortKey, sortDir);
+  }
+  function ariaSort(key: SortKey): 'ascending' | 'descending' | 'none' {
+    return sortKey !== key ? 'none' : sortDir === 'asc' ? 'ascending' : 'descending';
+  }
 
   const offline = $derived(loadState === 'offline' || !server.online);
   const readOnly = $derived(offline || loadState === 'disabled');
@@ -110,7 +129,7 @@
       filterText = '';
     }
     path = res.path;
-    listing = sortEntries(res.entries);
+    listing = sortEntries(res.entries, sortKey, sortDir);
     loadState = 'ready';
   }
 
@@ -665,7 +684,13 @@
   }
 </script>
 
-<div class="files">
+{#snippet sortHead(key: SortKey, label: string)}
+  <button class="sorter" type="button" onclick={() => sortBy(key)}>
+    {$tStore(label)}<span class="arrow" aria-hidden="true">{sortKey === key ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
+  </button>
+{/snippet}
+
+<div class="files" class:embedded>
   <input class="picker" bind:this={picker} type="file" multiple tabindex="-1" aria-hidden="true" onchange={onPick} />
   {#if $isPhone}
     <div class="ptools">
@@ -756,7 +781,7 @@
   {/if}
 
   {#if !$isPhone}
-    <div class="panes" style:--tree-w="{treeWidth}px" style:--panes-h="{panesH}px" bind:this={panesEl}>
+    <div class="panes" class:embedded style:--tree-w="{treeWidth}px" style:--panes-h="{panesH}px" bind:this={panesEl}>
     {#if loadState !== 'offline' && loadState !== 'disabled'}
       <aside class="treepane">
         <FileTree {serverId} {path} entries={listing} onnavigate={navigateTree} />
@@ -773,11 +798,11 @@
           <thead>
             <tr>
               <th class="kind"><span class="sr-only">{$tStore('files.col.type')}</span></th>
-              <th>{$tStore('files.col.name')}</th>
-              <th class="hide-sm">{$tStore('files.col.mode')}</th>
-              <th class="hide-sm">{$tStore('files.col.owner')}</th>
-              <th class="num">{$tStore('files.col.size')}</th>
-              <th class="hide-xs">{$tStore('files.col.mtime')}</th>
+              <th aria-sort={ariaSort('name')}>{@render sortHead('name', 'files.col.name')}</th>
+              <th class="hide-sm" aria-sort={ariaSort('mode')}>{@render sortHead('mode', 'files.col.mode')}</th>
+              <th class="hide-sm" aria-sort={ariaSort('owner')}>{@render sortHead('owner', 'files.col.owner')}</th>
+              <th class="num" aria-sort={ariaSort('size')}>{@render sortHead('size', 'files.col.size')}</th>
+              <th class="hide-xs" aria-sort={ariaSort('mtime')}>{@render sortHead('mtime', 'files.col.mtime')}</th>
               <th class="acts-head"><span class="sr-only">{$tStore('files.col.actions')}</span></th>
             </tr>
           </thead>
@@ -1132,6 +1157,18 @@
     height: var(--panes-h);
   }
 
+  /* In a floating window the tab fills it and only the two panes scroll, never the window body. */
+  .files.embedded {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .panes.embedded {
+    flex: 1 1 0;
+    min-height: 0;
+    height: auto;
+  }
+
   .treepane {
     min-width: 0;
     min-height: 0;
@@ -1212,6 +1249,38 @@
     text-align: left;
     text-transform: uppercase;
     white-space: nowrap;
+  }
+
+  /* The column title is a button that sorts the list. */
+  .sorter {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    cursor: pointer;
+  }
+
+  .sorter:hover,
+  th[aria-sort='ascending'] .sorter,
+  th[aria-sort='descending'] .sorter {
+    color: var(--ink);
+  }
+
+  .sorter:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .arrow {
+    display: inline-block;
+    min-width: 8px;
+    font-size: 8px;
   }
 
   td {

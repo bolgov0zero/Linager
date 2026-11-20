@@ -125,7 +125,11 @@
     gap: 4px;
   }
 
+  /* The label and the arrow icon (a block-level svg) sit in the middle of the key. */
   .k {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-width: 0;
     min-height: 44px;
     padding: 0 2px;
@@ -171,5 +175,17 @@
   .k.small {
     min-height: 44px;
     font-size: 10px;
+  }
+
+  /* With a mouse the keys are the size of the interface buttons, not of a finger. */
+  @media (min-width: 721px) and (pointer: fine) {
+    .k,
+    .k.small {
+      min-height: 29px;
+    }
+
+    .k.tab {
+      min-height: 24px;
+    }
   }
 </style>

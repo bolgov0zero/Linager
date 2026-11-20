@@ -1,4 +1,5 @@
 import { ApiError, type FileEntry } from '../../../api';
+export { sortEntries, type SortDir, type SortKey } from './files-sort';
 
 export type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -28,12 +29,6 @@ export function crumbs(dir: string): Crumb[] {
     out.push({ name, path: acc });
   }
   return out;
-}
-
-/** Directories first, then by name. */
-export function sortEntries(entries: FileEntry[] | null | undefined): FileEntry[] {
-  const rank = (e: FileEntry) => (e.type === 'dir' ? 0 : 1);
-  return [...(entries ?? [])].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
 }
 
 /** Returns a translation key when the name cannot be used, otherwise null. */

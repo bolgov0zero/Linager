@@ -48,7 +48,7 @@
   {/snippet}
   <div class="fill">
     {#if detail}
-      <FilesTab server={detail} />
+      <FilesTab server={detail} embedded />
     {:else if failed}
       <p class="muted">{$tr('common.genericError')}</p>
     {:else}
@@ -58,8 +58,10 @@
 </WindowFrame>
 
 <style>
+  /* The tab sizes itself to the window; its own panes scroll. */
   .fill {
     height: 100%;
-    overflow: auto;
+    min-height: 0;
+    overflow: hidden;
   }
 </style>

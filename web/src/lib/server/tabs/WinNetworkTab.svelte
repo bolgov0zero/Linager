@@ -2,6 +2,7 @@
   import { ApiError, winCall, type ServerDetail, type WinAdapter, type WinNetApply, type WinNetState } from '../../../api';
   import { tr } from '../../../i18n';
   import PixIcon from '../../ui/PixIcon.svelte';
+  import Select from '../../ui/Select.svelte';
   import { showToast } from '../../toast';
   import WinConfirm from './WinConfirm.svelte';
 
@@ -19,6 +20,10 @@
   let left = $state(0);
 
   let fMode = $state<'dhcp' | 'static'>('dhcp');
+  const modeOptions = $derived([
+    { value: 'dhcp' as const, label: $tr('wn.dhcp') },
+    { value: 'static' as const, label: $tr('wn.static') },
+  ]);
   let fIp = $state('');
   let fPrefix = $state(24);
   let fGw = $state('');
@@ -170,7 +175,7 @@
               <form class="form" onsubmit={(e) => { e.preventDefault(); review(); }}>
                 <p class="small warnText">{$tr('wn.warnCarrier')}</p>
                 <label><span>{$tr('wn.mode')}</span>
-                  <select bind:value={fMode}><option value="dhcp">{$tr('wn.dhcp')}</option><option value="static">{$tr('wn.static')}</option></select>
+                  <Select bind:value={fMode} options={modeOptions} />
                 </label>
                 {#if fMode === 'static'}
                   <label><span>{$tr('wn.ip')}</span><input bind:value={fIp} placeholder="192.168.1.20" spellcheck="false" /></label>
@@ -226,6 +231,7 @@
   .err { color: var(--crit); margin: 0; }
   .form { display: flex; flex-direction: column; gap: 10px; }
   .form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
-  .form input, .form select { padding: 8px 10px; font: inherit; color: var(--ink); background: var(--bg); border: 2px solid var(--line); }
+  .form :global(.sel) { padding: 8px 10px; background: var(--bg); }
+  .form input { padding: 8px 10px; font: inherit; color: var(--ink); background: var(--bg); border: 2px solid var(--line); }
   p { margin: 0; }
 </style>

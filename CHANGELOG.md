@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.1
+
+Small fixes of the interface. No database migration; the web interface only.
+
+- Fix: **the floating window "Files".** The folder tree and the list scroll inside the window instead of going under its edge (the panes fill the window, `FilesTab` has `embedded`); the head of the list stays on top. A click on the title of a column sorts the list (name, rights, owner, size, date; a second click changes the direction). By default the list goes by name, and the folders are always on top.
+- Fix: **the mode of a network card on Windows** is the project selector instead of the system one. The selectors (`Select`) are as tall as the text fields next to them; in "Processes" the number of rows is the size and the look of the buttons beside it (`size="chip"`).
+- Fix: **the pencil in a note** is the same 24 px button as the cross; **the search field in "Users"** (Linux and Windows) is as tall as the buttons next to it.
+- Fix: **the keys of the terminal.** The arrow icons are in the middle of their keys (also in the quick bar of a phone); with a mouse the keys are 29 px (24 px for the tabs of the modes), the touch size is kept on phones and touch screens.
+
 ## 0.8.0
 
 The stable release of the **Assistant for Linux**: the console of a GNOME desktop on Wayland in the browser, and below the compositor the sign-in screen, the lock screen and X11. It gathers everything of 0.8.0-beta.1 to 0.8.0-beta.7 below. No database migration; update the server and the agents (the Linux Assistant needs the new agent).

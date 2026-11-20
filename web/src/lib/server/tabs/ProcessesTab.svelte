@@ -141,7 +141,7 @@
         {#if !$isPhone}
           <label class="count">
             <span class="muted small">{$tr('proc.show')}</span>
-            <Select bind:value={count} width="auto" options={countOptions} />
+            <Select bind:value={count} size="chip" width="auto" options={countOptions} />
           </label>
         {/if}
       </div>
@@ -150,7 +150,7 @@
           <p class="muted small">{refreshText}</p>
           <label class="count">
             <span class="muted small">{$tr('proc.show')}</span>
-            <Select bind:value={count} width="auto" ariaLabel={$tr('proc.show')} options={countOptions} />
+            <Select bind:value={count} size="chip" width="auto" ariaLabel={$tr('proc.show')} options={countOptions} />
           </label>
         </div>
       {:else}

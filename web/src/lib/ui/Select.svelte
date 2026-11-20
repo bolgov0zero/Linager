@@ -19,8 +19,8 @@
     value: T;
     options: { value: T; label: string }[];
     onchange?: (value: T) => void;
-    /** md: like `.input` (fills its container); sm: compact control for toolbars and table rows. */
-    size?: 'md' | 'sm';
+    /** md: like `.input` (fills its container); sm: compact control for toolbars and table rows; chip: the size and look of a `.chip` button, for a row of them. */
+    size?: 'md' | 'sm' | 'chip';
     /** CSS width of the control; md defaults to 100%, sm to its content. */
     width?: string;
     ariaLabel?: string;
@@ -246,13 +246,22 @@
     cursor: pointer;
   }
 
+  /* The same box as `.input`, so a selector and a text field side by side are equally tall. */
   .sel.md {
-    padding: 7px 9px;
+    padding: 5px 9px;
   }
 
   .sel.sm {
     padding: 5px 7px;
     font-size: 12px;
+  }
+
+  .sel.chip {
+    padding: 4px 10px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    box-shadow: 3px 3px 0 var(--shade);
   }
 
   .sel:disabled {
@@ -309,6 +318,10 @@
 
   :global(.sel-list.sm) {
     font-size: 11px;
+  }
+
+  :global(.sel-list.chip) {
+    font-size: 12px;
   }
 
   :global(.sel-list li) {

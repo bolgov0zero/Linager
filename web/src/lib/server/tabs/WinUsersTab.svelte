@@ -217,7 +217,7 @@
   .wrap { display: flex; flex-direction: column; gap: 10px; }
   h3 { margin: 6px 0; }
   .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
-  .search { flex: 1 1 200px; max-width: 288px; height: 36px; padding-block: 0; }
+  .search { flex: 1 1 200px; max-width: 288px; height: 29px; padding-block: 0; font-size: 12px; } /* as tall as the buttons next to it */
   .add { margin-left: auto; }
   .table-wrap { overflow-x: auto; }
   .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }

@@ -92,8 +92,8 @@
 <Modal title={$tr('srv.note.title')} labelId="srv-note-title" onclose={close} onescape={() => (editing ? cancel() : close())}>
   {#snippet actions()}
     {#if canEdit && !editing}
-      <button class="btn pencil" type="button" aria-label={$tr('srv.note.edit')} title={$tr('srv.note.edit')} onclick={startEdit}>
-        <PixIcon name="pencil" />
+      <button class="btn sm icon" type="button" aria-label={$tr('srv.note.edit')} title={$tr('srv.note.edit')} onclick={startEdit}>
+        <PixIcon name="pencil" size={16} />
       </button>
     {/if}
   {/snippet}
@@ -134,15 +134,6 @@
 </Modal>
 
 <style>
-  .pencil {
-    min-width: 32px;
-    min-height: 32px;
-    padding: 0 7px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
   .field {
     display: flex;
     flex-direction: column;

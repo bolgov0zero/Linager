@@ -333,8 +333,10 @@
   .search {
     flex: 1 1 200px;
     max-width: 288px;
-    height: 32px;
+    /* as tall as the text buttons next to it (29 px) */
+    height: 29px;
     padding-block: 0;
+    font-size: 12px;
   }
 
   .add {
