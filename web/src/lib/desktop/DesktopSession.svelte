@@ -14,6 +14,8 @@
   import { tr, t } from '../../i18n';
   import { showToast } from '../toast';
   import { planKey } from './keys';
+  import KeyPicker from '../keys/KeyPicker.svelte';
+  import type { Entry } from '../keys/vault';
 
   /**
    * The remote desktop of a Windows computer: a login form, then the screen of the browser RDP client (IronRDP,
@@ -49,6 +51,8 @@
   let login = $state(savedLogin());
   let password = $state('');
   let domain = $state('');
+  /** The name of the key of the vault the form was filled from (the password is not shown, only where it came from). */
+  let fromKey = $state<string | null>(null);
   let message = $state('');
   let hostState = $state<DesktopState | null>(null);
   let enabling = $state(false);
@@ -203,6 +207,13 @@
     return { width: even(w, 640, 4096), height: even(h, 480, 4096) };
   }
 
+  function useKey(entry: Entry): void {
+    login = entry.login;
+    domain = entry.domain;
+    password = entry.password;
+    fromKey = entry.name;
+  }
+
   export async function connect(): Promise<void> {
     if (!login.trim() || !password) return;
     message = '';
@@ -250,6 +261,7 @@
         // storage unavailable: the login is just not remembered
       }
       password = '';
+      fromKey = null;
       phase = 'open';
       watchSize();
       void info.run().then(
@@ -410,6 +422,8 @@
           <p class="warn">{hostState && !hostState.enabled ? $tr('desk.off') : $tr('desk.notListening')}</p>
           <button class="btn" type="button" disabled={enabling} onclick={() => void enable()}>{$tr('desk.enable')}</button>
         {/if}
+        <KeyPicker {serverId} use="rdp" picked={fromKey} onpick={useKey} />
+        {#if fromKey}<p class="small muted">{$tr('keys.pick.from', { name: fromKey })}</p>{/if}
         <label>
           <span>{$tr('desk.login')}</span>
           <input type="text" bind:value={login} autocomplete="username" spellcheck="false" autocapitalize="off" />

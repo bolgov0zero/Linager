@@ -238,6 +238,7 @@ flowchart LR
 | Обновления, бэкапы, откат | [обновления](docs/ru/updates.md) | [updates](docs/en/updates.md) |
 | Меню в терминале (`linager`) | [меню](docs/ru/menu.md) | [menu](docs/en/menu.md) |
 | Вид «Консоль» | [консоль](docs/ru/console.md) | [console](docs/en/console.md) |
+| Ключи (личный зашифрованный файл с логинами и паролями) | [ключи](docs/ru/keys.md) | [keys](docs/en/keys.md) |
 | Безопасность | [безопасность](docs/ru/security.md) | [security](docs/en/security.md) |
 | Архитектура | [архитектура](docs/architecture.md) | [architecture](docs/en/architecture.md) |
 

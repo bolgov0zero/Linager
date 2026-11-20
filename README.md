@@ -238,6 +238,7 @@ Details and known limits: [docs/en/security.md](docs/en/security.md). To report 
 | Updates, backups, rollback | [updates](docs/en/updates.md) | [обновления](docs/ru/updates.md) |
 | Terminal menu (`linager`) | [menu](docs/en/menu.md) | [меню](docs/ru/menu.md) |
 | The Console view | [console](docs/en/console.md) | [консоль](docs/ru/console.md) |
+| Keys (a personal encrypted file of logins and passwords) | [keys](docs/en/keys.md) | [ключи](docs/ru/keys.md) |
 | Security | [security](docs/en/security.md) | [безопасность](docs/ru/security.md) |
 | Architecture | [architecture](docs/en/architecture.md) | [архитектура](docs/architecture.md) |
 

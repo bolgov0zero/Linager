@@ -20,6 +20,8 @@
   import Modal from './lib/Modal.svelte';
   import PixIcon from './lib/ui/PixIcon.svelte';
   import TopMenu from './lib/TopMenu.svelte';
+  import KeysModal from './lib/keys/KeysModal.svelte';
+  import { closeVault, keysOpen } from './lib/keys/store';
   import RebootButton from './lib/server/tabs/RebootButton.svelte';
   import { serverBar } from './lib/server/serverbar';
   import ViewSwitch from './lib/dashboard/ViewSwitch.svelte';
@@ -124,6 +126,11 @@
     return true;
   }
 
+  function openKeys(): void {
+    keysOpen.set(true);
+    moreOpen = false;
+  }
+
   function openSettings(section: SettingsSection = settingsSection, list = false): void {
     settingsList = list && isAdmin;
     settingsSection = isAdmin ? section : 'profile'; // the others only have their profile
@@ -199,6 +206,8 @@
   function endSession(): void {
     session = null;
     settingsOpen = false;
+    keysOpen.set(false);
+    closeVault(); // the decrypted keys are forgotten with the sign-in
     editing = false;
     addOpen = false;
     pultVisited = false; // the sessions of the Console end with the sign-in
@@ -321,6 +330,7 @@
         onlocale={pickLocale}
         onedit={toggleEdit}
         onsettings={() => openSettings()}
+        onkeys={openKeys}
         onlogout={() => void logout()} />
     {/if}
   </div>
@@ -372,6 +382,10 @@
   />
 {/if}
 
+{#if $keysOpen && session}
+  <KeysModal onclose={() => keysOpen.set(false)} />
+{/if}
+
 {#if session && $isPhone && serverName === null}
   <TabBar items={barItems} label={$tr('app.menu')} onselect={onBar} />
 {/if}
@@ -381,6 +395,10 @@
     <div class="more">
       <button class="act" type="button" onclick={() => openSettings(settingsSection, true)}>
         <PixIcon name="gear" />{isAdmin ? $tr('app.settings') : $tr('app.profile')}
+        <PixIcon name="next" />
+      </button>
+      <button class="act" type="button" onclick={openKeys}>
+        <PixIcon name="key" />{$tr('keys.menu')}
         <PixIcon name="next" />
       </button>
       {#if isAdmin}

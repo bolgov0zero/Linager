@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Linager: макет окна «Ключи»</title>
+<style>
+@font-face{font-family:"Medeo Mono";src:url(../mockup/fonts/MedeoMonoVariable.woff2) format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Medeo Pixel";src:url(../mockup/fonts/MedeoPixelVariable.woff) format("woff");font-style:normal;font-display:swap}
+:root{
+  --bg:#e8ebe5;--surface:#f6f7f3;--ink:#14181e;--muted:#5d6572;--line:#14181e;--accent:#2b55d9;--good:#1e8a4b;--warn:#b36f0e;--crit:#c4352a;--seg-off:#d5d9d0;--shade:#c3c8bd;
+  --ctl:36px;--ctl-sm:28px;
+  --font-display:"Medeo Pixel","Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  --font-body:"Medeo Mono",ui-monospace,Menlo,Consolas,monospace;
+  font-variation-settings:"ELSH" 1;font-synthesis:none;color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1218;--surface:#171b23;--ink:#e6e9ef;--muted:#8a93a4;--line:#3b4455;--accent:#7d9cff;--good:#4fcf86;--warn:#e6b04b;--crit:#ff6d60;--seg-off:#272d39;--shade:#0a0c10;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45}
+h1,h2,h3,h4,p{margin:0}
+button{font:inherit;color:inherit}
+.muted{color:var(--muted)}.small{font-size:12px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px;border-bottom:2px solid var(--line);background:var(--surface)}
+.brand{display:flex;align-items:center;gap:10px}
+.brand h1{font-family:var(--font-display);font-size:22px;font-weight:400}
+.note{margin:0;padding:8px 20px;background:var(--ink);color:var(--surface);font-size:12px}
+main{padding:20px;max-width:1440px;margin:0 auto}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.btn,.chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:var(--ctl);background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;padding:0 12px;cursor:pointer;font-family:var(--font-display);font-size:14px;line-height:1;letter-spacing:.02em;box-shadow:3px 3px 0 var(--shade);white-space:nowrap}
+.btn.sm{height:var(--ctl-sm);padding:0 8px;font-size:12px}
+.btn.primary{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.btn.danger{background:var(--crit);color:var(--surface);border-color:var(--crit)}
+.btn.ink{background:var(--ink);color:var(--surface)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.btn.icon{min-width:28px;padding:0 6px}
+.chip{font-size:13px;padding:0 10px}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--surface)}
+.input{height:var(--ctl);background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;padding:0 8px;font-family:var(--font-body);font-size:13px;line-height:1;min-width:0;width:100%}
+textarea.input{height:auto;padding:8px;line-height:1.4;resize:vertical}
+.new{display:inline-block;padding:0 6px;border:2px solid var(--accent);color:var(--accent);font-size:11px;letter-spacing:.04em;font-family:var(--font-body);text-transform:uppercase}
+.badge{display:inline-block;padding:0 6px;border:2px solid currentColor;font-size:12px;white-space:nowrap;line-height:1.35}
+.ok{color:var(--good)}.warn{color:var(--warn)}.crit{color:var(--crit)}.acc{color:var(--accent)}
+.dot{display:inline-block;width:8px;height:8px;background:currentColor;margin-right:6px}
+.ico{width:16px;height:16px;flex:none;shape-rendering:crispEdges;fill:currentColor}
+.card{background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);padding:16px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.tile{height:92px;color:var(--muted);font-size:12px}
+
+/* the menu of the top bar */
+.rel{position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 4px);z-index:10;background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);min-width:230px;display:none}
+.menu.on{display:block}
+.menu button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;background:none;border:0;padding:9px 12px;cursor:pointer;font-size:13px}
+.menu button:hover{background:var(--seg-off)}
+.menu .val{color:var(--muted);font-size:12px}
+.menu hr{border:0;border-top:2px dashed var(--seg-off);margin:2px 0}
+.menu .lab{display:flex;align-items:center;gap:8px}
+
+/* modal */
+.modal{position:fixed;inset:0;z-index:30;display:none;align-items:flex-start;justify-content:center;padding:5vh 16px;overflow-y:auto;background:rgba(10,12,16,.55)}
+.modal.on{display:flex}
+#m-rdp{z-index:30}#m-keys{z-index:32}#m-edit{z-index:40}#m-bind{z-index:45}#m-confirm{z-index:41}
+.dlg{background:var(--surface);border:2px solid var(--line);box-shadow:6px 6px 0 var(--shade);width:min(560px,100%)}
+.dlg.big{width:min(980px,100%)}
+.dlg header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:2px solid var(--line)}
+.dlg header h3{font-family:var(--font-display);font-weight:400;font-size:20px;display:flex;align-items:center;gap:10px}
+.dlg .body{padding:16px;display:flex;flex-direction:column;gap:14px}
+.dlg.big .body{max-height:70vh;overflow-y:auto}
+.dlg footer{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:2px solid var(--line)}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f label,.f .lab{font-size:12px;color:var(--muted)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.warnbox{border:2px solid var(--warn);color:var(--warn);padding:8px 10px;font-size:12px}
+.infobox{border:2px dashed var(--seg-off);padding:8px 10px;font-size:12px;color:var(--muted)}
+.errbox{border:2px solid var(--crit);color:var(--crit);padding:8px 10px;font-size:12px}
+
+/* keys window */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pane{border:2px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:12px}
+.pane h4{font-family:var(--font-display);font-weight:400;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.meter{display:flex;gap:3px;align-items:center}
+.meter i{width:22px;height:8px;background:var(--seg-off)}
+.meter i.on{background:var(--good)}.meter i.on.w{background:var(--warn)}.meter i.on.c{background:var(--crit)}
+.fileline{display:flex;align-items:center;gap:8px;min-width:0}
+.fileline .fn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--muted);border:2px dashed var(--seg-off);height:var(--ctl);display:flex;align-items:center;padding:0 8px}
+.strip{display:flex;flex-wrap:wrap;align-items:center;gap:10px;border:2px solid var(--line);padding:8px 12px}
+.strip .grow{flex:1 1 160px;min-width:0}
+.strip .fname{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* custom select (same look as the panel's Select component: a button and a list moved to the body) */
+.sel{display:inline-flex;align-items:center;justify-content:space-between;gap:9px;max-width:100%;min-width:0;background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:0;font:inherit;text-align:left;cursor:pointer}
+.sel.md{width:100%;height:var(--ctl);padding:0 9px;font-size:13px}
+.sel.sm{height:var(--ctl-sm);padding:0 7px;font-size:12px}
+.sel:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sel .text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sel .arrow{flex:none;width:6px;height:6px;margin-top:-4px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg)}
+.sel.open .arrow{margin-top:3px;transform:rotate(225deg)}
+.sel-list{position:fixed;z-index:50;margin:4px 0 0;padding:4px 0;overflow-y:auto;list-style:none;background:var(--surface);color:var(--ink);border:2px solid var(--line);box-shadow:3px 3px 0 var(--shade);font-family:var(--font-body);font-size:13px}
+.sel-list.sm{font-size:12px}
+.sel-list li{padding:4px 9px;white-space:nowrap;cursor:pointer}
+.sel-list li.active{background:var(--seg-off)}
+.sel-list li[aria-selected=true]{background:var(--ink);color:var(--surface)}
+.tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.tools .grow{flex:1 1 200px;max-width:320px}
+.tools .end{margin-left:auto}
+.wrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:760px}
+.tbl th{font-family:var(--font-display);font-weight:400;font-size:12px;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:2px solid var(--line);white-space:nowrap}
+.tbl td{padding:8px;border-bottom:1px dashed var(--seg-off);vertical-align:middle}
+.tbl tr.k:hover td{background:var(--seg-off)}
+.tbl td.nw{white-space:nowrap}
+.tbl td b{font-weight:600}
+.acts{display:flex;gap:6px;justify-content:flex-end;align-items:center}
+.empty{padding:22px;text-align:center;color:var(--muted);border:2px dashed var(--seg-off)}
+.legend{color:var(--muted);font-size:12px}
+.seg{display:flex}
+.seg label{flex:1;display:flex;align-items:center;justify-content:center;height:var(--ctl);border:2px solid var(--line);margin-left:-2px;cursor:pointer;font-family:var(--font-display);font-size:13px;color:var(--ink)}
+.seg label:first-child{margin-left:0}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg input:checked+span{display:contents}
+.seg label.on{background:var(--ink);color:var(--surface)}
+.pw{display:flex;gap:6px}
+.pw .input{flex:1}
+
+/* the RDP form and its key picker */
+.pick{position:relative}
+.pickbtn{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;height:var(--ctl);background:var(--surface);border:2px solid var(--line);padding:0 8px;cursor:pointer;font-size:13px;text-align:left}
+.pickbtn .ph{color:var(--muted)}
+.pickbtn .l{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pickmenu{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;background:var(--surface);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shade);max-height:300px;overflow-y:auto;display:none}
+.pickmenu.on{display:block}
+.pickmenu .gh{padding:6px 10px 2px;font-family:var(--font-display);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.pickmenu .gh+.it{margin-top:2px}
+.pickmenu .it{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:none;border:0;padding:7px 10px;cursor:pointer;font-size:13px;text-align:left}
+.pickmenu .it:hover{background:var(--seg-off)}
+.pickmenu .it small{color:var(--muted);font-size:12px;white-space:nowrap}
+.pickmenu hr{border:0;border-top:2px dashed var(--seg-off);margin:4px 0}
+.pickmenu .more{color:var(--accent)}
+.pickmenu .closed{padding:10px;display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--muted)}
+
+.tree{display:flex;flex-direction:column;gap:9px;max-height:48vh;overflow-y:auto}
+.block{border:2px solid var(--line)}
+.block .head{display:flex;align-items:center;gap:9px;padding:7px 11px;background:var(--seg-off)}
+.block ul{margin:0;padding:0;list-style:none}
+.block .srv{display:flex;align-items:center;gap:9px;padding:6px 11px 6px 32px;border-top:1px dashed var(--seg-off)}
+.block .srv.locked{opacity:.55}
+.block .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.sw{position:relative;flex:none;width:34px;height:20px;padding:0;border:2px solid var(--line);background:var(--seg-off);cursor:pointer}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;background:var(--ink)}
+.sw[aria-pressed=true]{background:var(--good)}
+.sw[aria-pressed=true]::after{transform:translateX(16px);background:var(--surface)}
+.sw:disabled{background:var(--muted);cursor:not-allowed}
+.sw:disabled[aria-pressed=true]::after{transform:translateX(16px);background:var(--surface)}
+.mono{letter-spacing:.04em}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--surface);padding:10px 14px;font-size:13px;max-width:min(560px,calc(100% - 32px));display:none;box-shadow:4px 4px 0 var(--shade)}
+.toast.on{display:block}
+@media (max-width:720px){.cols,.two{grid-template-columns:1fr}.top{padding:10px 12px}main{padding:12px}.modal{padding:0}.dlg{width:100%!important;min-height:100vh;box-shadow:none;border-width:0}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 14 14" width="30" height="30" shape-rendering="crispEdges" aria-hidden="true"><rect width="14" height="14" rx="3" fill="#0f1218"/><rect x="2" y="3" width="2" height="2" fill="#e6e9ef"/><rect x="4" y="5" width="2" height="2" fill="#e6e9ef"/><rect x="6" y="7" width="2" height="2" fill="#e6e9ef"/><rect x="4" y="9" width="2" height="2" fill="#e6e9ef"/><rect x="8" y="10" width="4" height="2" fill="#7d9cff"/></svg>
+    <h1>Linager</h1>
+  </div>
+  <div class="row rel">
+    <button class="btn" id="theme" type="button">Тема</button>
+    <button class="btn" id="menu-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Меню">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="2"/><rect x="3" y="11" width="18" height="2"/><rect x="3" y="17" width="18" height="2"/></svg>
+    </button>
+    <div class="menu" id="menu" role="menu">
+      <button type="button" role="menuitem"><span class="lab">Тема</span><span class="val">светлая</span></button>
+      <button type="button" role="menuitem"><span class="lab">Язык</span><span class="val">Русский</span></button>
+      <button type="button" role="menuitem"><span class="lab">Редактировать</span></button>
+      <button type="button" role="menuitem"><span class="lab">Настройки</span></button>
+      <button type="button" role="menuitem" id="menu-keys"><span class="lab">Ключи</span><span class="new">новое</span></button>
+      <hr>
+      <button type="button" role="menuitem"><span class="lab">Выйти</span></button>
+    </div>
+  </div>
+</header>
+<p class="note">Макет окна «Ключи»: личное зашифрованное хранилище логинов и паролей. Пункт «Ключи» в меню верхней строки у каждого пользователя (и у оператора тоже). Работают: создать хранилище, открыть файл (подойдёт любой; фраза «wrong» покажет ошибку), добавить, изменить, удалить, «Сохранить файл», закрыть хранилище, а также подстановка в форму RDP. Данные вымышленные, пометка «новое» отмечает то, чего в панели ещё нет.
+  <span class="row" style="display:inline-flex;margin-left:8px;gap:6px"><button class="btn sm" id="go-menu" type="button">Меню</button><button class="btn sm" id="go-rdp" type="button">Форма RDP</button></span></p>
+
+<main>
+  <div class="tiles" aria-hidden="true">
+    <div class="card tile">дашборд (заглушка)</div><div class="card tile">win-office-01</div><div class="card tile">win-dc-01</div><div class="card tile">web-01</div>
+  </div>
+</main>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- a key, drawn on the 24 px grid like Pixelarticons (the real icon is added to pixelart.ts) -->
+    <symbol id="i-key" viewBox="0 0 24 24"><rect x="4" y="6" width="6" height="2"/><rect x="2" y="8" width="2" height="5"/><rect x="10" y="8" width="2" height="5"/><rect x="4" y="13" width="6" height="2"/><rect x="12" y="9" width="10" height="2"/><rect x="16" y="11" width="2" height="3"/><rect x="20" y="11" width="2" height="3"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="2"/><rect x="3" y="8" width="3" height="2"/><rect x="18" y="8" width="3" height="2"/><rect x="1" y="10" width="3" height="4"/><rect x="20" y="10" width="3" height="4"/><rect x="3" y="14" width="3" height="2"/><rect x="18" y="14" width="3" height="2"/><rect x="6" y="16" width="12" height="2"/><rect x="10" y="10" width="4" height="4"/></symbol>
+  </defs>
+</svg>
+
+<!-- the window «Ключи» -->
+<div class="modal" id="m-keys" role="dialog" aria-modal="true" aria-labelledby="keys-t">
+  <div class="dlg big">
+    <header><h3 id="keys-t"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-key"/></svg>Ключи</h3><button class="btn sm" data-close type="button">Закрыть окно</button></header>
+    <div class="body" id="keys-body"></div>
+  </div>
+</div>
+
+<!-- add / edit a key -->
+<div class="modal" id="m-edit" role="dialog" aria-modal="true" aria-labelledby="edit-t">
+  <div class="dlg">
+    <header><h3 id="edit-t">Ключ</h3><button class="btn sm icon" data-close title="Закрыть" aria-label="Закрыть" type="button">×</button></header>
+    <div class="body">
+      <div class="f"><label for="e-name">Название (его видно в списках)</label><input class="input" id="e-name" autocomplete="off" placeholder="Например: Админ офиса"></div>
+      <div class="f"><span class="lab">Где использовать</span>
+        <div class="seg" id="e-type">
+          <label><input type="radio" name="etype" value="rdp"><span>RDP</span></label>
+          <label><input type="radio" name="etype" value="uac"><span>UAC</span></label>
+          <label><input type="radio" name="etype" value="any"><span>Любой</span></label>
+        </div>
+        <span class="small muted" id="e-type-h"></span>
+      </div>
+      <div class="f"><span class="lab">Привязка (в списке такие ключи идут первыми)</span>
+        <button class="pickbtn" id="e-bindbtn" type="button"><span class="l" id="e-bindtxt"></span><span class="small acc">Изменить…</span></button>
+      </div>
+      <div class="two">
+        <div class="f"><label for="e-login">Логин</label><input class="input" id="e-login" autocomplete="off" spellcheck="false" autocapitalize="off"></div>
+        <div class="f"><label for="e-domain">Домен (необязательно)</label><input class="input" id="e-domain" autocomplete="off" spellcheck="false" autocapitalize="off"></div>
+      </div>
+      <div class="f"><label for="e-pass">Пароль</label>
+        <div class="pw"><input class="input" id="e-pass" type="password" autocomplete="new-password"><button class="btn icon" id="e-eye" type="button" title="Показать пароль" aria-label="Показать пароль"><svg class="ico" viewBox="0 0 24 24"><use href="#i-eye"/></svg></button><button class="btn" id="e-gen" type="button">Создать</button></div>
+      </div>
+      <div class="f"><label for="e-note">Заметка (необязательно)</label><textarea class="input" id="e-note" rows="2"></textarea></div>
+      <div class="infobox">Изменение попадает в хранилище в памяти. В файл оно попадёт после «Сохранить файл».</div>
+    </div>
+    <footer><button class="btn" data-close type="button">Отмена</button><button class="btn primary" id="e-ok" type="button">Готово</button></footer>
+  </div>
+</div>
+
+<!-- the binding of a key: groups and servers with checkboxes -->
+<div class="modal" id="m-bind" role="dialog" aria-modal="true" aria-labelledby="bind-t">
+  <div class="dlg">
+    <header><h3 id="bind-t">Привязка ключа</h3><button class="btn sm icon" data-close title="Закрыть" aria-label="Закрыть" type="button">×</button></header>
+    <div class="body">
+      <div class="infobox" id="b-hint"></div>
+      <input class="input" id="b-q" type="search" placeholder="Поиск по серверам и группам">
+      <div class="tree" id="b-tree"></div>
+    </div>
+    <footer><span class="small muted" id="b-count" style="margin-right:auto"></span><button class="btn" id="b-reset" type="button">Для всех серверов</button><button class="btn" data-close type="button">Отмена</button><button class="btn primary" id="b-ok" type="button">Готово</button></footer>
+  </div>
+</div>
+
+<!-- confirm -->
+<div class="modal" id="m-confirm" role="dialog" aria-modal="true"><div class="dlg" id="confirm-dlg"></div></div>
+
+<!-- the RDP form of a Windows server with the key picker -->
+<div class="modal" id="m-rdp" role="dialog" aria-modal="true" aria-labelledby="rdp-t">
+  <div class="dlg">
+    <header><h3 id="rdp-t">RDP · win-office-01</h3><button class="btn sm" data-close type="button">Закрыть</button></header>
+    <div class="body">
+      <div class="f"><span class="lab">Ключ</span>
+        <div class="pick" id="pick"><button class="pickbtn" id="pick-btn" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="l" id="pick-l"><span class="ph">Выбрать из хранилища…</span></span><span aria-hidden="true">▾</span></button><div class="pickmenu" id="pick-menu" role="listbox"></div></div>
+      </div>
+      <div class="two">
+        <div class="f"><label for="r-login">Логин</label><input class="input" id="r-login" autocomplete="username" spellcheck="false" autocapitalize="off"></div>
+        <div class="f"><label for="r-domain">Домен</label><input class="input" id="r-domain" autocomplete="off" spellcheck="false" autocapitalize="off"></div>
+      </div>
+      <div class="f"><label for="r-pass">Пароль</label><input class="input" id="r-pass" type="password" autocomplete="current-password"></div>
+      <p class="small muted" id="r-from"></p>
+    </div>
+    <footer><button class="btn primary" id="r-go" type="button">Подключиться</button></footer>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const KEY='<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-key"/></svg>';
+
+/* the servers and the groups of the panel (made up) */
+const GROUPS=['Веб','Базы данных','Офис'];
+const SERVERS=[{id:'web-01',g:'Веб',on:true},{id:'web-02',g:'Веб',on:true},{id:'db-01',g:'Базы данных',on:true},{id:'win-office-01',g:'Офис',on:true},{id:'win-office-02',g:'Офис',on:false},{id:'win-dc-01',g:'',on:true},{id:'nas-01',g:'',on:true}];
+const HERE={id:'win-office-01',g:'Офис'}; // the server of the RDP form
+const TYPES={rdp:'RDP',uac:'UAC',any:'Любой'};
+const TCLS={rdp:'acc',uac:'warn',any:'muted'};
+const R=id=>({id,name:id}); // in the mockup the id of a group or a server is its name
+
+const demo=()=>[
+  {id:1,name:'Админ офиса',type:'rdp',groups:[R('Офис')],servers:[],login:'office.admin',domain:'CORP',pass:'demo-pass-1',note:'Для всех машин офиса'},
+  {id:2,name:'Бухгалтерия',type:'rdp',groups:[],servers:[R('win-office-01')],login:'buh',domain:'CORP',pass:'demo-pass-2',note:''},
+  {id:3,name:'Локальный администратор',type:'any',groups:[],servers:[R('win-dc-01'),R('nas-01')],login:'Administrator',domain:'',pass:'demo-pass-3',note:''},
+  {id:4,name:'Обслуживание (UAC)',type:'uac',groups:[R('Офис')],servers:[],login:'svc-maint',domain:'CORP',pass:'demo-pass-4',note:'Только для запроса UAC'},
+  {id:5,name:'Доменный админ',type:'any',groups:[],servers:[],login:'ops.admin',domain:'CORP',pass:'demo-pass-5',note:''},
+  {id:6,name:'Админ веб и баз',type:'rdp',groups:[R('Веб'),R('Базы данных')],servers:[R('win-dc-01')],login:'infra',domain:'',pass:'demo-pass-6',note:''},
+  {id:7,name:'Старый сервер',type:'rdp',groups:[],servers:[R('win-old-03')],login:'Administrator',domain:'',pass:'demo-pass-7',note:'Сервер удалён из панели'}
+];
+
+let vault=null; // {file, entries, dirty}
+let lockVal='15',filter='all',q='',delId=null,editId=null,nextId=100,pickMore=false,picked=null,fileName='';
+
+const forAll=e=>!e.groups.length&&!e.servers.length;
+const goneRef=(kind,r)=>kind==='g'?!GROUPS.includes(r.id):!SERVERS.some(s=>s.id===r.id);
+const hasGone=e=>e.groups.some(g=>goneRef('g',g))||e.servers.some(x=>goneRef('s',x));
+const isLost=e=>!forAll(e)&&e.groups.every(g=>goneRef('g',g))&&e.servers.every(x=>goneRef('s',x));
+const plur=(n,a,b,c)=>{const x=n%100,y=n%10;return x>10&&x<15?c:y===1?a:y>1&&y<5?b:c};
+function countText(g,sv){const p=[];if(g)p.push(g+' '+plur(g,'группа','группы','групп'));if(sv)p.push(sv+' '+plur(sv,'сервер','сервера','серверов'));return p.join(', ')}
+function bindText(e){
+  if(forAll(e))return 'Все серверы';
+  const names=[...e.groups.map(g=>'Группа «'+g.name+'»'),...e.servers.map(x=>x.name)];
+  return names.length<=2?names.join(', '):countText(e.groups.length,e.servers.length);
+}
+const idLabel=e=>(e.domain?e.domain+'\\':'')+e.login;
+
+/* a custom select: a button and a list moved to the body, like the panel's Select component */
+function makeSel(host,{options,value,size='md',onchange,label}){
+  const st={value,options};let list=null,active=0;
+  const btn=document.createElement('button');
+  btn.type='button';btn.className='sel '+size;btn.setAttribute('role','combobox');btn.setAttribute('aria-haspopup','listbox');btn.setAttribute('aria-expanded','false');
+  if(label)btn.setAttribute('aria-label',label);
+  btn.innerHTML='<span class="text"></span><span class="arrow" aria-hidden="true"></span>';
+  host.replaceChildren(btn);
+  const text=()=>{const o=st.options.find(o=>o.value===st.value);btn.firstChild.textContent=o?o.label:''};
+  const hide=()=>{if(list){list.remove();list=null}btn.classList.remove('open');btn.setAttribute('aria-expanded','false')};
+  const mark=()=>{if(list)[...list.children].forEach((li,i)=>li.classList.toggle('active',i===active))};
+  const pick=i=>{const o=st.options[i];hide();btn.focus();if(!o||o.value===st.value)return;st.value=o.value;text();if(onchange)onchange(o.value)};
+  const show=()=>{
+    if(list)return;active=Math.max(0,st.options.findIndex(o=>o.value===st.value));
+    list=document.createElement('ul');list.className='sel-list '+size;list.setAttribute('role','listbox');
+    st.options.forEach((o,i)=>{const li=document.createElement('li');li.setAttribute('role','option');li.setAttribute('aria-selected',o.value===st.value);li.textContent=o.label;li.onpointerenter=()=>{active=i;mark()};li.onpointerdown=e=>e.preventDefault();li.onclick=()=>pick(i);list.appendChild(li)});
+    document.body.appendChild(list);
+    const r=btn.getBoundingClientRect();
+    list.style.left=r.left+'px';list.style.minWidth=r.width+'px';
+    const below=innerHeight-r.bottom-8,want=Math.min(280,st.options.length*30+8);
+    if(below<want&&r.top>below){list.style.top=r.top+'px';list.style.transform='translateY(-100%)';list.style.margin='0 0 4px';list.style.maxHeight=Math.max(120,Math.min(280,r.top-8))+'px'}
+    else{list.style.top=r.bottom+'px';list.style.maxHeight=Math.max(120,Math.min(280,below))+'px'}
+    btn.classList.add('open');btn.setAttribute('aria-expanded','true');mark();
+  };
+  btn.onclick=()=>list?hide():show();
+  btn.onkeydown=e=>{
+    const k=e.key;
+    if(!list){if(['ArrowDown','ArrowUp','Enter',' '].includes(k)){e.preventDefault();show()}return}
+    if(k==='ArrowDown'){e.preventDefault();active=Math.min(active+1,st.options.length-1);mark()}
+    else if(k==='ArrowUp'){e.preventDefault();active=Math.max(active-1,0);mark()}
+    else if(k==='Enter'||k===' '){e.preventDefault();pick(active)}
+    else if(k==='Escape'){e.preventDefault();e.stopPropagation();hide()} // the dialog stays open
+    else if(k==='Tab')hide();
+  };
+  document.addEventListener('pointerdown',e=>{if(list&&!btn.contains(e.target)&&!list.contains(e.target))hide()});
+  text();
+  return{get value(){return st.value},set(v,opts){if(opts)st.options=opts;st.value=v;text()}};
+}
+
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('on'),4200)}
+const open=id=>$('#'+id).classList.add('on');
+const shut=id=>$('#'+id).classList.remove('on');
+document.addEventListener('click',e=>{const c=e.target.closest('[data-close]');if(c){const m=c.closest('.modal');if(m)m.classList.remove('on')}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){const on=[...document.querySelectorAll('.modal.on')].pop();if(on)on.classList.remove('on')}});
+
+/* theme and the menu */
+$('#theme').addEventListener('click',()=>{const r=document.documentElement;const d=r.dataset.theme==='dark'||(!r.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches);r.dataset.theme=d?'light':'dark'});
+function menu(on){$('#menu').classList.toggle('on',on);$('#menu-btn').setAttribute('aria-expanded',on)}
+$('#menu-btn').addEventListener('click',e=>{e.stopPropagation();menu(!$('#menu').classList.contains('on'))});
+document.addEventListener('click',e=>{if(!e.target.closest('#menu'))menu(false)});
+$('#go-menu').addEventListener('click',e=>{e.stopPropagation();menu(true);window.scrollTo(0,0)});
+$('#menu-keys').addEventListener('click',()=>{menu(false);renderKeys();open('m-keys')});
+$('#go-rdp').addEventListener('click',()=>{openRdp()});
+
+/* ---- the window ---- */
+function plural(n){const a=n%100,b=n%10;return a>10&&a<15?'ключей':b===1?'ключ':b>1&&b<5?'ключа':'ключей'}
+function strength(p){const n=p.length;return n<8?1:n<12?2:n<16?3:4}
+function renderKeys(){
+  const body=$('#keys-body');
+  if(!vault){
+    body.innerHTML=`
+      <div class="infobox">Ключи это ваш личный зашифрованный файл с логинами и паролями. Он хранится у вас, а не на сервере, и нужен для входа по RDP (позже и для запроса UAC). В панели он расшифровывается только в памяти этой вкладки: после закрытия вкладки или обновления страницы файл нужно открыть снова.</div>
+      <div class="cols">
+        <div class="pane">
+          <h4>Создать хранилище</h4>
+          <div class="f"><label for="c-p1">Парольная фраза</label><input class="input" id="c-p1" type="password" autocomplete="new-password"><div class="meter" id="c-m" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div>
+          <div class="f"><label for="c-p2">Ещё раз</label><input class="input" id="c-p2" type="password" autocomplete="new-password"></div>
+          <div class="warnbox">Фразу восстановить нельзя: если вы её забудете, файл не открыть. Файл сохраните в надёжном месте и сделайте копию.</div>
+          <p class="small muted" id="c-h">Не короче 10 символов; лучше фраза из нескольких слов.</p>
+          <button class="btn primary" id="c-go" type="button" disabled>Создать и скачать файл</button>
+        </div>
+        <div class="pane">
+          <h4>Открыть файл</h4>
+          <div class="f"><span class="lab">Файл хранилища</span><div class="fileline"><span class="fn" id="o-fn">${esc(fileName)||'не выбран'}</span><button class="btn" id="o-pick" type="button">Выбрать…</button><input id="o-file" type="file" accept=".lvault" hidden></div></div>
+          <div class="f"><label for="o-p">Парольная фраза</label><input class="input" id="o-p" type="password" autocomplete="current-password"></div>
+          <div class="errbox" id="o-err" hidden>Неверная фраза или файл повреждён.</div>
+          <p class="small muted">В макете подойдёт любой файл.</p>
+          <button class="btn primary" id="o-go" type="button" disabled>Открыть</button>
+        </div>
+      </div>`;
+    const p1=$('#c-p1'),p2=$('#c-p2'),go=$('#c-go');
+    const chk=()=>{const s=strength(p1.value);[...$('#c-m').children].forEach((b,i)=>{b.className=i<(p1.value?s:0)?'on '+(s<2?'c':s<3?'w':''):''});
+      const ok=p1.value.length>=10&&p1.value===p2.value;go.disabled=!ok;
+      $('#c-h').textContent=p1.value.length&&p1.value.length<10?'Слишком короткая фраза.':p2.value&&p1.value!==p2.value?'Фразы не совпадают.':'Не короче 10 символов; лучше фраза из нескольких слов.'};
+    p1.oninput=p2.oninput=chk;
+    go.onclick=()=>{vault={file:'linager-keys.lvault',entries:[],dirty:false};toast('Файл linager-keys.lvault создан и скачан. Сохраните его: фразу восстановить нельзя.');renderKeys()};
+    const f=$('#o-file'),og=$('#o-go'),op=$('#o-p');
+    $('#o-pick').onclick=()=>f.click();
+    f.onchange=()=>{fileName=f.files[0]?f.files[0].name:'';$('#o-fn').textContent=fileName||'не выбран';upd()};
+    const upd=()=>{og.disabled=!(fileName&&op.value)};
+    op.oninput=()=>{$('#o-err').hidden=true;upd()};
+    og.onclick=()=>{if(op.value==='wrong'){$('#o-err').hidden=false;return}vault={file:fileName||'linager-keys.lvault',entries:demo(),dirty:false};renderKeys()};
+    return;
+  }
+  const list=vault.entries.filter(e=>(filter==='all'||e.type===filter)&&(!q||(e.name+' '+e.login+' '+bindText(e)).toLowerCase().includes(q.toLowerCase())));
+  const rows=list.map(e=>{
+    const orphan=hasGone(e);
+    const last=delId===e.id
+      ?`<div class="acts"><span class="small crit">Удалить?</span><button class="btn sm danger" data-do-del="${e.id}" type="button">Да</button><button class="btn sm" data-no-del type="button">Нет</button></div>`
+      :`<div class="acts"><button class="btn sm" data-edit="${e.id}" type="button">Изменить</button><button class="btn sm" data-del="${e.id}" type="button">Удалить</button></div>`;
+    return `<tr class="k"><td><b>${esc(e.name)}</b></td><td><span class="badge ${TCLS[e.type]}">${TYPES[e.type]}</span></td><td>${esc(bindText(e))}${orphan?' <span class="badge warn" title="Часть привязки указывает на сервер или группу, которых больше нет в панели">не найдено</span>':''}</td><td class="nw">${esc(idLabel(e))}</td><td>${last}</td></tr>`}).join('');
+  body.innerHTML=`
+    <div class="strip">
+      <span class="ok"><span class="dot"></span>Открыто</span>
+      <span class="grow fname" title="${esc(vault.file)}">${esc(vault.file)}</span>
+      <span class="muted small">${vault.entries.length} ${plural(vault.entries.length)}</span>
+      ${vault.dirty?'<span class="badge warn">есть несохранённые изменения</span>':'<span class="muted small">сохранено</span>'}
+      <span class="small muted" style="display:flex;align-items:center;gap:6px">Блокировка через <span id="k-lock"></span></span>
+      <button class="btn ${vault.dirty?'primary':''}" id="k-save" type="button">Сохранить файл</button>
+      <button class="btn" id="k-close" type="button">Закрыть хранилище</button>
+    </div>
+    <div class="tools">
+      <input class="input grow" id="k-q" type="search" placeholder="Поиск по названию, логину, привязке" value="${esc(q)}">
+      ${['all','rdp','uac','any'].map(t=>`<button class="chip" data-f="${t}" aria-pressed="${filter===t}" type="button">${t==='all'?'Все':TYPES[t]}</button>`).join('')}
+      <button class="btn primary end" id="k-add" type="button">Добавить ключ</button>
+    </div>
+    ${vault.entries.length?`<div class="wrap"><table class="tbl"><thead><tr><th>Название</th><th>Где</th><th>Привязка</th><th>Логин</th><th></th></tr></thead><tbody>${rows||`<tr><td colspan="5" class="muted" style="padding:16px">Ничего не найдено.</td></tr>`}</tbody></table></div>`
+      :`<div class="empty">В хранилище пока нет ключей. «Добавить ключ» создаёт первую запись.</div>`}
+    <p class="legend">Пароли в таблице не показываются: их видно только в окне ключа. «Закрыть окно» оставляет хранилище открытым до закрытия вкладки; «Закрыть хранилище» забывает расшифрованное сразу. Привязка нужна только для порядка в списках: все ключи файла открыты тому, кто его открыл.</p>`;
+  makeSel($('#k-lock'),{size:'sm',label:'Автоблокировка',value:lockVal,options:[{value:'5',label:'5 мин'},{value:'15',label:'15 мин'},{value:'30',label:'30 мин'},{value:'0',label:'не блокировать'}],onchange:v=>{lockVal=v}});
+  $('#k-q').oninput=e=>{q=e.target.value;const p=e.target.selectionStart;renderKeys();const n=$('#k-q');n.focus();n.setSelectionRange(p,p)};
+  body.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{filter=b.dataset.f;renderKeys()});
+  $('#k-add').onclick=()=>openEdit(null);
+  body.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEdit(+b.dataset.edit));
+  body.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{delId=+b.dataset.del;renderKeys()});
+  body.querySelectorAll('[data-no-del]').forEach(b=>b.onclick=()=>{delId=null;renderKeys()});
+  body.querySelectorAll('[data-do-del]').forEach(b=>b.onclick=()=>{vault.entries=vault.entries.filter(e=>e.id!==+b.dataset.doDel);vault.dirty=true;delId=null;renderKeys()});
+  $('#k-save').onclick=()=>{vault.dirty=false;toast('Файл '+vault.file+' скачан. Замените им прежний файл.');renderKeys()};
+  $('#k-close').onclick=()=>{
+    if(!vault.dirty){vault=null;fileName='';picked=null;renderKeys();return}
+    $('#confirm-dlg').innerHTML=`<header><h3>Закрыть без сохранения?</h3><button class="btn sm" data-close type="button">Отмена</button></header><div class="body"><p>Изменения, которых нет в файле, пропадут.</p></div><footer><button class="btn" id="cf-save" type="button">Сохранить файл и закрыть</button><button class="btn danger" id="cf-drop" type="button">Закрыть без сохранения</button></footer>`;
+    open('m-confirm');
+    $('#cf-save').onclick=()=>{shut('m-confirm');toast('Файл '+vault.file+' скачан.');vault=null;fileName='';picked=null;renderKeys()};
+    $('#cf-drop').onclick=()=>{shut('m-confirm');vault=null;fileName='';picked=null;renderKeys()};
+  };
+}
+
+/* ---- add and edit ---- */
+const TYPE_H={rdp:'Подставляется в форму «RDP».',uac:'Для ввода в запрос UAC и на экран входа Windows (в Помощнике, позже).',any:'Подходит и для RDP, и для UAC.'};
+let draft={groups:[],servers:[]};
+function showBind(){$('#e-bindtxt').textContent=bindText(draft)}
+function syncType(){document.querySelectorAll('#e-type label').forEach(l=>l.classList.toggle('on',l.querySelector('input').checked));$('#e-type-h').textContent=TYPE_H[document.querySelector('input[name=etype]:checked').value]}
+function openEdit(id){
+  editId=id;const e=id?vault.entries.find(x=>x.id===id):{name:'',type:'rdp',groups:[],servers:[],login:'',domain:'',pass:'',note:''};
+  $('#edit-t').textContent=id?'Ключ: '+e.name:'Новый ключ';
+  $('#e-name').value=e.name;$('#e-login').value=e.login;$('#e-domain').value=e.domain;$('#e-pass').value=e.pass;$('#e-pass').type='password';$('#e-note').value=e.note;
+  document.querySelector('input[name=etype][value='+e.type+']').checked=true;syncType();
+  draft={groups:[...e.groups],servers:[...e.servers]};showBind();
+  open('m-edit');$('#e-name').focus();
+}
+document.querySelectorAll('input[name=etype]').forEach(i=>i.addEventListener('change',syncType));
+$('#e-eye').addEventListener('click',()=>{const p=$('#e-pass');p.type=p.type==='password'?'text':'password'});
+$('#e-gen').addEventListener('click',()=>{const a='abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<20;i++)s+=a[Math.floor(Math.random()*a.length)];$('#e-pass').value=s;$('#e-pass').type='text'});
+$('#e-ok').addEventListener('click',()=>{
+  const name=$('#e-name').value.trim(),login=$('#e-login').value.trim();
+  if(!name||!login){toast('Нужны название и логин.');return}
+  const rec={name,type:document.querySelector('input[name=etype]:checked').value,groups:draft.groups,servers:draft.servers,login,domain:$('#e-domain').value.trim(),pass:$('#e-pass').value,note:$('#e-note').value.trim()};
+  if(editId)Object.assign(vault.entries.find(x=>x.id===editId),rec);else vault.entries.push({id:nextId++,...rec});
+  vault.dirty=true;shut('m-edit');renderKeys();
+});
+
+/* ---- the binding: groups and servers with checkboxes ---- */
+let bsel={g:new Set(),s:new Set()},bq='';
+function renderBind(){
+  const q=bq.trim().toLowerCase(),tree=$('#b-tree');
+  const gone=[...draft.groups.filter(g=>goneRef('g',g)).map(g=>({k:'g',r:g})),...draft.servers.filter(x=>goneRef('s',x)).map(x=>({k:'s',r:x}))];
+  const sections=[...GROUPS.map(g=>({id:g,list:SERVERS.filter(x=>x.g===g)})),{id:null,list:SERVERS.filter(x=>!x.g)}];
+  let h='';
+  for(const sec of sections){
+    const gm=sec.id&&sec.id.toLowerCase().includes(q);
+    const list=sec.list.filter(x=>!q||gm||x.id.toLowerCase().includes(q));
+    if(q&&!list.length&&!gm)continue;
+    if(!sec.id&&!list.length)continue;
+    const gOn=sec.id&&bsel.g.has(sec.id);
+    h+=`<section class="block"><div class="head">${sec.id?`<button class="sw" type="button" data-g="${esc(sec.id)}" aria-pressed="${!!gOn}" aria-label="${esc(sec.id)}"></button><strong>${esc(sec.id)}</strong><span class="muted small">серверов: ${sec.list.length}</span>`:'<strong>Без группы</strong>'}</div><ul>`;
+    h+=list.length?list.map(x=>{const on=gOn||bsel.s.has(x.id);return `<li class="srv ${gOn?'locked':''}"><button class="sw" type="button" data-s="${esc(x.id)}" aria-pressed="${!!on}" ${gOn?'disabled':''} aria-label="${esc(x.id)}"></button><span class="nm">${esc(x.id)}</span><span class="muted small mono">10.0.0.${10+SERVERS.indexOf(x)}</span></li>`}).join(''):'<li class="srv muted small">В группе нет серверов</li>';
+    h+='</ul></section>';
+  }
+  if(gone.length)h+=`<section class="block"><div class="head"><strong>Нет в панели</strong></div><ul>`+gone.map(({k,r})=>{const on=k==='g'?bsel.g.has(r.id):bsel.s.has(r.id);return `<li class="srv"><button class="sw" type="button" data-${k}="${esc(r.id)}" aria-pressed="${on}" aria-label="${esc(r.name)}"></button><span class="nm">${esc(r.name)}</span><span class="muted small">${k==='g'?'группа удалена':'сервер удалён'}</span></li>`}).join('')+'</ul></section>';
+  tree.innerHTML=h||'<div class="empty">Ничего не найдено.</div>';
+  tree.querySelectorAll('button.sw').forEach(i=>i.onclick=()=>{const set=i.dataset.g!==undefined?bsel.g:bsel.s,id=i.dataset.g??i.dataset.s;set.has(id)?set.delete(id):set.add(id);const top=tree.scrollTop;renderBind();tree.scrollTop=top});
+  const g=bsel.g.size,sv=bsel.s.size;
+  $('#b-count').textContent=g+sv?'Отмечено: '+countText(g,sv):'Ключ для всех серверов';
+  $('#b-hint').textContent='Ничего не отмечено: ключ для всех серверов. Переключатель группы действует на все её серверы, в том числе на будущие; серверы группы тогда включены сами.';
+  $('#b-reset').disabled=!(g+sv);
+}
+function openBind(){bsel={g:new Set(draft.groups.map(g=>g.id)),s:new Set(draft.servers.map(x=>x.id))};bq='';$('#b-q').value='';renderBind();open('m-bind')}
+$('#e-bindbtn').addEventListener('click',openBind);
+$('#b-q').addEventListener('input',e=>{bq=e.target.value;renderBind()});
+$('#b-reset').addEventListener('click',()=>{bsel={g:new Set(),s:new Set()};renderBind()});
+$('#b-ok').addEventListener('click',()=>{
+  const name=(list,id)=>(list.find(r=>r.id===id)||R(id));
+  draft={groups:[...bsel.g].map(id=>name(draft.groups,id)),servers:[...bsel.s].filter(id=>!bsel.g.has(SERVERS.find(x=>x.id===id)?.g)).map(id=>name(draft.servers,id))};
+  showBind();shut('m-bind');
+});
+
+/* ---- the RDP form ---- */
+function groupOf(e){
+  if(forAll(e)||isLost(e))return 3; // no binding, or only a lost one: «for all»
+  if(e.servers.some(x=>x.id===HERE.id))return 0;
+  if(e.groups.some(g=>g.id===HERE.g))return 1;
+  return 9;
+}
+function pickItem(e){return `<button class="it" data-pick="${e.id}" role="option" type="button"><span>${esc(e.name)}</span><small>${esc(idLabel(e))}</small></button>`}
+function renderPick(){
+  const m=$('#pick-menu');
+  if(!vault){m.innerHTML=`<div class="closed"><span>Хранилище закрыто.</span><button class="btn sm primary" id="pk-open" type="button">Открыть…</button></div>`;$('#pk-open').onclick=()=>{$('#pick').querySelector('.pickmenu').classList.remove('on');renderKeys();open('m-keys')};return}
+  const ok=vault.entries.filter(e=>e.type!=='uac');
+  const sec=(t,n)=>{const a=ok.filter(e=>groupOf(e)===n);return a.length?`<div class="gh">${t}</div>`+a.map(pickItem).join(''):''};
+  const rest=ok.filter(e=>groupOf(e)===9);
+  m.innerHTML=(sec('Для '+HERE.id,0)+sec('Для группы «'+HERE.g+'»',1)+sec('Для всех',3)||'<div class="closed">Для этого сервера ключей нет.</div>')
+    +(rest.length?`<hr><button class="it more" id="pk-more" type="button"><span>${pickMore?'Скрыть остальные':'Показать все ('+rest.length+' ещё)'}</span></button>`+(pickMore?`<div class="gh">Привязаны к другим</div>`+rest.map(pickItem).join(''):''):'');
+  const more=$('#pk-more');if(more)more.onclick=e=>{e.stopPropagation();pickMore=!pickMore;renderPick()};
+  m.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{
+    const e=vault.entries.find(x=>x.id===+b.dataset.pick);picked=e;
+    $('#r-login').value=e.login;$('#r-domain').value=e.domain;$('#r-pass').value=e.pass;
+    $('#pick-l').innerHTML=KEY+'<span>'+esc(e.name)+'</span>';
+    $('#r-from').textContent='Подставлено из ключа «'+e.name+'». Пароль остаётся в браузере и на сервер не отправляется.';
+    m.classList.remove('on');$('#pick-btn').setAttribute('aria-expanded','false');
+  });
+}
+function openRdp(){
+  picked=null;pickMore=false;$('#pick-l').innerHTML='<span class="ph">Выбрать из хранилища…</span>';
+  ['#r-login','#r-domain','#r-pass'].forEach(s=>$(s).value='');$('#r-from').textContent='';
+  $('#pick-menu').classList.remove('on');open('m-rdp');
+}
+$('#pick-btn').addEventListener('click',e=>{e.stopPropagation();const m=$('#pick-menu');if(!m.classList.contains('on'))renderPick();m.classList.toggle('on');$('#pick-btn').setAttribute('aria-expanded',m.classList.contains('on'))});
+document.addEventListener('click',e=>{if(!e.target.closest('#pick'))$('#pick-menu').classList.remove('on')});
+$('#r-go').addEventListener('click',()=>toast('В макете подключения нет.'));
+</script>
+</body>
+</html>

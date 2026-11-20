@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.0-beta.1
+
+Beta channel. The web interface and the docs only: no database migration, no change in the server or the agents.
+
+- New: **Keys, a personal encrypted file of logins and passwords** (the item "Keys" in the menu of the top bar, for every user; the docs `docs/en/keys.md`, `docs/ru/keys.md`, the mockup `docs/design/next/keys.html`). The file is kept by the person, not by the panel: nothing is stored in the database, in the config or in the audit. It is made and opened in the browser: Argon2id (64 MiB, 3 passes) and AES-256-GCM with an authenticated header (`web/src/lib/keys/vault.ts`, `@noble/hashes` and `@noble/ciphers`: plain JavaScript, works over HTTP, no WebAssembly, no change in the CSP). The file is opened once per tab and the decrypted keys live only in the memory of the page (not in `localStorage`, `sessionStorage` or IndexedDB): a closed tab, a reload, a sign-out and the auto-lock (5, 15 or 30 minutes, or off) forget them; with unsaved changes the vault stays open until the file is saved and the browser asks before the tab is closed. A key has a name, a type (RDP, UAC or any), a binding to several groups and servers (it only sets the order in the lists), a login, a domain, a password and a note.
+- New: **the list "Key" in the RDP form** (the tab and the floating window) fills the login, the domain and the password from the vault; the keys of this server come first, then those of its group, then those for all, the rest are behind "Show all". The password stays in the browser and goes into the CredSSP of the client, as before.
+- Change: the picker of servers and groups of the access of an operator (`AccessServersModal`) takes its own captions, so the binding of a key uses the same window. Icons `key`, `eye` and `eye-off` (Pixelarticons 2.4.2).
+- Not in this beta: typing a key into the UAC prompt and the Windows sign-in screen (the next step: a key button in the Assistant). Keys of the type UAC are kept already.
+
 ## 0.8.6
 
 Small changes in the panel only. No database migration, no change in the agents.

@@ -11,6 +11,10 @@
     selectedGroups,
     onsave,
     onclose,
+    title,
+    hint,
+    totalKey = 'acc.servers.total',
+    zeroKey,
   }: {
     servers: Server[];
     groups: Group[];
@@ -18,6 +22,12 @@
     selectedGroups: number[];
     onsave: (servers: string[], groups: number[]) => void;
     onclose: () => void;
+    /** Other captions, for another use of the same picker (the binding of a key); the access texts by default. */
+    title?: string;
+    hint?: string;
+    totalKey?: string;
+    /** The caption when nothing is chosen (for a key it means "all servers"). */
+    zeroKey?: string;
   } = $props();
 
   // edited locally, applied with "Save"
@@ -55,8 +65,8 @@
   }
 </script>
 
-<Modal title={$tr('acc.servers.title')} labelId="acc-servers-title" {onclose}>
-  <p class="muted small">{$tr('acc.servers.hint')}</p>
+<Modal title={title ?? $tr('acc.servers.title')} labelId="acc-servers-title" {onclose}>
+  <p class="muted small">{hint ?? $tr('acc.servers.hint')}</p>
   {#if servers.length > 8}
     <input class="input" type="search" placeholder={$tr('acc.servers.search')} aria-label={$tr('acc.servers.search')} bind:value={search} />
   {/if}
@@ -99,7 +109,7 @@
     {/each}
   </div>
   <div class="row between bar">
-    <span class="small muted">{$tr('acc.servers.total', { n: total })}</span>
+    <span class="small muted">{$tr(total === 0 && zeroKey ? zeroKey : totalKey, { n: total })}</span>
     <div class="row">
       <button class="btn" type="button" onclick={onclose}>{$tr('common.cancel')}</button>
       <button class="btn primary" type="button" onclick={() => onsave(pickedServers, pickedGroups)}>{$tr('acc.apply')}</button>

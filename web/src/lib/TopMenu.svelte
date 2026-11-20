@@ -17,6 +17,7 @@
     onlocale,
     onedit,
     onsettings,
+    onkeys,
     onlogout,
   }: {
     dark: boolean;
@@ -30,6 +31,7 @@
     onlocale: (next: Locale) => void;
     onedit: () => void;
     onsettings: () => void;
+    onkeys: () => void;
     onlogout: () => void;
   } = $props();
 
@@ -91,6 +93,9 @@
         <button class="row" type="button" role="menuitem" onclick={() => run(onsettings)}>
           <span class="lab">{isAdmin ? $tr('app.settings') : $tr('app.profile')}</span>
           {#if isAdmin && updatesCount > 0}<span class="badge">{updatesCount}</span>{/if}
+        </button>
+        <button class="row" type="button" role="menuitem" onclick={() => run(onkeys)}>
+          <span class="lab">{$tr('keys.menu')}</span>
         </button>
         <button class="row logout" type="button" role="menuitem" onclick={() => run(onlogout)}>
           <span class="lab">{$tr('app.logout')}</span>
