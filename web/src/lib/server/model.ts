@@ -98,4 +98,22 @@ export function groupTabs(tabs: readonly (typeof TABS)[number][]): { id: string;
   })).filter((g) => g.tabs.length > 0);
 }
 
+/**
+ * The agent modules split into the same groups as the sidebar, in the order of its tabs (a module that backs two tabs is listed
+ * once, in the first group). It is what the list of modules of an operator is built from, so the two never disagree.
+ */
+export function moduleGroups(): { id: string; key: string; modules: string[] }[] {
+  const seen = new Set<string>();
+  return TAB_GROUPS.map((g) => ({
+    id: g.id,
+    key: g.key,
+    modules: g.tabs.flatMap((id) => {
+      const m = TAB_MODULE[id];
+      if (!m || seen.has(m)) return [];
+      seen.add(m);
+      return [m];
+    }),
+  })).filter((g) => g.modules.length > 0);
+}
+
 /** 9x9 pixel icons of the tabs, one string per row; "1" is a filled square. Drawn so that one square is 2 px at 18 px, which keeps them sharp on any screen. */

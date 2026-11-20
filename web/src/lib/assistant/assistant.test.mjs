@@ -215,3 +215,18 @@ test('the Dispatcher: the bottom bar offers restart and stop for a running servi
   assert.equal(heat(25, 50), 0.5);
   assert.equal(heat(500, 50), 1);
 });
+
+test('the modules of an operator are grouped like the sidebar', async () => {
+  const { moduleGroups } = await import('../server/model.ts');
+  const groups = moduleGroups();
+  assert.deepEqual(
+    groups.map((g) => [g.id, g.modules]),
+    [
+      ['general', ['terminal', 'desktop', 'assistant']],
+      ['system', ['services', 'processes', 'logs', 'apt']],
+      ['fs', ['files', 'disk']],
+      ['net', ['network', 'firewall', 'security', 'users']],
+      ['apps', ['docker']],
+    ],
+  );
+});

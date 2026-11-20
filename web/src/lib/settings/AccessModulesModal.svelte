@@ -8,6 +8,7 @@
   import { untrack } from 'svelte';
   import { tr } from '../../i18n';
   import Modal from '../Modal.svelte';
+  import { moduleGroups } from '../server/model';
 
   let {
     selected,
@@ -22,6 +23,12 @@
   let picked = $state<string[]>(untrack(() => [...selected]));
 
   const tabKey = (m: string): string => (m === 'apt' ? 'srv.tab.updates' : `srv.tab.${m}`);
+  /** The sidebar's groups; a module that is in none of them (a new one) goes into a last group, so it is never lost. */
+  const groups = (() => {
+    const g = moduleGroups().map((x) => ({ ...x, modules: x.modules.filter((m) => (MODULES as readonly string[]).includes(m)) }));
+    const rest = MODULES.filter((m) => !g.some((x) => x.modules.includes(m)));
+    return rest.length > 0 ? [...g, { id: 'other', key: 'acc.modules.other', modules: [...rest] }] : g;
+  })();
   const rootPicked = $derived(picked.filter((m) => ROOT_MODULES.includes(m)));
 
   function toggle(m: string): void {
@@ -31,18 +38,25 @@
 
 <Modal title={$tr('acc.modules.title')} labelId="acc-modules-title" {onclose}>
   <p class="muted small">{$tr('acc.modules.hint')}</p>
-  <ul class="list">
-    {#each MODULES as m (m)}
-      <li class="mod">
-        <button class="sw" type="button" aria-pressed={picked.includes(m)} aria-label={$tr(tabKey(m))} onclick={() => toggle(m)}></button>
-        <div class="txt">
-          <strong>{$tr(tabKey(m))}</strong>
-          <span class="muted small">{$tr(`acc.mod.${m}`)}</span>
-        </div>
-        {#if ROOT_MODULES.includes(m)}<span class="badge root">{$tr('acc.modules.root')}</span>{/if}
-      </li>
+  <div class="list">
+    {#each groups as g (g.id)}
+      <section aria-labelledby="acc-mg-{g.id}">
+        <h3 id="acc-mg-{g.id}" class="grp">{$tr(g.key)}</h3>
+        <ul>
+          {#each g.modules as m (m)}
+            <li class="mod">
+              <button class="sw" type="button" aria-pressed={picked.includes(m)} aria-label={$tr(tabKey(m))} onclick={() => toggle(m)}></button>
+              <div class="txt">
+                <strong>{$tr(tabKey(m))}</strong>
+                <span class="muted small">{$tr(`acc.mod.${m}`)}</span>
+              </div>
+              {#if ROOT_MODULES.includes(m)}<span class="badge root">{$tr('acc.modules.root')}</span>{/if}
+            </li>
+          {/each}
+        </ul>
+      </section>
     {/each}
-  </ul>
+  </div>
   {#if rootPicked.length > 0}
     <p class="warn small" role="status">{$tr('acc.modules.rootWarn')}</p>
   {/if}
@@ -57,12 +71,33 @@
 
 <style>
   .list {
-    margin: 0;
-    padding: 0;
-    list-style: none;
     border: 2px solid var(--line);
     max-height: min(52vh, 414px);
     overflow: auto;
+  }
+
+  .list ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* The title of a group, like the groups of the sidebar. */
+  .grp {
+    margin: 0;
+    padding: 6px 11px;
+    background: var(--seg-off);
+    border-bottom: 2px solid var(--line);
+    color: var(--muted);
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  section + section .grp {
+    border-top: 2px solid var(--line);
   }
 
   .mod {
@@ -77,6 +112,7 @@
   .mod:last-child {
     border-bottom: 0;
   }
+
 
   .txt {
     display: flex;

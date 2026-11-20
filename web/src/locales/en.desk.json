@@ -1,9 +1,9 @@
 {
-  "srv.tab.desktop": "Desktop",
-  "dash.desktop": "Remote desktop",
+  "srv.tab.desktop": "RDP",
+  "dash.desktop": "RDP",
   "desk.title": "Remote desktop",
-  "desk.header": "Desktop · {name}",
-  "deskwin.title": "Desktop · {name}",
+  "desk.header": "RDP · {name}",
+  "deskwin.title": "RDP · {name}",
   "desk.connecting": "Connecting…",
   "desk.open": "connected",
   "desk.closed": "disconnected",

@@ -1,9 +1,9 @@
 {
-  "srv.tab.desktop": "Рабочий стол",
-  "dash.desktop": "Рабочий стол",
+  "srv.tab.desktop": "RDP",
+  "dash.desktop": "RDP",
   "desk.title": "Удалённый рабочий стол",
-  "desk.header": "Рабочий стол · {name}",
-  "deskwin.title": "Рабочий стол · {name}",
+  "desk.header": "RDP · {name}",
+  "deskwin.title": "RDP · {name}",
   "desk.connecting": "Подключение…",
   "desk.open": "подключено",
   "desk.closed": "отключено",

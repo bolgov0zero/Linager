@@ -29,7 +29,7 @@
   "pult.winClose": "Close",
   "pult.winFiles": "Files",
   "pult.winTerminal": "Terminal",
-  "pult.winDesktop": "Desktop",
+  "pult.winDesktop": "RDP",
   "pult.winAssistant": "Assistant",
   "pult.winQuality": "Quality",
   "pult.winDispatcher": "Dispatcher",

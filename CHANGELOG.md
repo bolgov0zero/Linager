@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.3
+
+- Change: **the tab "Desktop" of a Windows computer is called "RDP"** (the tab, the floating window, the item in the lists of windows and in the context menu of a tile, the right of an operator, the audit journal and the docs). The name says what it is, and it is no longer mixed up with the screen of the Assistant. Only the names changed.
+- Change: **the list of the modules of an operator** (Settings, Access) is split into the groups of the sidebar (General, System, File system, Network and protection, Applications), and the name of the module "Desktop" is "RDP" there too. The description of the module "Assistant" says that it is not only for Windows any more (the Linux desktop too).
+
 ## 0.8.2
 
 - Fix: **the list of the window "Files" in a narrow window.** The rights, the owner, the size and the date no longer wrap onto a second line; the columns drop out one by one as the list gets narrower (the owner, then the rights, then the date, then the size), and the name stays. An empty owner (Windows) is shown as "—".
