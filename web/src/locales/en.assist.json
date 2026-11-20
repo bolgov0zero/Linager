@@ -151,7 +151,7 @@
   "manage.state.down": "ending",
   "manage.state.init": "starting",
   "manage.state.unknown": "unknown",
-  "assist.secureDesktop": "Lock / sign-in / UAC screen",
+  "assist.secureDesktop": "UAC",
   "assist.cadConsoleOnly": "Console session only",
   "assist.monitorN": "Monitor {n}",
   "assist.monitorPrimary": "primary",

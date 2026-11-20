@@ -22,13 +22,13 @@ const INFO_KEY = 'linager.assist.info';
 
 function readInfoShown(): boolean {
   try {
-    return localStorage.getItem(INFO_KEY) !== '0';
+    return localStorage.getItem(INFO_KEY) === '1';
   } catch {
-    return true;
+    return false;
   }
 }
 
-/** Whether the line under the screen (resolution, colours, frames, traffic) is shown. On by default; one choice for every Assistant window and tab, remembered in the browser. */
+/** Whether the line under the screen (resolution, colours, frames, traffic) is shown. Off by default; one choice for every Assistant window and tab, remembered in the browser. */
 export const assistInfoShown = writable<boolean>(readInfoShown());
 
 export function toggleAssistInfo(): void {

@@ -632,7 +632,7 @@
   }
 
   main {
-    padding: 22px 14px;
+    padding: 14px 14px;
   }
 
   @media (max-width: 720px) {

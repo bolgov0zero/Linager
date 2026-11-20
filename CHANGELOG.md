@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.6
+
+Small changes in the panel only. No database migration, no change in the agents.
+
+- Change: **the badge of the Assistant is called "UAC"** (it was "Lock / sign-in / UAC screen", in Russian "Экран блокировки / входа / UAC"). It shows in the header of the window, in the tab and in the line under the screen when the computer shows the lock, sign-in or UAC screen.
+- Change: **the line under the screen of the Assistant (resolution, colours, frames, traffic) is hidden by default.** It is turned on with the item "Information" of the "More" menu; a choice made before stays as it was (`linager.assist.info`).
+- Change: **the page has a smaller padding** (`14px 14px` instead of `22px 14px`), so the space under the dashboard is less.
+
 ## 0.8.5
 
 Documentation, the landing and the screenshots only. No database migration, no change in the panel or the agents.
