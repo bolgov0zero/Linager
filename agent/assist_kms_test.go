@@ -2,7 +2,9 @@ package agent
 
 import (
 	"bytes"
+	"errors"
 	"testing"
+	"time"
 )
 
 func TestCopyRegionXRGB(t *testing.T) {
@@ -75,5 +77,33 @@ func TestScaleAbs(t *testing.T) {
 	}
 	if scaleAbs(10, 0) != 0 {
 		t.Error("no screen")
+	}
+}
+
+func TestWaitForScreenWakesAndTellsTheBrowser(t *testing.T) {
+	var says []bool
+	nudges, looks := 0, 0
+	// the screen lights up on the third look
+	err := waitForScreen(func() bool { looks++; return looks >= 3 }, func() { nudges++ }, func(on bool) { says = append(says, on) },
+		time.Second, time.Hour, time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if nudges != 1 {
+		t.Errorf("nudges = %d, want 1 (the repeat is an hour away)", nudges)
+	}
+	if len(says) != 2 || !says[0] || says[1] {
+		t.Errorf("the browser is told: waking, then awake; got %v", says)
+	}
+}
+
+func TestWaitForScreenGivesUpAndRepeatsTheNudge(t *testing.T) {
+	nudges := 0
+	err := waitForScreen(func() bool { return false }, func() { nudges++ }, nil, 60*time.Millisecond, 10*time.Millisecond, time.Millisecond)
+	if !errors.Is(err, errScreenStaysOff) {
+		t.Fatalf("err = %v", err)
+	}
+	if nudges < 3 {
+		t.Errorf("nudges = %d, want the first and some repeats", nudges)
 	}
 }

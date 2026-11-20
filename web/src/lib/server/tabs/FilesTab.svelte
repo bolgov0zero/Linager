@@ -800,8 +800,8 @@
               <th class="kind"><span class="sr-only">{$tStore('files.col.type')}</span></th>
               <th aria-sort={ariaSort('name')}>{@render sortHead('name', 'files.col.name')}</th>
               <th class="hide-sm" aria-sort={ariaSort('mode')}>{@render sortHead('mode', 'files.col.mode')}</th>
-              <th class="hide-sm" aria-sort={ariaSort('owner')}>{@render sortHead('owner', 'files.col.owner')}</th>
-              <th class="num" aria-sort={ariaSort('size')}>{@render sortHead('size', 'files.col.size')}</th>
+              <th class="hide-md" aria-sort={ariaSort('owner')}>{@render sortHead('owner', 'files.col.owner')}</th>
+              <th class="num hide-xxs" aria-sort={ariaSort('size')}>{@render sortHead('size', 'files.col.size')}</th>
               <th class="hide-xs" aria-sort={ariaSort('mtime')}>{@render sortHead('mtime', 'files.col.mtime')}</th>
               <th class="acts-head"><span class="sr-only">{$tStore('files.col.actions')}</span></th>
             </tr>
@@ -833,8 +833,8 @@
                   {/if}
                 </td>
                 <td class="hide-sm mono small">{entry.mode_str}</td>
-                <td class="hide-sm mono small">{entry.owner}:{entry.group}</td>
-                <td class="num mono">{entry.type === 'dir' ? '—' : formatBytes(entry.size)}</td>
+                <td class="hide-md mono small">{entry.owner || entry.group ? `${entry.owner}:${entry.group}` : '—'}</td>
+                <td class="num hide-xxs mono">{entry.type === 'dir' ? '—' : formatBytes(entry.size)}</td>
                 <td class="hide-xs mono small">{formatDateTime(entry.mtime, $locale)}</td>
                 <td class="acts">
                   <button class="btn more" type="button" aria-label={$tStore('files.menu.more')} onclick={(e) => moreClick(e, entry)}>⋯</button>
@@ -1283,6 +1283,12 @@
     font-size: 8px;
   }
 
+  /* The rights, the owner, the size and the date stay on one line; only the name wraps. */
+  td:not(.name),
+  th {
+    white-space: nowrap;
+  }
+
   td {
     padding: 7px;
     border-bottom: 2px dashed var(--seg-off);
@@ -1361,6 +1367,20 @@
     overflow: hidden;
     clip: rect(0 0 0 0);
     white-space: nowrap;
+  }
+
+  /* The columns drop out one by one as the list gets narrower: the owner, then the rights, then the date; the name and the size stay. */
+  @container (max-width: 760px) {
+    .hide-md {
+      display: none;
+    }
+  }
+
+  /* In the narrowest window only the name is left (and the date). */
+  @container (max-width: 300px) {
+    .hide-xxs {
+      display: none;
+    }
   }
 
   @container (max-width: 460px) {

@@ -103,7 +103,8 @@ type kmsHost struct {
 	log *slog.Logger
 	ui  *uinputDev
 
-	checked time.Time // when it was last looked at whether the desktop is open
+	checked time.Time     // when it was last looked at whether the desktop is open
+	onWake  func(on bool) // tells the browser that a dark screen is being woken (nil in the tests)
 
 	mu    sync.Mutex
 	cards []int // the file descriptors of /dev/dri/card*
@@ -114,8 +115,8 @@ type kmsHost struct {
 	lastH int
 }
 
-func newKMSHost(log *slog.Logger) (*kmsHost, error) {
-	h := &kmsHost{log: log}
+func newKMSHost(log *slog.Logger, onWake func(on bool)) (*kmsHost, error) {
+	h := &kmsHost{log: log, onWake: onWake}
 	paths, _ := filepath.Glob("/dev/dri/card[0-9]*")
 	sort.Strings(paths)
 	for _, p := range paths {
@@ -133,17 +134,47 @@ func newKMSHost(log *slog.Logger) (*kmsHost, error) {
 		h.release()
 		return nil, err
 	}
-	if len(h.outs) == 0 {
-		h.release()
-		return nil, errors.New("no display shows a picture now")
-	}
 	ui, err := newUinput()
 	if err != nil {
 		h.release()
 		return nil, err
 	}
 	h.ui = ui
+	if len(h.outs) == 0 { // the screen went dark: a key wakes it, and the browser shows "connecting" meanwhile
+		if err := h.wakeScreen(); err != nil {
+			h.release()
+			return nil, err
+		}
+	}
 	return h, nil
+}
+
+// keyLeftShift is the key the wake-up sends: it does nothing on the sign-in and the lock screens, and any input wakes the monitor.
+const keyLeftShift = 42
+
+// nudge presses and lets go of Shift on the virtual keyboard.
+func (h *kmsHost) nudge() {
+	if h.ui == nil {
+		return
+	}
+	_ = h.ui.key(keyLeftShift, true)
+	time.Sleep(40 * time.Millisecond)
+	_ = h.ui.key(keyLeftShift, false)
+}
+
+// wakeScreen wakes a screen that shows no picture and waits for it. It does not hold h.mu while it waits, so the input and
+// the settings of the browser go on.
+func (h *kmsHost) wakeScreen() error {
+	h.log.Info("assistant: the screen is dark, waking it")
+	return waitForScreen(func() bool {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		if h.scan() != nil || len(h.outs) == 0 {
+			return false
+		}
+		time.Sleep(300 * time.Millisecond) // the compositor draws the first picture
+		return true
+	}, h.nudge, h.onWake, wakeTimeout, wakeNudge, wakeStep)
 }
 
 // scan reads which controllers show a picture and in what size.
@@ -299,12 +330,21 @@ func (h *kmsHost) Grab() ([]byte, int, int, error) {
 		}
 	}
 	h.mu.Lock()
-	defer h.mu.Unlock()
-	if err := h.scan(); err != nil {
+	err := h.scan()
+	dark := err == nil && len(h.outs) == 0
+	h.mu.Unlock()
+	if err != nil {
 		return nil, 0, 0, err
 	}
+	if dark { // the screen went dark while the Assistant was open
+		if err := h.wakeScreen(); err != nil {
+			return nil, 0, 0, err
+		}
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	if len(h.outs) == 0 {
-		return nil, 0, 0, errors.New("no display shows a picture now")
+		return nil, 0, 0, errScreenStaysOff
 	}
 	o := h.outs[h.sel]
 	m, err := h.framebuffer(o)

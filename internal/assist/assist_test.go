@@ -316,3 +316,19 @@ func TestEncoderDoesNotRefineAtFixedQuality(t *testing.T) {
 		t.Errorf("nothing changed and the quality never moved: %d tiles", len(tiles))
 	}
 }
+
+func TestWakingFrame(t *testing.T) {
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, TypeWaking, Waking{On: true}); err != nil {
+		t.Fatal(err)
+	}
+	var re Reassembler
+	frames, err := re.Push(buf.Bytes())
+	if err != nil || len(frames) != 1 || frames[0].Type != TypeWaking {
+		t.Fatalf("frames = %v, err = %v", frames, err)
+	}
+	var w Waking
+	if err := json.Unmarshal(frames[0].Data, &w); err != nil || !w.On {
+		t.Errorf("waking = %+v, err = %v", w, err)
+	}
+}

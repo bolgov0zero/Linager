@@ -23,6 +23,7 @@ const (
 	TypeStats    byte = 3  // JSON Stats, about once a second
 	TypeEnd      byte = 4  // JSON End: the helper stops and says why
 	TypeClip     byte = 5  // JSON Clip: the text of the clipboard of the computer, the answer to TypeClipGet
+	TypeWaking   byte = 6  // JSON Waking: the screen of the computer is off and is being woken, or it is awake again
 	TypeInput    byte = 16 // JSON Input: mouse and keys, from the browser
 	TypeSettings byte = 17 // JSON Settings, from the panel
 	TypeClipSet  byte = 18 // JSON Clip: put this text on the clipboard of the computer
@@ -146,6 +147,12 @@ type End struct {
 	// Reconnect asks the browser to connect again: the helper ended because another way of reading the screen suits the
 	// computer now (the desktop opened after the sign-in, the screen was locked, the person signed out).
 	Reconnect bool `json:"reconnect,omitempty"`
+}
+
+// Waking tells the browser that the screen of the computer is off (it went dark by itself) and the helper is waking it:
+// the browser shows a plain "connecting" stub until the picture comes. On=false says the screen is awake.
+type Waking struct {
+	On bool `json:"on"`
 }
 
 // Tile is a rectangle of the screen and its JPEG picture.

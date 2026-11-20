@@ -6,6 +6,8 @@ export const MSG_TILES = 2;
 export const MSG_STATS = 3;
 export const MSG_END = 4;
 export const MSG_CLIP = 5;
+/** The screen of the computer is off and is being woken (`{on: true}`), or it is awake again (`{on: false}`). */
+export const MSG_WAKING = 6;
 /** Browser to server. */
 export const MSG_INPUT = 16;
 export const MSG_CLIP_SET = 18;

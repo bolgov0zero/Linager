@@ -2,7 +2,9 @@ package agent
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
+	"time"
 )
 
 // The pure parts of the capture below the compositor (DRM/KMS) and of the input through uinput: the formats of the
@@ -114,4 +116,40 @@ func scaleAbs(v, size int) int32 {
 	}
 	v = max(0, min(v, size-1))
 	return int32(int64(v) * absMax / int64(size-1)) //nolint:gosec // 0..65535
+}
+
+// wakeTimeout is how long a dark screen is given to come back after the input that wakes it (a monitor needs a few seconds
+// to find its signal); a nudge is repeated every wakeNudge.
+const (
+	wakeTimeout = 10 * time.Second
+	wakeNudge   = 2 * time.Second
+	wakeStep    = 200 * time.Millisecond
+)
+
+var errScreenStaysOff = errors.New("the screen is off and did not wake up (the monitor may be switched off, or the computer is asleep)")
+
+// waitForScreen wakes a dark screen: it tells the browser (say), sends an input that wakes the monitor (nudge) and looks
+// (lit) every step for the picture, nudging again every `every`. It returns when the screen shows a picture, or an error
+// when it stays dark for `timeout`.
+func waitForScreen(lit func() bool, nudge func(), say func(on bool), timeout, every, step time.Duration) error {
+	if say != nil {
+		say(true)
+	}
+	nudge()
+	start := time.Now()
+	last := start
+	for time.Since(start) < timeout {
+		time.Sleep(step)
+		if lit() {
+			if say != nil {
+				say(false)
+			}
+			return nil
+		}
+		if time.Since(last) >= every {
+			nudge()
+			last = time.Now()
+		}
+	}
+	return errScreenStaysOff
 }

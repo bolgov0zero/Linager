@@ -35,7 +35,7 @@ func RunAssistHelper(ctx context.Context, addr string, session int, mode string)
 	var screen assistHost
 	var release func()
 	if mode == "kms" { // the screen below the compositor: the sign-in screen, an X11 session, a locked screen
-		k, err := newKMSHost(log)
+		k, err := newKMSHost(log, func(on bool) { _ = assist.WriteJSON(conn, assist.TypeWaking, assist.Waking{On: on}) })
 		if err != nil {
 			_ = assist.WriteJSON(conn, assist.TypeEnd, assist.End{Reason: "cannot open the screen: " + err.Error()})
 			return helperExitScreen, err

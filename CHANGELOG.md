@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.2
+
+- Fix: **the list of the window "Files" in a narrow window.** The rights, the owner, the size and the date no longer wrap onto a second line; the columns drop out one by one as the list gets narrower (the owner, then the rights, then the date, then the size), and the name stays. An empty owner (Windows) is shown as "—".
+- New: **the Assistant for Linux wakes a dark screen.** When the screen of the computer goes dark (the sign-in or the lock screen turns the monitor off), the helper no longer ends with "no display shows a picture now": it presses Shift on its virtual keyboard (`uinput`; the key does nothing on those screens), repeats it every two seconds and waits up to ten for the picture. Meanwhile the browser shows the plain "Connecting to the session…" stub with "the screen of the computer is off; switching it on" and no technical hint (a new frame `TypeWaking`, `{on: true|false}`, from the helper to the browser). The same works when the screen goes dark while the Assistant is open. If the screen stays dark (the monitor is switched off, the computer is asleep), the session ends with the reason. Update the agents too.
+
 ## 0.8.1
 
 Small fixes of the interface. No database migration; the web interface only.

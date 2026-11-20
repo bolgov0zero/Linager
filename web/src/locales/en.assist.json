@@ -11,6 +11,7 @@
   "assist.connectingShort": "connecting…",
   "assist.connecting": "Connecting to the session: {name}…",
   "assist.connectingHint": "The agent starts the helper in the session; waiting for the first frame.",
+  "assist.wakingHint": "The screen of the computer is off; switching it on. It takes a few seconds.",
   "assist.closedTitle": "Connection closed",
   "assist.reconnect": "Connect again",
   "assist.limit": "This session is already open in another Assistant window. Close that window or pick another session.",

@@ -29,6 +29,7 @@
   import {
     ASSIST_LIMIT_CODE,
     MSG_CLIP,
+    MSG_WAKING,
     MSG_END,
     MSG_HELLO,
     MSG_STATS,
@@ -69,6 +70,8 @@
   let canvas = $state<HTMLCanvasElement | null>(null);
   let host = $state<HTMLDivElement | null>(null);
   let message = $state('');
+  /** The computer's screen is dark and is being woken: a plain "connecting" stub, with no technical hint. */
+  let waking = $state(false);
   let mode = $state<AssistScale>('fit');
   let box = $state({ w: 0, h: 0 });
   let size = $state({ w: 0, h: 0 });
@@ -104,6 +107,7 @@
     shutdown();
     const mine = ++generation;
     message = '';
+    waking = false;
     clipWanted = 0;
     if (!quiet) {
       info = null; // a silent reconnection keeps the last picture and its size until the new screen has come
@@ -182,6 +186,7 @@
 
   function end(reason: string): void {
     message = reason;
+    waking = false;
     phase = 'closed';
     if (!quiet) info = null;
   }
@@ -212,9 +217,14 @@
         };
         phase = 'open';
         quiet = false;
+        waking = false;
         return;
       }
+      case MSG_WAKING:
+        waking = json<{ on?: boolean }>(body)?.on === true;
+        return;
       case MSG_TILES:
+        waking = false;
         await draw(mine, body);
         return;
       case MSG_STATS: {
@@ -597,12 +607,12 @@
     ></canvas>
   </div>
 
-  {#if phase !== 'open' && !quiet}
+  {#if (phase !== 'open' && !quiet) || (waking && phase !== 'closed')}
     <div class="veil" role={phase === 'closed' ? 'alert' : 'status'}>
-      {#if phase === 'connecting'}
+      {#if phase === 'connecting' || waking}
         <div class="spin" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
         <p>{$tr('assist.connecting', { name: label })}</p>
-        <p class="small hint">{$tr('assist.connectingHint')}</p>
+        <p class="small hint">{$tr(waking ? 'assist.wakingHint' : 'assist.connectingHint')}</p>
       {:else}
         <h3>{$tr('assist.closedTitle')}</h3>
         <p class="reason">{message}</p>
